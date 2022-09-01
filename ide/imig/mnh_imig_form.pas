@@ -200,9 +200,9 @@ PROCEDURE TDisplayImageForm.displayCurrentImage;
 FUNCTION getScreenSize_imp intFuncSignature;
   begin
     result:=nil;
-    if (params=nil) or (params^.size=0) then result:=recycler^.newListLiteral(
-      recycler^.newIntLiteral(screen.width),
-      recycler^.newIntLiteral(screen.height));
+    if (params=nil) or (params^.size=0) then result:=literalRecycler.newListLiteral(
+      literalRecycler.newIntLiteral(screen.width),
+      literalRecycler.newIntLiteral(screen.height));
   end;
 
 FUNCTION imigImageSize_imp intFuncSignature;
@@ -215,7 +215,7 @@ FUNCTION imigImageSize_imp intFuncSignature;
     new(closedRequest,createRetrieveRequest);
     context^.messages^.postCustomMessage(closedRequest);
     closedRequest^.getResponseWaiting(context^.messages,plotWidth,plotHeight);
-    result:=recycler^.newListLiteral()^.appendInt(recycler,plotWidth)^.appendInt(recycler,plotHeight);
+    result:=literalRecycler.newListLiteral()^.appendInt(plotWidth)^.appendInt(plotHeight);
     disposeMessage(closedRequest);
   end else result:=nil; end;
 

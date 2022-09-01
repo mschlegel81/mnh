@@ -165,7 +165,7 @@ FUNCTION createWorkflow(CONST steps:P_listLiteral; CONST validating:boolean; OUT
       end;
       imageContexts.maxImageManipulationThreads:=settings.cpuCount;
     end;
-    if steps<>tmpSteps then recycler^.disposeLiteral(tmpSteps);
+    if steps<>tmpSteps then literalRecycler.disposeLiteral(tmpSteps);
     if not(isValid) and not(validating) and not(errorRaised) then context^.raiseError('Invalid workflow',tokenLocation);
   end;
 
@@ -188,10 +188,10 @@ PROCEDURE doOutput(CONST s:string; CONST warning:boolean; CONST location:T_token
       outputLit:P_literal;
   begin
     if outputMethod<>nil then begin
-      sLit:=recycler^.newStringLiteral(s);
+      sLit:=literalRecycler.newStringLiteral(s);
       outputLit:=outputMethod^.evaluateToLiteral(location,context,recycler,sLit,nil).literal;
-      recycler^.disposeLiteral(sLit);
-      if outputLit<>nil then recycler^.disposeLiteral(outputLit);
+      literalRecycler.disposeLiteral(sLit);
+      if outputLit<>nil then literalRecycler.disposeLiteral(outputLit);
     end else begin
       if warning
       then context^.messages^.postTextMessage(mt_el2_warning,location,s)
@@ -425,9 +425,9 @@ FUNCTION imageSize_imp intFuncSignature;
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       size:=obtainDimensionsViaAdapters(context^.messages);
-      result:=recycler^.newListLiteral(
-                recycler^.newIntLiteral(size.width),
-                recycler^.newIntLiteral(size.height));
+      result:=literalRecycler.newListLiteral(
+                literalRecycler.newIntLiteral(size.width),
+                literalRecycler.newIntLiteral(size.height));
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       if not(fileExists(str0^.value)) then begin
         context^.raiseError('File '+str0^.value+' does not exist',tokenLocation);
@@ -435,12 +435,12 @@ FUNCTION imageSize_imp intFuncSignature;
       end;
       try
         tempImage.create(str0^.value);
-        result:=recycler^.newListLiteral(
-                  recycler^.newIntLiteral(tempImage.dimensions.width),
-                  recycler^.newIntLiteral(tempImage.dimensions.height));
+        result:=literalRecycler.newListLiteral(
+                  literalRecycler.newIntLiteral(tempImage.dimensions.width),
+                  literalRecycler.newIntLiteral(tempImage.dimensions.height));
       except
-        if result<>nil then recycler^.disposeLiteral(result);
-        result:=recycler^.newListLiteral(0);
+        if result<>nil then literalRecycler.disposeLiteral(result);
+        result:=literalRecycler.newListLiteral(0);
       end;
       tempImage.destroy;
     end;
@@ -488,14 +488,14 @@ FUNCTION imageJpgRawData_imp intFuncSignature;
       obtainedImage:=obtainCurrentImageViaAdapters(context^.messages);
       if obtainedImage=nil then context^.raiseError('Cannot display image because no image is loaded',tokenLocation)
       else begin
-        result:=recycler^.newStringLiteral(obtainedImage^.getJpgFileData());
+        result:=literalRecycler.newStringLiteral(obtainedImage^.getJpgFileData());
         dispose(obtainedImage,destroy);
       end;
     end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) then begin
       obtainedImage:=obtainCurrentImageViaAdapters(context^.messages);
       if obtainedImage=nil then context^.raiseError('Cannot display image because no image is loaded',tokenLocation)
       else begin
-        result:=recycler^.newStringLiteral(obtainedImage^.getJpgFileData(int0^.intValue));
+        result:=literalRecycler.newStringLiteral(obtainedImage^.getJpgFileData(int0^.intValue));
         dispose(obtainedImage,destroy);
       end;
     end;
@@ -504,8 +504,8 @@ FUNCTION imageJpgRawData_imp intFuncSignature;
 FUNCTION listManipulations_imp intFuncSignature;
   VAR op:P_imageOperationMeta;
   begin
-    result:=recycler^.newListLiteral();
-    for op in allImageOperations do listResult^.appendString(recycler,op^.getDefaultParameterString);
+    result:=literalRecycler.newListLiteral();
+    for op in allImageOperations do listResult^.appendString(op^.getDefaultParameterString);
   end;
 
 FUNCTION expandImageGeneration_imp intFuncSignature;
@@ -516,7 +516,7 @@ FUNCTION expandImageGeneration_imp intFuncSignature;
       meta:=getAlgorithmOrNil(str0^.value,true);
       if meta=nil
       then exit(str0^.rereferenced)
-      else exit(recycler^.newStringLiteral(meta^.prototype^.toFullString()));
+      else exit(literalRecycler.newStringLiteral(meta^.prototype^.toFullString()));
     end;
   end;
 
@@ -534,7 +534,7 @@ FUNCTION getThumbnail_imp intFuncSignature;
       end;
       img.create(str0^.value);
       img.resize(imageDimensions(int1^.intValue,int2^.intValue),res_fit);
-      result:=recycler^.newStringLiteral(img.getJpgFileData(80));
+      result:=literalRecycler.newStringLiteral(img.getJpgFileData(80));
       img.destroy;
     end;
   end;
@@ -577,7 +577,7 @@ FUNCTION randomIfs_impl intFuncSignature;
   begin
     ifs.create;
     ifs.resetParameters(1);
-    result:=recycler^.newStringLiteral(ifs.getAlgorithmName+ifs.toString(tsm_forSerialization));
+    result:=literalRecycler.newStringLiteral(ifs.getAlgorithmName+ifs.toString(tsm_forSerialization));
     ifs.destroy;
   end;
 
