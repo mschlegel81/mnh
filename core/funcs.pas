@@ -290,12 +290,12 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
     VAR k:longint;
         x:P_literal;
     begin
-      result:=recycler^.newListLiteral(params^.size);
+      result:=literalRecycler.newListLiteral(params^.size);
       for k:=0 to params^.size-1 do begin
         x:=params^.value[k];
         if x^.literalType in C_listTypes
-        then result^.append(recycler,P_listLiteral(x)^.value[index],true)
-        else result^.append(recycler,x                             ,true);
+        then result^.append(P_listLiteral(x)^.value[index],true)
+        else result^.append(x                             ,true);
       end;
     end;
 
@@ -303,10 +303,10 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
   FUNCTION getSetSubParameters(CONST index:longint):P_listLiteral; inline;
     VAR k:longint;
     begin
-      result:=recycler^.newListLiteral(params^.size);
+      result:=literalRecycler.newListLiteral(params^.size);
       for k:=0 to params^.size-1 do
-      if k=firstSet then result^.append(recycler,setIter  [index],true)
-                    else result^.append(recycler,params^.value[k],true);
+      if k=firstSet then result^.append(setIter  [index],true)
+                    else result^.append(params^.value[k],true);
     end;
 
   VAR i:longint;
@@ -327,11 +327,11 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
       for i:=0 to consensusLength-1 do if allOkay then begin
         p:=getListSubParameters(i);
         fp:=f(p,tokenLocation,context,recycler);
-        recycler^.disposeLiteral(p);
+        literalRecycler.disposeLiteral(p);
         if fp=nil then allOkay:=false
         else if not(context^.continueEvaluation) then begin
           allOkay:=false;
-          recycler^.disposeLiteral(fp);
+          literalRecycler.disposeLiteral(fp);
         end else begin
           resultElements[k]:=fp;
           inc(k);
@@ -339,34 +339,34 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
       end;
       if allOkay then begin
         setLength(resultElements,k);
-        result:=recycler^.newListLiteral(0);
-        P_listLiteral(result)^.setContents(resultElements,recycler);
+        result:=literalRecycler.newListLiteral(0);
+        P_listLiteral(result)^.setContents(resultElements);
       end else begin
         result:=nil;
-        recycler^.disposeLiteral(resultElements);
+        literalRecycler.disposeLiteral(resultElements);
       end;
     end else if firstSet>=0 then begin
       setIter:=P_setLiteral(params^.value[firstSet])^.tempIteratableList;
-      result:=recycler^.newSetLiteral(length(setIter));
+      result:=literalRecycler.newSetLiteral(length(setIter));
       for i:=0 to length(setIter)-1 do if allOkay then begin
         p:=getSetSubParameters(i);
         fp:=f(p,tokenLocation,context,recycler);
-        recycler^.disposeLiteral(p);
+        literalRecycler.disposeLiteral(p);
         if fp=nil then allOkay:=false
         else if not(context^.continueEvaluation) then begin
           allOkay:=false;
-          recycler^.disposeLiteral(fp);
+          literalRecycler.disposeLiteral(fp);
         end else begin
           if fp^.literalType in (C_collectionTypes)
           then begin
-            P_setLiteral(result)^.appendAll(recycler,P_collectionLiteral(fp));
-            recycler^.disposeLiteral(fp);
-          end else P_setLiteral(result)^.append(recycler,fp,false);
+            P_setLiteral(result)^.appendAll(P_collectionLiteral(fp));
+            literalRecycler.disposeLiteral(fp);
+          end else P_setLiteral(result)^.append(fp,false);
           end;
         end;
     end else result:=nil;
     if not(allOkay) then begin
-      recycler^.disposeLiteral(result);
+      literalRecycler.disposeLiteral(result);
       result:=nil;
     end;
   end;
@@ -467,9 +467,9 @@ FUNCTION assert_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_boolean) then begin
       if not(bool0^.value) then begin
-        failParam:=params^.tail(recycler);
+        failParam:=params^.tail();
         result:=fail_impl(failParam,tokenLocation,context,recycler);
-        recycler^.disposeLiteral(failParam);
+        literalRecycler.disposeLiteral(failParam);
       end else result:=newVoidLiteral;
     end;
   end;
@@ -494,8 +494,8 @@ FUNCTION allBuiltinFunctions intFuncSignature;
   VAR meta:P_builtinFunctionMetaData;
   begin
     if (params<>nil) and (params^.size>0) then exit(nil);
-    result:=recycler^.newSetLiteral(length(builtinFunctionMap.uniqueMetaDatas));
-    for meta in builtinFunctionMap.uniqueMetaDatas do setResult^.appendString(recycler,meta^.qualifiedId);
+    result:=literalRecycler.newSetLiteral(length(builtinFunctionMap.uniqueMetaDatas));
+    for meta in builtinFunctionMap.uniqueMetaDatas do setResult^.appendString(meta^.qualifiedId);
   end;
 
 INITIALIZATION

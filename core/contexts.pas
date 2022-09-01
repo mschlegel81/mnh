@@ -587,7 +587,7 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(CONST recycler:P_recycler; CONST l
     {$endif}
     if not(suppressBeep) and (eco_beepOnError in globalOptions) and primaryContext.messages^.triggersBeep then beep;
     while primaryContext.valueScope<>nil do begin
-      primaryContext.valueScope^.checkVariablesOnPop(recycler, location,@primaryContext);
+      primaryContext.valueScope^.checkVariablesOnPop(location,@primaryContext);
       recycler^.scopePop(primaryContext.valueScope);
     end;
     primaryContext.finalizeTaskAndDetachFromParent(recycler);
@@ -746,7 +746,7 @@ PROCEDURE T_context.finalizeTaskAndDetachFromParent(CONST recycler:P_recycler);
       callStack.clear;
       parentCustomForm:=nil;
       {$endif}
-      if valueScope<>nil then valueScope^.checkVariablesOnPop(recycler,C_nilSearchTokenLocation,@self);
+      if valueScope<>nil then valueScope^.checkVariablesOnPop(C_nilSearchTokenLocation,@self);
       recycler^.disposeScope(valueScope);
       assert(valueScope=nil,'valueScope must be nil at this point');
       state:=fts_finished;
@@ -782,17 +782,17 @@ PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token; CONST recy
         parameterIndex:=strToIntDef(copy(first^.txt,2,length(first^.txt)-1),-1);
         if parameterIndex<0 then begin
           if first^.txt=ALL_PARAMETERS_TOKEN_TEXT then begin
-            newValue:=recycler^.newListLiteral(length(mainParameters)+1);
-            P_listLiteral(newValue)^.appendString(recycler,first^.location.package^.getPath);
-            for s in mainParameters do P_listLiteral(newValue)^.appendString(recycler,s);
+            newValue:=literalRecycler.newListLiteral(length(mainParameters)+1);
+            P_listLiteral(newValue)^.appendString(first^.location.package^.getPath);
+            for s in mainParameters do P_listLiteral(newValue)^.appendString(s);
           end else begin
             primaryContext.raiseError('Invalid parameter identifier',first^.location);
             exit;
           end;
         end else if parameterIndex=0 then
-          newValue:=recycler^.newStringLiteral(first^.location.package^.getPath)
+          newValue:=literalRecycler.newStringLiteral(first^.location.package^.getPath)
         else if parameterIndex<=length(mainParameters) then
-          newValue:=recycler^.newStringLiteral(mainParameters[parameterIndex-1])
+          newValue:=literalRecycler.newStringLiteral(mainParameters[parameterIndex-1])
         else
           newValue:=newVoidLiteral;
         first^.data:=newValue;

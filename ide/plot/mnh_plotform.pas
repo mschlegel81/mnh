@@ -851,7 +851,7 @@ FUNCTION plotImageSize_imp intFuncSignature;
     new(closedRequest,createRetrieveRequest);
     context^.messages^.postCustomMessage(closedRequest);
     closedRequest^.getResponseWaiting(context^.messages,plotWidth,plotHeight);
-    result:=recycler^.newListLiteral()^.appendInt(recycler,plotWidth)^.appendInt(recycler,plotHeight);
+    result:=literalRecycler.newListLiteral()^.appendInt(plotWidth)^.appendInt(plotHeight);
     disposeMessage(closedRequest);
   end else result:=nil; end;
 

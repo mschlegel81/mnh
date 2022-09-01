@@ -17,7 +17,7 @@ TYPE
       accessByIndex:boolean;
       xValues,
       yValues:T_arrayOfDouble;
-      FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
+      FUNCTION getParameterNames():P_listLiteral; virtual;
       FUNCTION getSingleInterpolatedValue(CONST floatIdx:double):double; virtual; abstract;
       FUNCTION getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression; virtual;
       FUNCTION findIndexForX(CONST x:double):longint;
@@ -32,17 +32,17 @@ TYPE
       FUNCTION arity:T_arityInfo; virtual;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
       FUNCTION toString(CONST lengthLimit: longint=maxLongint): ansistring; virtual;
-      PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
+      PROCEDURE cleanup(); virtual;
 
       FUNCTION referencesAnyUserPackage: boolean; virtual;
-      FUNCTION writeToStream(CONST literalRecycler: P_literalRecycler; CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean; virtual;
+      FUNCTION writeToStream(CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean; virtual;
   end;
 
 IMPLEMENTATION
 USES funcs,tokens,sysutils,math,mnh_messages;
-FUNCTION T_interpolator.getParameterNames(CONST literalRecycler: P_literalRecycler): P_listLiteral;
+FUNCTION T_interpolator.getParameterNames(): P_listLiteral;
   begin
-    result:=P_listLiteral(literalRecycler^.newListLiteral^.appendString(literalRecycler,'i'));
+    result:=P_listLiteral(literalRecycler.newListLiteral^.appendString('i'));
   end;
 
 FUNCTION T_interpolator.getEquivalentInlineExpression(CONST context: P_context; CONST recycler: P_recycler): P_inlineExpression;
@@ -120,9 +120,9 @@ FUNCTION T_interpolator.evaluateToDouble (CONST location:T_tokenLocation; CONST 
     if a^.literalType in [lt_bigint,lt_smallint,lt_real]
     then result:=getSingleInterpolatedValue(P_numericLiteral(a)^.floatValue)
     else begin
-      param:=P_recycler(recycler)^.newListLiteral(a,b);
+      param:=literalRecycler.newListLiteral(a,b);
       P_context(context)^.raiseCannotApplyError('interpolator '+getId,param,location);
-      P_recycler(recycler)^.disposeLiteral(param);
+      literalRecycler.disposeLiteral(param);
       result:=Nan;
     end;
   end;
@@ -140,12 +140,12 @@ FUNCTION T_interpolator.evaluateToLiteral(CONST location: T_tokenLocation; CONST
     result.literal:=nil;
     case a^.literalType of
       lt_bigint,lt_smallint,lt_real:
-        result.literal:=P_literalRecycler(recycler)^.newRealLiteral(getSingleInterpolatedValue(P_numericLiteral(a)^.floatValue));
+        result.literal:=literalRecycler.newRealLiteral(getSingleInterpolatedValue(P_numericLiteral(a)^.floatValue));
       lt_emptyList,lt_intList,lt_numList,lt_realList:
         begin
-          result.literal:=P_literalRecycler(recycler)^.newListLiteral(P_listLiteral(a)^.size);
+          result.literal:=literalRecycler.newListLiteral(P_listLiteral(a)^.size);
           for aSub in P_listLiteral(a)^.tempIteratableList do
-            P_listLiteral(result.literal)^.appendReal(P_literalRecycler(recycler),getSingleInterpolatedValue(P_numericLiteral(aSub)^.floatValue));
+            P_listLiteral(result.literal)^.appendReal(getSingleInterpolatedValue(P_numericLiteral(aSub)^.floatValue));
         end;
       else result.reasonForStop:=rr_fail;
     end;
@@ -179,9 +179,9 @@ FUNCTION T_interpolator.toString(CONST lengthLimit: longint): ansistring;
     result+=underlyingValues^.toString(lengthLimit-length(result)-1)+')';
   end;
 
-PROCEDURE T_interpolator.cleanup(CONST literalRecycler: P_literalRecycler);
+PROCEDURE T_interpolator.cleanup();
   begin
-    if underlyingValues<>nil then literalRecycler^.disposeLiteral(underlyingValues);
+    if underlyingValues<>nil then literalRecycler.disposeLiteral(underlyingValues);
     setLength(xValues,0);
     setLength(yValues,0);
     underlyingValues:=nil;
@@ -192,7 +192,7 @@ FUNCTION T_interpolator.referencesAnyUserPackage: boolean;
     result:=false;
   end;
 
-FUNCTION T_interpolator.writeToStream(CONST literalRecycler: P_literalRecycler; CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+FUNCTION T_interpolator.writeToStream(CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
   begin
     stream^.logWrongTypeError;
     if adapters<>nil
@@ -208,7 +208,7 @@ TYPE
       FUNCTION getSingleInterpolatedValue(CONST floatIdx:double):double; virtual;
     public
       CONSTRUCTOR create(CONST values:P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context);
-      PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
+      PROCEDURE cleanup(); virtual;
   end;
 
 FUNCTION T_linearInterpolator.getSingleInterpolatedValue(CONST floatIdx: double): double;
@@ -242,7 +242,7 @@ CONSTRUCTOR T_linearInterpolator.create(CONST values: P_listLiteral; CONST locat
     assert(values^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]);
   end;
 
-PROCEDURE T_linearInterpolator.cleanup(CONST literalRecycler: P_literalRecycler);
+PROCEDURE T_linearInterpolator.cleanup();
   begin
     inherited;
   end;
@@ -253,7 +253,7 @@ FUNCTION linearInterpolator_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
       new(P_linearInterpolator(result),create(list0,tokenLocation,context));
-      if not(context^.continueEvaluation) then recycler^.disposeLiteral(result);
+      if not(context^.continueEvaluation) then literalRecycler.disposeLiteral(result);
     end;
   end;
 
@@ -263,10 +263,10 @@ TYPE
     protected
       M:T_arrayOfDouble;
       FUNCTION getSingleInterpolatedValue(CONST floatIdx:double):double; virtual;
-      FUNCTION getFourierCoefficients(CONST maxWaveNumber:longint; CONST literalRecycler: P_literalRecycler):P_listLiteral;
+      FUNCTION getFourierCoefficients(CONST maxWaveNumber:longint):P_listLiteral;
     public
       CONSTRUCTOR create(CONST values:P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context);
-      PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
+      PROCEDURE cleanup; virtual;
   end;
 
 FUNCTION T_cSplineInterpolator.getSingleInterpolatedValue(CONST floatIdx: double): double;
@@ -307,7 +307,7 @@ FUNCTION T_cSplineInterpolator.getSingleInterpolatedValue(CONST floatIdx: double
     end;
   end;
 
-FUNCTION T_cSplineInterpolator.getFourierCoefficients(CONST maxWaveNumber:longint; CONST literalRecycler: P_literalRecycler):P_listLiteral;
+FUNCTION T_cSplineInterpolator.getFourierCoefficients(CONST maxWaveNumber:longint):P_listLiteral;
   TYPE T_normalizedCoeff=record a0,a1,a2,a3:double; end;
        T_fourierIntegralBasis=record s0,s1,s2,s3,
                                      c0,c1,c2,c3:double; end;
@@ -381,7 +381,7 @@ FUNCTION T_cSplineInterpolator.getFourierCoefficients(CONST maxWaveNumber:longin
       startBasis,endBasis:T_fourierIntegralBasis;
   begin
     if accessByIndex   then exit(nil);
-    if maxWaveNumber<0 then exit(literalRecycler^.newListLiteral(0));
+    if maxWaveNumber<0 then exit(literalRecycler.newListLiteral(0));
 
     //find first and last relevant section
     i0:=0;                 while (i0<length(xValues)-2) and (xValues[i0+1]<0 ) do inc(i0);
@@ -398,11 +398,11 @@ FUNCTION T_cSplineInterpolator.getFourierCoefficients(CONST maxWaveNumber:longin
     setLength(normalizedCoeff,i1-i0+1);
     for j:=0 to i1-i0 do normalizedCoeff[j]:=calcNormalizedCoeff(i0+j);
 
-    result:=literalRecycler^.newListLiteral;
+    result:=literalRecycler.newListLiteral;
     //Prepare 0th integral
     for j:=0 to length(normalizedCoeff)-1 do cosinusTotal+=sectionIntegral(normalizedCoeff[j],evaluationPoints[j],evaluationPoints[j+1]);
 
-    result^.append(literalRecycler,literalRecycler^.newListLiteral^.appendReal(literalRecycler,cosinusTotal/(2*pi))^.appendReal(literalRecycler,sinusTotal),false);
+    result^.append(literalRecycler.newListLiteral^.appendReal(cosinusTotal/(2*pi))^.appendReal(sinusTotal),false);
     //prepare remaining integrals
     for k:=1 to maxWaveNumber do begin
       ik[1]:=1/k; ik[2]:=ik[1]*ik[1]; ik[3]:=ik[1]*ik[2];
@@ -415,7 +415,7 @@ FUNCTION T_cSplineInterpolator.getFourierCoefficients(CONST maxWaveNumber:longin
         endBasis  :=calcFourierIntegralBasis(evaluationPoints[j+1],k);
         sectionIntegral(normalizedCoeff[j],startBasis,endBasis,sinusTotal,cosinusTotal);
       end;
-      result^.append(literalRecycler,literalRecycler^.newListLiteral^.appendReal(literalRecycler,cosinusTotal/pi)^.appendReal(literalRecycler,sinusTotal/pi),false);
+      result^.append(literalRecycler.newListLiteral^.appendReal(cosinusTotal/pi)^.appendReal(sinusTotal/pi),false);
     end;
 
     //cleanup
@@ -497,7 +497,7 @@ CONSTRUCTOR T_cSplineInterpolator.create(CONST values: P_listLiteral; CONST loca
     for i:=0 to n do M[i]*=1/6;
   end;
 
-PROCEDURE T_cSplineInterpolator.cleanup(CONST literalRecycler: P_literalRecycler);
+PROCEDURE T_cSplineInterpolator.cleanup;
   begin
     setLength(M,0);
     inherited;
@@ -508,7 +508,7 @@ FUNCTION cSplineInterpolator_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
       new(P_cSplineInterpolator(result),create(list0,tokenLocation,context));
-      if not(context^.continueEvaluation) then recycler^.disposeLiteral(result);
+      if not(context^.continueEvaluation) then literalRecycler.disposeLiteral(result);
     end;
   end;
 
@@ -573,7 +573,7 @@ FUNCTION bSplineApproximator_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
       new(P_bSplineApproximator(result),create(list0,tokenLocation,context));
-      if not(context^.continueEvaluation) then recycler^.disposeLiteral(result);
+      if not(context^.continueEvaluation) then literalRecycler.disposeLiteral(result);
     end;
   end;
 
@@ -611,7 +611,7 @@ FUNCTION fourierSeries_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
       new(P_fourierSeries(result),create(list0,tokenLocation,context));
-      if not(context^.continueEvaluation) then recycler^.disposeLiteral(result);
+      if not(context^.continueEvaluation) then literalRecycler.disposeLiteral(result);
     end;
   end;
 
@@ -632,7 +632,7 @@ FUNCTION calcFourierCoeff_im intFuncSignature;
       setLength(iter,0);
       h:=2*pi/length(x);
       //calculate coefficients
-      result:=recycler^.newListLiteral(maxWaveNumber+1);
+      result:=literalRecycler.newListLiteral(maxWaveNumber+1);
       for k:=0 to maxWaveNumber do begin
         sinSum:=0;
         cosSum:=0;
@@ -640,7 +640,7 @@ FUNCTION calcFourierCoeff_im intFuncSignature;
           sinSum+=x[i]*sin(h*i*k);
           cosSum+=x[i]*cos(h*i*k);
         end;
-        result^.append(recycler,recycler^.newListLiteral^.appendReal(recycler,2*cosSum/length(x))^.appendReal(recycler,2*sinSum/length(x)),false);
+        result^.append(literalRecycler.newListLiteral^.appendReal(2*cosSum/length(x))^.appendReal(2*sinSum/length(x)),false);
       end;
       setLength(x,0);
     end;
@@ -658,8 +658,8 @@ FUNCTION calcFourierCoeff_im intFuncSignature;
       else begin
         if maxWaveNumber=-1 then exit(nil);
         spline.create(list0,tokenLocation,context);
-        result:=spline.getFourierCoefficients(maxWaveNumber,recycler);
-        spline.cleanup(recycler);
+        result:=spline.getFourierCoefficients(maxWaveNumber);
+        spline.cleanup();
         spline.destroy;
       end;
     end;

@@ -168,7 +168,7 @@ TYPE
       FUNCTION renderToString(CONST width,height:longint):ansistring;
 
       PROCEDURE copyFrom(VAR p:T_plot);
-      FUNCTION getRowStatements(CONST prevOptions:T_scalingOptions; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
+      FUNCTION getRowStatements(CONST prevOptions:T_scalingOptions; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
       FUNCTION getRowStatementCount:longint;
 
       PROCEDURE doneImage(CONST cacheMode:T_frameCacheMode);
@@ -1351,7 +1351,7 @@ PROCEDURE T_plot.copyFrom(VAR p: T_plot);
     end;
   end;
 
-FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
+FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
   VAR opt:string;
       i,k0,k1:longint;
   begin
@@ -1364,13 +1364,13 @@ FUNCTION T_plot.getRowStatements(CONST prevOptions:T_scalingOptions; CONST liter
       if opt='' then setLength(result,0) else result:=opt;
       if length(row)<4 then begin
         for i:=0 to length(row)-1 do if not(haltExport^) then begin
-          append(result,row[i]^.toStatementForExport(i=0,literalRecycler,globalRowData));
+          append(result,row[i]^.toStatementForExport(i=0,globalRowData));
           progress.position:=progress.position+1;
         end;
       end else begin
-        append(result,row[0]^.toStatementForExport(true,literalRecycler,globalRowData));
+        append(result,row[0]^.toStatementForExport(true,globalRowData));
         k0:=globalRowData.size;
-        for i:=1 to length(row)-1 do row[i]^.toStatementForExport(false,literalRecycler,globalRowData);
+        for i:=1 to length(row)-1 do row[i]^.toStatementForExport(false,globalRowData);
         k1:=globalRowData.size-1;
         append(result,'map(ROW[['+intToStr(k0)+'..'+intToStr(k1)+']],{addPlot@$0});');
       end;
@@ -1514,13 +1514,11 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
       dummyLocation:T_tokenLocation=(package:nil;line:0;column:0);
       commands:T_arrayOfString;
       DataString:string;
-      recycler:P_recycler;
 
   begin
     enterCriticalSection(adapterCs);
-    recycler:=newRecycler;
     try
-      globalRowData:=recycler^.newListLiteral();
+      globalRowData:=literalRecycler.newListLiteral();
       setLength(result,2);
       result[0]:='#!'+settings.fullFlavourLocation+' '+FLAG_GUI;
       result[1]:='plain script;';
@@ -1534,23 +1532,22 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
           progress.position:=0;
           Application.ProcessMessages;
           for i:=0 to length(animation.frame)-1 do begin
-            myGenerics.append(commands,animation.frame[i]^.getRowStatements(prevOptions,recycler,globalRowData^,haltExport,Application,progress));
+            myGenerics.append(commands,animation.frame[i]^.getRowStatements(prevOptions,globalRowData^,haltExport,Application,progress));
             prevOptions:=animation.frame[i]^.scalingOptions;
             myGenerics.append(commands,'addAnimationFrame;');
           end;
         end else begin
           progress.max:=animation.frame[frameIndexOrNegativeIfAll]^.getRowStatementCount*2;
           Application.ProcessMessages;
-          myGenerics.append(commands,animation.frame[frameIndexOrNegativeIfAll]^.getRowStatements(prevOptions,recycler,globalRowData^,haltExport,Application,progress));
+          myGenerics.append(commands,animation.frame[frameIndexOrNegativeIfAll]^.getRowStatements(prevOptions,globalRowData^,haltExport,Application,progress));
         end;
       end else begin
         progress.max:=currentPlot.getRowStatementCount*2;
         Application.ProcessMessages;
-        myGenerics.append(commands,currentPlot.getRowStatements(prevOptions,recycler,globalRowData^,haltExport,Application,progress));
+        myGenerics.append(commands,currentPlot.getRowStatements(prevOptions,globalRowData^,haltExport,Application,progress));
       end;
       DataString:=base92Encode(
-                     serialize(recycler,
-                               globalRowData,
+                     serialize(globalRowData,
                                dummyLocation,
                                nil));
       myGenerics.append(result,'ROW:=//!~'+copy(DataString,1,151));
@@ -1574,9 +1571,8 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
       myGenerics.append(result,'display;');
       setLength(commands,0);
     finally
-      recycler^.disposeLiteral(globalRowData);
+      literalRecycler.disposeLiteral(globalRowData);
       leaveCriticalSection(adapterCs);
-      freeRecycler(recycler)
     end;
   end;
 
