@@ -69,8 +69,8 @@ FUNCTION wrapTextInHttp_impl intFuncSignature;
       invalidHeader:boolean=false;
   begin
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
-      if  params^.size=1                                    then exit(recycler^.newStringLiteral(wrapTextInHttp(str0^.value,serverInfo)));
-      if (params^.size=2) and (arg1^.literalType=lt_string) then exit(recycler^.newStringLiteral(wrapTextInHttp(str0^.value,serverInfo,str1^.value)));
+      if  params^.size=1                                    then exit(literalRecycler.newStringLiteral(wrapTextInHttp(str0^.value,serverInfo)));
+      if (params^.size=2) and (arg1^.literalType=lt_string) then exit(literalRecycler.newStringLiteral(wrapTextInHttp(str0^.value,serverInfo,str1^.value)));
       if (params^.size=3) and (arg1^.literalType=lt_smallint) and (arg2^.literalType in [lt_map,lt_emptyMap]) then begin
         iter:=map2^.entryList;
         setLength(header,length(iter));
@@ -84,7 +84,7 @@ FUNCTION wrapTextInHttp_impl intFuncSignature;
         if invalidHeader then begin
           context^.raiseError('Invalid header map; all keys must be strings',tokenLocation);
           exit(nil);
-        end else exit(recycler^.newStringLiteral(wrapTextInHttp(str0^.value,P_smallIntLiteral(arg1)^.value,header)));
+        end else exit(literalRecycler.newStringLiteral(wrapTextInHttp(str0^.value,P_smallIntLiteral(arg1)^.value,header)));
       end;
       result:=nil;
     end else result:=nil;
@@ -93,9 +93,9 @@ FUNCTION wrapTextInHttp_impl intFuncSignature;
 FUNCTION httpError_impl intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_smallint)
-    then result:=recycler^.newStringLiteral('HTTP/1.0 '+arg0^.toString+C_carriageReturnChar+C_lineBreakChar)
+    then result:=literalRecycler.newStringLiteral('HTTP/1.0 '+arg0^.toString+C_carriageReturnChar+C_lineBreakChar)
     else if (params=nil) or (params^.size=0)
-    then result:=recycler^.newStringLiteral('HTTP/1.0 404'+C_carriageReturnChar+C_lineBreakChar)
+    then result:=literalRecycler.newStringLiteral('HTTP/1.0 404'+C_carriageReturnChar+C_lineBreakChar)
     else result:=nil;
   end;
 
@@ -122,11 +122,13 @@ FUNCTION startServer_impl intFuncSignature;
         if microserver.httpListener.getLastListenerSocketError=0
         then microserver.start
         else begin
-          context^.raiseError('Error in socket creation ('+microserver.ip+')',tokenLocation);
+          context^.raiseError('Error in socket creation ('+microserver.ip+') - last socket error: '+intToStr(microserver.httpListener.getLastListenerSocketError)
+
+          ,tokenLocation);
           FreeAndNil(microserver);
           exit(nil);
         end;
-        result:=recycler^.newStringLiteral(microserver.ip);
+        result:=literalRecycler.newStringLiteral(microserver.ip);
       end else context^.raiseError('startServer is not allowed in this context because delegation is disabled.',tokenLocation);
     end;
   end;
@@ -153,13 +155,13 @@ PROCEDURE T_microserverRequest.execute;
     begin
       headerMap:=newMapLiteral(8);
       requestMap:=newMapLiteral(8)
-        ^.put(recycler,'request',
-          newMapLiteral(3)^.put(recycler,'method',C_httpRequestMethodName[connection.getMethod])
-                          ^.put(recycler,'path',connection.getRequest)
-                          ^.put(recycler,'protocol',connection.getProtocol),false)
-        ^.put(recycler,'header',headerMap,false)
-        ^.put(recycler,'body',connection.getBody);
-      for i:=0 to length(connection.getHeader)-1 do headerMap^.put(recycler,connection.getHeader[i].key,connection.getHeader[i].value);
+        ^.put('request',
+          newMapLiteral(3)^.put('method',C_httpRequestMethodName[connection.getMethod])
+                          ^.put('path',connection.getRequest)
+                          ^.put('protocol',connection.getProtocol),false)
+        ^.put('header',headerMap,false)
+        ^.put('body',connection.getBody);
+      for i:=0 to length(connection.getHeader)-1 do headerMap^.put(connection.getHeader[i].key,connection.getHeader[i].value);
     end;
 
   VAR response:P_literal;
@@ -169,12 +171,12 @@ PROCEDURE T_microserverRequest.execute;
     executionTime:=context^.wallclockTime;
     response:=servingExpression^.evaluateToLiteral(feedbackLocation,context,recycler,requestMap,nil).literal;
     executionTime:=context^.wallclockTime-executionTime;
-    recycler^.disposeLiteral(requestMap);
+    literalRecycler.disposeLiteral(requestMap);
     if (response<>nil) then begin
       if response^.literalType=lt_string
       then connection.sendStringAndClose(P_stringLiteral(response)^.value)
       else connection.sendStringAndClose(response^.toString);
-      recycler^.disposeLiteral(response);
+      literalRecycler.disposeLiteral(response);
     end else begin
       context^.messages^.postTextMessage(mt_el2_warning,feedbackLocation,'Microserver response is nil!');
       connection.sendStringAndClose(HTTP_404_RESPONSE);
@@ -188,7 +190,7 @@ PROCEDURE T_microserverRequest.execute;
 
 DESTRUCTOR T_microserverRequest.destroy;
   begin
-    recycler^.disposeLiteral(servingExpression);
+    literalRecycler.disposeLiteral(servingExpression);
     freeRecycler(recycler);
     inherited destroy;
   end;
@@ -220,7 +222,7 @@ DESTRUCTOR T_microserver.destroy;
   VAR recycler:P_recycler;
   begin
     recycler:=newRecycler;
-    recycler^.disposeLiteral(servingExpression);
+    literalRecycler.disposeLiteral(servingExpression);
     context^.finalizeTaskAndDetachFromParent(recycler);
     contextPool.disposeContext(context);
     httpListener.destroy;
@@ -314,10 +316,10 @@ FUNCTION extractParameters_impl intFuncSignature;
       for i:=0 to length(keyAndValue)-1 do begin
         keyAndValue[i]:=percentDecode(ansiReplaceStr(keyAndValue[i],'+',' '));
       end;
-      value:=recycler^.newStringLiteral(keyAndValue[1]);
-      castValue:=value^.softCast(recycler);
-      recycler^.disposeLiteral(value);
-      parameters^.put(recycler,keyAndValue[0],castValue,false);
+      value:=literalRecycler.newStringLiteral(keyAndValue[1]);
+      castValue:=value^.softCast();
+      literalRecycler.disposeLiteral(value);
+      parameters^.put(keyAndValue[0],castValue,false);
     end;
 
   VAR parts:T_arrayOfString;
@@ -343,8 +345,8 @@ FUNCTION extractRawParameters_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       parts:=split(str0^.value,'?');
       if length(parts)>1
-      then exit(recycler^.newStringLiteral(parts[1]))
-      else exit(recycler^.newStringLiteral(''));
+      then exit(literalRecycler.newStringLiteral(parts[1]))
+      else exit(literalRecycler.newStringLiteral(''));
     end;
   end;
 
@@ -355,8 +357,8 @@ FUNCTION extractPath_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       parts:=split(str0^.value,'?');
       if length(parts)>0
-      then exit(recycler^.newStringLiteral(parts[0]))
-      else exit(recycler^.newStringLiteral(''));
+      then exit(literalRecycler.newStringLiteral(parts[0]))
+      else exit(literalRecycler.newStringLiteral(''));
     end;
   end;
 
@@ -392,7 +394,7 @@ FUNCTION encodeRequest_impl intFuncSignature;
         end;
       end;
       if parameters<>'' then parameters:='?'+parameters;
-      result:=recycler^.newStringLiteral(address+path+parameters);
+      result:=literalRecycler.newStringLiteral(address+path+parameters);
     end;
   end;
 
@@ -432,14 +434,14 @@ FUNCTION httpGetPutPost(CONST method:T_httpMethod; CONST params:P_listLiteral; C
     begin
       headerMap:=newMapLiteral(0);
       result:=newMapLiteral(0)
-      ^.put(recycler,'body',resultText)
-      ^.put(recycler,'code',client.ResponseStatusCode)
-      ^.put(recycler,'status',client.ResponseStatusText)
-      ^.put(recycler,'header',headerMap,false);
+      ^.put('body',resultText)
+      ^.put('code',client.ResponseStatusCode)
+      ^.put('status',client.ResponseStatusText)
+      ^.put('header',headerMap,false);
       for i:=0 to client.ResponseHeaders.count-1 do begin
         s:=client.ResponseHeaders[i];
         key:=fetch(s,':');
-        headerMap^.put(recycler,key,trim(s));
+        headerMap^.put(key,trim(s));
       end;
     end;
 

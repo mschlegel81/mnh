@@ -128,7 +128,7 @@ PROCEDURE sendMessage(senderServerId,receiverServerId:string; CONST statusOk:boo
     sendStatusOk:=statusOk and ((adapters=nil) or (adapters^.continueEvaluation)) and (payload<>nil);
     streamWrapper.writeBoolean(sendStatusOk);
     try
-      if sendStatusOk then writeLiteralToStream(recycler,payload,@streamWrapper,location,adapters);
+      if sendStatusOk then writeLiteralToStream(payload,@streamWrapper,location,adapters);
     except
       serializationOk:=false;
     end;
@@ -169,7 +169,7 @@ FUNCTION readMessage(VAR receiver:TSimpleIPCServer;
     messageHash:=streamWrapper.readDWord;
     statusOk:=streamWrapper.readBoolean;
     typeMap:=P_abstractPackage(location.package)^.getTypeMap;
-    if statusOk then payload:=newLiteralFromStream(recycler,@streamWrapper,location,adapters,typeMap)
+    if statusOk then payload:=newLiteralFromStream(@streamWrapper,location,adapters,typeMap)
                 else payload:=nil;
     typeMap.destroy;
     streamWrapper.destroy;
@@ -228,18 +228,18 @@ PROCEDURE T_myIpcServer.execute;
           response.payload :=nil;
           response.statusOk:=false;
         end;
-        if request.payload<>nil then recycler^.disposeLiteral(request.payload);
+        if request.payload<>nil then literalRecycler.disposeLiteral(request.payload);
         //------------------------------------------------:execute
         //respond:------------------------------------------------
         try
           sendMessage(response.senderId,request.senderId,response.statusOk,response.payload,feedbackLocation,nil,response.messageHash,recycler);
-          if response.payload<>nil then recycler^.disposeLiteral(response.payload);
+          if response.payload<>nil then literalRecycler.disposeLiteral(response.payload);
         finally
         end;
         //------------------------------------------------:respond
         result:=true;
       end else begin
-        if request.payload<>nil then recycler^.disposeLiteral(request.payload);
+        if request.payload<>nil then literalRecycler.disposeLiteral(request.payload);
         result:=false;
       end;
     end;
@@ -306,7 +306,7 @@ DESTRUCTOR T_myIpcServer.destroy;
         servingContextOrNil^.finalizeTaskAndDetachFromParent(recycler);
         contextPool.disposeContext(servingContextOrNil);
       end;
-      if servingExpressionOrNil<>nil then recycler^.disposeLiteral(servingExpressionOrNil);
+      if servingExpressionOrNil<>nil then literalRecycler.disposeLiteral(servingExpressionOrNil);
       enterCriticalSection(localServerCs);
       localServers.dropKey(serverId);
       leaveCriticalSection(localServerCs);

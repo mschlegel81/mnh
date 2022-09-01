@@ -37,7 +37,7 @@ TYPE
     public
       CONSTRUCTOR createAnonymous(CONST loc:T_tokenLocation);
       CONSTRUCTOR create(CONST parameterId:T_idString; CONST loc:T_tokenLocation);
-      PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler);
+      PROCEDURE cleanup();
       DESTRUCTOR destroy;
       PROPERTY getCustomTypeCheck:P_typedef read customTypeCheck;
       PROPERTY getWhitelist:T_literalTypeSet read typeWhitelist;
@@ -45,8 +45,8 @@ TYPE
       FUNCTION getBuiltinCheckParameter:longint;
       FUNCTION isTypeCheckOnly:boolean;
 
-      FUNCTION loadFromStream(CONST literalRecycler:P_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
-      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+      FUNCTION loadFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
+      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
   end;
 
   T_patternElementLocation=object
@@ -67,7 +67,7 @@ TYPE
       CONSTRUCTOR create;
       CONSTRUCTOR clone(original:T_pattern);
       CONSTRUCTOR combineForInline(CONST LHSPattern,RHSPattern:T_pattern; CONST fallbackLocation:T_tokenLocation);
-      PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler);
+      PROCEDURE cleanup();
       DESTRUCTOR destroy;
       FUNCTION appendFreeId(CONST parId:T_idString; CONST location:T_tokenLocation):longint;
       FUNCTION indexOfId(CONST id:T_idString):longint;
@@ -83,7 +83,7 @@ TYPE
       FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
       FUNCTION isEquivalent(CONST p:T_pattern):boolean;
       FUNCTION hides(CONST p:T_pattern):boolean;
-      FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral;
+      FUNCTION getParameterNames():P_listLiteral;
       FUNCTION getNamedParameters:T_patternElementLocations;
       FUNCTION matchesNilPattern:boolean;
       FUNCTION matches(VAR par:T_listLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean;
@@ -100,8 +100,8 @@ TYPE
       FUNCTION getFirst:T_patternElement;
       FUNCTION usesStrictCustomTyping:boolean;
 
-      FUNCTION loadFromStream(CONST literalRecycler:P_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
-      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+      FUNCTION loadFromStream(CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
+      FUNCTION writeToStream(CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
   end;
 
 {$ifdef fullVersion}
@@ -333,9 +333,9 @@ FUNCTION T_patternElement.hides(CONST e: T_patternElement): boolean;
     end;
   end;
 
-PROCEDURE T_patternElement.cleanup(CONST literalRecycler:P_literalRecycler);
+PROCEDURE T_patternElement.cleanup();
   begin
-    if restrictionValue<>nil then literalRecycler^.disposeLiteral(restrictionValue);
+    if restrictionValue<>nil then literalRecycler.disposeLiteral(restrictionValue);
   end;
 
 DESTRUCTOR T_patternElement.destroy;
@@ -362,7 +362,7 @@ FUNCTION T_patternElement.isTypeCheckOnly: boolean;
     result:=restrictionType in [tt_typeCheck,tt_customTypeCheck,tt_literal];
   end;
 
-FUNCTION T_patternElement.loadFromStream(CONST literalRecycler:P_literalRecycler; CONST stream: P_inputStreamWrapper; CONST location: T_tokenLocation; CONST adapters: P_messages; VAR typeMap: T_typeMap): boolean;
+FUNCTION T_patternElement.loadFromStream(CONST stream: P_inputStreamWrapper; CONST location: T_tokenLocation; CONST adapters: P_messages; VAR typeMap: T_typeMap): boolean;
   VAR customTypeName:string;
   begin
     elementLocation:=location;
@@ -372,7 +372,7 @@ FUNCTION T_patternElement.loadFromStream(CONST literalRecycler:P_literalRecycler
     if restrictionType in [tt_comparatorEq..tt_comparatorListEq,tt_operatorIn] then begin
       restrictionIdx:=stream^.readInteger;
       if restrictionIdx<0
-      then restrictionValue:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap)
+      then restrictionValue:=newLiteralFromStream(stream,location,adapters,typeMap)
       else restrictionValue:=nil;
       if restrictionIdx>=0 then restrictionId:=stream^.readAnsiString;
     end else if (restrictionType=tt_typeCheck) and C_typeCheckInfo[builtinTypeCheck].modifiable
@@ -394,7 +394,7 @@ FUNCTION T_patternElement.loadFromStream(CONST literalRecycler:P_literalRecycler
     result:=stream^.allOkay;
   end;
 
-FUNCTION T_patternElement.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+FUNCTION T_patternElement.writeToStream(CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
   begin
     stream^.writeAnsiString(id);
     stream^.writeByte(byte(restrictionType));
@@ -402,7 +402,7 @@ FUNCTION T_patternElement.writeToStream(CONST literalRecycler:P_literalRecycler;
     if restrictionType in [tt_comparatorEq..tt_comparatorListEq,tt_operatorIn] then begin
       stream^.writeInteger(restrictionIdx);
       if restrictionIdx<0
-      then writeLiteralToStream(literalRecycler,restrictionValue,stream,locationOfSerializeCall,adapters);
+      then writeLiteralToStream(restrictionValue,stream,locationOfSerializeCall,adapters);
       if restrictionIdx>=0 then stream^.writeAnsiString(restrictionId);
     end else if (restrictionType=tt_typeCheck) and C_typeCheckInfo[builtinTypeCheck].modifiable
       then stream^.writeInteger(restrictionIdx)
@@ -441,11 +441,11 @@ CONSTRUCTOR T_pattern.combineForInline(CONST LHSPattern,RHSPattern:T_pattern; CO
     end;
   end;
 
-PROCEDURE T_pattern.cleanup(CONST literalRecycler:P_literalRecycler);
+PROCEDURE T_pattern.cleanup();
   VAR i:longint;
   begin
     for i:=0 to length(sig)-1 do begin
-      sig[i].cleanup(literalRecycler);
+      sig[i].cleanup();
       sig[i].destroy;
     end;
     setLength(sig,0);
@@ -649,11 +649,11 @@ PROCEDURE T_pattern.toParameterIds(CONST tok: P_token);
     end;
   end;
 
-FUNCTION T_pattern.getParameterNames(CONST literalRecycler:P_literalRecycler): P_listLiteral;
+FUNCTION T_pattern.getParameterNames(): P_listLiteral;
   VAR el:T_patternElement;
   begin
-    result:=literalRecycler^.newListLiteral(length(sig));
-    for el in sig do result^.appendString(literalRecycler,el.id);
+    result:=literalRecycler.newListLiteral(length(sig));
+    for el in sig do result^.appendString(el.id);
   end;
 
 FUNCTION T_pattern.getNamedParameters: T_patternElementLocations;
@@ -873,24 +873,24 @@ FUNCTION T_pattern.usesStrictCustomTyping: boolean;
     for s in sig do if (s.customTypeCheck<>nil) and not(s.customTypeCheck^.isDucktyping) then exit(true);
   end;
 
-FUNCTION T_pattern.loadFromStream(CONST literalRecycler:P_literalRecycler; CONST stream: P_inputStreamWrapper; CONST location: T_tokenLocation; CONST adapters: P_messages; VAR typeMap: T_typeMap): boolean;
+FUNCTION T_pattern.loadFromStream(CONST stream: P_inputStreamWrapper; CONST location: T_tokenLocation; CONST adapters: P_messages; VAR typeMap: T_typeMap): boolean;
   VAR i:longint;
   begin
     setLength(sig,stream^.readNaturalNumber);
     hasOptionals:=stream^.readBoolean;
     for i:=0 to length(sig)-1 do if stream^.allOkay then begin
       sig[i].createAnonymous(location);
-      sig[i].loadFromStream(literalRecycler,stream,location,adapters,typeMap);
+      sig[i].loadFromStream(stream,location,adapters,typeMap);
     end;
     result:=stream^.allOkay;
   end;
 
-FUNCTION T_pattern.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+FUNCTION T_pattern.writeToStream(CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
   VAR i:longint;
   begin
     stream^.writeNaturalNumber(length(sig));
     stream^.writeBoolean(hasOptionals);
-    for i:=0 to length(sig)-1 do sig[i].writeToStream(literalRecycler,locationOfSerializeCall,adapters,stream);
+    for i:=0 to length(sig)-1 do sig[i].writeToStream(locationOfSerializeCall,adapters,stream);
     result:=stream^.allOkay;
   end;
 
@@ -901,9 +901,9 @@ FUNCTION patternToString(CONST p:pointer):ansistring;
     else result:=P_pattern(p)^.toString+C_tokenDefaultId[tt_declare];
   end;
 
-PROCEDURE disposePattern(VAR pattern:pointer; CONST literalRecycler: P_literalRecycler);
+PROCEDURE disposePattern(VAR pattern:pointer);
   begin
-    P_pattern(pattern)^.cleanup(literalRecycler);
+    P_pattern(pattern)^.cleanup();
     dispose(P_pattern(pattern),destroy);
     pattern:=nil;
   end;

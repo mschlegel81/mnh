@@ -26,8 +26,8 @@ FUNCTION pos_imp intFuncSignature;
       else i:=int64(    pos(str0^.value,
                             str1^.value));
       i-=1;
-      if i<0 then result:=recycler^.newRealLiteral(infinity)
-             else result:=recycler^.newIntLiteral(i);
+      if i<0 then result:=infLit.rereferenced
+             else result:=literalRecycler.newIntLiteral(i);
     end else result:=genericVectorization('pos',params,tokenLocation,context,recycler);
   end;
 
@@ -47,8 +47,8 @@ FUNCTION copy_imp intFuncSignature;
   FUNCTION myCopy(CONST s:P_stringLiteral; CONST start,len:int64):P_stringLiteral; inline;
     begin
       if s^.getEncoding=se_utf8
-        then result:=recycler^.newStringLiteral(UTF8Copy(s^.value,start,len))
-        else result:=recycler^.newStringLiteral(    copy(s^.value,start,len));
+        then result:=literalRecycler.newStringLiteral(UTF8Copy(s^.value,start,len))
+        else result:=literalRecycler.newStringLiteral(    copy(s^.value,start,len));
     end;
 
   begin
@@ -64,23 +64,23 @@ FUNCTION copy_imp intFuncSignature;
     else result:=genericVectorization('copy',params,tokenLocation,context,recycler);
   end;
 
-FUNCTION bytes_internal(CONST literalRecycler:P_literalRecycler; CONST input:P_literal):P_listLiteral;
+FUNCTION bytes_internal(CONST input:P_literal):P_listLiteral;
   VAR c:char;
   begin
-    result:=literalRecycler^.newListLiteral(length(P_stringLiteral(input)^.value));
-    for c in P_stringLiteral(input)^.value do result^.appendString(literalRecycler,c);
+    result:=literalRecycler.newListLiteral(length(P_stringLiteral(input)^.value));
+    for c in P_stringLiteral(input)^.value do result^.append(charLit[c].rereferenced,false);
   end;
 
-FUNCTION chars_internal(CONST literalRecycler:P_literalRecycler; CONST input:P_literal):P_listLiteral;
+FUNCTION chars_internal( CONST input:P_literal):P_listLiteral;
   VAR charIndex,
       byteIndex:longint;
       i:longint;
       sub:string[8];
       literalValue:ansistring;
   begin
-    if not(P_stringLiteral(input)^.getEncoding=se_utf8) then exit(bytes_internal(literalRecycler,input));
+    if not(P_stringLiteral(input)^.getEncoding=se_utf8) then exit(bytes_internal(input));
     literalValue:=P_stringLiteral(input)^.value;
-    result:=literalRecycler^.newListLiteral;
+    result:=literalRecycler.newListLiteral;
     byteIndex:=1;
     for charIndex:=1 to UTF8Length(literalValue) do begin
       sub:='';
@@ -88,23 +88,20 @@ FUNCTION chars_internal(CONST literalRecycler:P_literalRecycler; CONST input:P_l
         sub+=P_stringLiteral(input)^.value[byteIndex];
         inc(byteIndex)
       end;
-      result^.appendString(literalRecycler,sub);
+      result^.appendString(sub);
     end;
   end;
 
 FUNCTION chars_imp intFuncSignature;
-  VAR i:longint;
+  VAR c:char;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
-      result:=chars_internal(recycler,arg0);
-    end else if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_stringList,lt_emptyList]) then begin
-      result:=recycler^.newListLiteral;
-      for i:=0 to list0^.size-1 do listResult^.append(recycler,chars_internal(recycler,list0^.value[i]),false);
-    end else if (params=nil) or (params^.size=0) then begin
-      result:=recycler^.newListLiteral;
-      for i:=0 to 255 do listResult^.appendString(recycler,chr(i));
-    end;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then
+      result:=chars_internal(arg0)
+    else if (params=nil) or (params^.size=0) then begin
+      result:=literalRecycler.newListLiteral;
+      for c:=#0 to #255 do listResult^.append(charLit[c].rereferenced,false); ;
+    end else result:=genericVectorization('chars',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION byteToChar_imp intFuncSignature;
@@ -138,13 +135,13 @@ FUNCTION charSet_imp intFuncSignature;
       if input^.getEncoding=se_utf8 then begin
         charSetUtf8.create;
         for sub in input^.value do charSetUtf8.put(sub);
-        result:=recycler^.newSetLiteral(charSetUtf8.size);
-        for sub in charSetUtf8.values do result^.appendString(recycler,sub);
+        result:=literalRecycler.newSetLiteral(charSetUtf8.size);
+        for sub in charSetUtf8.values do result^.appendString(sub);
         charSetUtf8.destroy;
       end else begin
         for c in input^.value do include(byteSet,c);
-        result:=recycler^.newSetLiteral(100);
-        for c in byteSet do result^.appendString(recycler,c);
+        result:=literalRecycler.newSetLiteral(100);
+        for c in byteSet do result^.appendString(c);
       end;
     end;
 
@@ -159,7 +156,7 @@ FUNCTION bytes_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=bytes_internal(recycler,arg0)
+    then result:=bytes_internal(arg0)
     else result:=genericVectorization('bytes',params,tokenLocation,context,recycler);
   end;
 
@@ -181,8 +178,8 @@ FUNCTION split_imp intFuncSignature;
   FUNCTION splitOneString(CONST s:P_stringLiteral):P_collectionLiteral;
     VAR part:string;
     begin
-      result:=recycler^.newListLiteral(1);
-      for part in split(s^.value,splitters) do result^.appendString(recycler,part);
+      result:=literalRecycler.newListLiteral(1);
+      for part in split(s^.value,splitters) do result^.appendString(part);
     end;
 
   FUNCTION splitRecurse(CONST p:P_literal):P_literal;
@@ -194,10 +191,10 @@ FUNCTION split_imp intFuncSignature;
         lt_string: result:=splitOneString(P_stringLiteral(p));
         lt_list,lt_stringList,lt_emptyList,
         lt_set ,lt_stringSet ,lt_emptySet: begin
-          result:=P_collectionLiteral(p)^.newOfSameType(recycler,true);
+          result:=P_collectionLiteral(p)^.newOfSameType(true);
           iter:=P_collectionLiteral(p)^.tempIteratableList;
           for sub in iter do
-            collResult^.append(recycler,splitRecurse(sub),false);
+            collResult^.append(splitRecurse(sub),false);
         end;
         else raiseNotApplicableError('split',p,tokenLocation,context);
       end;
@@ -236,7 +233,7 @@ FUNCTION join_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and ((params^.size=1) or (params^.size=2) and (arg1^.literalType=lt_string)) then begin
       if (arg0^.literalType in C_listTypes+C_setTypes) then begin
-        if collection0^.size=0 then exit(recycler^.newStringLiteral(''));
+        if collection0^.size=0 then exit(literalRecycler.newStringLiteral(''));
         iter:=collection0^.tempIteratableList;
         setLength(resultParts,length(iter));
         for i:=0 to length(iter)-1 do resultParts[i]:=stringOfLit(iter[i]);
@@ -245,10 +242,10 @@ FUNCTION join_impl intFuncSignature;
         if params^.size=2
         then resultString:=join(resultParts,str1^.value)
         else resultString:=join(resultParts,''         );
-        result:=recycler^.newStringLiteral(resultString);
+        result:=literalRecycler.newStringLiteral(resultString);
         setLength(resultParts,0);
       end else if (arg0^.literalType in C_scalarTypes) then
-        result:=recycler^.newStringLiteral(stringOfLit(arg0));
+        result:=literalRecycler.newStringLiteral(stringOfLit(arg0));
     end;
   end;
 
@@ -257,7 +254,7 @@ FUNCTION escapePascal_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=recycler^.newStringLiteral(escapeString(str0^.value,es_mnhPascalStyle,str0^.getEncoding,dummy))
+    then result:=literalRecycler.newStringLiteral(escapeString(str0^.value,es_mnhPascalStyle,str0^.getEncoding,dummy))
     else result:=genericVectorization('escapePascal',params,tokenLocation,context,recycler);
   end;
 
@@ -267,13 +264,13 @@ FUNCTION escapeJava_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then begin
-      result:=recycler^.newStringLiteral(escapeString(str0^.value,es_javaStyle,str0^.getEncoding,nonescapableFound));
+      result:=literalRecycler.newStringLiteral(escapeString(str0^.value,es_javaStyle,str0^.getEncoding,nonescapableFound));
       if nonescapableFound then context^.raiseError('escapeJava cannot be applied to this string because it contains characters that cannot be represented.',tokenLocation);
     end
     else result:=genericVectorization('escapeJava',params,tokenLocation,context,recycler);
   end;
 
-FUNCTION replace_one_or_all(CONST literalRecycler:P_literalRecycler; CONST params:P_listLiteral; CONST all:boolean):P_literal;
+FUNCTION replace_one_or_all(CONST params:P_listLiteral; CONST all:boolean):P_literal;
   VAR lookFor,replaceBy:T_arrayOfString;
       i:longint;
 
@@ -299,20 +296,20 @@ FUNCTION replace_one_or_all(CONST literalRecycler:P_literalRecycler; CONST param
         setLength(lookFor,1);
         lookFor[0]:=P_stringLiteral(L)^.value;
       end else begin
-        iter:=P_compoundLiteral(L)^.forcedIteratableList(literalRecycler);
+        iter:=P_compoundLiteral(L)^.forcedIteratableList();
         setLength(lookFor,length(iter));
         for i:=0 to length(lookFor)-1 do lookFor[i]:=P_stringLiteral(iter[i])^.value;
-        literalRecycler^.disposeLiteral(iter);
+        literalRecycler.disposeLiteral(iter);
       end;
       L:=arg2;
       if L^.literalType=lt_string then begin
         setLength(replaceBy,1);
         replaceBy[0]:=P_stringLiteral(L)^.value;
       end else begin
-        iter:=P_compoundLiteral(L)^.forcedIteratableList(literalRecycler);
+        iter:=P_compoundLiteral(L)^.forcedIteratableList();
         setLength(replaceBy,length(iter));
         for i:=0 to length(replaceBy)-1 do replaceBy[i]:=P_stringLiteral(iter[i])^.value;
-        literalRecycler^.disposeLiteral(iter);
+        literalRecycler.disposeLiteral(iter);
       end;
       while length(replaceBy)<length(lookFor) do elongate(replaceBy);
       while length(lookFor)<length(replaceBy) do elongate(lookFor);
@@ -341,19 +338,19 @@ FUNCTION replace_one_or_all(CONST literalRecycler:P_literalRecycler; CONST param
     if i>1 then exit(nil);
 
     initArrays;
-    if arg0^.literalType=lt_string then result:=literalRecycler^.newStringLiteral(modify(str0^.value))
+    if arg0^.literalType=lt_string then result:=literalRecycler.newStringLiteral(modify(str0^.value))
     else begin
-      result:=collection0^.newOfSameType(literalRecycler,true);
+      result:=collection0^.newOfSameType(true);
       iter:=collection0^.tempIteratableList;
       for sub in iter do
-        listResult^.appendString(literalRecycler,modify(P_stringLiteral(sub)^.value));
+        listResult^.appendString(modify(P_stringLiteral(sub)^.value));
     end;
     setLength(lookFor,0);
     setLength(replaceBy,0);
   end;
 
-FUNCTION replaceOne_impl intFuncSignature; begin result:=replace_one_or_all(recycler,params,false); end;
-FUNCTION replace_impl    intFuncSignature; begin result:=replace_one_or_all(recycler,params,true);  end;
+FUNCTION replaceOne_impl intFuncSignature; begin result:=replace_one_or_all(params,false); end;
+FUNCTION replace_impl    intFuncSignature; begin result:=replace_one_or_all(params,true);  end;
 
 FUNCTION repeat_impl intFuncSignature;
   VAR sub,res:ansistring;
@@ -366,7 +363,7 @@ FUNCTION repeat_impl intFuncSignature;
       res:='';
       sub:=str0^.value;
       for i:=1 to int1^.intValue do res:=res+sub;
-      result:=recycler^.newStringLiteral(res);
+      result:=literalRecycler.newStringLiteral(res);
     end;
   end;
 
@@ -440,13 +437,13 @@ FUNCTION clean_impl intFuncSignature; {input,whitelist,instead,joinSuccessiveCha
        ((params^.size=3) or (arg3^.literalType=lt_boolean)) then begin
       utf8WhiteList.create;
 
-      iter:=compound1^.forcedIteratableList(recycler);
+      iter:=compound1^.forcedIteratableList();
       for l in iter do begin
         s:=P_stringLiteral(l)^.value;
         if length(s)=1 then include(asciiWhitelist,s[1]);
         utf8WhiteList.put(s);
       end;
-      recycler^.disposeLiteral(iter);
+      literalRecycler.disposeLiteral(iter);
 
       instead:=str2^.value;
       if length(instead)=1 then insteadC:=instead[1];
@@ -454,16 +451,16 @@ FUNCTION clean_impl intFuncSignature; {input,whitelist,instead,joinSuccessiveCha
       keepCharCount:=keepCharCount and not((params^.size>3) and bool3^.value);
 
       case arg0^.literalType of
-        lt_string: result:=recycler^.newStringLiteral(innerClean(str0^.value));
+        lt_string: result:=literalRecycler.newStringLiteral(innerClean(str0^.value));
         lt_stringList,lt_emptyList: begin
-          result:=recycler^.newListLiteral(list0^.size);
-          for k:=0 to list0^.size-1 do listResult^.appendString(recycler,innerClean(P_stringLiteral(list0^.value[k])^.value));
+          result:=literalRecycler.newListLiteral(list0^.size);
+          for k:=0 to list0^.size-1 do listResult^.appendString(innerClean(P_stringLiteral(list0^.value[k])^.value));
         end;
         lt_stringSet,lt_emptySet: begin
           iter:=set0^.tempIteratableList;
-          result:=recycler^.newSetLiteral(length(iter));
+          result:=literalRecycler.newSetLiteral(length(iter));
           for l in iter do
-            setResult^.appendString(recycler,innerClean(P_stringLiteral(l)^.value));
+            setResult^.appendString(innerClean(P_stringLiteral(l)^.value));
         end;
       end;
 
@@ -501,11 +498,11 @@ FUNCTION reverseString_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=recycler^.newStringLiteral(rev(arg0))
+    then result:=literalRecycler.newStringLiteral(rev(arg0))
     else result:=genericVectorization('reverseString',params,tokenLocation,context,recycler);
   end;
 
-FUNCTION prepareDiff(CONST literalRecycler:P_literalRecycler; CONST A,B:P_literal; OUT diff:TDiff):P_mapLiteral;
+FUNCTION prepareDiff(CONST A,B:P_literal; OUT diff:TDiff):P_mapLiteral;
   VAR aHashes,bHashes:PInteger;
       aLen,bLen:integer;
       i:longint;
@@ -516,7 +513,7 @@ FUNCTION prepareDiff(CONST literalRecycler:P_literalRecycler; CONST A,B:P_litera
   begin
     diff.create();
     if A^.literalType=lt_string
-    then tempChars:=chars_internal(literalRecycler,A)
+    then tempChars:=chars_internal(A)
     else tempChars:=P_listLiteral(A^.rereferenced);
 
     with tempChars^ do begin
@@ -526,10 +523,10 @@ FUNCTION prepareDiff(CONST literalRecycler:P_literalRecycler; CONST A,B:P_litera
       for i:=0 to aLen-1 do aHashes[i]:=value[i]^.hash;
       {$R+}
     end;
-    literalRecycler^.disposeLiteral(tempChars);
+    literalRecycler.disposeLiteral(tempChars);
 
     if B^.literalType=lt_string
-    then tempChars:=chars_internal(literalRecycler,B)
+    then tempChars:=chars_internal(B)
     else tempChars:=P_listLiteral(B^.rereferenced);
 
     with tempChars^ do begin
@@ -539,16 +536,16 @@ FUNCTION prepareDiff(CONST literalRecycler:P_literalRecycler; CONST A,B:P_litera
       for i:=0 to bLen-1 do bHashes[i]:=value[i]^.hash;
       {$R+}
     end;
-    literalRecycler^.disposeLiteral(tempChars);
+    literalRecycler.disposeLiteral(tempChars);
 
     diff.execute(aHashes,bHashes,aLen,bLen);
     freeMem(aHashes,aLen*sizeOf(integer));
     freeMem(bHashes,bLen*sizeOf(integer));
     result:=newMapLiteral(4)^
-            .put(literalRecycler,'adds'    ,diff.DiffStats.adds    )^
-            .put(literalRecycler,'deletes' ,diff.DiffStats.deletes )^
-            .put(literalRecycler,'matches' ,diff.DiffStats.matches )^
-            .put(literalRecycler,'modifies',diff.DiffStats.modifies);
+            .put('adds'    ,diff.DiffStats.adds    )^
+            .put('deletes' ,diff.DiffStats.deletes )^
+            .put('matches' ,diff.DiffStats.matches )^
+            .put('modifies',diff.DiffStats.modifies);
   end;
 
 FUNCTION diff_impl intFuncSignature;
@@ -558,13 +555,13 @@ FUNCTION diff_impl intFuncSignature;
   FUNCTION simpleEdit:P_listLiteral;
     VAR i:longint;
     begin
-      result:=recycler^.newListLiteral(diff.count);
+      result:=literalRecycler.newListLiteral(diff.count);
       for i:=0 to diff.count-1 do
-        result^.append(recycler,
-          recycler^.newListLiteral(3)^
-          .appendString(recycler,changeKindChar[diff.Compares[i].kind    ])^
-          .appendInt   (recycler,               diff.Compares[i].oldIndex1)^
-          .appendInt   (recycler,               diff.Compares[i].oldIndex2),false);
+        result^.append(
+          literalRecycler.newListLiteral(3)^
+          .appendString(changeKindChar[diff.Compares[i].kind    ])^
+          .appendInt   (               diff.Compares[i].oldIndex1)^
+          .appendInt   (               diff.Compares[i].oldIndex2),false);
     end;
 
   FUNCTION blockEdit:P_listLiteral;
@@ -609,12 +606,12 @@ FUNCTION diff_impl intFuncSignature;
         inc(i);
       end;
       //---------------------------------Convert modify runs to adds and deletes
-      result:=recycler^.newListLiteral(length(digest));
-      for rec in digest do result^.append(recycler,
-        recycler^.newListLiteral(3)^
-          .appendString(recycler,rec.kind)^
-          .appendInt   (recycler,rec.i0)^
-          .appendInt   (recycler,rec.i1),false);
+      result:=literalRecycler.newListLiteral(length(digest));
+      for rec in digest do result^.append(
+        literalRecycler.newListLiteral(3)^
+          .appendString(rec.kind)^
+          .appendInt   (rec.i0)^
+          .appendInt   (rec.i1),false);
     end;
 
   begin
@@ -625,10 +622,10 @@ FUNCTION diff_impl intFuncSignature;
         (arg0^.literalType=lt_string) and
         (arg1^.literalType=lt_string)) and
        ((params^.size=2) or (arg2^.literalType=lt_boolean)) then begin
-      result:=prepareDiff(recycler,arg0,arg1,diff);
+      result:=prepareDiff(arg0,arg1,diff);
       if (params^.size=3) and (bool2^.value)
-      then mapResult^.put(recycler,'edit',blockEdit ,false)
-      else mapResult^.put(recycler,'edit',simpleEdit,false);
+      then mapResult^.put('edit',blockEdit ,false)
+      else mapResult^.put('edit',simpleEdit,false);
       diff.destroy;
     end;
   end;
@@ -642,7 +639,7 @@ FUNCTION diffStats_impl intFuncSignature;
         (arg1^.literalType in [lt_stringList,lt_emptyList]) or
         (arg0^.literalType=lt_string) and
         (arg1^.literalType=lt_string)) then begin
-      result:=prepareDiff(recycler,arg0,arg1,diff);
+      result:=prepareDiff(arg0,arg1,diff);
       diff.destroy;
     end;
   end;
@@ -651,7 +648,7 @@ FUNCTION trim_imp      intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=recycler^.newStringLiteral(trim(str0^.value))
+    then result:=literalRecycler.newStringLiteral(trim(str0^.value))
     else result:=genericVectorization('trim',params,tokenLocation,context,recycler);
   end;
 
@@ -659,7 +656,7 @@ FUNCTION trimLeft_imp  intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=recycler^.newStringLiteral(trimLeft(str0^.value))
+    then result:=literalRecycler.newStringLiteral(trimLeft(str0^.value))
     else result:=genericVectorization('trimLeft',params,tokenLocation,context,recycler);
   end;
 
@@ -667,7 +664,7 @@ FUNCTION trimRight_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=recycler^.newStringLiteral(trimRight(str0^.value))
+    then result:=literalRecycler.newStringLiteral(trimRight(str0^.value))
     else result:=genericVectorization('trimRight',params,tokenLocation,context,recycler);
   end;
 
@@ -675,7 +672,7 @@ FUNCTION upper_imp     intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=recycler^.newStringLiteral(UTF8UpperCase(str0^.value))
+    then result:=literalRecycler.newStringLiteral(UTF8UpperCase(str0^.value))
     else result:=genericVectorization('upper',params,tokenLocation,context,recycler);
   end;
 
@@ -683,7 +680,7 @@ FUNCTION lower_imp     intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=recycler^.newStringLiteral(UTF8LowerCase(str0^.value))
+    then result:=literalRecycler.newStringLiteral(UTF8LowerCase(str0^.value))
     else result:=genericVectorization('lower',params,tokenLocation,context,recycler);
   end;
 
@@ -691,7 +688,7 @@ FUNCTION unbrace_imp   intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=recycler^.newStringLiteral(myStringUtil.unbrace(str0^.value))
+    then result:=literalRecycler.newStringLiteral(myStringUtil.unbrace(str0^.value))
     else result:=genericVectorization('unbrace',params,tokenLocation,context,recycler);
   end;
 
@@ -700,7 +697,7 @@ FUNCTION escape_imp    intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=recycler^.newStringLiteral(escapeString(str0^.value,es_pickShortest,str0^.getEncoding,dummy))
+    then result:=literalRecycler.newStringLiteral(escapeString(str0^.value,es_pickShortest,str0^.getEncoding,dummy))
     else result:=genericVectorization('escape',params,tokenLocation,context,recycler);
   end;
 
@@ -724,7 +721,7 @@ FUNCTION utf8ToAnsi_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=recycler^.newStringLiteral(UTF8ToCP1252(str0^.value))
+    then result:=literalRecycler.newStringLiteral(UTF8ToCP1252(str0^.value))
     else result:=genericVectorization('utf8ToAnsi',params,tokenLocation,context,recycler);
   end;
 
@@ -732,7 +729,7 @@ FUNCTION ansiToUtf8_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=recycler^.newStringLiteral(CP1252ToUTF8(str0^.value))
+    then result:=literalRecycler.newStringLiteral(CP1252ToUTF8(str0^.value))
     else result:=genericVectorization('ansiToUtf8',params,tokenLocation,context,recycler);
   end;
 
@@ -740,7 +737,7 @@ FUNCTION base64encode_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=recycler^.newStringLiteral(EncodeStringBase64(str0^.value))
+    then result:=literalRecycler.newStringLiteral(EncodeStringBase64(str0^.value))
     else result:=genericVectorization('base64encode',params,tokenLocation,context,recycler);
   end;
 
@@ -748,7 +745,7 @@ FUNCTION base64decode_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=recycler^.newStringLiteral(DecodeStringBase64(str0^.value))
+    then result:=literalRecycler.newStringLiteral(DecodeStringBase64(str0^.value))
     else result:=genericVectorization('base64decode',params,tokenLocation,context,recycler);
   end;
 
@@ -756,7 +753,7 @@ FUNCTION base92encode_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=recycler^.newStringLiteral(base92Encode(str0^.value))
+    then result:=literalRecycler.newStringLiteral(base92Encode(str0^.value))
     else result:=genericVectorization('base92encode',params,tokenLocation,context,recycler);
   end;
 
@@ -764,7 +761,7 @@ FUNCTION base92decode_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=recycler^.newStringLiteral(base92Decode(str0^.value))
+    then result:=literalRecycler.newStringLiteral(base92Decode(str0^.value))
     else result:=genericVectorization('base92decode',params,tokenLocation,context,recycler);
   end;
 
@@ -772,9 +769,9 @@ FUNCTION compress_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=recycler^.newStringLiteral(compressString(str0^.value,[0..255]))
+    then result:=literalRecycler.newStringLiteral(compressString(str0^.value,[0..255]))
     else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_bigint,lt_smallint])
-    then result:=recycler^.newStringLiteral(compressString(str0^.value,[byte(int1^.intValue)]))
+    then result:=literalRecycler.newStringLiteral(compressString(str0^.value,[byte(int1^.intValue)]))
     else result:=genericVectorization('compress',params,tokenLocation,context,recycler);
   end;
 
@@ -794,7 +791,7 @@ FUNCTION decompress_impl intFuncSignature;
         end;
       end;
       {$endif}
-      result:=recycler^.newStringLiteral(resultString);
+      result:=literalRecycler.newStringLiteral(resultString);
     end else result:=genericVectorization('decompress',params,tokenLocation,context,recycler);
   end;
 
@@ -805,8 +802,8 @@ FUNCTION formatTabs_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string) then begin
       arr:=formatTabs(split(str0^.value));
-      result:=recycler^.newListLiteral;
-      for i:=0 to length(arr)-1 do listResult^.appendString(recycler,arr[i]);
+      result:=literalRecycler.newListLiteral;
+      for i:=0 to length(arr)-1 do listResult^.appendString(arr[i]);
       setLength(arr,0);
     end;
   end;
@@ -819,15 +816,15 @@ FUNCTION formatTabs_impl intFuncSignature;
       result:=nil;
       case l^.literalType of
         lt_string: if P_stringLiteral(L)^.getEncoding=se_utf8
-                   then result:=recycler^.newIntLiteral(LENGTH_FUNC(P_stringLiteral(L)^.value))
-                   else result:=recycler^.newIntLiteral(     length(P_stringLiteral(L)^.value));
+                   then result:=literalRecycler.newIntLiteral(LENGTH_FUNC(P_stringLiteral(L)^.value))
+                   else result:=literalRecycler.newIntLiteral(     length(P_stringLiteral(L)^.value));
         lt_list,lt_stringList,lt_emptyList,
         lt_set,lt_stringSet,lt_emptySet:
         begin
-          result:=P_collectionLiteral(l)^.newOfSameType(recycler,false);
+          result:=P_collectionLiteral(l)^.newOfSameType(false);
           iter  :=P_collectionLiteral(l)^.tempIteratableList;
           for sub in iter do
-            P_collectionLiteral(result)^.append(recycler,innerRec(sub),false);
+            P_collectionLiteral(result)^.append(innerRec(sub),false);
         end;
         else raiseNotApplicableError(ID_MACRO,l,tokenLocation,context);
       end;
@@ -855,7 +852,7 @@ FUNCTION md5_imp intFuncSignature;
       setLength(digits,length(md5String));
       for i:=1 to length(md5String) do digits[i-1]:=ord(md5String[i]);
       md5Int.createFromDigits(256,digits);
-      result:=recycler^.newIntLiteral(md5Int);
+      result:=literalRecycler.newIntLiteral(md5Int);
     end else result:=genericVectorization('md5',params,tokenLocation,context,recycler);
   end;
 
@@ -871,7 +868,7 @@ FUNCTION sha256_imp intFuncSignature;
       setLength(sha256Digits,length(sha256Digest));
       for i:=0 to length(sha256Digest)-1 do sha256Digits[i]:=sha256Digest[i];
       sha256Int.createFromDigits(256,sha256Digits);
-      result:=recycler^.newIntLiteral(sha256Int);
+      result:=literalRecycler.newIntLiteral(sha256Int);
     end else result:=genericVectorization('sha256',params,tokenLocation,context,recycler);
   end;
 

@@ -18,7 +18,7 @@ FUNCTION sandBoxExecute_imp intFuncSignature;
       if (params^.size=2) and not(canInterpretAsSideEffectList(arg1,true,tokenLocation,context,sideEffectWhitelist))
       then exit(nil);
       messages:=sandbox^.execute(src,sideEffectWhitelist,recycler,ExitCode,context^.getGlobals^.prng.dwordRandom);
-      result:=messagesToLiteralForSandbox(recycler,messages,C_textMessages-[mt_timing_info],ExitCode);
+      result:=messagesToLiteralForSandbox(messages,C_textMessages-[mt_timing_info],ExitCode);
       setLength(messages,0);
     end;
   end;
@@ -35,18 +35,18 @@ FUNCTION try_imp intFuncSignature;
 
       result:=toTry^.evaluate(tokenLocation,context,recycler,toTryParameters).literal;
       if ((result=nil) or (tryMessages.getFlags*[FlagError,FlagFatalError]<>[])) and oldMessages^.continueEvaluation then begin
-        if (result<>nil) then recycler^.disposeLiteral(result);
+        if (result<>nil) then literalRecycler.disposeLiteral(result);
         //Error handling
         if inCaseOfFailure=nil then begin
           tryMessages.clear;
           result:=newVoidLiteral
         end else if inCaseOfFailure^.literalType=lt_expression then begin
           if P_expressionLiteral(inCaseOfFailure)^.canApplyToNumberOfParameters(1) then begin
-            messagesLiteral:=messagesToLiteralForSandbox(recycler,tryMessages.storedMessages(false),C_errorMessageTypes[4]+C_errorMessageTypes[3],SUPPRESS_EXIT_CODE);
+            messagesLiteral:=messagesToLiteralForSandbox(tryMessages.storedMessages(false),C_errorMessageTypes[4]+C_errorMessageTypes[3],SUPPRESS_EXIT_CODE);
             tryMessages.clear;
             context^.messages:=oldMessages;
             result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,context,recycler,messagesLiteral,nil).literal;
-            recycler^.disposeLiteral(messagesLiteral);
+            literalRecycler.disposeLiteral(messagesLiteral);
           end else begin
             tryMessages.clear;
             context^.messages:=oldMessages;
@@ -180,7 +180,7 @@ FUNCTION runScript_imp intFuncSignature;
 FUNCTION helpOnMain_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0)
-    then result:=recycler^.newStringLiteral(P_package(tokenLocation.package)^.getHelpOnMain)
+    then result:=literalRecycler.newStringLiteral(P_package(tokenLocation.package)^.getHelpOnMain)
     else result:=nil;
   end;
 
@@ -224,7 +224,7 @@ FUNCTION inspect_imp intFuncSignature;
         k:longint;
     begin
       msg:=sandbox^.loadForCodeAssistance(tempPackage^,recycler{$ifdef fullVersion},functionCallInfos{$endif});
-      loadMessages:=messagesToLiteralForSandbox(recycler,msg,C_errorsAndWarnings,SUPPRESS_EXIT_CODE);
+      loadMessages:=messagesToLiteralForSandbox(msg,C_errorsAndWarnings,SUPPRESS_EXIT_CODE);
       for k:=0 to length(msg)-1 do disposeMessage(msg[k]);
       setLength(msg,0);
     end;
@@ -241,16 +241,16 @@ FUNCTION inspect_imp intFuncSignature;
       if tempPackage<>nil then begin
         if inspectedPackageIsTemporary then loadTemporaryPackage({$ifdef fullVersion}functionCallInfos{$endif});
         result:=tempPackage^.inspect(not(inspectedPackageIsTemporary),context,recycler{$ifdef fullVersion},functionCallInfos{$endif});
-        if loadMessages<>nil then mapResult^.put(recycler,'messages',loadMessages,false);
+        if loadMessages<>nil then mapResult^.put('messages',loadMessages,false);
         if inspectedPackageIsTemporary
         then dispose(tempPackage,destroy);
-      end else result:=recycler^.newListLiteral;
+      end else result:=literalRecycler.newListLiteral;
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_stringList) then begin
       setLength(source,list1^.size);
       for i:=0 to list1^.size-1 do source[i]:=P_stringLiteral(list1^.value[i])^.value;
       new(tempPackage,create(newVirtualFileCodeProvider(str0^.value,source),nil));
       loadTemporaryPackage({$ifdef fullVersion}functionCallInfos{$endif});
-      result:=tempPackage^.inspect(false,context,recycler{$ifdef fullVersion},functionCallInfos{$endif})^.put(recycler,'messages',loadMessages,false);
+      result:=tempPackage^.inspect(false,context,recycler{$ifdef fullVersion},functionCallInfos{$endif})^.put('messages',loadMessages,false);
       dispose(tempPackage,destroy);
     end;
   end;
@@ -266,8 +266,8 @@ FUNCTION inspectAll_imp intFuncSignature;
       main:=P_package(tokenLocation.package)^.mainPackage;
       result:=newMapLiteral(0);
       for p in main^.secondaryPackages do
-      mapResult^.put(recycler,p   ^.getPath,p   ^.inspect(true,context,recycler{$ifdef fullVersion},functionCallInfos{$endif}),false);
-      mapResult^.put(recycler,main^.getPath,main^.inspect(true,context,recycler{$ifdef fullVersion},functionCallInfos{$endif}),false);
+      mapResult^.put(p   ^.getPath,p   ^.inspect(true,context,recycler{$ifdef fullVersion},functionCallInfos{$endif}),false);
+      mapResult^.put(main^.getPath,main^.inspect(true,context,recycler{$ifdef fullVersion},functionCallInfos{$endif}),false);
     end;
   end;
 
@@ -276,8 +276,8 @@ FUNCTION writeAllDataStores_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
       flush.create;
-      result:=newBoolLiteral(P_package(tokenLocation.package)^.writeDataStores(context^.messages,true,recycler,flush));
-      flush.finalize(context^.messages,recycler);
+      result:=newBoolLiteral(P_package(tokenLocation.package)^.writeDataStores(context^.messages,true,flush));
+      flush.finalize(context^.messages);
       flush.destroy;
     end else result:=nil;
   end;
@@ -287,8 +287,8 @@ FUNCTION writeDataStores_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then begin
       flush.create;
-      result:=newBoolLiteral(P_package(tokenLocation.package)^.writeDataStores(context^.messages,false,recycler,flush));
-      flush.finalize(context^.messages,recycler);
+      result:=newBoolLiteral(P_package(tokenLocation.package)^.writeDataStores(context^.messages,false,flush));
+      flush.finalize(context^.messages);
       flush.destroy;
     end else result:=nil;
   end;

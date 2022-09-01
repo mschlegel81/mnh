@@ -12,7 +12,7 @@ TYPE
     end;
     relatedPlotAdapter:P_guiPlotSystem;
 
-    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST recycler:P_literalRecycler; CONST plot:P_guiPlotSystem);
+    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST plot:P_guiPlotSystem);
     PROCEDURE update; virtual;
     FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean; virtual;
     FUNCTION getControl:TControl; virtual;
@@ -25,10 +25,10 @@ TYPE
     FUNCTION getName:string; virtual;
   end;
 
-CONSTRUCTOR T_plotConnectorMeta.create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST recycler:P_literalRecycler; CONST plot:P_guiPlotSystem);
+CONSTRUCTOR T_plotConnectorMeta.create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST plot:P_guiPlotSystem);
   VAR tmp:P_literal;
   begin
-    inherited create(def,location,context,recycler,[dmk_type,dmk_action,dmk_mouseClicked,dmk_mouseMoved]);
+    inherited create(def,location,context,[dmk_type,dmk_action,dmk_mouseClicked,dmk_mouseMoved]);
     relatedPlotAdapter:=plot;
     if plot=nil then context.raiseError('No plot available for connecting',location);
     with plotConfig do begin
@@ -40,14 +40,14 @@ CONSTRUCTOR T_plotConnectorMeta.create(CONST def:P_mapLiteral; CONST location:T_
       mouseClickedParam:=nil;
     end;
 
-    tmp:=mapGet(def,key[dmk_mouseMoved],recycler);
+    tmp:=mapGet(def,key[dmk_mouseMoved]);
     if tmp<>nil then begin
       if (tmp^.literalType=lt_expression)
       then plotConfig.mouseMoved:=P_expressionLiteral(tmp)
       else context.raiseError('mouseMoved is: '+tmp^.typeString+'; must be nullary or binary expression',location);
     end;
 
-    tmp:=mapGet(def,key[dmk_mouseClicked],recycler);
+    tmp:=mapGet(def,key[dmk_mouseClicked]);
     if tmp<>nil then begin
       if (tmp^.literalType=lt_expression)
       then plotConfig.mouseClicked:=P_expressionLiteral(tmp)
@@ -72,8 +72,8 @@ FUNCTION T_plotConnectorMeta.evaluate(CONST location:T_tokenLocation; CONST cont
         if plotConfig.mouseMoved^.canApplyToNumberOfParameters(2)
         then tmp:=plotConfig.mouseMoved^.evaluate(location,context,recycler,plotState.mouseMovedParam).literal
         else tmp:=plotConfig.mouseMoved^.evaluate(location,context,recycler,nil).literal;
-        if tmp<>nil then recycler^.disposeLiteral(tmp);
-        recycler^.disposeLiteral(plotState.mouseMovedParam);
+        if tmp<>nil then literalRecycler.disposeLiteral(tmp);
+        literalRecycler.disposeLiteral(plotState.mouseMovedParam);
         result:=true;
       end;
 
@@ -81,8 +81,8 @@ FUNCTION T_plotConnectorMeta.evaluate(CONST location:T_tokenLocation; CONST cont
         if plotConfig.mouseClicked^.canApplyToNumberOfParameters(2)
         then tmp:=plotConfig.mouseClicked^.evaluate(location,context,recycler,plotState.mouseClickedParam).literal
         else tmp:=plotConfig.mouseClicked^.evaluate(location,context,recycler,nil).literal;
-        if tmp<>nil then recycler^.disposeLiteral(tmp);
-        recycler^.disposeLiteral(plotState.mouseClickedParam);
+        if tmp<>nil then literalRecycler.disposeLiteral(tmp);
+        literalRecycler.disposeLiteral(plotState.mouseClickedParam);
         result:=true;
       end;
     finally
@@ -102,9 +102,9 @@ PROCEDURE T_plotConnectorMeta.plotMouseMoved(CONST realPoint:T_point);
     try
       recycler:=newRecycler;
       with plotState do begin
-        if mouseMovedParam<>nil then recycler^.disposeLiteral(mouseMovedParam);
-        mouseMovedParam:=recycler^.newListLiteral(2);
-        mouseMovedParam^.appendReal(recycler,realPoint[0])^.appendReal(recycler,realPoint[1]);
+        if mouseMovedParam<>nil then literalRecycler.disposeLiteral(mouseMovedParam);
+        mouseMovedParam:=literalRecycler.newListLiteral(2);
+        mouseMovedParam^.appendReal(realPoint[0])^.appendReal(realPoint[1]);
       end;
     finally
       leaveCriticalSection(elementCs);
@@ -119,9 +119,9 @@ PROCEDURE T_plotConnectorMeta.plotMouseClicked(CONST realPoint:T_point);
     try
       with plotState do begin
         recycler:=newRecycler;
-        if mouseClickedParam<>nil then recycler^.disposeLiteral(mouseClickedParam);
-        mouseClickedParam:=recycler^.newListLiteral(2);
-        mouseClickedParam^.appendReal(recycler,realPoint[0])^.appendReal(recycler,realPoint[1]);
+        if mouseClickedParam<>nil then literalRecycler.disposeLiteral(mouseClickedParam);
+        mouseClickedParam:=literalRecycler.newListLiteral(2);
+        mouseClickedParam^.appendReal(realPoint[0])^.appendReal(realPoint[1]);
         freeRecycler(recycler);
       end;
     finally
@@ -166,12 +166,12 @@ DESTRUCTOR T_plotConnectorMeta.destroy;
     inherited destroy;
     recycler:=newRecycler;
     with plotConfig do begin
-      if mouseMoved  <>nil then recycler^.disposeLiteral(mouseMoved  );
-      if mouseClicked<>nil then recycler^.disposeLiteral(mouseClicked);
+      if mouseMoved  <>nil then literalRecycler.disposeLiteral(mouseMoved  );
+      if mouseClicked<>nil then literalRecycler.disposeLiteral(mouseClicked);
     end;
     with plotState do begin
-      if mouseMovedParam  <>nil then recycler^.disposeLiteral(mouseMovedParam  );
-      if mouseClickedParam<>nil then recycler^.disposeLiteral(mouseClickedParam);
+      if mouseMovedParam  <>nil then literalRecycler.disposeLiteral(mouseMovedParam  );
+      if mouseClickedParam<>nil then literalRecycler.disposeLiteral(mouseClickedParam);
     end;
     freeRecycler(recycler);
   end;

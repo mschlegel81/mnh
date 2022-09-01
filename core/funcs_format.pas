@@ -147,11 +147,11 @@ FUNCTION formatComment(CONST commentString:string; CONST tokenLocation:T_tokenLo
     tryMessages.createErrorHolder(context^.messages,[mt_el3_evalError..mt_el3_userDefined]);
     context^.messages:=@tryMessages;
     fmt.create(commentString,tokenLocation,context,recycler);
-    dummyParams:=recycler^.newListLiteral(1);
-    dummyParams^.appendString(recycler,commentString);
+    dummyParams:=literalRecycler.newListLiteral(1);
+    dummyParams^.appendString(commentString);
     resultList:=fmt.format(dummyParams,tokenLocation,context,recycler);
     fmt.destroy;
-    recycler^.disposeLiteral(dummyParams);
+    literalRecycler.disposeLiteral(dummyParams);
     if (tryMessages.getFlags*[FlagError,FlagFatalError]=[]) and (length(resultList)=1)
     then result:=resultList[0]
     else result:=commentString;
@@ -299,11 +299,11 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
       end;
       if context^.continueEvaluation
       then begin
-        tempStringLiteral:=recycler^.newStringLiteral('{'+expressionString+']}');
+        tempStringLiteral:=literalRecycler.newStringLiteral('{'+expressionString+']}');
         result:=stringOrListToExpression(tempStringLiteral,
                                          tokenLocation,
                                          context,recycler);
-        recycler^.disposeLiteral(tempStringLiteral);
+        literalRecycler.disposeLiteral(tempStringLiteral);
       end
       else result:=nil;
     end;
@@ -322,7 +322,7 @@ DESTRUCTOR T_preparedFormatStatement.destroy;
       recycler:P_recycler;
   begin
     recycler:=newRecycler;
-    if formatSubrule<>nil then recycler^.disposeLiteral(formatSubrule);
+    if formatSubrule<>nil then literalRecycler.disposeLiteral(formatSubrule);
     for i:=0 to length(parts)-1 do parts[i]:='';
     setLength(parts,0);
     for i:=0 to length(formats)-1 do formats[i].destroy;
@@ -356,26 +356,26 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
         oldSideEffectWhitelist:T_sideEffects;
     begin
       //prepare parameters
-      fpar:=recycler^.newListLiteral(params^.size-1);
+      fpar:=literalRecycler.newListLiteral(params^.size-1);
       for k:=1 to params^.size-1 do
       if params^.value[k]^.literalType in C_collectionTypes
-      then fpar^.append(recycler,iter[k][index],true)
-      else fpar^.append(recycler,iter[k][    0],true);
+      then fpar^.append(iter[k][index],true)
+      else fpar^.append(iter[k][    0],true);
 
       if formatSubrule<>nil then begin
         oldSideEffectWhitelist:=context^.setAllowedSideEffectsReturningPrevious(C_sideEffectsForFormatting*context^.sideEffectWhitelist);
         temp:=formatSubrule^.evaluateFormat(tokenLocation,context,recycler,fpar);
         context^.setAllowedSideEffectsReturningPrevious(oldSideEffectWhitelist);
-        recycler^.disposeLiteral(fpar);
+        literalRecycler.disposeLiteral(fpar);
         if (temp<>nil) and (temp^.literalType in C_listTypes)
         then fpar:=P_listLiteral(temp)
         else begin
-          if temp<>nil then recycler^.disposeLiteral(temp);
+          if temp<>nil then literalRecycler.disposeLiteral(temp);
           exit(''); //One of the called routines already raised a proper error
         end;
       end;
       result:=simpleFormat(parts,fpar^);
-      recycler^.disposeLiteral(fpar);
+      literalRecycler.disposeLiteral(fpar);
     end;
 
   VAR i:longint;
@@ -391,7 +391,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
     if listSize=-1 then listSize:=1;
     setLength(iter,params^.size);
     for i:=1 to params^.size-1 do if (params^.value[i]^.literalType in C_collectionTypes) and (P_collectionLiteral(params^.value[i])^.customType=nil)
-    then iter[i]:=P_collectionLiteral(params^.value[i])^.forcedIteratableList(recycler)
+    then iter[i]:=P_collectionLiteral(params^.value[i])^.forcedIteratableList()
     else begin setLength(iter[i],1); iter[i][0]:=params^.value[i]^.rereferenced; end;
 
     if formatSubrule=nil
@@ -401,16 +401,16 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
       context^.raiseError('Invalid format statement; found '+intToStr(i)+' placeholders but '+intToStr(params^.size-1)+' variables.',tokenLocation);
       if formatSubrule<>nil then begin
         context^.raiseError('Helper subrule is: '+formatSubrule^.toString,tokenLocation);
-        recycler^.disposeLiteral(formatSubrule);
+        literalRecycler.disposeLiteral(formatSubrule);
         formatSubrule:=nil;
       end;
-      for i:=1 to length(iter)-1 do recycler^.disposeLiteral(iter[i]);
+      for i:=1 to length(iter)-1 do literalRecycler.disposeLiteral(iter[i]);
       exit(C_EMPTY_STRING_ARRAY);
     end;
     setLength(result,listSize);
     for i:=0 to listSize-1 do if (context^.messages^.continueEvaluation) then result[i]:=getFormattedString(i);
     if not(context^.messages^.continueEvaluation) then setLength(result,0);
-    for i:=1 to length(iter)-1 do recycler^.disposeLiteral(iter[i]);
+    for i:=1 to length(iter)-1 do literalRecycler.disposeLiteral(iter[i]);
   end;
 
 {$ifdef fullVersion}VAR formatLoc:P_intFuncCallback; {$endif}
@@ -429,10 +429,10 @@ FUNCTION format_imp intFuncSignature;
       end;
       txt:=preparedStatement^.format(params,tokenLocation,context,recycler);
       dispose(preparedStatement,destroy);
-      if length(txt)=1 then result:=recycler^.newStringLiteral(txt[0])
+      if length(txt)=1 then result:=literalRecycler.newStringLiteral(txt[0])
       else begin
-        result:=recycler^.newListLiteral;
-        for i:=0 to length(txt)-1 do P_listLiteral(result)^.appendString(recycler,txt[i]);
+        result:=literalRecycler.newListLiteral;
+        for i:=0 to length(txt)-1 do P_listLiteral(result)^.appendString(txt[i]);
       end;
     end;
   end;
@@ -467,7 +467,7 @@ FUNCTION formatTime_imp intFuncSignature;
       i :=length(simpleResult);
       if i<i1 then i1:=i;
       for i:=1 to i1 do if not(fmt[i] in placeholders) then simpleResult[i]:=fmt[i];
-      result:=recycler^.newStringLiteral(simpleResult);
+      result:=literalRecycler.newStringLiteral(simpleResult);
     end;
 
   begin
@@ -532,11 +532,11 @@ FUNCTION parseTime_imp intFuncSignature;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) then begin
       format:= uppercase(P_stringLiteral(arg0)^.value);
       if (arg1^.literalType=lt_string) then
-        result:=recycler^.newRealLiteral(encodeDateTime(P_stringLiteral(arg1)^.value))
+        result:=literalRecycler.newRealLiteral(encodeDateTime(P_stringLiteral(arg1)^.value))
       else if (arg1^.literalType in [lt_stringList,lt_emptyList]) then begin
-        result:=recycler^.newListLiteral;
+        result:=literalRecycler.newListLiteral;
         for i:=0 to list1^.size-1 do
-          P_listLiteral(result)^.appendReal(recycler,encodeDateTime(P_stringLiteral(list1^.value[i])^.value));
+          P_listLiteral(result)^.appendReal(encodeDateTime(P_stringLiteral(list1^.value[i])^.value));
       end;
     end else result:=genericVectorization('parseTime',params,tokenLocation,context,recycler);
   end;
