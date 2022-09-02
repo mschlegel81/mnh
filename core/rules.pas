@@ -362,16 +362,13 @@ CONSTRUCTOR T_ruleMap.create(CONST package: P_abstractPackage);
 
 PROCEDURE T_ruleMap.clear;
   VAR i:longint;
-      recycler:P_recycler;
   begin
     inherited clear;
-    recycler:=newRecycler;
-    for i:=0 to length(afterRules)-1 do recycler^.disposeLiteral(afterRules[i]);
+    for i:=0 to length(afterRules)-1 do globalLiteralRecycler.disposeLiteral(afterRules[i]);
     setLength(afterRules,0);
     {$ifdef fullVersion}
     suppressAllUnusedWarnings:=false;
     {$endif}
-    freeRecycler(recycler);
   end;
 
 FUNCTION T_ruleMap.addImports(CONST other: P_ruleMap): boolean;
@@ -1075,11 +1072,8 @@ CONSTRUCTOR T_datastore.create(CONST ruleId: T_idString; CONST startAt:T_tokenLo
 
 DESTRUCTOR T_ruleWithSubrules.destroy;
   VAR i:longint;
-      recycler:P_recycler;
   begin
-    recycler:=newRecycler;
-    for i:=0 to length(subrules)-1 do recycler^.disposeLiteral(subrules[i]);
-    freeRecycler(recycler);
+    for i:=0 to length(subrules)-1 do globalLiteralRecycler.disposeLiteral(subrules[i]);
     setLength(subrules,0);
     inherited destroy;
   end;
@@ -1099,12 +1093,9 @@ DESTRUCTOR T_memoizedRule.destroy;
   end;
 
 DESTRUCTOR T_variable.destroy;
-  VAR recycler:P_recycler;
   begin
-    recycler:=newRecycler;
-    namedValue.cleanup(recycler);
+    namedValue.cleanup(@globalLiteralRecycler);
     namedValue.destroy;
-    freeRecycler(recycler);
   end;
 
 DESTRUCTOR T_datastore.destroy;
@@ -1413,13 +1404,10 @@ FUNCTION T_typeCheckRule.getFirstParameterTypeWhitelist: T_literalTypeSet;
   end;
 
 DESTRUCTOR T_typeCheckRule.destroy;
-  VAR recycler:P_recycler;
   begin
     if typedef<>nil then begin
-      recycler:=newRecycler;
-      typedef^.cleanup(recycler);
+      typedef^.cleanup(@globalLiteralRecycler);
       dispose(typedef,destroy);
-      freeRecycler(recycler);
     end;
     inherited destroy;
   end;

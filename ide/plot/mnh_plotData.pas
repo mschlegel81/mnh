@@ -1514,13 +1514,11 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
       dummyLocation:T_tokenLocation=(package:nil;line:0;column:0);
       commands:T_arrayOfString;
       DataString:string;
-      recycler:P_recycler;
 
   begin
     enterCriticalSection(adapterCs);
-    recycler:=newRecycler;
     try
-      globalRowData:=recycler^.newListLiteral();
+      globalRowData:=globalLiteralRecycler.newListLiteral();
       setLength(result,2);
       result[0]:='#!'+settings.fullFlavourLocation+' '+FLAG_GUI;
       result[1]:='plain script;';
@@ -1534,22 +1532,22 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
           progress.position:=0;
           Application.ProcessMessages;
           for i:=0 to length(animation.frame)-1 do begin
-            myGenerics.append(commands,animation.frame[i]^.getRowStatements(prevOptions,recycler,globalRowData^,haltExport,Application,progress));
+            myGenerics.append(commands,animation.frame[i]^.getRowStatements(prevOptions,@globalLiteralRecycler,globalRowData^,haltExport,Application,progress));
             prevOptions:=animation.frame[i]^.scalingOptions;
             myGenerics.append(commands,'addAnimationFrame;');
           end;
         end else begin
           progress.max:=animation.frame[frameIndexOrNegativeIfAll]^.getRowStatementCount*2;
           Application.ProcessMessages;
-          myGenerics.append(commands,animation.frame[frameIndexOrNegativeIfAll]^.getRowStatements(prevOptions,recycler,globalRowData^,haltExport,Application,progress));
+          myGenerics.append(commands,animation.frame[frameIndexOrNegativeIfAll]^.getRowStatements(prevOptions,@globalLiteralRecycler,globalRowData^,haltExport,Application,progress));
         end;
       end else begin
         progress.max:=currentPlot.getRowStatementCount*2;
         Application.ProcessMessages;
-        myGenerics.append(commands,currentPlot.getRowStatements(prevOptions,recycler,globalRowData^,haltExport,Application,progress));
+        myGenerics.append(commands,currentPlot.getRowStatements(prevOptions,@globalLiteralRecycler,globalRowData^,haltExport,Application,progress));
       end;
       DataString:=base92Encode(
-                     serialize(recycler,
+                     serialize(@globalLiteralRecycler,
                                globalRowData,
                                dummyLocation,
                                nil));
@@ -1574,9 +1572,8 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
       myGenerics.append(result,'display;');
       setLength(commands,0);
     finally
-      recycler^.disposeLiteral(globalRowData);
+      globalLiteralRecycler.disposeLiteral(globalRowData);
       leaveCriticalSection(adapterCs);
-      freeRecycler(recycler)
     end;
   end;
 

@@ -12,7 +12,7 @@ USES sysutils,
      tokens;
 TYPE
   P_recycler=^T_recycler;
-  T_recycler=object(T_literalRecycler)
+  T_recycler=object(T_localLiteralRecycler)
     private
       isFree:boolean;
       tokens:record
@@ -146,6 +146,7 @@ PROCEDURE cleanupRecyclerPools;
     finally
       leaveCriticalSection(recyclerPoolCs);
     end;
+    globalLiteralRecycler.freeMemory(false);
   end;
 
 PROCEDURE cleanupRecyclerPoolsHard;
@@ -167,6 +168,7 @@ PROCEDURE cleanupRecyclerPoolsHard;
     finally
       leaveCriticalSection(recyclerPoolCs);
     end;
+    globalLiteralRecycler.freeMemory(true);
   end;
 
 PROCEDURE finalizeRecyclerPools;
@@ -411,26 +413,12 @@ FUNCTION T_abstractRule.getTypedef: P_typedef;
 FUNCTION T_abstractRule.getInlineValue: P_literal;
   begin result:=nil; end;
 
-FUNCTION newLiteralRecycler:P_literalRecycler;
-  begin
-    result:=newRecycler;
-  end;
-
-PROCEDURE freeLiteralRecycler(VAR recycler:P_literalRecycler);
-  VAR r:P_recycler;
-  begin
-    r:=P_recycler(recycler);
-    freeRecycler(r);
-    recycler:=nil;
-  end;
-
 INITIALIZATION
   initCriticalSection(recyclerPoolCs);
   setLength(recyclerPool,0);
   memoryCleaner.registerCleanupMethod(0,@cleanupRecyclerPools);
   memoryCleaner.registerCleanupMethod(1,@cleanupRecyclerPoolsHard);
-  litVar.newLiteralRecycler :=@newLiteralRecycler;
-  litVar.freeLiteralRecycler:=@freeLiteralRecycler;
+
 FINALIZATION
   finalizeRecyclerPools;
 

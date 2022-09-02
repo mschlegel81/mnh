@@ -53,9 +53,7 @@ DESTRUCTOR T_cache.destroy;
 PROCEDURE T_cache.polish;
   VAR binIdx,i,j: longint;
       dropThreshold:longint;
-      recycler:P_recycler;
   begin
-    recycler:=newRecycler;
     enterCriticalSection(criticalSection);
     try
       dropThreshold:=useCounter - fill shr 1;
@@ -67,15 +65,14 @@ PROCEDURE T_cache.polish;
           data[j] := data[i];
           inc(j);
         end else begin
-          recycler^.disposeLiteral(data[i].key);
-          recycler^.disposeLiteral(data[i].value);
+          globalLiteralRecycler.disposeLiteral(data[i].key);
+          globalLiteralRecycler.disposeLiteral(data[i].value);
           dec(fill);
         end;
         setLength(data, j);
       end;
     finally
       leaveCriticalSection(criticalSection);
-      freeRecycler(recycler);
     end;
   end;
 
@@ -164,15 +161,13 @@ FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
 
 PROCEDURE T_cache.clear;
   VAR i, j: longint;
-      recycler:P_recycler;
   begin
-    recycler:=newRecycler;
     enterCriticalSection(criticalSection);
     try
       for i := 0 to (length(cached)-1) do with cached[i] do begin
         for j := 0 to length(data)-1 do with data[j] do begin
-          recycler^.disposeLiteral(key);
-          recycler^.disposeLiteral(value);
+          globalLiteralRecycler.disposeLiteral(key);
+          globalLiteralRecycler.disposeLiteral(value);
         end;
         setLength(data, 0);
       end;
@@ -181,7 +176,6 @@ PROCEDURE T_cache.clear;
       useCounter:=0;
     finally
       leaveCriticalSection(criticalSection);
-      freeRecycler(recycler);
     end;
   end;
 

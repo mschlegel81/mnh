@@ -287,13 +287,10 @@ CONSTRUCTOR T_echoOutMessage.create(CONST value: P_literal; CONST loc: T_searchT
   end;
 
 DESTRUCTOR T_echoOutMessage.destroy;
-  VAR  recycler:P_recycler;
   begin
-    recycler:=newRecycler;
     enterCriticalSection(messageCs);
-    recycler^.disposeLiteral(literal);
+    globalLiteralRecycler.disposeLiteral(literal);
     leaveCriticalSection(messageCs);
-    freeRecycler(recycler);
     inherited;
   end;
 

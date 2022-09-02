@@ -303,7 +303,7 @@ PROCEDURE T_elementFrequencyAggregator.cleanup(CONST literalRecycler:P_literalRe
   VAR keySet:T_arrayOfLiteral;
   begin
     keySet:=counterMap.keySet;
-    literalRecycler^.disposeLiteral(keySet);
+    literalRecycler^.disposeLiterals(keySet);
     counterMap.destroy;
   end;
 

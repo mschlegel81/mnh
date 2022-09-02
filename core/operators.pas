@@ -237,7 +237,7 @@ FUNCTION operator_NotIn       intFuncSignature;
         resultElements[i]:=function_id(LHS,rhsIt[i],tokenLocation,context,recycler);
         if resultElements[i]=nil then begin
           setLength(resultElements,i);
-          recycler^.disposeLiteral(resultElements);
+          recycler^.disposeLiterals(resultElements);
           exit(nil);
         end;
       end;
@@ -256,7 +256,7 @@ FUNCTION operator_NotIn       intFuncSignature;
         resultElements[i]:=function_id(lhsIt[i],RHS,tokenLocation,context,recycler);
         if resultElements[i]=nil then begin
           setLength(resultElements,i);
-          recycler^.disposeLiteral(resultElements);
+          recycler^.disposeLiterals(resultElements);
           exit(nil);
         end;
       end;
@@ -275,7 +275,7 @@ FUNCTION operator_NotIn       intFuncSignature;
                                          P_listLiteral(RHS)^.value[i],tokenLocation,context,recycler);
           if resultElements[i]=nil then begin
             setLength(resultElements,i);
-            recycler^.disposeLiteral(resultElements);
+            recycler^.disposeLiterals(resultElements);
             exit(nil);
           end;
         end;
@@ -297,7 +297,7 @@ FUNCTION operator_NotIn       intFuncSignature;
           resultElements[k]:=function_id(lhsX,rhsX,tokenLocation,context,recycler);
           if resultElements[k]=nil then begin
             setLength(resultElements,k);
-            recycler^.disposeLiteral(resultElements);
+            recycler^.disposeLiterals(resultElements);
             exit(nil);
           end;
           inc(k);

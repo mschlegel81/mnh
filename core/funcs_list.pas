@@ -266,7 +266,7 @@ FUNCTION flatten_imp intFuncSignature;
       for x in iter do if x^.literalType in C_compoundTypes
       then recurse_flatten(P_compoundLiteral(x))
       else listResult^.append(recycler,x,true);
-      recycler^.disposeLiteral(iter);
+      recycler^.disposeLiterals(iter);
     end;
 
   begin
@@ -337,7 +337,7 @@ FUNCTION isSubsetOf_imp   intFuncSignature;
           begin
             iter:=compound0^.forcedIteratableList(recycler);
             for a in iter do allContained:=allContained and list1^.contains(a);
-            recycler^.disposeLiteral(iter);
+            recycler^.disposeLiterals(iter);
             result:=newBoolLiteral(allContained);
           end;
         lt_emptyList,lt_emptySet,lt_emptyMap:
@@ -390,7 +390,7 @@ FUNCTION getAll_imp intFuncSignature;
           else recycler^.disposeLiteral(got);
         end else recycler^.disposeLiteral(result);
       end;
-      recycler^.disposeLiteral(iter);
+      recycler^.disposeLiterals(iter);
     end else if (params<>nil) and (params^.size=3) and (arg0^.literalType in C_compoundTypes) and (arg1^.literalType in C_listTypes) and (arg2^.literalType in C_listTypes) and (list1^.size=list2^.size) then begin
       result:=recycler^.newListLiteral;
       for i:=0 to list1^.size-1 do if result<>nil then begin
@@ -469,7 +469,7 @@ FUNCTION cross_impl intFuncSignature;
           subLit[k]:=l;
           recurseBuild(index+1,subLit);
         end;
-        recycler^.disposeLiteral(iter);
+        recycler^.disposeLiterals(iter);
       end;
     end;
 
@@ -568,7 +568,7 @@ FUNCTION group_imp intFuncSignature;
       groupMap:=P_mapLiteral(result)^.underlyingMap;
       for inputIndex:=0 to length(keyList)-1 do if context^.continueEvaluation then
         addToAggregation(keyList[inputIndex],listToGroup^.value[inputIndex]);
-      recycler^.disposeLiteral(keyList);
+      recycler^.disposeLiterals(keyList);
       P_mapLiteral(result)^.ensureType;
     end;
   end;

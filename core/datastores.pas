@@ -67,10 +67,7 @@ FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOf
       literal:P_literal=nil;
       dummyLocation:T_tokenLocation;
       dummyTypeMap:T_typeMap;
-      recycler:P_recycler;
   begin
-    recycler:=newRecycler;
-
     wrapper.createToReadFromFile(fileName);
     id:=wrapper.readAnsiString;
     result:=wrapper.allOkay;
@@ -78,7 +75,7 @@ FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOf
       try
         initialize(dummyLocation);
         dummyTypeMap.create();
-        literal:=newLiteralFromStream(recycler,@wrapper,dummyLocation,nil,dummyTypeMap);
+        literal:=newLiteralFromStream(@globalLiteralRecycler,@wrapper,dummyLocation,nil,dummyTypeMap);
         dummyTypeMap.destroy;
         if wrapper.allOkay and (literal<>nil) then begin
           dataAsStringList:=id+':=';
@@ -87,8 +84,7 @@ FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOf
       except
         result:=false;
       end;
-      if literal<>nil then recycler^.disposeLiteral(literal);
-      freeRecycler(recycler);
+      if literal<>nil then globalLiteralRecycler.disposeLiteral(literal);
     end else dataAsStringList:=C_EMPTY_STRING_ARRAY;
     wrapper.destroy;
   end;

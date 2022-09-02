@@ -319,15 +319,12 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
 
 DESTRUCTOR T_preparedFormatStatement.destroy;
   VAR i:longint;
-      recycler:P_recycler;
   begin
-    recycler:=newRecycler;
-    if formatSubrule<>nil then recycler^.disposeLiteral(formatSubrule);
+    if formatSubrule<>nil then globalLiteralRecycler.disposeLiteral(formatSubrule);
     for i:=0 to length(parts)-1 do parts[i]:='';
     setLength(parts,0);
     for i:=0 to length(formats)-1 do formats[i].destroy;
     setLength(formats,0);
-    freeRecycler(recycler);
   end;
 
 FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):T_arrayOfString;
@@ -404,13 +401,13 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
         recycler^.disposeLiteral(formatSubrule);
         formatSubrule:=nil;
       end;
-      for i:=1 to length(iter)-1 do recycler^.disposeLiteral(iter[i]);
+      for i:=1 to length(iter)-1 do recycler^.disposeLiterals(iter[i]);
       exit(C_EMPTY_STRING_ARRAY);
     end;
     setLength(result,listSize);
     for i:=0 to listSize-1 do if (context^.messages^.continueEvaluation) then result[i]:=getFormattedString(i);
     if not(context^.messages^.continueEvaluation) then setLength(result,0);
-    for i:=1 to length(iter)-1 do recycler^.disposeLiteral(iter[i]);
+    for i:=1 to length(iter)-1 do recycler^.disposeLiterals(iter[i]);
   end;
 
 {$ifdef fullVersion}VAR formatLoc:P_intFuncCallback; {$endif}

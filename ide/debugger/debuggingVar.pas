@@ -215,7 +215,7 @@ FUNCTION T_variableTreeEntryAnonymousValue.getChildren: T_treeEntries;
         iter:=P_compoundLiteral(value)^.forcedIteratableList(recycler);
         setLength(preparedChildren,length(iter));
         for i:=0 to length(iter)-1 do new(preparedChildren[i],create(iter[i],value^.literalType in C_mapTypes));
-        recycler^.disposeLiteral(iter);
+        recycler^.disposeLiterals(iter);
       end;
       freeRecycler(recycler);
     end;

@@ -343,7 +343,7 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
         P_listLiteral(result)^.setContents(resultElements,recycler);
       end else begin
         result:=nil;
-        recycler^.disposeLiteral(resultElements);
+        recycler^.disposeLiterals(resultElements);
       end;
     end else if firstSet>=0 then begin
       setIter:=P_setLiteral(params^.value[firstSet])^.tempIteratableList;

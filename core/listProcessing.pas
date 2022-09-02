@@ -146,7 +146,7 @@ end}
     end else if input^.literalType in C_compoundTypes then begin
       iter:=P_compoundLiteral(input)^.forcedIteratableList(recycler);
       for x in iter do if proceed then processX;
-      recycler^.disposeLiteral(iter);
+      recycler^.disposeLiterals(iter);
     end else begin
       x:=input;
       processX;
@@ -253,7 +253,7 @@ end}
     end else if input^.literalType in C_compoundTypes then begin
       iter:=P_compoundLiteral(input)^.forcedIteratableList(recycler);
       for x in iter do if proceed then processX;
-      recycler^.disposeLiteral(iter);
+      recycler^.disposeLiterals(iter);
     end else begin
       x:=input;
       processX;
@@ -300,7 +300,7 @@ FUNCTION processMapSerial(CONST input:P_literal; CONST expr:P_expressionLiteral;
       if isExpressionNullary
       then begin for x in iter do if (context^.continueEvaluation) then result^.append(recycler,expr^.evaluateToLiteral(mapLocation,context,recycler,nil,nil).literal,false); end
       else begin for x in iter do if (context^.continueEvaluation) then result^.append(recycler,expr^.evaluateToLiteral(mapLocation,context,recycler,x  ,nil).literal,false); end;
-      recycler^.disposeLiteral(iter);
+      recycler^.disposeLiterals(iter);
     end else begin
       if isExpressionNullary
       then result^.append(recycler, expr^.evaluateToLiteral(mapLocation,context,recycler,nil  ,nil).literal,false)
@@ -323,7 +323,7 @@ FUNCTION processFilterSerial  (CONST input:P_compoundLiteral; CONST filterExpres
     iter:=input^.forcedIteratableList(recycler);
     for x in iter do if context^.continueEvaluation and filterExpression^.evaluateToBoolean(filterLocation,context,recycler,true,x,nil)
                      then P_collectionLiteral(result)^.append(recycler,x,true);
-    recycler^.disposeLiteral(iter);
+    recycler^.disposeLiterals(iter);
     if input^.literalType=lt_map then begin
       x:=result;
       result:=P_listLiteral(result)^.toMap(recycler,filterLocation,context);
@@ -352,7 +352,7 @@ PROCEDURE aggregate(CONST input:P_literal; CONST aggregator: P_aggregator; CONST
       x.reasonForStop:=rr_ok;
       for x.literal in iter do if (x.literal^.literalType<>lt_void) and context^.messages^.continueEvaluation and not(aggregator^.earlyAbort) then
         aggregator^.addToAggregation(x,false,location,context,recycler);
-      recycler^.disposeLiteral(iter);
+      recycler^.disposeLiterals(iter);
     end else begin
       x.reasonForStop:=rr_ok;
       x.literal:=input;

@@ -134,11 +134,8 @@ CONSTRUCTOR T_treeDisplayRequest.create(CONST L: P_literal; CONST newCaption: st
   end;
 
 DESTRUCTOR T_treeDisplayRequest.destroy;
-  VAR recyler:P_recycler;
   begin
-    recyler:=newRecycler;
-    recyler^.disposeLiteral(treeContent);
-    freeRecycler(recyler);
+    globalLiteralRecycler.disposeLiteral(treeContent);
     inherited destroy;
   end;
 

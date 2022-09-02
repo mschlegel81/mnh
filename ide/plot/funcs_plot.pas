@@ -239,12 +239,12 @@ FUNCTION setOptions intFuncSignature;
     if (params<>nil) and (params^.size=1) and ((arg0^.literalType=lt_map) or (arg0^.literalType in C_listTypes+C_setTypes) and (list0^.isKeyValueCollection)) then begin
       iter:=compound0^.forcedIteratableList(recycler);
       for pair in iter do if P_listLiteral(pair)^.value[0]^.literalType<>lt_string then begin
-        recycler^.disposeLiteral(iter);
+        recycler^.disposeLiterals(iter);
         exit(nil);
       end;
       for pair in iter do
         matchKey(P_stringLiteral(P_listLiteral(pair)^.value[0])^.value,P_listLiteral(pair)^.value[1]);
-      recycler^.disposeLiteral(iter);
+      recycler^.disposeLiterals(iter);
       result:=newBoolLiteral(allOkay);
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType in [lt_real,lt_smallint,lt_bigint,lt_boolean]) then begin
       matchKey(str0^.value,arg1);

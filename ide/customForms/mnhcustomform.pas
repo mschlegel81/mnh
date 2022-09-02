@@ -207,7 +207,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
       for k in keys do if not(isConsidered(k)) then begin
         context.messages^.postTextMessage(mt_el2_warning,location,'Key '+k^.toString()+' is ignored in '+def^.toString());
       end;
-      recycler^.disposeLiteral(keys);
+      recycler^.disposeLiterals(keys);
     end;
 
   VAR tmp:P_literal;
@@ -279,14 +279,11 @@ FUNCTION T_guiElementMeta.getCustomForm:TWinControl;
   end;
 
 PROCEDURE T_guiElementMeta.postAction(CONST param: P_literal);
-  VAR recycler:P_recycler;
   begin
     if (config.action=nil) or (tryEnterCriticalsection(elementCs)=0) then exit;
     try
       if state.actionParameter<>nil then begin
-        recycler:=newRecycler;
-        recycler^.disposeLiteral(state.actionParameter);
-        freeRecycler(recycler);
+        globalLiteralRecycler.disposeLiteral(state.actionParameter);
       end;
       state.actionParameter:=param;
       state.actionTriggered:=true;
@@ -384,21 +381,18 @@ FUNCTION T_guiElementMeta.evaluate(CONST location: T_tokenLocation; CONST contex
   end;
 
 DESTRUCTOR T_guiElementMeta.destroy;
-  VAR recycler:P_recycler;
   begin
     enterCriticalSection(elementCs);
-    recycler:=newRecycler;
     try
-      if config.action  <>nil then recycler^.disposeLiteral(config.action );
-      if config.caption <>nil then recycler^.disposeLiteral(config.caption);
-      if config.enabled <>nil then recycler^.disposeLiteral(config.enabled);
+      if config.action  <>nil then globalLiteralRecycler.disposeLiteral(config.action );
+      if config.caption <>nil then globalLiteralRecycler.disposeLiteral(config.caption);
+      if config.enabled <>nil then globalLiteralRecycler.disposeLiteral(config.enabled);
       state.actionTriggered:=false;
-      if state.actionParameter<>nil then recycler^.disposeLiteral(state.actionParameter);
-      if state.bindingValue   <>nil then recycler^.disposeLiteral(state.bindingValue);
+      if state.actionParameter<>nil then globalLiteralRecycler.disposeLiteral(state.actionParameter);
+      if state.bindingValue   <>nil then globalLiteralRecycler.disposeLiteral(state.bindingValue);
     finally
       leaveCriticalSection(elementCs);
       doneCriticalSection(elementCs);
-      freeRecycler(recycler);
     end;
   end;
 
@@ -739,14 +733,12 @@ CONSTRUCTOR T_customFormAdapter.createCustomFormAdapter(CONST plot:P_guiPlotSyst
 FUNCTION T_customFormAdapter.flushToGui(CONST forceFlush:boolean): T_messageTypeSet;
   VAR i,k:longint;
       newForm:TscriptedForm;
-      recycler:P_recycler;
       start:double;
   begin
     start:=now;
     result:=[];
     if collectedFill=0 then exit([]);
     enterCriticalSection(adapterCs);
-    recycler:=newRecycler;
     try
       for i:=0 to collectedFill-1 do begin
         case collected[i]^.messageType of
@@ -764,7 +756,7 @@ FUNCTION T_customFormAdapter.flushToGui(CONST forceFlush:boolean): T_messageType
             newForm.caption:=setupTitle;
             setLength(scriptedForms,length(scriptedForms)+1);
             scriptedForms[length(scriptedForms)-1]:=newForm;
-            newForm.initialize(setupDef,setupLocation,setupContext,recycler,relatedPlotAdapter);
+            newForm.initialize(setupDef,setupLocation,setupContext,@globalLiteralRecycler,relatedPlotAdapter);
             newForm.adapter:=@self;
             setCreatedForm(newForm);
             dockNewForm(newForm);
@@ -776,7 +768,6 @@ FUNCTION T_customFormAdapter.flushToGui(CONST forceFlush:boolean): T_messageType
       clear;
     finally
       leaveCriticalSection(adapterCs);
-      freeRecycler(recycler);
     end;
     if now-start>ONE_SECOND*0.1 then postIdeMessage('Flush of custom form adapter took a long time: '+myTimeToStr(now-start),true);
   end;

@@ -57,7 +57,7 @@ FUNCTION T_listIterator.evaluateToLiteral(CONST location:T_tokenLocation; CONST 
 PROCEDURE T_listIterator.cleanup(CONST literalRecycler:P_literalRecycler);
   begin
     literalRecycler^.disposeLiteral(underlying);
-    literalRecycler^.disposeLiteral(values);
+    literalRecycler^.disposeLiterals(values);
   end;
 
 DESTRUCTOR T_listIterator.destroy;
@@ -315,7 +315,7 @@ FUNCTION T_permutationIterator.evaluateToLiteral(CONST location:T_tokenLocation;
 PROCEDURE T_permutationIterator.cleanup(CONST literalRecycler:P_literalRecycler);
   begin
     literalRecycler^.disposeLiteral(underlying);
-    literalRecycler^.disposeLiteral(nextPermutation);
+    literalRecycler^.disposeLiterals(nextPermutation);
   end;
 
 DESTRUCTOR T_permutationIterator.destroy;
@@ -553,7 +553,7 @@ FUNCTION T_flatMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation; C
             lt_map: begin
               iter:=P_compoundLiteral(nextUnmapped)^.forcedIteratableList(recycler);
               for sub in iter do appendEvaluated(sub^.rereferenced);
-              P_recycler(recycler)^.disposeLiteral(iter);
+              P_recycler(recycler)^.disposeLiterals(iter);
               P_recycler(recycler)^.disposeLiteral(nextUnmapped);
             end;
             lt_expression: begin

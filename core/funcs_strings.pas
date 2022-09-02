@@ -302,7 +302,7 @@ FUNCTION replace_one_or_all(CONST literalRecycler:P_literalRecycler; CONST param
         iter:=P_compoundLiteral(L)^.forcedIteratableList(literalRecycler);
         setLength(lookFor,length(iter));
         for i:=0 to length(lookFor)-1 do lookFor[i]:=P_stringLiteral(iter[i])^.value;
-        literalRecycler^.disposeLiteral(iter);
+        literalRecycler^.disposeLiterals(iter);
       end;
       L:=arg2;
       if L^.literalType=lt_string then begin
@@ -312,7 +312,7 @@ FUNCTION replace_one_or_all(CONST literalRecycler:P_literalRecycler; CONST param
         iter:=P_compoundLiteral(L)^.forcedIteratableList(literalRecycler);
         setLength(replaceBy,length(iter));
         for i:=0 to length(replaceBy)-1 do replaceBy[i]:=P_stringLiteral(iter[i])^.value;
-        literalRecycler^.disposeLiteral(iter);
+        literalRecycler^.disposeLiterals(iter);
       end;
       while length(replaceBy)<length(lookFor) do elongate(replaceBy);
       while length(lookFor)<length(replaceBy) do elongate(lookFor);
@@ -446,7 +446,7 @@ FUNCTION clean_impl intFuncSignature; {input,whitelist,instead,joinSuccessiveCha
         if length(s)=1 then include(asciiWhitelist,s[1]);
         utf8WhiteList.put(s);
       end;
-      recycler^.disposeLiteral(iter);
+      recycler^.disposeLiterals(iter);
 
       instead:=str2^.value;
       if length(instead)=1 then insteadC:=instead[1];

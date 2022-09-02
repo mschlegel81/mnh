@@ -120,7 +120,7 @@ FUNCTION T_interpolator.evaluateToDouble (CONST location:T_tokenLocation; CONST 
     if a^.literalType in [lt_bigint,lt_smallint,lt_real]
     then result:=getSingleInterpolatedValue(P_numericLiteral(a)^.floatValue)
     else begin
-      param:=P_recycler(recycler)^.newListLiteral(a,b);
+      param:=P_recycler(recycler)^.listLiteralOf(a,b);
       P_context(context)^.raiseCannotApplyError('interpolator '+getId,param,location);
       P_recycler(recycler)^.disposeLiteral(param);
       result:=Nan;
