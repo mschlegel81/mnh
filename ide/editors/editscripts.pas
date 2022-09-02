@@ -123,9 +123,9 @@ CONSTRUCTOR T_editScriptTask.create(CONST script_:P_scriptMeta; CONST inputEditF
     inputEditName:=inputEditFile;
     recycler:=newRecycler;
     if script^.scriptType=st_edit then begin
-      input:=literalRecycler.newListLiteral(length(input_));
-      for s in input_ do P_listLiteral(input)^.appendString(s);
-    end else input:=literalRecycler.newStringLiteral(inputEditFile);
+      input:=recycler^.newListLiteral(length(input_));
+      for s in input_ do P_listLiteral(input)^.appendString(recycler,s);
+    end else input:=recycler^.newStringLiteral(inputEditFile);
     freeRecycler(recycler);
     output:=nil;
     outputLanguage:=script^.outputLanguage;
@@ -149,8 +149,8 @@ CONSTRUCTOR T_editScriptTask.createForNewEditor(CONST editLines:T_arrayOfString;
     done:=true;
     succeeded:=true;
     recycler:=newRecycler;
-    output:=literalRecycler.newListLiteral(length(editLines));
-    for s in editLines do P_listLiteral(output)^.appendString(s);
+    output:=recycler^.newListLiteral(length(editLines));
+    for s in editLines do P_listLiteral(output)^.appendString(recycler,s);
     freeRecycler(recycler);
     done:=false;
   end;
@@ -160,7 +160,7 @@ DESTRUCTOR T_editScriptTask.destroy;
   begin
     if output<>nil then begin
       recycler:=newRecycler;
-      literalRecycler.disposeLiteral(output);
+      recycler^.disposeLiteral(output);
       freeRecycler(recycler);
     end;
     inherited destroy;
@@ -169,10 +169,10 @@ DESTRUCTOR T_editScriptTask.destroy;
 PROCEDURE T_editScriptTask.execute(VAR globals:T_evaluationGlobals; CONST recycler:P_recycler);
   begin
     output:=script^.editRule^.evaluateToLiteral(script^.editRule^.getLocation,@globals.primaryContext,recycler,input,nil).literal;
-    literalRecycler.disposeLiteral(input);
+    recycler^.disposeLiteral(input);
     if (output<>nil) and not(output^.literalType in C_scriptTypeMeta[script^.scriptType].validResultType) then begin
       globals.primaryContext.messages^.raiseSimpleError('Script failed due to invalid result type '+output^.typeString,script^.editRule^.getLocation);
-      literalRecycler.disposeLiteral(output);
+      recycler^.disposeLiteral(output);
     end;
     done:=true;
   end;

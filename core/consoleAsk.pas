@@ -124,8 +124,8 @@ FUNCTION ask_impl intFuncSignature;
       system.enterCriticalSection(cs);
       try
         if hasOptions
-        then result:=literalRecycler.newStringLiteral(ask(str0^.value, opt,context^.messages,visible))
-        else result:=literalRecycler.newStringLiteral(ask(str0^.value     ,context^.messages,visible));
+        then result:=recycler^.newStringLiteral(ask(str0^.value, opt,context^.messages,visible))
+        else result:=recycler^.newStringLiteral(ask(str0^.value     ,context^.messages,visible));
       finally
         system.leaveCriticalSection(cs);
       end;

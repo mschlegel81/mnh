@@ -23,16 +23,16 @@ FUNCTION parseJson_impl intFuncSignature;
     begin
       result:=nil;
       case json.JSONType of
-        jtString  : result:=literalRecycler.newStringLiteral(json.AsString);
+        jtString  : result:=recycler^.newStringLiteral(json.AsString);
         jtBoolean : result:=newBoolLiteral(json.AsBoolean);
         jtNumber  : if json.ClassType=TJSONFloatNumber.ClassType
-                    then result:=literalRecycler.newRealLiteral(json.AsFloat)
-                    else result:=literalRecycler.newIntLiteral(json.AsInt64);
+                    then result:=recycler^.newRealLiteral(json.AsFloat)
+                    else result:=recycler^.newIntLiteral(json.AsInt64);
         jtArray   : begin
-                      result:=literalRecycler.newListLiteral(TJSONArray(json).count);
+                      result:=recycler^.newListLiteral(TJSONArray(json).count);
                       for i:=0 to TJSONArray(json).count-1 do begin
                         childLit:=jsonToLiteral(TJSONArray(json)[i]);
-                        if childLit<>nil then P_listLiteral(result)^.append(childLit,false);
+                        if childLit<>nil then P_listLiteral(result)^.append(recycler,childLit,false);
                       end;
                     end;
         jtObject  : begin
@@ -40,7 +40,7 @@ FUNCTION parseJson_impl intFuncSignature;
                       for i:=0 to TJSONObject(json).count-1 do begin
                         key     :=TJSONObject(json).Names[i];
                         childLit:=jsonToLiteral(TJSONObject(json).elements[key]);
-                        if childLit<>nil then P_mapLiteral(result)^.put(key,childLit,false);
+                        if childLit<>nil then P_mapLiteral(result)^.put(recycler,key,childLit,false);
                       end;
                     end;
         jtNull    : if insteadOfNull<>nil then result:=insteadOfNull^.rereferenced;
@@ -114,7 +114,7 @@ FUNCTION formatJson_impl intFuncSignature;
 
   begin
     if (params<>nil) and (params^.size=1)
-    then result:=literalRecycler.newStringLiteral(literalToJson(arg0),true)
+    then result:=recycler^.newStringLiteral(literalToJson(arg0),true)
     else result:=nil;
   end;
 

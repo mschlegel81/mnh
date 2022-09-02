@@ -12,7 +12,7 @@ USES sysutils,
      tokens;
 TYPE
   P_recycler=^T_recycler;
-  T_recycler=object
+  T_recycler=object(T_literalRecycler)
     private
       isFree:boolean;
       tokens:record
@@ -146,7 +146,6 @@ PROCEDURE cleanupRecyclerPools;
     finally
       leaveCriticalSection(recyclerPoolCs);
     end;
-    literalRecycler.freeMemory(false);
   end;
 
 PROCEDURE cleanupRecyclerPoolsHard;
@@ -168,7 +167,6 @@ PROCEDURE cleanupRecyclerPoolsHard;
     finally
       leaveCriticalSection(recyclerPoolCs);
     end;
-    literalRecycler.freeMemory(true);
   end;
 
 PROCEDURE finalizeRecyclerPools;
@@ -202,6 +200,7 @@ PROCEDURE T_recycler.cleanup(CONST hard:boolean);
         end;
       end;
     end;
+    inherited freeMemory(hard);
   end;
 
 CONSTRUCTOR T_recycler.create;
@@ -211,11 +210,13 @@ CONSTRUCTOR T_recycler.create;
     hardCleanupPosted:=false;
     tokens.fill:=0;
     scopeRecycler.fill:=0;
+    inherited create;
   end;
 
 DESTRUCTOR T_recycler.destroy;
   begin
     cleanup(true);
+    inherited destroy;
   end;
 
 PROCEDURE T_recycler.cleanupIfPosted;
@@ -235,7 +236,7 @@ FUNCTION T_recycler.disposeToken(p: P_token): P_token;
       {$endif}
 
       result:=p^.next;
-      p^.undefine();
+      p^.undefine(@self);
       with tokens do if (fill>=length(dat))
       then dispose(p,destroy)
       else begin
@@ -260,14 +261,14 @@ FUNCTION T_recycler.newToken(CONST tokenLocation: T_tokenLocation; CONST tokenTe
 FUNCTION T_recycler.newToken(CONST original: T_token): P_token;
   begin
     with tokens do if (fill>0) then begin dec(fill); result:=dat[fill]; end else new(result,create);
-    result^.define(original);
+    result^.define(original,@self);
     result^.next:=nil;
   end;
 
 FUNCTION T_recycler.newToken(CONST original: P_token): P_token;
   begin
     with tokens do if (fill>0) then begin dec(fill); result:=dat[fill]; end else new(result,create);
-    result^.define(original^);
+    result^.define(original^,@self);
     result^.next:=nil;
   end;
 
@@ -287,7 +288,7 @@ PROCEDURE T_recycler.disposeScope(VAR scope: P_valueScope);
       scope:=nil;
       exit;
     end;
-    scope^.cleanup();
+    scope^.cleanup(@self);
     parent:=scope^.parentScope;
     with scopeRecycler do begin
       if (fill>=length(dat))
@@ -338,7 +339,7 @@ PROCEDURE T_recycler.scopePop(VAR scope: P_valueScope);
       scope:=newScope;
       exit;
     end;
-    scope^.cleanup();
+    scope^.cleanup(@self);
     with scopeRecycler do begin
       if (fill>=length(dat))
       then dispose(scope,destroy)
@@ -388,8 +389,8 @@ FUNCTION T_abstractRule.evaluateToBoolean(CONST callLocation:T_tokenLocation; CO
   VAR parList:P_listLiteral;
       rep:T_tokenRange;
   begin
-    parList:=literalRecycler.newListLiteral(1);
-    parList^.append(singleParameter,true);
+    parList:=recycler^.newListLiteral(1);
+    parList^.append(recycler,singleParameter,true);
     if canBeApplied(callLocation,parList,rep,context,recycler)
     then begin
       result:=(rep.first<>     nil          ) and
@@ -398,7 +399,7 @@ FUNCTION T_abstractRule.evaluateToBoolean(CONST callLocation:T_tokenLocation; CO
               (rep.first^.data=@boolLit[true]);
       recycler^.cascadeDisposeToken(rep.first);
     end else result:=false;
-    literalRecycler.disposeLiteral(parList);
+    recycler^.disposeLiteral(parList);
   end;
 
 FUNCTION T_abstractRule.getTypedef: P_typedef;
@@ -410,11 +411,26 @@ FUNCTION T_abstractRule.getTypedef: P_typedef;
 FUNCTION T_abstractRule.getInlineValue: P_literal;
   begin result:=nil; end;
 
+FUNCTION newLiteralRecycler:P_literalRecycler;
+  begin
+    result:=newRecycler;
+  end;
+
+PROCEDURE freeLiteralRecycler(VAR recycler:P_literalRecycler);
+  VAR r:P_recycler;
+  begin
+    r:=P_recycler(recycler);
+    freeRecycler(r);
+    recycler:=nil;
+  end;
+
 INITIALIZATION
   initCriticalSection(recyclerPoolCs);
   setLength(recyclerPool,0);
   memoryCleaner.registerCleanupMethod(0,@cleanupRecyclerPools);
   memoryCleaner.registerCleanupMethod(1,@cleanupRecyclerPoolsHard);
+  litVar.newLiteralRecycler :=@newLiteralRecycler;
+  litVar.freeLiteralRecycler:=@freeLiteralRecycler;
 FINALIZATION
   finalizeRecyclerPools;
 

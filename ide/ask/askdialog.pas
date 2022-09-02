@@ -262,7 +262,7 @@ FUNCTION ask_impl intFuncSignature;
         if hasOptions
         then askForm.initWithQuestionAndOptions(str0^.value, opt)
         else askForm.initWithQuestion(str0^.value);
-        result := literalRecycler.newStringLiteral(askForm.getLastAnswerReleasing(context^.messages));
+        result := recycler^.newStringLiteral(askForm.getLastAnswerReleasing(context^.messages));
       finally
         system.leaveCriticalSection(cs);
       end;

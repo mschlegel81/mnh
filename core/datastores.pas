@@ -30,7 +30,7 @@ TYPE
     public
       CONSTRUCTOR create;
       PROCEDURE addStoreToFlush(CONST meta:P_datastoreMeta; CONST L: P_literal; CONST location: T_tokenLocation; CONST writePlainText:boolean);
-      PROCEDURE finalize(CONST threadLocalMessages: P_messages);
+      PROCEDURE finalize(CONST threadLocalMessages: P_messages; CONST recycler:P_literalRecycler);
       DESTRUCTOR destroy;
   end;
 
@@ -43,7 +43,7 @@ TYPE
       FUNCTION newStoreName:string;
       {Returns true if new name is returned}
       FUNCTION tryObtainName(CONST createIfMissing:boolean; CONST enforcedName:string=''):boolean;
-      FUNCTION writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean):T_writeTempResult;
+      FUNCTION writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean; CONST recycler:P_literalRecycler):T_writeTempResult;
     public
       CONSTRUCTOR create(CONST packagePath_,ruleId_:string);
       DESTRUCTOR destroy;
@@ -78,7 +78,7 @@ FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOf
       try
         initialize(dummyLocation);
         dummyTypeMap.create();
-        literal:=newLiteralFromStream(@wrapper,dummyLocation,nil,dummyTypeMap);
+        literal:=newLiteralFromStream(recycler,@wrapper,dummyLocation,nil,dummyTypeMap);
         dummyTypeMap.destroy;
         if wrapper.allOkay and (literal<>nil) then begin
           dataAsStringList:=id+':=';
@@ -87,7 +87,7 @@ FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOf
       except
         result:=false;
       end;
-      if literal<>nil then literalRecycler.disposeLiteral(literal);
+      if literal<>nil then recycler^.disposeLiteral(literal);
       freeRecycler(recycler);
     end else dataAsStringList:=C_EMPTY_STRING_ARRAY;
     wrapper.destroy;
@@ -119,7 +119,8 @@ PROCEDURE moveSafely(CONST source,dest:string);
     end;
   end;
 
-PROCEDURE T_datastoreFlush.finalize(CONST threadLocalMessages: P_messages);
+PROCEDURE T_datastoreFlush.finalize(CONST threadLocalMessages: P_messages;
+  CONST recycler: P_literalRecycler);
   VAR i:longint;
       rename:T_writeTempResult;
       pendingRenames:array of T_writeTempResult;
@@ -131,11 +132,11 @@ PROCEDURE T_datastoreFlush.finalize(CONST threadLocalMessages: P_messages);
       for i:=0 to length(pendingWrites)-1 do with pendingWrites[i] do begin
         if threadLocalMessages^.continueEvaluation
         then begin
-          pendingRenames[i]:=meta^.writeValue(L,location,threadLocalMessages,writePlainText);
+          pendingRenames[i]:=meta^.writeValue(L,location,threadLocalMessages,writePlainText,recycler);
           allOk:=allOk and pendingRenames[i].finishedOk;
         end
         else pendingRenames[i].tempFileName:='';
-        literalRecycler.disposeLiteral(L);
+        recycler^.disposeLiteral(L);
       end;
       if allOk then begin
         for rename in pendingRenames do if rename.useTempFile then moveSafely(rename.tempFileName,rename.fileName);
@@ -271,10 +272,10 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; CONST context
       wrapper.readAnsiString;
       result:=nil;
       typeMap:=P_abstractPackage(location.package)^.getTypeMap;
-      if wrapper.allOkay then result:=newLiteralFromStream(@wrapper,location,context^.messages,typeMap);
+      if wrapper.allOkay then result:=newLiteralFromStream(recycler,@wrapper,location,context^.messages,typeMap);
       typeMap.destroy;
       if not(wrapper.allOkay) then begin
-        if result<>nil then literalRecycler.disposeLiteral(result);
+        if result<>nil then recycler^.disposeLiteral(result);
         result:=nil;
       end;
       wrapper.destroy;
@@ -303,12 +304,12 @@ FUNCTION T_datastoreMeta.readFromSpecificFileIncludingId(CONST fname:string; CON
       contentLiteral:=readValue(location,context,recycler);
       if contentLiteral=nil then exit(newVoidLiteral);
       result:=newMapLiteral(2)
-        ^.put('id',ruleId)
-        ^.put('content',contentLiteral,false);
+        ^.put(recycler,'id',ruleId)
+        ^.put(recycler,'content',contentLiteral,false);
     end else result:=newVoidLiteral;
   end;
 
-FUNCTION T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean):T_writeTempResult;
+FUNCTION T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean; CONST recycler:P_literalRecycler):T_writeTempResult;
   VAR wrapper:T_bufferedOutputStreamWrapper;
       plainText:T_arrayOfString;
   begin
@@ -326,7 +327,7 @@ FUNCTION T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLo
     end else begin
       wrapper.createToWriteToFile(result.tempFileName);
       wrapper.writeAnsiString(ruleId);
-      writeLiteralToStream(L,@wrapper,location,threadLocalMessages);
+      writeLiteralToStream(recycler,L,@wrapper,location,threadLocalMessages);
       result.finishedOk:=threadLocalMessages^.continueEvaluation and wrapper.allOkay;
       wrapper.destroy;
     end;

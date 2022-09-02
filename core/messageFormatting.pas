@@ -291,7 +291,7 @@ DESTRUCTOR T_echoOutMessage.destroy;
   begin
     recycler:=newRecycler;
     enterCriticalSection(messageCs);
-    literalRecycler.disposeLiteral(literal);
+    recycler^.disposeLiteral(literal);
     leaveCriticalSection(messageCs);
     freeRecycler(recycler);
     inherited;

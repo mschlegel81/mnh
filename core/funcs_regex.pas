@@ -134,9 +134,9 @@ FUNCTION regexValidate_imp intFuncSignature;
     doneRegex(regex);
     if feedbackMethod=nil then exit(newBoolLiteral(message=''));
     if message<>'' then begin
-      feedbackInput:=literalRecycler.newStringLiteral(message);
+      feedbackInput:=recycler^.newStringLiteral(message);
       result:=feedbackMethod^.evaluateToLiteral(tokenLocation,context,recycler,feedbackInput,nil).literal;
-      literalRecycler.disposeLiteral(feedbackInput);
+      recycler^.disposeLiteral(feedbackInput);
       exit(result);
     end;
     result:=newVoidLiteral;
@@ -169,8 +169,8 @@ FUNCTION regexMatch_imp intFuncSignature;
       if i1<IS_SCALAR then exit(nil)
       else if i1=IS_SCALAR then result:=newBoolLiteral(regexMatches(triplet(arg1,arg0,nil,0)))
       else begin
-        result:=literalRecycler.newListLiteral;
-        for i:=0 to i1-1 do listResult^.appendBool(regexMatches(triplet(arg1,arg0,nil,i)));
+        result:=recycler^.newListLiteral;
+        for i:=0 to i1-1 do listResult^.appendBool(recycler,regexMatches(triplet(arg1,arg0,nil,i)));
       end;
     end;
   end;
@@ -180,20 +180,21 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
     VAR i:longint;
         regex:P_regexMapEntry;
     begin
-      if trip.y='' then exit(literalRecycler.newListLiteral(0));
+      if trip.y='' then exit(recycler^.newListLiteral(0));
       regex:=regexForExpression(trip.x);
       regex^.RegExpr.inputString:=trip.y;
-      result:=literalRecycler.newListLiteral;
+      result:=recycler^.newListLiteral;
       try
         if regex^.RegExpr.Exec(trip.y) then repeat
           for i:=0 to regex^.RegExpr.SubExprMatchCount do
           if (i=0) or (regex^.RegExpr.MatchPos[i]<>regex^.RegExpr.MatchPos[i-1]) or
                       (regex^.RegExpr.MatchLen[i]<>regex^.RegExpr.MatchLen[i-1]) then begin
             result^.append(
-              literalRecycler.newListLiteral^.
-              appendString(regex^.RegExpr.match   [i])^.
-              appendInt   (regex^.RegExpr.MatchPos[i])^.
-              appendInt   (regex^.RegExpr.MatchLen[i]),false);
+              recycler,
+              recycler^.newListLiteral^.
+              appendString(recycler,regex^.RegExpr.match   [i])^.
+              appendInt   (recycler,regex^.RegExpr.MatchPos[i])^.
+              appendInt   (recycler,regex^.RegExpr.MatchLen[i]),false);
           end;
         until not(regex^.RegExpr.ExecNext);
       except
@@ -215,8 +216,8 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
       if i1<IS_SCALAR then exit(nil)
       else if i1=IS_SCALAR then result:=regexMatchComposite(triplet(arg1,arg0,nil,0))
       else begin
-        result:=literalRecycler.newListLiteral;
-        for i:=0 to i1-1 do listResult^.append(regexMatchComposite(triplet(arg1,arg0,nil,i)),false);
+        result:=recycler^.newListLiteral;
+        for i:=0 to i1-1 do listResult^.append(recycler,regexMatchComposite(triplet(arg1,arg0,nil,i)),false);
       end;
     end;
   end;
@@ -227,7 +228,7 @@ FUNCTION regexSplit_imp intFuncSignature;
         pieces : TStrings;
         regex:P_regexMapEntry;
     begin
-      if trip.y='' then exit(literalRecycler.newListLiteral(0));
+      if trip.y='' then exit(recycler^.newListLiteral(0));
       regex:=regexForExpression(trip.x);
       pieces:=TStringList.create;
       try
@@ -241,8 +242,8 @@ FUNCTION regexSplit_imp intFuncSignature;
         end;
       end;
       doneRegex(regex);
-      result:=literalRecycler.newListLiteral;
-      for i:=0 to pieces.count-1 do result^.appendString(pieces[i]);
+      result:=recycler^.newListLiteral;
+      for i:=0 to pieces.count-1 do result^.appendString(recycler,pieces[i]);
       pieces.free;
     end;
 
@@ -254,8 +255,8 @@ FUNCTION regexSplit_imp intFuncSignature;
       if i1<IS_SCALAR then exit(nil)
       else if i1=IS_SCALAR then result:=regexSplit(triplet(arg1,arg0,nil,0))
       else begin
-        result:=literalRecycler.newListLiteral;
-        for i:=0 to i1-1 do listResult^.append(regexSplit(triplet(arg1,arg0,nil,i)),false);
+        result:=recycler^.newListLiteral;
+        for i:=0 to i1-1 do listResult^.append(recycler,regexSplit(triplet(arg1,arg0,nil,i)),false);
       end;
     end;
   end;
@@ -285,10 +286,10 @@ FUNCTION regexReplace_imp intFuncSignature;
     if (params<>nil) and (params^.size=3) then begin
       i1:=listSize(arg0,arg1,arg2);
       if i1<IS_SCALAR then exit(nil)
-      else if i1=IS_SCALAR then result:=literalRecycler.newStringLiteral(regexReplace(triplet(arg1,arg0,arg2,0)))
+      else if i1=IS_SCALAR then result:=recycler^.newStringLiteral(regexReplace(triplet(arg1,arg0,arg2,0)))
       else begin
-        result:=literalRecycler.newListLiteral;
-        for i:=0 to i1-1 do listResult^.appendString(regexReplace(triplet(arg1,arg0,arg2,i)));
+        result:=recycler^.newListLiteral;
+        for i:=0 to i1-1 do listResult^.appendString(recycler,regexReplace(triplet(arg1,arg0,arg2,i)));
       end;
     end;
   end;

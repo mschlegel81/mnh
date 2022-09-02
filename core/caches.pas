@@ -67,8 +67,8 @@ PROCEDURE T_cache.polish;
           data[j] := data[i];
           inc(j);
         end else begin
-          literalRecycler.disposeLiteral(data[i].key);
-          literalRecycler.disposeLiteral(data[i].value);
+          recycler^.disposeLiteral(data[i].key);
+          recycler^.disposeLiteral(data[i].value);
           dec(fill);
         end;
         setLength(data, j);
@@ -171,8 +171,8 @@ PROCEDURE T_cache.clear;
     try
       for i := 0 to (length(cached)-1) do with cached[i] do begin
         for j := 0 to length(data)-1 do with data[j] do begin
-          literalRecycler.disposeLiteral(key);
-          literalRecycler.disposeLiteral(value);
+          recycler^.disposeLiteral(key);
+          recycler^.disposeLiteral(value);
         end;
         setLength(data, 0);
       end;
