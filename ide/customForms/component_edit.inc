@@ -4,7 +4,7 @@ TYPE
     editPanel:TPanel;
     editLabel:TLabel;
     edit:TEdit;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST recycler:P_literalRecycler);
     PROCEDURE update; virtual;
     FUNCTION leftLabelOrNil:TLabel; virtual;
     PROCEDURE OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftState);
@@ -14,9 +14,9 @@ TYPE
   end;
 
 CONSTRUCTOR T_editMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
-                              CONST location: T_tokenLocation; VAR context: T_context);
+                              CONST location: T_tokenLocation; VAR context: T_context; CONST recycler:P_literalRecycler);
   begin
-    inherited create(def,location,context,[dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind]);
+    inherited create(def,location,context,[dmk_type,dmk_action,dmk_caption,dmk_enabled,dmk_bind],recycler);
     editPanel:=TPanel.create(parent^.winControl);
     editPanel.parent:=parent^.winControl;
     editPanel.Align:=alTop;
@@ -79,7 +79,7 @@ PROCEDURE T_editMeta.OnKeyDown(Sender: TObject; VAR key: word; Shift: TShiftStat
   begin
     if (key<>13) then exit;
     recycler:=newRecycler;
-    if config.action<>nil then postAction(literalRecycler.newStringLiteral(TEdit(Sender).text));
+    if config.action<>nil then postAction(recycler^.newStringLiteral(TEdit(Sender).text));
     freeRecycler(recycler);
   end;
 

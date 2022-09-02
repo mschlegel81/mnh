@@ -3,7 +3,7 @@ TYPE
   T_secondaryOutputMemoMeta=object(T_outputMemoMeta)
     adaptersHoldingCollector:P_messagesDistributor;
     synOutAdapter:P_eagerInitializedOutAdapter;
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST recycler:P_literalRecycler);
     FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean; virtual;
     PROCEDURE update; virtual;
     PROCEDURE connect; virtual;
@@ -12,9 +12,9 @@ TYPE
     DESTRUCTOR destroy; virtual;
   end;
 
-CONSTRUCTOR T_secondaryOutputMemoMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_context);
+CONSTRUCTOR T_secondaryOutputMemoMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_context; CONST recycler:P_literalRecycler);
   begin
-    inherited create(parent,def,location,context,[dmk_type]);
+    inherited create(parent,def,location,context,recycler,[dmk_type]);
     state_hlLang:=fileTypeMeta[LANG_OUTPUT].extensions[0];
     synMeta.setLanguageWithFallback(state_hlLang,synMeta.language);
     adaptersHoldingCollector:=P_messagesDistributor(context.messages);

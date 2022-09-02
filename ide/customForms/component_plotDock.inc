@@ -5,7 +5,7 @@ T_plotDockMeta=object(T_panelMeta)
     relatedPlotAdapter:P_guiPlotSystem;
     plotDockedBefore:T_componentParent;
   public
-  CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST plot:P_guiPlotSystem);
+  CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST recycler:P_literalRecycler; CONST plot:P_guiPlotSystem);
   PROCEDURE update; virtual;
   FUNCTION preferClientAlignment:boolean; virtual;
   PROCEDURE alignContents; virtual;
@@ -15,9 +15,10 @@ T_plotDockMeta=object(T_panelMeta)
   PROCEDURE disconnect; virtual;
 end;
 
-CONSTRUCTOR T_plotDockMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_context; CONST plot:P_guiPlotSystem);
+CONSTRUCTOR T_plotDockMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral; CONST location: T_tokenLocation;
+  VAR context: T_context; CONST recycler:P_literalRecycler; CONST plot:P_guiPlotSystem);
   begin
-    inherited create(parent,def,location,context,[dmk_type]);
+    inherited create(parent,def,location,context,recycler,[dmk_type]);
     relatedPlotAdapter:=plot;
   end;
 

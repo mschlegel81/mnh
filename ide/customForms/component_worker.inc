@@ -3,18 +3,18 @@ TYPE
   T_workerMeta=object(T_guiElementMeta)
     nextInvocation:double;
     interval:double;
-    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
+    CONSTRUCTOR create(CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST recycler:P_literalRecycler);
     PROCEDURE update; virtual;
     FUNCTION evaluate(CONST location: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler): boolean; virtual;
     FUNCTION getControl:TControl; virtual;
     FUNCTION getName:string; virtual;
   end;
 
-CONSTRUCTOR T_workerMeta.create(CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_context);
+CONSTRUCTOR T_workerMeta.create(CONST def: P_mapLiteral; CONST location: T_tokenLocation; VAR context: T_context; CONST recycler:P_literalRecycler);
   VAR tmp:P_literal;
   begin
-    inherited create(def,location,context,[dmk_type,dmk_action,dmk_interval]);
-    tmp:=mapGet(def,key[dmk_interval]);
+    inherited create(def,location,context,recycler,[dmk_type,dmk_action,dmk_interval]);
+    tmp:=mapGet(def,key[dmk_interval],recycler);
     interval:=0;
     if tmp<>nil then begin
       case tmp^.literalType of
@@ -34,7 +34,7 @@ FUNCTION T_workerMeta.evaluate(CONST location: T_tokenLocation; CONST context:P_
   begin
     if (config.action<>nil) and (now>=nextInvocation) then begin
       tmp:=config.action^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
-      if tmp<>nil then literalRecycler.disposeLiteral(tmp);
+      if tmp<>nil then recycler^.disposeLiteral(tmp);
       nextInvocation:=now+interval;
       result:=true;
     end else result:=false;

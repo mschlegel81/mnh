@@ -1497,7 +1497,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
     end else if length(lines)>0 then begin
       result^.location:=start;
       result^.tokType:=tt_literal;
-      result^.data:=literalRecycler.newStringLiteral(join(lines,C_lineBreakChar));
+      result^.data:=recycler^.newStringLiteral(join(lines,C_lineBreakChar));
       setLength(lines,0);
       exit(result);
     end;
@@ -1522,7 +1522,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
     end;
     case line[inputLocation.column] of
       '0'..'9': begin
-        result^.data:=parseNumber(line,inputLocation.column, false, parsedLength);
+        result^.data:=parseNumber(line,inputLocation.column, false,recycler, parsedLength);
         if parsedLength<=0 then begin
                                   fail('Cannot parse numeric literal '+line);
                                   recycler^.disposeToken(result);
@@ -1550,7 +1550,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
           end;
         end else begin
           result^.tokType:=tt_literal;
-          result^.data:=literalRecycler.newStringLiteral(stringValue);
+          result^.data:=recycler^.newStringLiteral(stringValue);
         end;
         stringValue:='';
       end;
@@ -1569,8 +1569,8 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
         if result^.tokType=tt_identifier then begin
           if      result^.txt=LITERAL_BOOL_TEXT[true]  then begin result^.tokType:=tt_literal; result^.data:=newBoolLiteral(true);     end
           else if result^.txt=LITERAL_BOOL_TEXT[false] then begin result^.tokType:=tt_literal; result^.data:=newBoolLiteral(false);    end
-          else if result^.txt=LITERAL_NAN_TEXT         then begin result^.tokType:=tt_literal; result^.data:=literalRecycler.newRealLiteral(Nan);      end
-          else if result^.txt=LITERAL_INF_TEXT         then begin result^.tokType:=tt_literal; result^.data:=literalRecycler.newRealLiteral(infinity); end
+          else if result^.txt=LITERAL_NAN_TEXT         then begin result^.tokType:=tt_literal; result^.data:=recycler^.newRealLiteral(Nan);      end
+          else if result^.txt=LITERAL_INF_TEXT         then begin result^.tokType:=tt_literal; result^.data:=recycler^.newRealLiteral(infinity); end
           else if result^.txt=LITERAL_TEXT_VOID        then begin result^.tokType:=tt_literal; result^.data:=newVoidLiteral;           end
           else begin
             result^.data:=associatedPackage;

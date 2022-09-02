@@ -1,12 +1,15 @@
-private randomsToPi(samples:NumericList)->4*trueCount(samples<1)/samples.size;
+@SuppressUnusedWarning=Used in printf
+private monteCarloPi  (sampleSize>0)->
+  rangeGenerator(1,sampleSize).chunkMap(500,(l)->trueCount(random(l.size)²+random(l.size)²<1)).agg(+)/sampleSize*4;
 
 @SuppressUnusedWarning=Used in printf
-private monteCarloPi  (sampleSize>0)->randomsToPi(random(sampleSize)²+
-                                                  random(sampleSize)²);
-@SuppressUnusedWarning=Used in printf
-private vanDerCorputPi(sampleSize>0)->randomsToPi(vanDerCorputGenerator(2).head(sampleSize)²+
-                                                  vanDerCorputGenerator(3).head(sampleSize)²);
+private vanDerCorputPi(sampleSize>0)->begin
+  local G2:=vanDerCorputGenerator(2);
+  local G3:=vanDerCorputGenerator(3);
+  rangeGenerator(1,sampleSize).chunkMap(500,(l)->trueCount(G2.head(l.size)²+G3.head(l.size)²<1)).agg(+)/sampleSize*4;
+end;
 
+vanDerCorputPi(10^6);
 
 @demo_for=math/monte carlo
 //*Solves the "Monte carlo methods" task from http://rosettacode.org/wiki/Monte_Carlo_methods

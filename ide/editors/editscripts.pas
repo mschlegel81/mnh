@@ -116,17 +116,14 @@ DESTRUCTOR T_scriptMeta.destroy;
 
 CONSTRUCTOR T_editScriptTask.create(CONST script_:P_scriptMeta; CONST inputEditFile:string; CONST input_:T_arrayOfString; CONST inputLang:string);
   VAR s:string;
-      recycler:P_recycler;
   begin
     inherited create(mt_guiEdit_done);
     script:=script_;
     inputEditName:=inputEditFile;
-    recycler:=newRecycler;
     if script^.scriptType=st_edit then begin
-      input:=literalRecycler.newListLiteral(length(input_));
-      for s in input_ do P_listLiteral(input)^.appendString(s);
-    end else input:=literalRecycler.newStringLiteral(inputEditFile);
-    freeRecycler(recycler);
+      input:=globalLiteralRecycler.newListLiteral(length(input_));
+      for s in input_ do P_listLiteral(input)^.appendString(@globalLiteralRecycler,s);
+    end else input:=globalLiteralRecycler.newStringLiteral(inputEditFile);
     output:=nil;
     outputLanguage:=script^.outputLanguage;
     if outputLanguage='' then begin
@@ -139,7 +136,6 @@ CONSTRUCTOR T_editScriptTask.create(CONST script_:P_scriptMeta; CONST inputEditF
 
 CONSTRUCTOR T_editScriptTask.createForNewEditor(CONST editLines:T_arrayOfString; CONST language:string='mnh');
   VAR s:string;
-      recycler:P_recycler;
   begin
     inherited create(mt_guiEdit_done);
     script:=nil;
@@ -148,31 +144,25 @@ CONSTRUCTOR T_editScriptTask.createForNewEditor(CONST editLines:T_arrayOfString;
     outputLanguage:=language;
     done:=true;
     succeeded:=true;
-    recycler:=newRecycler;
-    output:=literalRecycler.newListLiteral(length(editLines));
-    for s in editLines do P_listLiteral(output)^.appendString(s);
-    freeRecycler(recycler);
+    output:=globalLiteralRecycler.newListLiteral(length(editLines));
+    for s in editLines do P_listLiteral(output)^.appendString(@globalLiteralRecycler,s);
     done:=false;
   end;
 
 DESTRUCTOR T_editScriptTask.destroy;
-  VAR recycler:P_recycler;
   begin
-    if output<>nil then begin
-      recycler:=newRecycler;
-      literalRecycler.disposeLiteral(output);
-      freeRecycler(recycler);
-    end;
+    if output<>nil
+    then globalLiteralRecycler.disposeLiteral(output);
     inherited destroy;
   end;
 
 PROCEDURE T_editScriptTask.execute(VAR globals:T_evaluationGlobals; CONST recycler:P_recycler);
   begin
     output:=script^.editRule^.evaluateToLiteral(script^.editRule^.getLocation,@globals.primaryContext,recycler,input,nil).literal;
-    literalRecycler.disposeLiteral(input);
+    recycler^.disposeLiteral(input);
     if (output<>nil) and not(output^.literalType in C_scriptTypeMeta[script^.scriptType].validResultType) then begin
       globals.primaryContext.messages^.raiseSimpleError('Script failed due to invalid result type '+output^.typeString,script^.editRule^.getLocation);
-      literalRecycler.disposeLiteral(output);
+      recycler^.disposeLiteral(output);
     end;
     done:=true;
   end;

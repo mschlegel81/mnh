@@ -4,7 +4,7 @@ TYPE
     private
       colCount:longint;
     public
-    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context);
+    CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST recycler:P_literalRecycler);
     PROCEDURE add(CONST meta:P_guiElementMeta); virtual;
     PROCEDURE doneAdding;
     PROCEDURE update; virtual;
@@ -16,12 +16,12 @@ TYPE
   end;
 
 CONSTRUCTOR T_gridMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLiteral;
-                              CONST location: T_tokenLocation; VAR context: T_context);
+                              CONST location: T_tokenLocation; VAR context: T_context; CONST recycler:P_literalRecycler);
   VAR tmp:P_literal;
   begin
-    inherited create(parent,def,location,context,[dmk_type,dmk_parts,dmk_colCount]);
+    inherited create(parent,def,location,context,recycler,[dmk_type,dmk_parts,dmk_colCount]);
     colCount:=-1;
-    tmp:=mapGet(def,key[dmk_colCount]);
+    tmp:=mapGet(def,key[dmk_colCount],recycler);
     if (tmp<>nil) and (tmp^.literalType in [lt_smallint,lt_bigint]) and (P_abstractIntLiteral(tmp)^.isBetween(1,100)) then colCount:=P_abstractIntLiteral(tmp)^.intValue;
     if colCount<0 then context.raiseError('grids must have a specified colCount in [1..100]',location);
     winControl.OnResize:=@OnResize;

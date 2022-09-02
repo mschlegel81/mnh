@@ -46,7 +46,7 @@ TYPE
       PROPERTY point[index:longint]:T_point read getPoint write setPoint; default;
       PROPERTY size:longint read alloc write setSize;
       PROCEDURE cloneTo(OUT other:T_dataRow);
-      FUNCTION toNewLiteralForExport():P_listLiteral;
+      FUNCTION toNewLiteralForExport(CONST literalRecycler:P_literalRecycler):P_listLiteral;
   end;
 
   T_rowToPaint = array of record
@@ -128,7 +128,7 @@ TYPE
     pseudoIndex:longint;
     PROCEDURE updateBoundingBox(CONST scaling:T_scalingOptions; VAR boundingBox:T_boundingBox); virtual; abstract;
     PROCEDURE render(CONST opt:T_scalingOptions; CONST screenBox:T_boundingBox;  CONST yBaseLine:longint; CONST target:TBGRACanvas); virtual; abstract;
-    FUNCTION toStatementForExport(CONST firstRow:boolean; VAR globalRowData:T_listLiteral):string; virtual; abstract;
+    FUNCTION toStatementForExport(CONST firstRow:boolean; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral):string; virtual; abstract;
     FUNCTION getFullClone:P_plotPrimitive; virtual; abstract;
     DESTRUCTOR destroy; virtual; abstract;
   end;
@@ -141,7 +141,7 @@ TYPE
 
     PROCEDURE updateBoundingBox(CONST scaling:T_scalingOptions; VAR boundingBox:T_boundingBox); virtual;
     PROCEDURE render(CONST opt:T_scalingOptions; CONST screenBox:T_boundingBox; CONST yBaseLine:longint; CONST target:TBGRACanvas); virtual;
-    FUNCTION toStatementForExport(CONST firstRow:boolean; VAR globalRowData:T_listLiteral):string; virtual;
+    FUNCTION toStatementForExport(CONST firstRow:boolean; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral):string; virtual;
     FUNCTION getFullClone:P_plotPrimitive; virtual;
     DESTRUCTOR destroy; virtual;
   end;
@@ -169,7 +169,7 @@ TYPE
 
     PROCEDURE updateBoundingBox(CONST scaling:T_scalingOptions; VAR boundingBox:T_boundingBox); virtual;
     PROCEDURE render(CONST opt:T_scalingOptions; CONST screenBox:T_boundingBox;  CONST yBaseLine:longint; CONST target:TBGRACanvas); virtual;
-    FUNCTION toStatementForExport(CONST firstRow:boolean; VAR globalRowData:T_listLiteral):string; virtual;
+    FUNCTION toStatementForExport(CONST firstRow:boolean; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral):string; virtual;
     FUNCTION getFullClone:P_plotPrimitive; virtual;
     DESTRUCTOR destroy; virtual;
   end;
@@ -181,7 +181,7 @@ TYPE
     CONSTRUCTOR create();
     PROCEDURE updateBoundingBox(CONST scaling:T_scalingOptions; VAR boundingBox:T_boundingBox); virtual;
     PROCEDURE render(CONST opt:T_scalingOptions; CONST screenBox:T_boundingBox; CONST yBaseLine:longint; CONST target:TBGRACanvas); virtual;
-    FUNCTION toStatementForExport(CONST firstRow:boolean; VAR globalRowData:T_listLiteral):string; virtual;
+    FUNCTION toStatementForExport(CONST firstRow:boolean; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral):string; virtual;
     FUNCTION getFullClone:P_plotPrimitive; virtual;
     DESTRUCTOR destroy; virtual;
   end;
@@ -338,7 +338,7 @@ PROCEDURE T_rasterImage.render(CONST opt: T_scalingOptions; CONST screenBox: T_b
     end;
   end;
 
-FUNCTION T_rasterImage.toStatementForExport(CONST firstRow: boolean; VAR globalRowData: T_listLiteral): string;
+FUNCTION T_rasterImage.toStatementForExport(CONST firstRow: boolean; CONST literalRecycler: P_literalRecycler; VAR globalRowData: T_listLiteral): string;
   VAR myRowIndex:longint;
       i:longint;
       data:P_listLiteral;
@@ -347,17 +347,17 @@ FUNCTION T_rasterImage.toStatementForExport(CONST firstRow: boolean; VAR globalR
   begin
     myRowIndex:=globalRowData.size;
     result:='plotRasterImage(ROW['+intToStr(myRowIndex)+']/255,'+intToStr(width)+');';
-    data:=literalRecycler.newListLiteral(length(colors));
+    data:=literalRecycler^.newListLiteral(length(colors));
     for i:=0 to length(colors)-1 do begin
       c:=colors[i];
       if (c[cc_red]=c[cc_green]) and (c[cc_red]=c[cc_blue])
-      then data^.appendInt(c[cc_red])
-      else data^.append(literalRecycler.newListLiteral(3)^
-                       .appendInt(c[cc_red  ])^
-                       .appendInt(c[cc_green])^
-                       .appendInt(c[cc_blue ]),false);
+      then data^.appendInt(literalRecycler,c[cc_red])
+      else data^.append(literalRecycler,literalRecycler^.newListLiteral(3)^
+                       .appendInt(literalRecycler,c[cc_red  ])^
+                       .appendInt(literalRecycler,c[cc_green])^
+                       .appendInt(literalRecycler,c[cc_blue ]),false);
     end;
-    globalRowData.append(data,false);
+    globalRowData.append(literalRecycler,data,false);
   end;
 
 FUNCTION T_rasterImage.getFullClone: P_plotPrimitive;
@@ -713,27 +713,27 @@ FUNCTION numToString(num:double):string;
     end else result:=myFloatToStr(num);
   end;
 
-FUNCTION T_dataRow.toNewLiteralForExport():P_listLiteral;
+FUNCTION T_dataRow.toNewLiteralForExport(CONST literalRecycler:P_literalRecycler):P_listLiteral;
   FUNCTION simplify(CONST num:double):P_numericLiteral;
     VAR inum:int64;
     begin
       if (num>=-9E18) and (num<9E18) then begin
         inum:=round(num);
-        if num=inum then result:=literalRecycler.newIntLiteral(inum)
-                    else result:=literalRecycler.newRealLiteral(num);
-      end else result:=literalRecycler.newRealLiteral(num);
+        if num=inum then result:=literalRecycler^.newIntLiteral(inum)
+                    else result:=literalRecycler^.newRealLiteral(num);
+      end else result:=literalRecycler^.newRealLiteral(num);
     end;
 
   VAR i:longint=0;
       simple:boolean=true;
   begin
     while (i<alloc) and simple do begin simple:=simple and (dat[i,0]=i); inc(i); end;
-    result:=literalRecycler.newListLiteral(alloc);
+    result:=literalRecycler^.newListLiteral(alloc);
     if simple
-    then for i:=0 to alloc-1 do result^.append(simplify(dat[i,1]),false)
-    else for i:=0 to alloc-1 do result^.append(literalRecycler.newListLiteral(2)^
-                                                    .append(simplify(dat[i,0]),false)^
-                                                    .append(simplify(dat[i,1]),false),false);
+    then for i:=0 to alloc-1 do result^.append(literalRecycler,simplify(dat[i,1]),false)
+    else for i:=0 to alloc-1 do result^.append(literalRecycler,literalRecycler^.newListLiteral(2)^
+                                                    .append(literalRecycler,simplify(dat[i,0]),false)^
+                                                    .append(literalRecycler,simplify(dat[i,1]),false),false);
   end;
 
 CONSTRUCTOR T_customText.create(CONST x, y: double; CONST txt: T_arrayOfString);
@@ -895,7 +895,9 @@ PROCEDURE T_customText.updateBoundingBox(CONST scaling: T_scalingOptions;
     //TODO Maybe custom text with relative positions must influence the bounding box...
   end;
 
-FUNCTION T_customText.toStatementForExport(CONST firstRow: boolean; VAR globalRowData: T_listLiteral): string;
+FUNCTION T_customText.toStatementForExport(CONST firstRow: boolean;
+  CONST literalRecycler: P_literalRecycler; VAR globalRowData: T_listLiteral
+  ): string;
   CONST anchorText:array[T_customTextAnchor] of string=('"TL"','"T"','"TR"','"L"','"C"','"R"','"BL"','"B"','"BR"');
   VAR dummy:boolean;
   begin
@@ -1796,15 +1798,16 @@ DESTRUCTOR T_sampleRow.destroy;
     sample.free;
   end;
 
-FUNCTION T_sampleRow.toStatementForExport(CONST firstRow: boolean;VAR globalRowData: T_listLiteral): string;
+FUNCTION T_sampleRow.toStatementForExport(CONST firstRow: boolean;CONST literalRecycler: P_literalRecycler; VAR globalRowData: T_listLiteral): string;
   VAR myRowIndex:longint;
   begin
     myRowIndex:=globalRowData.size;
     if firstRow then result:='plot@(ROW['+intToStr(myRowIndex)+']);'
              else result:='addPlot@(ROW['+intToStr(myRowIndex)+']);';
-    globalRowData.append(literalRecycler.newListLiteral(2)^
-                               .append      (sample.toNewLiteralForExport(),false)^
-                               .appendString(style.toString),false);
+    globalRowData.append(literalRecycler,
+                         literalRecycler^.newListLiteral(2)^
+                               .append      (literalRecycler,sample.toNewLiteralForExport(literalRecycler),false)^
+                               .appendString(literalRecycler,style.toString),false);
   end;
 
 FUNCTION T_sampleRow.getFullClone: P_plotPrimitive;
