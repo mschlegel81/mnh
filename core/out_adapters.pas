@@ -1147,6 +1147,8 @@ DESTRUCTOR T_consoleOutAdapter.destroy;
 FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
   VAR s:string;
       p:ansistring;
+      formatted,toPrint:T_arrayOfString;
+      k:longint=0;
   begin
     result:=message^.messageType in messageTypesToInclude;
     if result then begin
@@ -1154,20 +1156,6 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
       try
         case message^.messageType of
           mt_clearConsole: mySys.clearConsole;
-          mt_printline: begin
-            if not(mySys.isConsoleShowing) then mySys.showConsole;
-            for s in messageFormatProvider^.formatMessage(message) do begin
-              if s=C_formFeedChar
-              then mySys.clearConsole
-              else begin
-                p:=s;
-                {$ifdef Windows} SetCodePage(RawByteString(p),CP_NONE,false); {$endif}
-                if mode in [com_normal,com_stdout_only]
-                then writeln(       p)
-                else writeln(stdErr,p);
-              end;
-            end;
-          end;
           mt_printdirect: begin
             if not(mySys.isConsoleShowing) then mySys.showConsole;
             for s in P_storedMessageWithText(message)^.txt do
@@ -1179,15 +1167,22 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
                 else write(stdErr,p);
               end;
           end;
-          else for s in messageFormatProvider^.formatMessage(message) do
-            begin
-              p:=s;
-              {$ifdef Windows} SetCodePage(RawByteString(p),CP_NONE,false); {$endif}
-              if mode = com_stdout_only
-              then writeln(       p)
-              else writeln(stdErr,p);
-            end;
+          else begin
+            if not(mySys.isConsoleShowing) then mySys.showConsole;
+            formatted:=messageFormatProvider^.formatMessage(message);
+            setLength(toPrint,length(formatted));
+            for s in formatted do if s=C_formFeedChar then mySys.clearConsole else begin toPrint[k]:=s; k+=1; end;
+            setLength(toPrint,k);
+            p:=join(toPrint,LineEnding);
+            {$ifdef Windows} SetCodePage(RawByteString(p),CP_NONE,false); {$endif}
+            if    (message^.messageType in [mt_printline,mt_log]) and (mode in [com_normal,com_stdout_only]) or
+               not(message^.messageType in [mt_printline,mt_log]) and (mode = com_stdout_only)
+            then writeln(       p)
+            else writeln(stdErr,p);
+          end;
         end;
+        flush(StdOut);
+        flush(stdErr);
       finally
         leaveCriticalSection(adapterCs);
       end;
@@ -1373,6 +1368,7 @@ INITIALIZATION
   initialize(globalAdaptersCs);
   initCriticalSection(globalAdaptersCs);
   setLength(allConnectors,0);
+
 FINALIZATION
   if (fileFlushThread<>nil) then begin
     while not(fileFlushThread.Finished) do fileFlushThread.Terminate;
