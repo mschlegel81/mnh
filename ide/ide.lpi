@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <ProjectOptions>
-    <Version Value="11"/>
+    <Version Value="12"/>
     <General>
       <Flags>
         <LRSInOutputDirectory Value="False"/>
+        <CompatibilityMode Value="True"/>
       </Flags>
       <SessionStorage Value="InProjectDir"/>
-      <MainUnit Value="0"/>
       <Title Value="MNH5 - GUI"/>
       <Scaled Value="True"/>
       <UseAppBundle Value="False"/>
@@ -26,7 +26,7 @@
       <MajorVersionNr Value="2"/>
       <MinorVersionNr Value="2"/>
       <RevisionNr Value="5"/>
-      <BuildNr Value="438"/>
+      <BuildNr Value="439"/>
       <CharSet Value="04B0"/>
       <StringTable CompanyName="Martin Schlegel" FileDescription="MNH5 IDE and interpreter" InternalName="mnh5_full" LegalCopyright="LGPL" OriginalFilename="mnh" ProductName="MNH5"/>
     </VersionInfo>
@@ -114,7 +114,6 @@
     </PublishOptions>
     <RunParams>
       <FormatVersion Value="2"/>
-      <Modes Count="0"/>
     </RunParams>
     <RequiredPackages Count="3">
       <Item1>
@@ -693,6 +692,7 @@
     </CodeGeneration>
     <Linking>
       <Debugging>
+        <DebugInfoType Value="dsDwarf2Set"/>
         <UseHeaptrc Value="True"/>
       </Debugging>
     </Linking>

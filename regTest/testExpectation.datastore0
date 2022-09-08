@@ -3444,18 +3444,27 @@ expectations:=
   'FDWin64'=>
   ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
    'was reconstructed as -0.104*cos(0*t)-0.158*cos(1*t)+0.656*sin(1*t)-0.696*cos(2*t)+0.143*sin(2*t);'],
+  'FOLinux'=>
+  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
+   'was reconstructed as -0.0960*cos(0*t)+0.0381*cos(1*t)+0.604*sin(1*t)-0.524*cos(2*t)+0.118*sin(2*t);'],
   'FOWin32'=>
   ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
    'was reconstructed as -0.0156*cos(0*t)+0.110*cos(1*t)+0.618*sin(1*t)-0.382*cos(2*t)-0.0226*sin(2*t);'],
   'FOWin64'=>
   ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
    'was reconstructed as -0.104*cos(0*t)-0.158*cos(1*t)+0.656*sin(1*t)-0.696*cos(2*t)+0.143*sin(2*t);'],
+  'LDLinux'=>
+  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
+   'was reconstructed as -0.0960*cos(0*t)+0.0381*cos(1*t)+0.604*sin(1*t)-0.524*cos(2*t)+0.118*sin(2*t);'],
   'LDWin32'=>
   ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
    'was reconstructed as -0.0156*cos(0*t)+0.110*cos(1*t)+0.618*sin(1*t)-0.382*cos(2*t)-0.0226*sin(2*t);'],
   'LDWin64'=>
   ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
    'was reconstructed as -0.104*cos(0*t)-0.158*cos(1*t)+0.656*sin(1*t)-0.696*cos(2*t)+0.143*sin(2*t);'],
+  'LOLinux'=>
+  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
+   'was reconstructed as -0.0960*cos(0*t)+0.0381*cos(1*t)+0.604*sin(1*t)-0.524*cos(2*t)+0.118*sin(2*t);'],
   'LOWin32'=>
   ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
    'was reconstructed as -0.0156*cos(0*t)+0.110*cos(1*t)+0.618*sin(1*t)-0.382*cos(2*t)-0.0226*sin(2*t);'],
