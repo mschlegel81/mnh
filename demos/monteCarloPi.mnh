@@ -1,13 +1,11 @@
 @SuppressUnusedWarning=Used in printf
 private monteCarloPi  (sampleSize>0)->
-  rangeGenerator(1,sampleSize).chunkMap(500,(l)->trueCount(random(l.size)²+random(l.size)²<1)).agg(+)/sampleSize*4;
+  trueCount(random(sampleSize)²+random(sampleSize)²<1)/sampleSize*4;
 
 @SuppressUnusedWarning=Used in printf
-private vanDerCorputPi(sampleSize>0)->begin
-  local G2:=vanDerCorputGenerator(2);
-  local G3:=vanDerCorputGenerator(3);
-  rangeGenerator(1,sampleSize).chunkMap(500,(l)->trueCount(G2.head(l.size)²+G3.head(l.size)²<1)).agg(+)/sampleSize*4;
-end;
+private vanDerCorputPi(sampleSize>0)->
+  trueCount(vanDerCorputGenerator(2).head(sampleSize)²+
+            vanDerCorputGenerator(3).head(sampleSize)²<1)/sampleSize*4;
 
 vanDerCorputPi(10^6);
 
