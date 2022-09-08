@@ -82,7 +82,7 @@ main(width,height)->begin
   local worldSize:=[width.toInt,height.toInt].toWorldSize;
   isGuiStarted
   ? playTheGame(worldSize,2^62,{plotClosed ? true : void},{plotWorld(worldSize,$w)})
-  : playTheGame(worldSize,2^62,async(::ask,['Press Enter to quit']),{printWorld(0.01,worldSize,$w)});
+  : playTheGame(worldSize,2^62,async(::ask,['Press Enter to quit']),{printWorld(0.05,worldSize,$w)});
 end;
 
 //*Play the game for the given number of steps
