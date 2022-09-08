@@ -1325,7 +1325,7 @@ end}
         end;
       end;
       inc(cleanupCount);
-      if cleanupCount>4096 then begin
+      if cleanupCount>8196 then begin
         recycler^.cleanupIfPosted;
         cleanupCount:=0;
       end;
