@@ -467,6 +467,7 @@ TYPE
     private
       sourceGenerator:P_expressionLiteral;
       mapExpression:P_expressionLiteral;
+      currentUnmapped:P_literal;
       isNullary:boolean;
       queue:specialize G_queue<P_literal>;
     public
@@ -486,6 +487,7 @@ CONSTRUCTOR T_flatMapGenerator.create(CONST source, mapEx: P_expressionLiteral;C
     if mapExpression<>nil then mapExpression^.rereference;
     queue.create;
     isNullary:=(mapEx<>nil) and not(mapEx^.canApplyToNumberOfParameters(1));
+    currentUnmapped:=nil;
   end;
 
 FUNCTION T_flatMapGenerator.toString(CONST lengthLimit: longint): string;
@@ -524,20 +526,20 @@ FUNCTION T_flatMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation; C
         end else P_recycler(recycler)^.disposeLiteral(unmapped);
       end;
 
-    VAR nextUnmapped:P_literal;
-        iter:T_arrayOfLiteral;
+    VAR iter:T_arrayOfLiteral;
         sub :P_literal;
+        stillFetchingFromIterator: boolean;
     begin
       result:=NIL_EVAL_RESULT;
       repeat
-        nextUnmapped:=sourceGenerator^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
-        if (nextUnmapped<>nil) and not(nextUnmapped^.literalType in [lt_void,lt_emptyList,lt_emptyMap,lt_emptySet,lt_error]) then begin
-          case nextUnmapped^.literalType of
+        if currentUnmapped=nil then currentUnmapped:=sourceGenerator^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
+        if (currentUnmapped<>nil) and not(currentUnmapped^.literalType in [lt_void,lt_emptyList,lt_emptyMap,lt_emptySet,lt_error]) then begin
+          case currentUnmapped^.literalType of
             lt_boolean,
             lt_smallint,
             lt_bigint,
             lt_real,
-            lt_string: appendEvaluated(nextUnmapped);
+            lt_string: begin appendEvaluated(currentUnmapped); currentUnmapped:=nil; end;
             lt_list,
             lt_booleanList,
             lt_intList,
@@ -551,24 +553,27 @@ FUNCTION T_flatMapGenerator.evaluateToLiteral(CONST location: T_tokenLocation; C
             lt_numSet,
             lt_stringSet,
             lt_map: begin
-              iter:=P_compoundLiteral(nextUnmapped)^.forcedIteratableList(recycler);
+              iter:=P_compoundLiteral(currentUnmapped)^.forcedIteratableList(recycler);
               for sub in iter do appendEvaluated(sub^.rereferenced);
               P_recycler(recycler)^.disposeLiterals(iter);
-              P_recycler(recycler)^.disposeLiteral(nextUnmapped);
+              P_recycler(recycler)^.disposeLiteral(currentUnmapped);
             end;
             lt_expression: begin
-              if (P_expressionLiteral(nextUnmapped)^.typ in C_iteratableExpressionTypes) then begin
-                sub:=P_expressionLiteral(nextUnmapped)^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
-                while (sub<>nil) and (sub^.literalType<>lt_void) and (context^.continueEvaluation) do begin
-                  appendEvaluated(sub);
-                  sub:=P_expressionLiteral(nextUnmapped)^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
-                end;
-                P_recycler(recycler)^.disposeLiteral(nextUnmapped);
-              end else appendEvaluated(nextUnmapped);
+              if (P_expressionLiteral(currentUnmapped)^.typ in C_iteratableExpressionTypes) then begin
+                repeat
+                  sub:=P_expressionLiteral(currentUnmapped)^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
+                  stillFetchingFromIterator:=(sub<>nil) and (sub^.literalType<>lt_void);
+                  if stillFetchingFromIterator and context^.continueEvaluation then appendEvaluated(sub);
+                until not(stillFetchingFromIterator) or not(context^.continueEvaluation) or (queue.fill>=256);
+                if not(stillFetchingFromIterator) or not(context^.continueEvaluation) then P_recycler(recycler)^.disposeLiteral(currentUnmapped);
+              end else begin
+                appendEvaluated(currentUnmapped);
+                currentUnmapped:=nil;
+              end;
             end;
           end;
         end else begin
-          if nextUnmapped<>nil then P_recycler(recycler)^.disposeLiteral(nextUnmapped);
+          if currentUnmapped<>nil then P_recycler(recycler)^.disposeLiteral(currentUnmapped);
           doneFetching:=true;
         end;
       until someFetched or doneFetching or not(context^.continueEvaluation);
@@ -586,6 +591,7 @@ PROCEDURE T_flatMapGenerator.cleanup(CONST literalRecycler:P_literalRecycler);
   VAR l:P_literal;
   begin
     literalRecycler^.disposeLiteral(sourceGenerator);
+    if currentUnmapped<>nil then literalRecycler^.disposeLiteral(currentUnmapped);
     if mapExpression<>nil then literalRecycler^.disposeLiteral(mapExpression);
     while queue.hasNext do begin
       l:=queue.next;
@@ -1356,7 +1362,7 @@ TYPE
       CONST
         CHUNK_SIZE_LOG2=16;
         CHUNK_SIZE=1 shl CHUNK_SIZE_LOG2;
-      VAR table:array of bitpacked array[0..CHUNK_SIZE-1] of boolean;
+      VAR table:array of array[0..CHUNK_SIZE-1] of boolean;
       index:int64;
     public
       CONSTRUCTOR create(CONST loc:T_tokenLocation);
