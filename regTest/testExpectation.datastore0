@@ -4098,10 +4098,10 @@ expectations:=
  ['See http://rosettacode.org/wiki/Monte_Carlo_methods',
   'n=     10 pi approximated as 2.4       (random) and as 3.6       (Van der Corput generator)',
   'n=    100 pi approximated as 3.16      (random) and as 3.24      (Van der Corput generator)',
-  'n=   1000 pi approximated as 3.136     (random) and as 3.148     (Van der Corput generator)',
-  'n=  10000 pi approximated as 3.1452    (random) and as 3.1448    (Van der Corput generator)',
-  'n= 100000 pi approximated as 3.14244   (random) and as 3.14208   (Van der Corput generator)',
-  'n=1000000 pi approximated as 3.141992  (random) and as 3.141572  (Van der Corput generator)'],
+  'n=   1000 pi approximated as 3.132     (random) and as 3.148     (Van der Corput generator)',
+  'n=  10000 pi approximated as 3.1412    (random) and as 3.1448    (Van der Corput generator)',
+  'n= 100000 pi approximated as 3.14796   (random) and as 3.14208   (Van der Corput generator)',
+  'n=1000000 pi approximated as 3.143148  (random) and as 3.141572  (Van der Corput generator)'],
  'montyHall'=>
  ['FDLinux'=>
   ['Monty Hall Problem','  1000 random runs','  Probability to win without switching doors 31.700000000000000399%',

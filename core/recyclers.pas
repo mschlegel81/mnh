@@ -213,6 +213,7 @@ CONSTRUCTOR T_recycler.create;
     tokens.fill:=0;
     scopeRecycler.fill:=0;
     inherited create;
+    exchangeLiterals();
   end;
 
 DESTRUCTOR T_recycler.destroy;
@@ -223,7 +224,9 @@ DESTRUCTOR T_recycler.destroy;
 
 PROCEDURE T_recycler.cleanupIfPosted;
   begin
-    if cleanupPosted or hardCleanupPosted then cleanup(hardCleanupPosted);
+    if cleanupPosted or hardCleanupPosted
+    then cleanup(hardCleanupPosted)
+    else exchangeLiterals();
     cleanupPosted:=false;
     hardCleanupPosted:=false;
   end;
@@ -335,9 +338,6 @@ PROCEDURE T_recycler.scopePop(VAR scope: P_valueScope);
     if scope=nil then exit;
     newScope:=scope^.parentScope;
     if interlockedDecrement(scope^.refCount)>0 then begin
-      {$ifdef debugMode}
-      //writeln('Scope ',IntToHex(ptrint(scope),32),' still has ',scope^.refCount,' references - not disposed');
-      {$endif}
       scope:=newScope;
       exit;
     end;
