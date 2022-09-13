@@ -1071,18 +1071,18 @@ FUNCTION integrate_impl intFuncSignature;
     end;
 
   FUNCTION integrate_inner(CONST x0,dx:double; f0,f2,f4:T_arrayOfDouble; CONST skips:byte):T_arrayOfDouble;
-    VAr f1,f3:T_arrayOfDouble;
+    VAR f1,f3:T_arrayOfDouble;
     FUNCTION resolveNan:T_arrayOfDouble;
       VAR k,i:longint;
           nanAt:array[0..4] of boolean=(false,false,false,false,false);
           g0,g1,g2,summand:T_arrayOfDouble;
           y0,   y2:double;
       begin
-        for k:=0 to length(f0)-1 do nanAt[0]:=nanAt[0] or isNan(f0[k]) or IsInfinite(f0[k]);
-        for k:=0 to length(f1)-1 do nanAt[1]:=nanAt[1] or isNan(f1[k]) or IsInfinite(f1[k]);
-        for k:=0 to length(f2)-1 do nanAt[2]:=nanAt[2] or isNan(f2[k]) or IsInfinite(f2[k]);
-        for k:=0 to length(f3)-1 do nanAt[3]:=nanAt[3] or isNan(f3[k]) or IsInfinite(f3[k]);
-        for k:=0 to length(f4)-1 do nanAt[4]:=nanAt[4] or isNan(f4[k]) or IsInfinite(f4[k]);
+        for k:=0 to length(f0)-1 do nanAt[0]:=nanAt[0] or isNan(f0[k]) or isInfinite(f0[k]);
+        for k:=0 to length(f1)-1 do nanAt[1]:=nanAt[1] or isNan(f1[k]) or isInfinite(f1[k]);
+        for k:=0 to length(f2)-1 do nanAt[2]:=nanAt[2] or isNan(f2[k]) or isInfinite(f2[k]);
+        for k:=0 to length(f3)-1 do nanAt[3]:=nanAt[3] or isNan(f3[k]) or isInfinite(f3[k]);
+        for k:=0 to length(f4)-1 do nanAt[4]:=nanAt[4] or isNan(f4[k]) or isInfinite(f4[k]);
         setLength(result,min(min(length(f0),length(f1)),min(min(length(f2),length(f3)),length(f4))));
         for k:=0 to length(result)-1 do result[k]:=0;
         for i:=0 to 3 do begin
