@@ -1038,11 +1038,8 @@ FUNCTION integrate_impl intFuncSignature;
   CONST maxSkips=5;
         epsilon=1E-6;
   VAR f:P_expressionLiteral;
-      x0,x1,tolerance:double;
-      floatResult:T_arrayOfDouble;
-      i:longint;
       returnType:T_literalType=lt_error;
-
+      tolerance:double;
   FUNCTION evalF(CONST x:double):T_arrayOfDouble; inline;
     VAR evResult:T_evaluationResult;
         parameterList:T_listLiteral;
@@ -1123,7 +1120,6 @@ FUNCTION integrate_impl intFuncSignature;
         then exit(result)
         else exit(resolveNan);
       end;
-
       setLength(Simpson,length(result));
       for k:=0 to length(Simpson)-1 do
         Simpson[k]:=dx*(f0[k]*1/6+f2[k]*4/6+f4[k]*1/6);
@@ -1131,14 +1127,74 @@ FUNCTION integrate_impl intFuncSignature;
       errorEstimate:=0;
       for k:=0 to length(Simpson)-1 do errorEstimate+=abs(Simpson[k]-result[k])*sqr(dx)*1E-3;
 
-      if errorEstimate>tolerance then begin
+      if (errorEstimate>tolerance) then begin
         result :=integrate_inner(x0       ,dx*0.5,f0,f1,f2,skips);
         Simpson:=integrate_inner(x0+dx*0.5,dx*0.5,f2,f3,f4,skips);
         for k:=0 to length(result)-1 do result[k]+=Simpson[k];
       end;
     end;
 
-  VAR k:longint;
+  TYPE T_samplingPoint=record
+        x:double;
+        y:T_arrayOfDouble;
+        sliceSize:double;
+      end;
+
+  VAR points:array of T_samplingPoint;
+
+  PROCEDURE determineSamplingPoints(CONST x0,x1:double);
+    FUNCTION maxSliceSize:double;
+      VAR i,k:longint;
+          dy:double;
+      begin
+        result:=0;
+        for i:=0 to length(points)-2 do begin
+          if points[i].sliceSize<0 then begin
+            dy:=0;
+            for k:=0 to min(length(points[i].y),length(points[i+1].y))-1 do dy:=max(dy,abs(points[i].y[k]-points[i+1].y[k]));
+            points[i].sliceSize:=dy*(points[i+1].x-points[i].x);
+          end;
+          if points[i].sliceSize>result then result:=points[i].sliceSize;
+        end;
+        writeln('Max slice size for ',length(points),' points is ',result);
+      end;
+
+    VAR acceptedSliceSize:double;
+        i,j:longint;
+
+    begin
+      setLength(points,2);
+      points[0].x:=x0;
+      points[0].y:=evalF(x0);
+      points[0].sliceSize:=-1;
+      points[1].x:=x1;
+      points[1].y:=evalF(x1);
+      points[1].sliceSize:=-1;
+
+      acceptedSliceSize:=min(tolerance*10,maxSliceSize/2);
+
+      while  (length(points)<4096) and (maxSliceSize>acceptedSliceSize) do begin
+        i:=0;
+        while (i<length(points)-1) and (length(points)<4096) do begin
+          if points[i].sliceSize>acceptedSliceSize then begin
+            setLength(points,length(points)+1);
+            points[i].sliceSize:=-1;
+
+            for j:=length(points)-1 downto i+2 do points[j]:=points[j-1];
+            points[i+1].x:=(points[i].x+points[i+2].x)/2;
+            points[i+1].y:=evalF(points[i+1].x);
+            points[i+1].sliceSize:=-1;
+
+            inc(i);
+          end;
+          inc(i);
+        end;
+      end;
+
+    end;
+
+  VAR k,i:longint;
+      floatResult,summand:T_arrayOfDouble;
   begin
     if (params<>nil) and (params^.size=4) and
       (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(1)) and
@@ -1147,11 +1203,25 @@ FUNCTION integrate_impl intFuncSignature;
       (arg3^.literalType in [lt_smallint,lt_bigint,lt_real]) and (P_numericLiteral(arg3)^.floatValue>0)
     then begin
       f :=       P_expressionLiteral(arg0);
-      x0:=       P_numericLiteral(arg1)^.floatValue;
-      x1:=       P_numericLiteral(arg2)^.floatValue;
+   //   x0:=       P_numericLiteral(arg1)^.floatValue;
+   //   x1:=       P_numericLiteral(arg2)^.floatValue;
       tolerance:=P_numericLiteral(arg3)^.floatValue;
 
-      floatResult:=integrate_inner(x0,x1-x0,evalF(x0),evalF((x0+x1)*0.5),evalF(x1),0);
+      determineSamplingPoints(P_numericLiteral(arg1)^.floatValue,
+                              P_numericLiteral(arg2)^.floatValue);
+      floatResult:=integrate_inner(points[0].x,points[1].x-points[0].x,
+                                   points[0].y,
+                                   evalF((points[0].x+points[1].x)/2),
+                                   points[1].y,0);
+      for i:=1 to length(points)-2 do begin
+        summand:=integrate_inner(points[i].x,points[i+1].x-points[i].x,
+                                 points[i].y,
+                                 evalF((points[i].x+points[i+1].x)/2),
+                                 points[i+1].y,0);
+        for k:=0 to length(floatResult)-1 do floatResult[k]+=summand[k];
+      end;
+
+      //floatResult:=integrate_inner(x0,x1-x0,evalF(x0),evalF((x0+x1)*0.5),evalF(x1),0);
 
       if returnType in C_listTypes then begin
         result:=recycler^.newListLiteral(length(floatResult));
