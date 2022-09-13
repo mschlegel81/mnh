@@ -1230,6 +1230,14 @@ FUNCTION firstOrderUpwind2D_imp intFuncSignature;
        setLength(vy,0);
     end;
 
+FUNCTION bitXor intFuncSignature;
+  CONST mask:array[1..32] of longint=($1,$3,$7,$F,$1F,$3F,$7F,$ff,$1ff,$3ff,$7ff,$FFF,$1FFF,$3FFF,$7FFF,$FFFF,$1FFFF,$3FFFF,$7FFFF,$FFFFF,$1FFFFF,$3FFFFF,$7FFFFF,$FFFFFF,$1FFFFFF,$3FFFFFF,$7FFFFFF,$FFFFFFF,$1FFFFFFF,$3FFFFFFF,$7FFFFFFF,-1);
+  begin
+    if (params<>nil) and (params^.size=3) then begin
+      if (arg0^.literalType=lt_smallint) and (arg1^.literalType=lt_smallint) and (arg2^.literalType=lt_smallint) and (int2^.intValue>0) and (int2^.intValue<32)
+      then result:=recycler^.newIntLiteral(mask[P_smallIntLiteral(arg2)^.value] and (P_smallIntLiteral(arg0)^.value xor P_smallIntLiteral(arg1)^.value))
+      else result:=genericVectorization('bitXor',params,tokenLocation,context,recycler);
+    end else result:=nil;
   end;
 
 INITIALIZATION
@@ -1283,4 +1291,5 @@ INITIALIZATION
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'integrate'     ,@integrate_impl     ,ak_quartary {$ifdef fullVersion},'integrate(f:Expression(1),x0,x1,tolerance);//returns the numeric integral of f over interval [x0,x1]'{$endif});
 
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'firstOrderUpwind2D',@firstOrderUpwind2D_imp,ak_variadic{$ifdef fullVersion},'firstOrderUpwind2D(c,vx,vy,width:Int,periodicBoundary:Boolean);'{$endif});
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'bitXor',@bitXor,ak_variadic{$ifdef fullVersion},'bitXor(x:Int,y:Int,relevantBits in [1..32]);//Returns x xor y for the given number of relevant bits'{$endif});
 end.
