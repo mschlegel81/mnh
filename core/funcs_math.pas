@@ -1035,9 +1035,10 @@ FUNCTION euklideanNorm_impl intFuncSignature;
   end;
 
 FUNCTION integrate_impl intFuncSignature;
+  CONST maxSkips=5;
+        epsilon=1E-6;
   VAR f:P_expressionLiteral;
       x0,x1,tolerance:double;
-      pointCount:int64;
       floatResult:T_arrayOfDouble;
       i:longint;
       returnType:T_literalType=lt_error;
@@ -1069,9 +1070,44 @@ FUNCTION integrate_impl intFuncSignature;
       if evResult.literal<>nil then recycler^.disposeLiteral(evResult.literal);
     end;
 
-  FUNCTION integrate_inner(CONST x0,dx:double; f0,f2,f4:T_arrayOfDouble):T_arrayOfDouble;
+  FUNCTION integrate_inner(CONST x0,dx:double; f0,f2,f4:T_arrayOfDouble; CONST skips:byte):T_arrayOfDouble;
+    VAR f1,f3:T_arrayOfDouble;
+    FUNCTION resolveNan:T_arrayOfDouble;
+      VAR k,i:longint;
+          nanAt:array[0..4] of boolean=(false,false,false,false,false);
+          g0,g1,g2,summand:T_arrayOfDouble;
+          y0,   y2:double;
+      begin
+        for k:=0 to length(f0)-1 do nanAt[0]:=nanAt[0] or isNan(f0[k]) or isInfinite(f0[k]);
+        for k:=0 to length(f1)-1 do nanAt[1]:=nanAt[1] or isNan(f1[k]) or isInfinite(f1[k]);
+        for k:=0 to length(f2)-1 do nanAt[2]:=nanAt[2] or isNan(f2[k]) or isInfinite(f2[k]);
+        for k:=0 to length(f3)-1 do nanAt[3]:=nanAt[3] or isNan(f3[k]) or isInfinite(f3[k]);
+        for k:=0 to length(f4)-1 do nanAt[4]:=nanAt[4] or isNan(f4[k]) or isInfinite(f4[k]);
+        setLength(result,min(min(length(f0),length(f1)),min(min(length(f2),length(f3)),length(f4))));
+        for k:=0 to length(result)-1 do result[k]:=0;
+        for i:=0 to 3 do begin
+          if nanAt[i] then begin
+            y0:=x0+dx*0.25*i+epsilon;
+            g0:=evalF(y0);
+          end else begin
+            y0:=x0+dx*i;
+            case byte(i) of 0: g0:=f0; 1: g0:=f1; 2: g0:=f2; 3: g0:=f3; end;
+          end;
+          if nanAt[i+1] then begin
+            y2:=x0+dx*0.25*(i+1)-epsilon;
+            g2:=evalF(y2);
+          end else begin
+            y2:=x0+dx*0.25*(i+1);
+            case byte(i) of 0: g2:=f1; 1: g2:=f2; 2: g2:=f3; 3: g2:=f4; end;
+          end;
+          g1:=evalF((y0+y2)/2);
+          summand:=integrate_inner(y0,y2-y0,g0,g1,g2,skips+1);
+          for k:=0 to min(length(result),length(summand))-1 do result[k]+=summand[k];
+        end;
+      end;
+
     VAR errorEstimate:double;
-        Simpson,f1,f3:T_arrayOfDouble;
+        Simpson:T_arrayOfDouble;
         k:longint;
         anyNan:boolean=false;
     begin
@@ -1082,7 +1118,12 @@ FUNCTION integrate_impl intFuncSignature;
         result[k]:=dx*(f0[k]*7/90+f1[k]*32/90+f2[k]*12/90+f3[k]*32/90+f4[k]*7/90);
         anyNan:=anyNan or isNan(result[k]) or isInfinite(result[k]);
       end;
-      if anyNan then exit(result);
+      if anyNan then begin
+        if skips>=maxSkips
+        then exit(result)
+        else exit(resolveNan);
+      end;
+
       setLength(Simpson,length(result));
       for k:=0 to length(Simpson)-1 do
         Simpson[k]:=dx*(f0[k]*1/6+f2[k]*4/6+f4[k]*1/6);
@@ -1091,16 +1132,13 @@ FUNCTION integrate_impl intFuncSignature;
       for k:=0 to length(Simpson)-1 do errorEstimate+=abs(Simpson[k]-result[k])*sqr(dx)*1E-3;
 
       if errorEstimate>tolerance then begin
-        result :=integrate_inner(x0       ,dx*0.5,f0,f1,f2);
-        Simpson:=integrate_inner(x0+dx*0.5,dx*0.5,f2,f3,f4);
+        result :=integrate_inner(x0       ,dx*0.5,f0,f1,f2,skips);
+        Simpson:=integrate_inner(x0+dx*0.5,dx*0.5,f2,f3,f4,skips);
         for k:=0 to length(result)-1 do result[k]+=Simpson[k];
       end;
     end;
 
-  VAR dx:double;
-      f0,f1:T_arrayOfDouble;
-      stepIntegral:T_arrayOfDouble;
-      k:longint;
+  VAR k:longint;
   begin
     if (params<>nil) and (params^.size=4) and
       (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(1)) and
@@ -1112,26 +1150,9 @@ FUNCTION integrate_impl intFuncSignature;
       x0:=       P_numericLiteral(arg1)^.floatValue;
       x1:=       P_numericLiteral(arg2)^.floatValue;
       tolerance:=P_numericLiteral(arg3)^.floatValue;
-      //error (for smooth f) is ~ in O(dx^5) -> dx = exp(ln(tolerance*1E3)/5)
-      pointCount:=ceil64((x1-x0)/exp(ln(tolerance)/5));
-      if      pointCount>1000 then pointCount:=1000
-      else if pointCount<1    then pointCount:=1;
-      dx:=(x1-x0)/pointCount;
-      for i:=0 to longint(pointCount-1) do if context^.continueEvaluation then begin
-        if i>0
-        then f0:=f1
-        else f0:=evalF(x0+dx* i   );
-             f1:=evalF(x0+dx*(i+1));
-        stepIntegral:=integrate_inner(x0+dx*i,dx,
-                                      f0,
-                                      evalF(x0+dx*(i+0.5)),
-                                      f1);
-        if i=0 then begin
-          setLength(floatResult,length(stepIntegral));
-          for k:=0 to length(floatResult)-1 do floatResult[k]:=stepIntegral[k];
-        end else
-          for k:=0 to length(floatResult)-1 do floatResult[k]+=stepIntegral[k];
-      end;
+
+      floatResult:=integrate_inner(x0,x1-x0,evalF(x0),evalF((x0+x1)*0.5),evalF(x1),0);
+
       if returnType in C_listTypes then begin
         result:=recycler^.newListLiteral(length(floatResult));
         for k:=0 to length(floatResult)-1 do listResult^.appendReal(recycler,floatResult[k]);
@@ -1229,7 +1250,16 @@ FUNCTION firstOrderUpwind2D_imp intFuncSignature;
        setLength(vx,0);
        setLength(vy,0);
     end;
+  end;
 
+FUNCTION bitXor intFuncSignature;
+  CONST mask:array[1..32] of longint=($1,$3,$7,$F,$1F,$3F,$7F,$ff,$1ff,$3ff,$7ff,$FFF,$1FFF,$3FFF,$7FFF,$FFFF,$1FFFF,$3FFFF,$7FFFF,$FFFFF,$1FFFFF,$3FFFFF,$7FFFFF,$FFFFFF,$1FFFFFF,$3FFFFFF,$7FFFFFF,$FFFFFFF,$1FFFFFFF,$3FFFFFFF,$7FFFFFFF,-1);
+  begin
+    if (params<>nil) and (params^.size=3) then begin
+      if (arg0^.literalType=lt_smallint) and (arg1^.literalType=lt_smallint) and (arg2^.literalType=lt_smallint) and (int2^.intValue>0) and (int2^.intValue<32)
+      then result:=recycler^.newIntLiteral(mask[P_smallIntLiteral(arg2)^.value] and (P_smallIntLiteral(arg0)^.value xor P_smallIntLiteral(arg1)^.value))
+      else result:=genericVectorization('bitXor',params,tokenLocation,context,recycler);
+    end else result:=nil;
   end;
 
 INITIALIZATION
@@ -1283,4 +1313,5 @@ INITIALIZATION
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'integrate'     ,@integrate_impl     ,ak_quartary {$ifdef fullVersion},'integrate(f:Expression(1),x0,x1,tolerance);//returns the numeric integral of f over interval [x0,x1]'{$endif});
 
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'firstOrderUpwind2D',@firstOrderUpwind2D_imp,ak_variadic{$ifdef fullVersion},'firstOrderUpwind2D(c,vx,vy,width:Int,periodicBoundary:Boolean);'{$endif});
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'bitXor',@bitXor,ak_variadic{$ifdef fullVersion},'bitXor(x:Int,y:Int,relevantBits in [1..32]);//Returns x xor y for the given number of relevant bits'{$endif});
 end.

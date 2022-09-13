@@ -45,6 +45,7 @@ testParameters(scriptFileName:String)->[];
 skipFile(scriptFile)->skipFile(scriptFile,mnhInfo['isFullVersion']);
 
 skipFile((demosRoot&'3body.mnh'              ),fullVersion)->true;
+skipFile((demosRoot&'counter.mnh'            ),fullVersion)->true;
 skipFile((demosRoot&'htmlFunctionPlotter.mnh'),fullVersion)->true;
 skipFile((demosRoot&'simpleServer.mnh'       ),fullVersion)->true;
 skipFile((demosRoot&'ipcDatastore.mnh'       ),fullVersion)->true;

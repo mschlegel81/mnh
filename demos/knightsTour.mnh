@@ -52,9 +52,18 @@ plotTour(tour:CoordCollection)->begin
            tour[tour.size-1] in tour[0].neighbors
            ? tour|[tour[0]]
            : tour;
-  plot   ( P          ,'1.5 . l'); //plot tour
-  addPlot([P.trailing],'2   .  '); //mark end point
-  addPlot([P.head    ],'2   .  '); //mark starting point
+
+  local board:=tour.transpose.map((c)->[c.min,c.max]);
+  local darkSquares:=filter(
+    cross@(board.map((range)->[range[0]..range[1]])),
+    (i)->(i and 1).agg(xor)=1);
+  darkSquares.each(s,s-0.5,s+0.5).plot('box f GREY0.5');
+  board:=board.transpose;
+  addPlot([board[0]-0.5,board[1]+0.5],'box GREY0.5');
+
+  addPlot( P          ,'1.5 . l black'); //plot tour
+  addPlot([P.trailing],'2   . red'); //mark end point
+  addPlot([P.head    ],'2   . blue'); //mark starting point
   tour;
 end;
 

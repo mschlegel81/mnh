@@ -169,11 +169,10 @@ TYPE
       poolThreadsRunning:longint;
       poolThreadsIdle   :longint;
       parent:P_evaluationGlobals;
-      enqueueEvent:PRTLEvent;
       FUNCTION  dequeue:P_queueTask;
       PROCEDURE cleanupQueues;
     public
-      PROCEDURE ensurePoolThreads(CONST numberToEnsure:longint=256);
+      PROCEDURE ensurePoolThreads;
       CONSTRUCTOR create(CONST parent_:P_evaluationGlobals);
       DESTRUCTOR destroy;
       FUNCTION  activeDeqeue(CONST recycler:P_recycler):boolean;
@@ -525,7 +524,6 @@ PROCEDURE T_evaluationGlobals.stopWorkers(CONST recycler:P_recycler);
     globalMessages^.setStopFlag;
     primaryContext.messages^.setStopFlag;
     while (now<timeout) and ((primaryContext.related.childCount>0) or (length(taskQueue.subQueue)>0)) do begin
-      if taskQueue.poolThreadsRunning>0 then RTLEventSetEvent(taskQueue.enqueueEvent);
       while (now<timeout) and taskQueue.activeDeqeue(recycler) do begin end;
       ThreadSwitch;
       sleep(1);
@@ -842,12 +840,11 @@ PROCEDURE T_workerThread.execute;
       currentTask:P_queueTask;
       recycler:P_recycler;
       idleSince:double;
-      justWokenUp:boolean=true;
   begin
     recycler:=newRecycler;
     with globals^ do begin
       repeat
-        if (getGlobalRunningThreads>settings.cpuCount) and not(justWokenUp)
+        if (getGlobalRunningThreads>settings.cpuCount)
         then begin
           inc(blockedCount);
           threadSleepMillis(10*blockedCount);
@@ -856,12 +853,7 @@ PROCEDURE T_workerThread.execute;
         currentTask:=taskQueue.dequeue;
         if currentTask=nil then begin
           recycler^.cleanupIfPosted;
-          idleSince:=now;
-          interLockedIncrement(taskQueue.poolThreadsIdle);
-          RTLEventResetEvent(taskQueue.enqueueEvent);
-          RTLEventWaitFor(taskQueue.enqueueEvent,1000);
-          interlockedDecrement(taskQueue.poolThreadsIdle);
-          justWokenUp:=true;
+          threadSleepMillis(1);
         end else begin
           if currentTask^.isVolatile then begin
             currentTask^.evaluate(recycler);
@@ -871,7 +863,6 @@ PROCEDURE T_workerThread.execute;
           end;
           recycler^.cleanupIfPosted;
           idleSince:=now;
-          justWokenUp:=false;
         end;
       until (now-idleSince>=DAYS_IDLE_BEFORE_QUIT) or    //nothing to do
             (Terminated) or
@@ -975,7 +966,6 @@ CONSTRUCTOR T_taskQueue.create(CONST parent_:P_evaluationGlobals);
     memoryCleaner.registerObjectForCleanup(5,@cleanupQueues);
     parent:=parent_;
     destructionPending:=false;
-    enqueueEvent:=RTLEventCreate;
     setLength(subQueue,0);
     poolThreadsRunning:=0;
     poolThreadsIdle:=0;
@@ -988,12 +978,10 @@ DESTRUCTOR T_taskQueue.destroy;
     timeout:=now+1/(24*60*60);
     while (now<timeout) and (poolThreadsRunning>0) do begin
       destructionPending:=true;
-      RTLEventSetEvent(enqueueEvent);
       sleep(1);
       ThreadSwitch;
     end;
     cleanupQueues;
-    RTLEventDestroy(enqueueEvent);
     system.doneCriticalSection(cs);
   end;
 
@@ -1032,13 +1020,16 @@ FUNCTION T_subQueue.dequeue(OUT isEmptyAfter: boolean): P_queueTask;
     isEmptyAfter:=(queuedCount=0) or (first=nil);
   end;
 
-PROCEDURE T_taskQueue.ensurePoolThreads(CONST numberToEnsure:longint=256);
+PROCEDURE T_taskQueue.ensurePoolThreads;
+  {$ifdef fullVersion} {$ifdef debugMode}
   VAR spawnCount:longint=0;
+  {$endif} {$endif}
   begin
     while (poolThreadsRunning<settings.cpuCount-1) and //one main thread is active!
-          (spawnCount<numberToEnsure) and
           (getGlobalThreads<GLOBAL_THREAD_LIMIT) do begin
+      {$ifdef fullVersion} {$ifdef debugMode}
       spawnCount+=1;
+      {$endif} {$endif}
       T_workerThread.create(parent);
     end;
     {$ifdef fullVersion} {$ifdef debugMode}
@@ -1066,19 +1057,13 @@ PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
       end;
     end;
 
-  VAR i:longint;
   begin
     system.enterCriticalSection(cs);
     try
-      i:=ensureQueue^.enqueue(task);
-      ensurePoolThreads(i-poolThreadsIdle);
-      if i>poolThreadsRunning then i:=poolThreadsRunning;;
+      ensureQueue^.enqueue(task);
+      ensurePoolThreads;
     finally
       system.leaveCriticalSection(cs);
-      while i>0 do begin
-        RTLEventSetEvent(enqueueEvent);
-        dec(i);
-      end;
     end;
   end;
 

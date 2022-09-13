@@ -1,0 +1,9 @@
+
+
+datastore counter:=0;
+
+//*Prints, that this program has been called {counter} times before and increments the counter.
+main->begin
+  printf('This program has been called {counter} times before.');
+  counter+=1;
+end;

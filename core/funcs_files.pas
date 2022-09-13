@@ -119,15 +119,21 @@ FUNCTION allFolders_impl intFuncSignature;
 FUNCTION fileExists_impl intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newBoolLiteral(fileExists(str0^.value));
+    if (params<>nil) and (params^.size=1) then begin
+      if (arg0^.literalType=lt_string)
+      then result:=newBoolLiteral(fileExists(str0^.value))
+      else result:=genericVectorization('fileExists',params,tokenLocation,context,recycler);
+    end;
   end;
 
 FUNCTION folderExists_impl intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=newBoolLiteral(DirectoryExists(str0^.value));
+    if (params<>nil) and (params^.size=1) then begin
+      if (arg0^.literalType=lt_string)
+      then result:=newBoolLiteral(DirectoryExists(str0^.value))
+      else result:=genericVectorization('folderExists',params,tokenLocation,context,recycler);
+    end;
   end;
 
 FUNCTION fileContents_impl intFuncSignature;
@@ -570,7 +576,8 @@ FUNCTION changeFileExtension_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_string)
-    then result:=recycler^.newStringLiteral(ChangeFileExt(str0^.value,str1^.value));
+    then result:=recycler^.newStringLiteral(ChangeFileExt(str0^.value,str1^.value))
+    else result:=genericVectorization('changeFileExt',params,tokenLocation,context,recycler);
   end;
 
 FUNCTION relativeFilename_impl intFuncSignature;
