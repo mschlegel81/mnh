@@ -1,4 +1,42 @@
-@demo_for=system_calls, formatting, date/time formatting
+GLYPHS:=//!~
+ ▄▀▀▀▀▄     ▄▀█    ▄▀▀▀▀▄   ▄▀▀▀▀▄      ▄█   █▀▀▀▀▀▀▀  ▄▀▀▀▀▄  ▀▀▀▀▀▀▀█  ▄▀▀▀▀▄   ▄▀▀▀▀▄  #
+█      █   ▀  █   █      █ █      █   ▄▀ █   █        █      ▀       █  █      █ █      █ #
+█      █      █         ▄▀       ▄▀ ▄▀   █   █▄▄▄▄▄   █ ▄▄▄▄        █   ▀▄    ▄▀ ▀▄    ▄█ #
+█      █      █       ▄▀       ▀▀▄  █▄▄▄▄█▄▄       ▀▄ █▀    ▀▄     █     ▄▀▀▀▀▄    ▀▀▀▀ █ #
+█      █      █     ▄▀     ▄      █      █   ▄      █ █      █    █     █      █        █ #
+▀▄    ▄▀      █   ▄▀       ▀▄    ▄▀      █   ▀▄    ▄▀ ▀▄    ▄▀   █      ▀▄    ▄▀ ▀▄    ▄▀ #
+  ▀▀▀▀       ▀▀▀  ▀▀▀▀▀▀▀▀   ▀▀▀▀       ▀▀▀    ▀▀▀▀     ▀▀▀▀     ▀        ▀▀▀▀     ▀▀▀▀   #
+▄▀▀▀▄   ▄█  ▄▀▀▀▄ ▄▀▀▀▄   ▄█  █▀▀▀▀ ▄▀▀▀▄ ▀▀▀▀█ ▄▀▀▀▄ ▄▀▀▀▄ #
+█   █  ▀ █     ▄▀  ▄▄▄▀ ▄▀ █  ▀▄▄▄  █▄▄▄     █  ▀▄▄▄▀ ▀▄▄▄█ #
+█   █    █   ▄▀   ▄   █ ▀▀▀█▀ ▄   █ █   █   █   █   █ ▄   █ #
+ ▀▀▀     ▀  ▀▀▀▀▀  ▀▀▀     ▀   ▀▀▀   ▀▀▀    ▀    ▀▀▀   ▀▀▀  #
+█▀█ ▄█  ▀▀█ ▀▀█ █ █ █▀▀ █▀▀ ▀▀█ █▀█ █▀█ #
+█ █  █  █▀▀  ▀█ ▀▀█  ▀█ █▀█  █  █▀█ ▀▀█ #
+▀▀▀ ▀▀▀ ▀▀▀ ▀▀▀   ▀ ▀▀▀ ▀▀▀  ▀  ▀▀▀ ▀▀▀ #~
+.split("\n").{begin
+  local S0:=$L[[1..7]].map((l)->l.copy([0..9]*9,9)).transpose;
+  local S1:=$L[[8..11]].map((l)->l.copy([0..9]*6,6)).transpose;
+  local S2:=$L[[12..14]].map((l)->l.copy([0..9]*4,4)).transpose;
+  [S0,S1,S2];
+end};
+
+fancyTime(t:Numeric,mode in [0,1,2])->fancyTime(formatTime('hhnnss',t),mode);
+fancyTime(s:String,mode in [0,1,2])->begin
+  local n:=s.chars.ord-ord('0');
+  local hh:=[GLYPHS[0,n[0]],GLYPHS[0,n[1]]].transpose.map(::join);
+  local mm:=[GLYPHS[1,n[2]],GLYPHS[1,n[3]]].transpose.map(::join);
+  local ss:=[GLYPHS[2,n[4]],GLYPHS[2,n[5]]].transpose.map(::join);
+  local hhmm:=[hh,mm].transpose.map(::join);
+  hhmm[hhmm.size-3]&='    '&ss[ss.size-3];
+  hhmm[hhmm.size-2]&='    '&ss[ss.size-2];
+  hhmm[hhmm.size-1]&='    '&ss[ss.size-1];
+  (mode=2 ? void : '╔')&'═══════════════════════════════'&(mode=1 ? '╦' : '╗')|
+  (mode=2 ? void : '║')&' '&hhmm                         &'║'|
+  (mode=2 ? void : '╚')&'═══════════════════════════════'&(mode=1 ? '╩' : '╝'); //
+end;
+
+memoized printOnce(s:StringList)->clearPrint orElse printf('%s',s);
+
 formatTimeNoDate(t<1)->formatTime('hhnnss',t);
 formatTimeNoDate(t<100/24)->begin
   local rest:=t*24;
@@ -8,35 +46,6 @@ formatTimeNoDate(t<100/24)->begin
   format('%2.2d%2.2d%2.2d',hours,minutes,seconds);
 end;
 formatTimeNoDate(t)->'995959';
-
-BIG:=//!~ ********    ****     *******  ********    *      ********** ******** ********** ********  ********.
-**********  *****    *******************  **      **************************************************
-****  **** ******   ***    ***       *** **  ***  ***       ***              *******  *******    ***
-****  ****    ***         ***   ******* ******************* *********       ***  ******** **********
-****  ****    ***        ***    ******* ******************************     ***   ******** **********
-****  ****    ***       ***          ***     ***         ******    ***    ***   ****  ****       ***
-**********    ***   ********************     ***  ********************   ***    ********************
- ********     ***   ********** ********      ***  *********  ********   ***      ********  ********.~
-.replace(['*','.'],['#',' ']).split("\n").map({$s.copy([0..9]*10,10)}).transpose;
-TINY:=//!~ _    __ __     _  _ ___ _  _.
-| | /  _) _)/_ |_ |_   /(_)(_)
-|_| | /____) | __)(_) / (_) /.~
-.replace('.',' ').split("\n").map({$s.copy([0..9]*3,3)}).transpose;
-
-digit(d in [0..9],fontStyle=0)->BIG[d];
-digit(d in [0..9],fontStyle=1)->BIG[d].each(L,index in [0,2,3,5,7] ? L : void)|['','',''];
-digit(d in [0..9],fontStyle=2)->['','','','','']|TINY[d];
-
-memoized printOnce(s:StringList)->clearPrint orElse printf('%s',s);
-
-asciiArtTime(s:String)->begin
-  local result:=s.chars.each(n,digit(n.toInt,index div 2))
-                  .transpose(' ').map({('%s %s %s %s              %s%s'.format@$s0).copy(0,43)});
-  (repeat('-',length(result).max+1)&'+')|
-  (result&' |')|
-  (repeat('-',length(result).max+1)&'+');
-end;
-asciiArtTime(t:Real)->asciiArtTime(formatTime('hhnnss',t));
 
 guessTimeOrInterval(TimeOrIntervalString:String)->
   begin
@@ -54,20 +63,20 @@ nextSecond->sleep(1-formatTime('0.zzz',systime).toReal);
 
 //*Displays a clock, updating every minute
 main->begin
-  async({while(true,begin (asciiArtTime(systime-floor(systime))|'Press Enter to quit').printOnce;
+  async({while(true,begin (fancyTime(systime-floor(systime),0)|'Press Enter to quit').printOnce;
   exec('cmd',['/C','title',formatTime('c',systime)]);
   nextSecond; end)});
-  ask('Press enter to quit');
+  ask('Press enter to cancel',['Quit'],false);
 end;
 
 //*Prints a nicely formatted time and returns at once
-main('once')->asciiArtTime(systime-floor(systime)).printOnce;
+main('once')->fancyTime(systime-floor(systime),0).printOnce;
 
 //*Displays time and timer
 //*valid inputs are e.g.: "15:23" (sleep until 15:23)
 //*                       "1h 5m" (sleep for one hour and 5 minutes)
 //*                       "20s"   (sleep for 20 seconds)
-main(timeOrInterval)->main(timeOrInterval,'-none');
+main(timeOrInterval)->timeOrInterval=='-h' ? helpOnMain.print : main(timeOrInterval,'-none');
 
 AFTER_METHOD:=[['-lock'    ,{execPipeless('rundll32.exe',['User32.dll,LockWorkStation'])}],
                ['-suspend' ,{execPipeless('rundll32.exe',['powrprof.dll,SetSuspendState','0,1,0'])}],
@@ -87,13 +96,13 @@ main(timeOrInterval,after in (AFTER_METHOD.getInner(0)))->begin
   async({begin
     local endTime:=guessTimeOrInterval(timeOrInterval);
     while(systime<endTime,begin
-      ((asciiArtTime(systime-floor(systime))&
-        asciiArtTime(formatTimeNoDate(endTime-systime)))|
+      ((fancyTime(systime-floor(systime),1)&
+        fancyTime(formatTimeNoDate(endTime-systime),2))|
        ['Action: '&after,'Press Enter to cancel']).printOnce;
       nextSecond;
     end);
     AFTER_METHOD[after]();
     halt;
   end});
-  ask('Press enter to cancel');
+  ask('Press enter to cancel',['Quit'],false);
 end;
