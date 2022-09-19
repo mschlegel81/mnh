@@ -240,7 +240,7 @@ PROCEDURE initAskForm;
 FUNCTION ask_impl intFuncSignature;
   VAR opt: T_arrayOfString=();
       i,k: longint;
-      visible, hasOptions: boolean;
+      hasOptions:boolean=false;
       iter: T_arrayOfLiteral;
   begin
     if not(context^.checkSideEffects('ask',tokenLocation,[se_input])) then exit(nil);
@@ -248,7 +248,7 @@ FUNCTION ask_impl intFuncSignature;
     result := nil;
     if (params<>nil) and (params^.size>=1) and (params^.size<=3) and (arg0^.literalType=lt_string) then begin
       for i:=1 to params^.size-1 do case params^.value[i]^.literalType of
-        lt_boolean   : visible:=P_boolLiteral(params^.value[i])^.value;
+        lt_boolean   : begin end; //visibility flag for console mode only
         lt_stringList: begin
           hasOptions:=true;
           iter:=P_listLiteral(params^.value[i])^.tempIteratableList;
