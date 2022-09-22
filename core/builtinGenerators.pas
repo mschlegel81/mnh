@@ -1227,14 +1227,19 @@ TYPE
   end;
 
 FUNCTION T_byteStreamIterator.fillQueue(CONST recycler: P_literalRecycler): boolean;
-  CONST READ_BYTES = 1024*1024; //=1MB
+  CONST readTarget=10*1024*1024; //=10 MB
   VAR k:longint;
       n:longint;
       readBfrPtr:PByte;
+      toRead:longint;
   begin
     result:=false;
-    getMem(readBfrPtr,READ_BYTES);
-    n:=fileStream.read(readBfrPtr^,READ_BYTES);
+    toRead:=(readTarget div bufferSize)*bufferSize;
+    if buffer^.size>0 then toRead+=bufferSize-buffer^.size;
+
+    getMem(readBfrPtr,toRead);
+    n:=fileStream.read(readBfrPtr^,toRead);
+
     if n>0 then begin
       result:=true;
       stopAt:=now+timeout;
@@ -1255,7 +1260,7 @@ FUNCTION T_byteStreamIterator.fillQueue(CONST recycler: P_literalRecycler): bool
       end else recycler^.disposeLiteral(buffer);
       if fileStream.position>fileStream.size then fileTruncated:=true;
     end;
-    freeMem(readBfrPtr,READ_BYTES);
+    freeMem(readBfrPtr,toRead);
   end;
 
 CONSTRUCTOR T_byteStreamIterator.create(CONST fileName: string;
