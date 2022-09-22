@@ -1206,9 +1206,6 @@ FUNCTION fileLineIterator intFuncSignature;
 
 TYPE
   P_byteStreamIterator=^T_byteStreamIterator;
-
-  { T_byteStreamIterator }
-
   T_byteStreamIterator=object(T_builtinGeneratorExpression)
     private
       queue       : specialize G_queue<P_listLiteral>;
