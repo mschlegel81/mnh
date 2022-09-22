@@ -1,5 +1,5 @@
 {$ifdef includeInterface}
-CONST FILE_HISTORY_MAX_SIZE=100;
+CONST FILE_HISTORY_MAX_SIZE=1000;
 TYPE
 
 P_fileHistory=^T_fileHistory;
