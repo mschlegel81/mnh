@@ -285,18 +285,9 @@ FUNCTION renderToFile_impl intFuncSignature;
       width :=int1^.intValue;
       height:=int2^.intValue;
       if params^.size=4 then backgroundRendering:=bool3^.value;
-      try
-        fileName:=str0^.value;
-        new(renderRequest,createRenderToFileRequest(fileName,width,height,backgroundRendering,tokenLocation,context^.messages));
-        context^.messages^.postCustomMessage(renderRequest,false);
-        renderRequest^.getStringWaiting(context^.messages);
-        disposeMessage(renderRequest);
-      except
-        on e:Exception do begin
-          context^.raiseError('Error on renderToFile: '+e.message,tokenLocation);
-          exit(nil);
-        end;
-      end;
+      fileName:=str0^.value;
+      new(renderRequest,createRenderToFileRequest(fileName,width,height,backgroundRendering,tokenLocation,context^.messages));
+      context^.messages^.postCustomMessage(renderRequest,true);
       result:=newVoidLiteral;
     end;
   end;
