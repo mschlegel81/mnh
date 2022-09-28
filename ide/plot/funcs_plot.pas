@@ -305,7 +305,7 @@ FUNCTION renderToString_impl intFuncSignature;
       (arg2^.literalType in [lt_smallint,lt_bigint])) then begin
       width:=int0^.intValue;
       height:=int1^.intValue;
-      new(renderRequest,createRenderToStringRequest(width,height,tokenLocation,context^.messages));
+      new(renderRequest,createRenderToStringRequest(width,height,tokenLocation,context^.messages,true));
       context^.messages^.postCustomMessage(renderRequest^.rereferenced,true);
       result:=recycler^.newStringLiteral(renderRequest^.getStringWaiting(context^.messages));
       renderRequest^.setString('');

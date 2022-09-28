@@ -64,12 +64,14 @@ TYPE
       FUNCTION getOptionsWaiting(CONST errorFlagProvider:P_messages):T_scalingOptions;
   end;
 
+  T_plotRenderTarget=(prt_file,prt_fileInBackground,prt_pngString,prt_bmpString);
+
   P_plotRenderRequest=^T_plotRenderRequest;
   T_plotRenderRequest=object(T_payloadMessage)
     private
       feedbackLocation:T_searchTokenLocation;
       feedbackMessages:P_messages;
-      targetIsString,renderInBackground:boolean;
+      target:T_plotRenderTarget;
       fileName:string;
       width,height:longint;
       retrieved:boolean;
@@ -77,10 +79,9 @@ TYPE
     public
       FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR createRenderToFileRequest  (CONST filename_:string; CONST width_,height_:longint; CONST backgroundRendering:boolean; CONST feedbackLocation_:T_searchTokenLocation; CONST feedbackMessages_:P_messages);
-      CONSTRUCTOR createRenderToStringRequest(CONST width_,height_:longint; CONST feedbackLocation_:T_searchTokenLocation; CONST feedbackMessages_:P_messages);
+      CONSTRUCTOR createRenderToStringRequest(CONST width_,height_:longint; CONST feedbackLocation_:T_searchTokenLocation; CONST feedbackMessages_:P_messages; CONST pngFormat:boolean);
       PROCEDURE setString(CONST s:string);
       FUNCTION getStringWaiting(CONST errorFlagProvider:P_messages):string;
-      PROPERTY isRenderToStringRequest:boolean read targetIsString;
   end;
 
   P_plotDropRowRequest=^T_plotDropRowRequest;
@@ -165,7 +166,7 @@ TYPE
 
       PROCEDURE renderPlot(VAR plotImage: TImage);
       PROCEDURE renderToFile(CONST fileName:string; CONST width,height:longint; CONST feedbackLocation:T_searchTokenLocation; CONST feedbackMessages:P_messages);
-      FUNCTION renderToString(CONST width,height:longint):ansistring;
+      FUNCTION renderToString(CONST width,height:longint; CONST pngFormat:boolean):ansistring;
 
       PROCEDURE copyFrom(VAR p:T_plot);
       FUNCTION getRowStatements(CONST prevOptions:T_scalingOptions; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
@@ -601,8 +602,9 @@ CONSTRUCTOR T_plotRenderRequest.createRenderToFileRequest(CONST filename_: strin
     inherited create(mt_plot_renderRequest);
     feedbackLocation:=feedbackLocation_;
     feedbackMessages:=feedbackMessages_;
-    targetIsString:=false;
-    renderInBackground:=backgroundRendering;
+    if backgroundRendering
+    then target:=prt_fileInBackground
+    else target:=prt_file;
     fileName:=filename_;
     width:=width_;
     height:=height_;
@@ -610,12 +612,14 @@ CONSTRUCTOR T_plotRenderRequest.createRenderToFileRequest(CONST filename_: strin
     outputString:='';
   end;
 
-CONSTRUCTOR T_plotRenderRequest.createRenderToStringRequest(CONST width_,height_: longint; CONST feedbackLocation_:T_searchTokenLocation; CONST feedbackMessages_:P_messages);
+CONSTRUCTOR T_plotRenderRequest.createRenderToStringRequest(CONST width_,height_: longint; CONST feedbackLocation_:T_searchTokenLocation; CONST feedbackMessages_:P_messages; CONST pngFormat:boolean);
   begin
     inherited create(mt_plot_renderRequest);
     feedbackLocation:=feedbackLocation_;
     feedbackMessages:=feedbackMessages_;
-    targetIsString:=true;
+    if pngFormat
+    then target:=prt_pngString
+    else target:=prt_bmpString;
     fileName:='';
     width:=width_;
     height:=height_;
@@ -1321,13 +1325,15 @@ FUNCTION T_plot.canRenderToFileInBackground(CONST fileName:string; CONST width,h
   end;
 {$endif}
 
-FUNCTION T_plot.renderToString(CONST width, height: longint): ansistring;
+FUNCTION T_plot.renderToString(CONST width, height: longint; CONST pngFormat:boolean): ansistring;
   VAR storeImage: TImage;
       memStream: TStringStream;
   begin
     storeImage:=obtainPlot(width,height);
     memStream := TStringStream.create('');
-    storeImage.picture.PNG.saveToStream(memStream);
+    if pngFormat
+    then storeImage.picture.PNG   .saveToStream(memStream)
+    else storeImage.picture.Bitmap.saveToStream(memStream);
     memStream.position:=0;
     result:=memStream.DataString;
     memStream.free;
@@ -1426,11 +1432,11 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
         end;
       end;
       mt_plot_renderRequest: begin
-        with P_plotRenderRequest(message)^ do if isRenderToStringRequest
-        then setString(currentPlot.renderToString(width,height))
+        with P_plotRenderRequest(message)^ do if target in [prt_bmpString,prt_pngString]
+        then setString(currentPlot.renderToString(width,height,target=prt_pngString))
         else begin
           {$ifdef enable_render_threads}
-          if renderInBackground then begin
+          if target=prt_fileInBackground then begin
             new(clonedPlot,createWithDefaults);
             clonedPlot^.copyFrom(currentPlot);
             if not(clonedPlot^.canRenderToFileInBackground(fileName,width,height,true,true,feedbackLocation,feedbackMessages))
