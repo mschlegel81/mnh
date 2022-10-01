@@ -555,14 +555,14 @@ FUNCTION renderPlotToCurrentImage intFuncSignature;
       (arg2^.literalType in [lt_smallint,lt_bigint])) then begin
       width:=int0^.intValue;
       height:=int1^.intValue;
-      new(renderRequest,createRenderToStringRequest(width,height,tokenLocation,context^.messages));
+      new(renderRequest,createRenderToStringRequest(width,height,tokenLocation,context^.messages,false));
       context^.messages^.postCustomMessage(renderRequest^.rereferenced);
       plotImage:=TImage.create(nil);
       plotImage.SetInitialBounds(0,0,width,height);
       imgStream:=TStringStream.create(renderRequest^.getStringWaiting(context^.messages));
       disposeMessage(renderRequest);
       imgStream.position:=0;
-      plotImage.picture.PNG.loadFromStream(imgStream);
+      plotImage.picture.Bitmap.loadFromStream(imgStream);
       imgStream.free;
       new(plotPic,create(1,1));
       plotPic^.copyFromImage(plotImage);
