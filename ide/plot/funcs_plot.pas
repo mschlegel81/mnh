@@ -66,9 +66,24 @@ FUNCTION plotRasterImage intFuncSignature;
   begin
     if not(context^.checkSideEffects('plotRasterImage',tokenLocation,[se_alterGuiState])) then exit(nil);
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType in [lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList]) and (arg1^.literalType = lt_smallint)
+    if (params<>nil) and (params^.size>=2) and (params^.size<=5) and (arg0^.literalType in [lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList]) and (arg1^.literalType = lt_smallint)
     then begin
       if int1^.intValue<1 then exit(nil);
+      if (params^.size>2) then begin
+        if (arg2^.literalType in [lt_bigint,lt_smallint,lt_real])
+        then scale:=P_numericLiteral(arg2)^.floatValue
+        else exit(nil);
+      end;
+      if (params^.size>3) then begin
+        if (arg3^.literalType in [lt_bigint,lt_smallint,lt_real])
+        then offsetX:=P_numericLiteral(arg3)^.floatValue
+        else exit(nil);
+      end;
+      if (params^.size>4) then begin
+        if (arg4^.literalType in [lt_bigint,lt_smallint,lt_real])
+        then offsetY:=P_numericLiteral(arg4)^.floatValue
+        else exit(nil);
+      end;
       new(message,create(int1^.intValue,scale,offsetX,offsetY));
       iter:=list0^.tempIteratableList;
       for c in iter do if not(message^.canAddColor(c)) then begin
@@ -437,8 +452,9 @@ INITIALIZATION
     'addPlot(list,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(xList,yList,[options]); //adds plot of flat numeric list or xy-list'+
     '#addPlot(f:expression(1),t0,t1>t0,samples>=2,[options]); //adds plot of f versus t in [t0,t1]',[se_alterGuiState]);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plotRasterImage',@plotRasterImage,ak_binary,
-    'plotRasterImage(colors:List;width>=1);//Plots a raster image given by a 1D-List of colors');
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plotRasterImage',@plotRasterImage,ak_variadic,
+    'plotRasterImage(colors:List;width>=1);//Plots a raster image given by a 1D-List of colors#'+
+    'plotRasterImage(colors:List;width>=1,scale:Numeric,offsetX:Numeric,offsetY:Numeric);//Plots a raster image with custom scaling');
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'getOptions',@getOptions, ak_nullary,
     'getOptions;//returns plot options as a key-value-list.',[se_readGuiState]);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'setOptions',@setOptions, ak_variadic_1,
