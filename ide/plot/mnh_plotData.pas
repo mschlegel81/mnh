@@ -1420,7 +1420,6 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
       mt_plot_rasterImage: with P_rasterImageMessage(message)^ do begin
         enterCriticalSection(currentPlot.plotCs);
         try
-          currentPlot.clear;
           currentPlot.scalingOptions.axisStyle['x']:=[];
           currentPlot.scalingOptions.axisStyle['y']:=[];
           setLength(currentPlot.row,1);

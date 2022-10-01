@@ -4,6 +4,7 @@
 {$define arg1:=params^.value[1]}
 {$define arg2:=params^.value[2]}
 {$define arg3:=params^.value[3]}
+{$define arg4:=params^.value[4]}
 {$define list0:=P_listLiteral(params^.value[0])}
 {$define list1:=P_listLiteral(params^.value[1])}
 {$define list2:=P_listLiteral(params^.value[2])}
