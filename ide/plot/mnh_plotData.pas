@@ -39,7 +39,7 @@ TYPE
     public
       primitive:P_rasterImage;
       FUNCTION internalType:shortstring; virtual;
-      CONSTRUCTOR create(CONST width_:longint);
+      CONSTRUCTOR create(CONST width_:longint; CONST scale,offsetX,offsetY:double);
       FUNCTION canAddColor(CONST literal:P_literal):boolean;
   end;
 
@@ -542,10 +542,10 @@ FUNCTION T_rasterImageMessage.internalType: shortstring;
     result:='P_rasterImageMessage';
   end;
 
-CONSTRUCTOR T_rasterImageMessage.create(CONST width_: longint);
+CONSTRUCTOR T_rasterImageMessage.create(CONST width_: longint; CONST scale,offsetX,offsetY:double);
   begin
     inherited create(mt_plot_rasterImage);
-    new(primitive,create);
+    new(primitive,create(scale,offsetX,offsetY));
     primitive^.width:=width_;
   end;
 
