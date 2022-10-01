@@ -7,7 +7,7 @@ USES sysutils,
      basicTypes,
      plotstyles,
      litVar,
-     BGRACanvas,
+     BGRACanvas, BGRABitmapTypes, BGRADefaultBitmap,
      types;
 CONST
   MIN_VALUE_FOR:array[false..true] of double=(-1E100, 1E-100);
@@ -178,7 +178,8 @@ TYPE
   T_rasterImage= object(T_plotPrimitive)
     colors:array of T_color;
     width:longint;
-    CONSTRUCTOR create();
+    scale,offsetX,offsetY:double;
+    CONSTRUCTOR create(CONST scale_,offsetX_,offsetY_:double);
     PROCEDURE updateBoundingBox(CONST scaling:T_scalingOptions; VAR boundingBox:T_boundingBox); virtual;
     PROCEDURE render(CONST opt:T_scalingOptions; CONST screenBox:T_boundingBox; CONST yBaseLine:longint; CONST target:TBGRACanvas); virtual;
     FUNCTION toStatementForExport(CONST firstRow:boolean; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral):string; virtual;
@@ -282,24 +283,26 @@ OPERATOR -(CONST x,y:T_point):T_point;
     result[1]:=x[1]-y[1];
   end;
 
-CONSTRUCTOR T_rasterImage.create();
+CONSTRUCTOR T_rasterImage.create(CONST scale_,offsetX_,offsetY_:double);
   begin
     setLength(colors,0);
     width:=1;
+    scale:=scale_;
+    offsetX:=offsetX_;
+    offsetY:=offsetY_;
   end;
 
 PROCEDURE T_rasterImage.updateBoundingBox(CONST scaling: T_scalingOptions; VAR boundingBox: T_boundingBox);
-  VAR r0,r1:longint;
+  VAR r0,r1:double;
   begin
     if (scaling.axisTrafo['x'].autoscale) then begin
-      if scaling.axisTrafo['x'].logs then r0:=1 else r0:=0; r1:=width;
+      if scaling.axisTrafo['x'].logs then r0:=1 else r0:=offsetX; r1:=width*scale+offsetX;
       if r0<boundingBox['x',0] then boundingBox['x',0]:=r0;
       if r1>boundingBox['x',1] then boundingBox['x',1]:=r1;
     end;
     if (scaling.axisTrafo['y'].autoscale) then begin
-      if scaling.axisTrafo['y'].logs then r0:=1 else r0:=0;
-      r1:=length(colors) div width;
-      if length(colors)>r1*width then inc(r1);
+      if scaling.axisTrafo['y'].logs then r0:=1 else r0:=offsetY;r1:=(length(colors) div width)*scale+offsetY;
+      if length(colors)>r1*width then r1+=scale;
       if r0<boundingBox['y',0] then boundingBox['y',0]:=r0;
       if r1>boundingBox['y',1] then boundingBox['y',1]:=r1;
     end;
@@ -309,33 +312,66 @@ PROCEDURE T_rasterImage.render(CONST opt: T_scalingOptions; CONST screenBox: T_b
   VAR i,jx,jy:longint;
       xGrid:array of longint;
       yGrid:array of longint;
-  begin
-    //Init X-Coordinates
-    setLength(xGrid,width+1);
-    for i:=0 to width do xGrid[i]:=round(opt.axisTrafo['x'].apply(i));
-    //Init Y-Coordinates
-    setLength(yGrid,length(colors) div width);
-    if width*length(yGrid)<length(colors)
-    then setLength(yGrid,length(yGrid)+2)
-    else setLength(yGrid,length(yGrid)+1);
-    for i:=0 to length(yGrid)-1 do yGrid[i]:=round(opt.axisTrafo['y'].apply(i));
 
-    //Draw
-    target.Pen.style:=psClear;
-    target.Brush.style:=bsSolid;
-    jx:=0;
-    jy:=0;
+      dest, source: TRect;
+      sourceMap: TBGRADefaultBitmap;
+
+  begin
+
+    source.Bottom:=0;
+    source.Left  :=0;
+    source.width :=width;
+    source.height:=length(colors) div width;
+    if source.height*source.width<length(colors) then source.height:=source.height+1;
+
+    dest.Bottom:=round(opt.axisTrafo['y'].apply(offsetY                    ));
+    dest.top   :=round(opt.axisTrafo['y'].apply(offsetY+source.height*scale));
+    dest.Left  :=round(opt.axisTrafo['x'].apply(offsetX));
+    dest.Right :=round(opt.axisTrafo['x'].apply(offsetX+       width *scale));
+
+    sourceMap:=TBGRADefaultBitmap.create(width,source.height);
+    jx:=0; jy:=0;
     for i:=0 to length(colors)-1 do begin
-      if intersect(screenBox,boundingBoxOf(xGrid[jx],yGrid[jy],xGrid[jx+1],yGrid[jy+1])) then begin
-        target.Brush.BGRAColor:=colors[i];
-        target.FillRect(xGrid[jx],yGrid[jy],xGrid[jx+1],yGrid[jy+1]);
-      end;
+      sourceMap.setPixel(jx,jy,RGBToColor(colors[i,cc_red],colors[i,cc_green],colors[i,cc_blue]));
       inc(jx);
       if jx>=width then begin
-        jx:=0;
         inc(jy);
+        jx:=0;
       end;
     end;
+
+    if target.width>3*source.width
+    then target.AntialiasingMode:=amOff
+    else target.AntialiasingMode:=amOn;
+    target.CopyRect(dest,sourceMap,source);
+    FreeAndNil(sourceMap);
+
+    ////Init X-Coordinates
+    //setLength(xGrid,width+1);
+    //for i:=0 to width do xGrid[i]:=round(opt.axisTrafo['x'].apply(i*scale+offsetX));
+    ////Init Y-Coordinates
+    //setLength(yGrid,length(colors) div width);
+    //if width*length(yGrid)<length(colors)
+    //then setLength(yGrid,length(yGrid)+2)
+    //else setLength(yGrid,length(yGrid)+1);
+    //for i:=0 to length(yGrid)-1 do yGrid[i]:=round(opt.axisTrafo['y'].apply(i*scale+offsetY));
+    //
+    ////Draw
+    //target.Pen.style:=psClear;
+    //target.Brush.style:=bsSolid;
+    //jx:=0;
+    //jy:=0;
+    //for i:=0 to length(colors)-1 do begin
+    //  if intersect(screenBox,boundingBoxOf(xGrid[jx],yGrid[jy],xGrid[jx+1],yGrid[jy+1])) then begin
+    //    target.Brush.BGRAColor:=colors[i];
+    //    target.FillRect(xGrid[jx],yGrid[jy],xGrid[jx+1],yGrid[jy+1]);
+    //  end;
+    //  inc(jx);
+    //  if jx>=width then begin
+    //    jx:=0;
+    //    inc(jy);
+    //  end;
+    //end;
   end;
 
 FUNCTION T_rasterImage.toStatementForExport(CONST firstRow: boolean; CONST literalRecycler: P_literalRecycler; VAR globalRowData: T_listLiteral): string;
@@ -364,12 +400,11 @@ FUNCTION T_rasterImage.getFullClone: P_plotPrimitive;
   VAR rasterImage:P_rasterImage;
       i:longint;
   begin
-    new(rasterImage,create);
+    new(rasterImage,create(scale,offsetX,offsetY));
     rasterImage^.width:=width;
     rasterImage^.pseudoIndex:=pseudoIndex;
     setLength(rasterImage^.colors,length(colors));
     for i:=0 to length(colors)-1 do rasterImage^.colors[i]:=colors[i];
-
     result:=rasterImage;
   end;
 

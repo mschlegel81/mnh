@@ -60,13 +60,16 @@ FUNCTION plotRasterImage intFuncSignature;
   VAR message:P_rasterImageMessage;
       iter:T_arrayOfLiteral;
       c:P_literal;
+      scale  : double=1;
+      offsetX: double=0;
+      offsetY: double=0;
   begin
     if not(context^.checkSideEffects('plotRasterImage',tokenLocation,[se_alterGuiState])) then exit(nil);
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType in [lt_list,lt_intList,lt_realList,lt_numList,lt_emptyList]) and (arg1^.literalType = lt_smallint)
     then begin
       if int1^.intValue<1 then exit(nil);
-      new(message,create(int1^.intValue));
+      new(message,create(int1^.intValue,scale,offsetX,offsetY));
       iter:=list0^.tempIteratableList;
       for c in iter do if not(message^.canAddColor(c)) then begin
         disposeMessage(message);
