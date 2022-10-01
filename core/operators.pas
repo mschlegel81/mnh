@@ -1215,10 +1215,10 @@ INITIALIZATION
   registerOperator(tt_comparatorLss    ,@comparator_Lss    ,@perform_lss);
   registerOperator(tt_comparatorGrt    ,@comparator_Grt    ,@perform_grt);
   registerOperator(tt_comparatorListEq ,@comparator_ListEq ,@perform_listEq);
-  registerOperator(tt_operatorLazyAnd  ,@operator_And      ,@perform_and      );
-  registerOperator(tt_operatorLazyOr   ,@operator_Or       ,@perform_or       );
   registerOperator(tt_operatorAnd      ,@operator_And      ,@perform_and      );
   registerOperator(tt_operatorOr       ,@operator_Or       ,@perform_or       );
+  registerOperator(tt_operatorLazyAnd  ,@operator_And      ,@perform_and      );
+  registerOperator(tt_operatorLazyOr   ,@operator_Or       ,@perform_or       );
   registerOperator(tt_operatorXor      ,@operator_Xor      ,@perform_xor      );
   registerOperator(tt_operatorPlus     ,@operator_Plus     ,@perform_plus     );
   registerOperator(tt_operatorMinus    ,@operator_Minus    ,@perform_minus    );
