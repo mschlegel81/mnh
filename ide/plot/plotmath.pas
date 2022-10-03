@@ -176,7 +176,6 @@ TYPE
 
   P_rasterImage=^T_rasterImage;
   T_rasterImage= object(T_plotPrimitive)
-    colors:array of T_color;
     width:longint;
     scale,offsetX,offsetY:double;
     sourceMap: TBGRADefaultBitmap;
@@ -286,12 +285,10 @@ OPERATOR -(CONST x,y:T_point):T_point;
 
 CONSTRUCTOR T_rasterImage.create(CONST scale_,offsetX_,offsetY_:double);
   begin
-    setLength(colors,0);
     width:=1;
     scale:=scale_;
     offsetX:=offsetX_;
     offsetY:=offsetY_;
-    sourceMap:=nil;
   end;
 
 PROCEDURE T_rasterImage.updateBoundingBox(CONST scaling: T_scalingOptions; VAR boundingBox: T_boundingBox);
@@ -303,40 +300,21 @@ PROCEDURE T_rasterImage.updateBoundingBox(CONST scaling: T_scalingOptions; VAR b
       if r1>boundingBox['x',1] then boundingBox['x',1]:=r1;
     end;
     if (scaling.axisTrafo['y'].autoscale) then begin
-      if scaling.axisTrafo['y'].logs then r0:=1 else r0:=offsetY;r1:=(length(colors) div width)*scale+offsetY;
-      if length(colors)>r1*width then r1+=scale;
+      if scaling.axisTrafo['y'].logs then r0:=1 else r0:=offsetY;r1:=sourceMap.height*scale+offsetY;
       if r0<boundingBox['y',0] then boundingBox['y',0]:=r0;
       if r1>boundingBox['y',1] then boundingBox['y',1]:=r1;
     end;
   end;
 
 PROCEDURE T_rasterImage.render(CONST opt: T_scalingOptions; CONST screenBox: T_boundingBox; CONST yBaseLine: longint; CONST target: TBGRACanvas);
-  VAR i,jx,jy:longint;
-      dest, source: TRect;
+  VAR dest, source: TRect;
   begin
-    source.Bottom:=0;
-    source.Left  :=0;
-    source.width :=width;
-    source.height:=length(colors) div width;
-    if source.height*source.width<length(colors) then source.height:=source.height+1;
 
-    dest.Bottom:=round(opt.axisTrafo['y'].apply(offsetY                    ));
-    dest.top   :=round(opt.axisTrafo['y'].apply(offsetY+source.height*scale));
-    dest.Left  :=round(opt.axisTrafo['x'].apply(offsetX));
-    dest.Right :=round(opt.axisTrafo['x'].apply(offsetX+       width *scale));
-
-    if sourceMap=nil then begin
-      sourceMap:=TBGRADefaultBitmap.create(width,source.height);
-      jx:=0; jy:=0;
-      for i:=0 to length(colors)-1 do begin
-        sourceMap.setPixel(jx,jy,RGBToColor(colors[i,cc_red],colors[i,cc_green],colors[i,cc_blue]));
-        inc(jx);
-        if jx>=width then begin
-          inc(jy);
-          jx:=0;
-        end;
-      end;
-    end;
+    dest.create(round(opt.axisTrafo['x'].apply(offsetX)),
+                round(opt.axisTrafo['y'].apply(offsetY+sourceMap.height*scale)),
+                round(opt.axisTrafo['x'].apply(offsetX+sourceMap.width *scale)),
+                round(opt.axisTrafo['y'].apply(offsetY                    )));
+    source.create(0,0,sourceMap.width,sourceMap.height);
 
     if dest.width>3*source.width
     then target.AntialiasingMode:=amOff
@@ -346,41 +324,68 @@ PROCEDURE T_rasterImage.render(CONST opt: T_scalingOptions; CONST screenBox: T_b
 
 FUNCTION T_rasterImage.toStatementForExport(CONST firstRow: boolean; CONST literalRecycler: P_literalRecycler; VAR globalRowData: T_listLiteral): string;
   VAR myRowIndex:longint;
-      i:longint;
+      ix,iy:longint;
       data:P_listLiteral;
       c:T_color;
+      pixel: TBGRAPixel;
 
   begin
     myRowIndex:=globalRowData.size;
-    result:='plotRasterImage(ROW['+intToStr(myRowIndex)+']/255,'+intToStr(width)+');';
-    data:=literalRecycler^.newListLiteral(length(colors));
-    for i:=0 to length(colors)-1 do begin
-      c:=colors[i];
-      if (c[cc_red]=c[cc_green]) and (c[cc_red]=c[cc_blue])
-      then data^.appendInt(literalRecycler,c[cc_red])
-      else data^.append(literalRecycler,literalRecycler^.newListLiteral(3)^
-                       .appendInt(literalRecycler,c[cc_red  ])^
-                       .appendInt(literalRecycler,c[cc_green])^
-                       .appendInt(literalRecycler,c[cc_blue ]),false);
+    result:='plotRasterImage(ROW['+intToStr(myRowIndex)+']*(1/255),'+intToStr(width);
+    if (scale<>1) or (offsetX<>0) or (offsetY<>0)
+    then result+=','+myFloatToStr(scale);
+    if (offsetX<>0) or (offsetY<>0)
+    then result+=','+myFloatToStr(offsetX);
+    if offsetY<>0
+    then result+=','+myFloatToStr(offsetY);
+    result+=');';
+    data:=literalRecycler^.newListLiteral(sourceMap.width*sourceMap.height);
+    for iy:=0 to sourceMap.height-1 do
+    for ix:=0 to sourceMap.width-1 do begin
+      pixel:=sourceMap.GetPixel256(ix,iy,0,0,rfBox,false);
+      if pixel.alpha=255 then begin
+        if (pixel.RED=pixel.GREEN) and (pixel.RED=pixel.BLUE) then begin
+          data^.appendInt(literalRecycler,pixel.RED);
+        end else begin
+          data^.append(literalRecycler,
+                       literalRecycler^.newListLiteral(3)^
+            .appendInt(literalRecycler,pixel.RED)^
+            .appendInt(literalRecycler,pixel.GREEN)^
+            .appendInt(literalRecycler,pixel.BLUE),false);
+        end;
+      end else begin
+        data^.append(literalRecycler,
+                     literalRecycler^.newListLiteral(4)^
+          .appendInt(literalRecycler,pixel.RED)^
+          .appendInt(literalRecycler,pixel.GREEN)^
+          .appendInt(literalRecycler,pixel.BLUE)^
+          .appendInt(literalRecycler,pixel.alpha),false);
+      end;
     end;
     globalRowData.append(literalRecycler,data,false);
   end;
 
 FUNCTION T_rasterImage.getFullClone: P_plotPrimitive;
   VAR rasterImage:P_rasterImage;
-      i:longint;
+      iy,ix:longint;
+      pixel: TBGRAPixel;
   begin
     new(rasterImage,create(scale,offsetX,offsetY));
     rasterImage^.width:=width;
     rasterImage^.pseudoIndex:=pseudoIndex;
-    setLength(rasterImage^.colors,length(colors));
-    for i:=0 to length(colors)-1 do rasterImage^.colors[i]:=colors[i];
+    rasterImage^.sourceMap:=TBGRADefaultBitmap.create(sourceMap.width,sourceMap.height);
+    sourceMap.CopyPropertiesTo(rasterImage^.sourceMap);
+    for iy:=0 to sourceMap.height-1 do
+    for ix:=0 to sourceMap.width-1 do begin
+      pixel:=sourceMap.GetPixel256(ix,iy,0,0,rfBox,false);
+      rasterImage^.sourceMap.setPixel(ix,iy,pixel.ToColor);
+      rasterImage^.sourceMap.AlphaPixel(ix,iy,pixel.alpha);
+    end;
     result:=rasterImage;
   end;
 
 DESTRUCTOR T_rasterImage.destroy;
   begin
-    setLength(colors,0);
     if sourceMap<>nil then FreeAndNil(sourceMap);
   end;
 
