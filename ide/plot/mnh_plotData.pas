@@ -14,7 +14,8 @@ USES sysutils,
      plotstyles,plotMath,
      litVar,
      EpikTimer,
-     BGRABitmap,BGRACanvas,BGRABitmapTypes,ideLayoutUtil;
+     BGRABitmap,BGRACanvas,BGRABitmapTypes,BGRADefaultBitmap,
+     ideLayoutUtil;
 CONST VOLATILE_FRAMES_MAX=100;
 TYPE
   T_boundingBox = array['x'..'y', 0..1] of double;
@@ -37,10 +38,13 @@ TYPE
   P_rasterImageMessage=^T_rasterImageMessage;
   T_rasterImageMessage=object(T_payloadMessage)
     public
+      colorFill:longint;
+      colors:array of T_color;
       primitive:P_rasterImage;
       FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR create(CONST width_:longint; CONST scale,offsetX,offsetY:double);
       FUNCTION canAddColor(CONST literal:P_literal):boolean;
+      PROCEDURE doneAddingColors;
   end;
 
   P_addTextMessage=^T_addTextMessage;
@@ -547,27 +551,52 @@ CONSTRUCTOR T_rasterImageMessage.create(CONST width_: longint; CONST scale,offse
     inherited create(mt_plot_rasterImage);
     new(primitive,create(scale,offsetX,offsetY));
     primitive^.width:=width_;
+
+    setLength(colors,width_*width_);
+    colorFill:=0;
   end;
 
 FUNCTION T_rasterImageMessage.canAddColor(CONST literal: P_literal): boolean;
-  VAR i:longint;
   begin
-    i:=length(primitive^.colors);
     if literal^.literalType in [lt_smallint,lt_bigint,lt_real] then begin
-      setLength(primitive^.colors,i+1);
-      primitive^.colors[i,cc_red  ]:=round(255*max(0, min(1,P_numericLiteral(literal)^.floatValue)));
-      primitive^.colors[i,cc_green]:=primitive^.colors[i,cc_red  ];
-      primitive^.colors[i,cc_blue ]:=primitive^.colors[i,cc_red  ];
-      primitive^.colors[i,cc_alpha]:=255;
+      if colorFill>=length(colors) then setLength(colors,colorFill+primitive^.width);
+      colors[colorFill,cc_red  ]:=round(255*max(0, min(1,P_numericLiteral(literal)^.floatValue)));
+      colors[colorFill,cc_green]:=colors[colorFill,cc_red  ];
+      colors[colorFill,cc_blue ]:=colors[colorFill,cc_red  ];
+      colors[colorFill,cc_alpha]:=255;
+      inc(colorFill);
       result:=true;
     end else if (literal^.literalType in [lt_intList,lt_realList,lt_numList]) and (P_listLiteral(literal)^.size=3) then begin
-      setLength(primitive^.colors,i+1);
-      primitive^.colors[i,cc_red  ]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[0])^.floatValue)));
-      primitive^.colors[i,cc_green]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[1])^.floatValue)));
-      primitive^.colors[i,cc_blue ]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[2])^.floatValue)));
-      primitive^.colors[i,cc_alpha]:=255;
+      if colorFill>=length(colors) then setLength(colors,colorFill+primitive^.width);
+      colors[colorFill,cc_red  ]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[0])^.floatValue)));
+      colors[colorFill,cc_green]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[1])^.floatValue)));
+      colors[colorFill,cc_blue ]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[2])^.floatValue)));
+      colors[colorFill,cc_alpha]:=255;
+      inc(colorFill);
+      result:=true;
+    end else if (literal^.literalType in [lt_intList,lt_realList,lt_numList]) and (P_listLiteral(literal)^.size=3) then begin
+      if colorFill>=length(colors) then setLength(colors,colorFill+primitive^.width);
+      colors[colorFill,cc_red  ]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[0])^.floatValue)));
+      colors[colorFill,cc_green]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[1])^.floatValue)));
+      colors[colorFill,cc_blue ]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[2])^.floatValue)));
+      colors[colorFill,cc_alpha]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[3])^.floatValue)));
+      inc(colorFill);
       result:=true;
     end else result:=false;
+  end;
+
+PROCEDURE T_rasterImageMessage.doneAddingColors;
+  VAR height,k:longint;
+  begin
+    setLength(colors,colorFill);
+    height:=length(colors) div primitive^.width;
+    if height*primitive^.width<length(colors) then inc(height);
+    primitive^.sourceMap:=TBGRADefaultBitmap.create(primitive^.width,height);
+    for k:=0 to length(colors)-1 do begin
+      primitive^.sourceMap.setPixel  (k mod primitive^.width,k div primitive^.width,RGBToColor(colors[k,cc_red],colors[k,cc_green],colors[k,cc_blue]));
+      primitive^.sourceMap.AlphaPixel(k mod primitive^.width,k div primitive^.width,           colors[k,cc_alpha]);
+    end;
+    setLength(colors,0);
   end;
 
 FUNCTION T_addTextMessage.internalType: shortstring;
@@ -1420,10 +1449,8 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
       mt_plot_rasterImage: with P_rasterImageMessage(message)^ do begin
         enterCriticalSection(currentPlot.plotCs);
         try
-          currentPlot.scalingOptions.axisStyle['x']:=[];
-          currentPlot.scalingOptions.axisStyle['y']:=[];
-          setLength(currentPlot.row,1);
-          currentPlot.row[0]:=primitive;
+          setLength(currentPlot.row,length(currentPlot.row)+1);
+          currentPlot.row[length(currentPlot.row)-1]:=primitive;
           primitive^.pseudoIndex:=currentPlot.virtualRowIndex;
           inc(currentPlot.virtualRowIndex);
         finally

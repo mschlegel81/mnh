@@ -90,6 +90,7 @@ FUNCTION plotRasterImage intFuncSignature;
         disposeMessage(message);
         exit(nil);
       end;
+      message^.doneAddingColors;
       context^.messages^.postCustomMessage(message,true);
       result:=newVoidLiteral;
     end;
