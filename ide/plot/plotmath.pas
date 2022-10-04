@@ -316,7 +316,7 @@ PROCEDURE T_rasterImage.render(CONST opt: T_scalingOptions; CONST screenBox: T_b
                 round(opt.axisTrafo['y'].apply(offsetY                    )));
     source.create(0,0,sourceMap.width,sourceMap.height);
 
-    if dest.width>3*source.width
+    if dest.width>2*source.width
     then target.AntialiasingMode:=amOff
     else target.AntialiasingMode:=amOn;
     target.CopyRect(dest,sourceMap,source);

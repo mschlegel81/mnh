@@ -790,11 +790,13 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
         startOfTask:=now;
         edit:=workspace.currentEditor;
         if (edit<>nil) then begin
-          openRelatedSubmenu.enabled:=(edit^.language=LANG_MNH);
-          workspace.processPendingMessagesInMainThread;
-          if edit^.isPseudoFile
-          then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
-          else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();
+          try
+            openRelatedSubmenu.enabled:=(edit^.language=LANG_MNH);
+            workspace.processPendingMessagesInMainThread;
+            if edit^.isPseudoFile
+            then caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif}
+            else caption:='MNH '{$ifdef debugMode}+'[debug] '{$endif}+edit^.pseudoName();
+          except end;
         end else begin
           caption:='MNH'{$ifdef debugMode}+' [debug]'{$endif};
           openRelatedSubmenu.enabled:=false;
