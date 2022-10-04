@@ -308,13 +308,33 @@ PROCEDURE T_rasterImage.updateBoundingBox(CONST scaling: T_scalingOptions; VAR b
 
 PROCEDURE T_rasterImage.render(CONST opt: T_scalingOptions; CONST screenBox: T_boundingBox; CONST yBaseLine: longint; CONST target: TBGRACanvas);
   VAR dest, source: TRect;
-  begin
+      x0:longint=0;
+      y0:longint=0;
+      x1,y1:longint;
 
-    dest.create(round(opt.axisTrafo['x'].apply(offsetX)),
-                round(opt.axisTrafo['y'].apply(offsetY+sourceMap.height*scale)),
-                round(opt.axisTrafo['x'].apply(offsetX+sourceMap.width *scale)),
-                round(opt.axisTrafo['y'].apply(offsetY                    )));
-    source.create(0,0,sourceMap.width,sourceMap.height);
+      tmp:double;
+
+      tx0,tx1,ty0,ty1:double;
+  begin
+    x1:=sourceMap.width;
+    y1:=sourceMap.height;
+
+    tx0:=opt.axisTrafo['x'].apply(offsetX+x0*scale);
+    tx1:=opt.axisTrafo['x'].apply(offsetX+x1*scale);
+    ty0:=opt.axisTrafo['y'].apply(offsetY+y1*scale);
+    ty1:=opt.axisTrafo['y'].apply(offsetY+y0*scale);
+    if (abs(tx1-tx0)>target.width*2) or (abs(ty1-ty0)>target.height*2) then begin
+      repeat inc(x0); tx0:=opt.axisTrafo['x'].apply(offsetX+x0*scale); until tx0>0;              dec(x0); tx0:=opt.axisTrafo['x'].apply(offsetX+x0*scale);
+      repeat dec(x1); tx1:=opt.axisTrafo['x'].apply(offsetX+x1*scale); until tx1<=target.width;  inc(x1); tx1:=opt.axisTrafo['x'].apply(offsetX+x1*scale);
+      repeat dec(y1); ty0:=opt.axisTrafo['y'].apply(offsetY+y1*scale); until ty0>0;              inc(y1); ty0:=opt.axisTrafo['y'].apply(offsetY+y1*scale);
+      repeat inc(y0); ty1:=opt.axisTrafo['y'].apply(offsetY+y0*scale); until ty1<=target.height; dec(y0); ty1:=opt.axisTrafo['y'].apply(offsetY+y0*scale);
+    end;
+
+    dest.create(round(tx0),
+                round(ty0),
+                round(tx1),
+                round(ty1));
+    source.create(x0,y0,x1,y1);
 
     if dest.width>2*source.width
     then target.AntialiasingMode:=amOff
