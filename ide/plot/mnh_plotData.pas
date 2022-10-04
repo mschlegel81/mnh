@@ -574,7 +574,7 @@ FUNCTION T_rasterImageMessage.canAddColor(CONST literal: P_literal): boolean;
       colors[colorFill,cc_alpha]:=255;
       inc(colorFill);
       result:=true;
-    end else if (literal^.literalType in [lt_intList,lt_realList,lt_numList]) and (P_listLiteral(literal)^.size=3) then begin
+    end else if (literal^.literalType in [lt_intList,lt_realList,lt_numList]) and (P_listLiteral(literal)^.size=4) then begin
       if colorFill>=length(colors) then setLength(colors,colorFill+primitive^.width);
       colors[colorFill,cc_red  ]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[0])^.floatValue)));
       colors[colorFill,cc_green]:=round(255*max(0, min(1,P_numericLiteral(P_listLiteral(literal)^.value[1])^.floatValue)));
