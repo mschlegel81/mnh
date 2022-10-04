@@ -1253,11 +1253,6 @@ FUNCTION T_byteStreamIterator.fillQueue(CONST recycler: P_literalRecycler): bool
       eofReached:=false;
     end else begin
       eofReached:=true;
-      if buffer^.size>0
-      then begin
-        queue.append(buffer);
-        buffer:=nil;
-      end else recycler^.disposeLiteral(buffer);
       if fileStream.position>fileStream.size then fileTruncated:=true;
     end;
     freeMem(readBfrPtr,toRead);
@@ -1307,12 +1302,21 @@ FUNCTION T_byteStreamIterator.evaluateToLiteral(CONST location: T_tokenLocation;
     if fileTruncated then P_context(context)^.messages^.postTextMessage(mt_el1_note,location,'File was (probably) truncated');
     if queue.hasNext
     then result.literal:=queue.next
-    else result.literal:=newVoidLiteral;
+    else if (buffer<>nil) and (buffer^.size>0) then begin
+      result.literal:=buffer;
+      buffer:=nil;
+    end else result.literal:=newVoidLiteral;
   end;
 
 DESTRUCTOR T_byteStreamIterator.destroy;
+  VAR l:P_literal;
   begin
     try
+      while queue.hasNext do begin
+        l:=queue.next;
+        globalLiteralRecycler.disposeLiteral(l);
+      end;
+      if buffer<>nil then globalLiteralRecycler.disposeLiteral(buffer);
       fileStream.free;
       queue.destroy;
     except
