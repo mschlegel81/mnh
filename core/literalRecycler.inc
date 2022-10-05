@@ -39,10 +39,10 @@
 
   T_localLiteralRecycler=object(T_literalRecycler)
     private
-      smallIntLiterals:record dat:array [0..1023] of P_smallIntLiteral; fill:longint; end;
-      bigIntLiterals  :record dat:array [0..1023] of P_bigIntLiteral;   fill:longint; end;
-      realLiterals    :record dat:array [0..1023] of P_realLiteral;     fill:longint; end;
-      stringLiterals  :record dat:array [0..1023] of P_stringLiteral;   fill:longint; end;
+      smallIntLiterals:record dat:array [0..2047] of P_smallIntLiteral; fill:longint; end;
+      bigIntLiterals  :record dat:array [0..511 ] of P_bigIntLiteral;   fill:longint; end;
+      realLiterals    :record dat:array [0..2047] of P_realLiteral;     fill:longint; end;
+      stringLiterals  :record dat:array [0..511 ] of P_stringLiteral;   fill:longint; end;
       listLiterals    :record dat:array [0..1023] of P_listLiteral;     fill:longint; end;
       setLiterals     :record dat:array [0..1023] of P_setLiteral;      fill:longint; end;
     public
