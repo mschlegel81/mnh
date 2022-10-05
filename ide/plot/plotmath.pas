@@ -289,6 +289,7 @@ CONSTRUCTOR T_rasterImage.create(CONST scale_,offsetX_,offsetY_:double);
     scale:=scale_;
     offsetX:=offsetX_;
     offsetY:=offsetY_;
+    sourceMap:=nil;
   end;
 
 PROCEDURE T_rasterImage.updateBoundingBox(CONST scaling: T_scalingOptions; VAR boundingBox: T_boundingBox);
