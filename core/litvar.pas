@@ -8,7 +8,7 @@ USES myGenerics, myStringUtil, serializationUtil, bigint,
      out_adapters;
 
 CONST HASH_GROWTH_THRESHOLD_FACTOR=1.5;
-      HASH_SHRINK_THRESHOLD_FACTOR=1.2/HASH_GROWTH_THRESHOLD_FACTOR;
+      HASH_SHRINK_THRESHOLD_FACTOR=2/HASH_GROWTH_THRESHOLD_FACTOR;
       MAX_DEAD_LIST_SIZE=256;
 TYPE T_expressionType=(et_builtin          ,
                        et_builtinIteratable,
@@ -299,6 +299,7 @@ TYPE
     CONSTRUCTOR createClone(VAR map:MY_TYPE);
     DESTRUCTOR destroy;
     PROCEDURE clear;
+    PROCEDURE polish;
     PROCEDURE rehash(CONST grow:boolean);
     PROCEDURE put(CONST key:P_literal; CONST value:VALUE_TYPE);
     FUNCTION putNew(CONST newEntry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
@@ -889,10 +890,26 @@ PROCEDURE G_literalKeyMap.clear;
     setLength(bin,1);
   end;
 
+PROCEDURE G_literalKeyMap.polish;
+  VAR i:longint;
+  begin
+    for i:=0 to length(bin)-1 do with bin[i] do
+      if length(arr)>binFill then setLength(arr,binFill);
+  end;
+
 PROCEDURE G_literalKeyMap.rehash(CONST grow:boolean);
   VAR i,i0,j,c0,c1:longint;
       hashMask:dword;
   begin
+    {$ifdef debugMode}
+    c0:=maxLongint;
+    c1:=0;
+    for i:=0 to length(bin)-1 do begin
+      if bin[i].binFill<c0 then c0:=bin[i].binFill;
+      if bin[i].binFill>c1 then c1:=bin[i].binFill;
+    end;
+    writeln('Rehashing from ',length(bin),' (fill=',fill,') grow=',grow,'; binFill: ',c0,'/',fill/length(bin):0:2,'/',c1);
+    {$endif}
     if grow then begin
       i0:=length(bin);
       setLength(bin,i0+i0);
@@ -2883,6 +2900,7 @@ FUNCTION setUnion(CONST literalRecycler:P_literalRecycler; CONST params:P_listLi
         else result^.appendAll(literalRecycler,P_collectionLiteral(part));
       end;
     end;
+    result^.dat.polish;
   end;
 
 FUNCTION setIntersect(CONST literalRecycler:P_literalRecycler; CONST params:P_listLiteral):P_setLiteral;
@@ -2969,6 +2987,7 @@ FUNCTION setIntersect(CONST literalRecycler:P_literalRecycler; CONST params:P_li
       result^.modifyType(entry.key);
       entry.key^.rereference;
     end;
+    result^.dat.polish;
     counterSet.destroy;
   end;
 
@@ -2996,6 +3015,7 @@ FUNCTION setMinus(CONST literalRecycler:P_literalRecycler; CONST params:P_listLi
         result^.modifyType(L);
       end;
     end;
+    result^.dat.polish;
   end;
 
 FUNCTION mapMerge(CONST literalRecycler:P_literalRecycler; CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:P_abstractContext; CONST recycler:pointer):P_mapLiteral;
@@ -3033,6 +3053,7 @@ FUNCTION mapMerge(CONST literalRecycler:P_literalRecycler; CONST params:P_listLi
         pTargetEntry^.value:=M;
       end;
     end;
+    result^.dat.polish;
     if result^.dat.fill>0 then result^.literalType:=lt_map
                           else result^.literalType:=lt_emptyMap;
   end;

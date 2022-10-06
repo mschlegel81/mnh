@@ -5,7 +5,7 @@ INTERFACE
 {$endif}
 USES sysutils,
      math,
-     Interfaces, Classes, ExtCtrls, Graphics, types,Forms, ComCtrls, LCLType,
+     Classes, ExtCtrls, Graphics, types,Forms, ComCtrls, LCLType,
      mySys,myGenerics,
      basicTypes, mnh_constants,
      mnh_settings,
@@ -245,13 +245,10 @@ FUNCTION newPlotSystemWithoutDisplay:P_plotSystem;
 FUNCTION getOptionsViaAdapters(CONST messages:P_messages):T_scalingOptions;
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
 IMPLEMENTATION
-USES FPReadPNG,
-     FPWritePNG,
-     IntfGraphics,
+USES
      myStringUtil,
      commandLineParameters,
-     contexts,
-     recyclers;
+     contexts;
 {$ifdef enable_render_threads}
 VAR preparationThreadsRunning:longint=0;
 TYPE
