@@ -193,20 +193,6 @@ TYPE
       FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
     end;
 
-  {$ifdef fullVersion}
-  P_structureMarker=^T_structureMarker;
-  T_structureMarker=object(T_objectWithIdAndLocation)
-    private
-      id:T_idString;
-      location:T_tokenLocation;
-    public
-      CONSTRUCTOR create(CONST identifier:T_idString);
-      FUNCTION getId:T_idString; virtual;
-      FUNCTION getLocation:T_tokenLocation; virtual;
-      DESTRUCTOR destroy;
-  end;
-  {$endif}
-
   T_builtinGeneratorType=(bgt_future,
                           bgt_listIterator,
                           bgt_singleValueIterator,
@@ -1089,18 +1075,7 @@ CONSTRUCTOR T_builtinExpressionProxy.create(CONST meta_:P_builtinFunctionMetaDat
     meta:=meta_;
     func:=meta^.functionPointer;
   end;
-{$ifdef fullVersion}
-CONSTRUCTOR T_structureMarker.create(CONST identifier:T_idString);
-  begin
-    id:=identifier;
-    location.package:=@MNH_PSEUDO_PACKAGE;
-    location.column:=1;
-    location.line:=interLockedIncrement(identifiedInternalFunctionTally);
-  end;
-FUNCTION T_structureMarker.getId:T_idString; begin result:=id; end;
-FUNCTION T_structureMarker.getLocation:T_tokenLocation; begin result:=location; end;
-DESTRUCTOR T_structureMarker.destroy; begin end; //pro forma
-{$endif}
+
 DESTRUCTOR T_builtinExpressionProxy.destroy;
   begin
     inherited destroy;

@@ -80,11 +80,7 @@ PROCEDURE enqueueFutureTask(CONST future:P_futureLiteral; CONST context:P_contex
 VAR newIterator:FUNCTION (CONST literalRecycler:P_literalRecycler; CONST input:P_literal; CONST location:T_tokenLocation):P_expressionLiteral;
 IMPLEMENTATION
 USES mySys,tokenArray;
-{$ifdef fullVersion}
-VAR eachStructureMarker :T_structureMarker;
-    pEachStructureMarker:T_structureMarker;
-    aggStructureMarker  :T_structureMarker;
-{$endif}
+
 TYPE
   T_eachPayload=record
     eachIndex:longint;
@@ -132,8 +128,7 @@ end}
       proceed:boolean=true;
   begin
     {$ifdef fullVersion}
-    if tco_stackTrace in context^.threadOptions
-    then context^.callStackPush(eachLocation,@eachStructureMarker,nil);
+    if tco_stackTrace in context^.threadOptions then context^.callStackPush(eachLocation,'each',eachLocation,nil);
     {$endif}
     if (input^.literalType=lt_expression) and (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then begin
       x:=P_expressionLiteral(input)^.evaluateToLiteral(eachLocation,context,recycler,nil,nil).literal;
@@ -234,8 +229,7 @@ end}
 
   begin
     {$ifdef fullVersion}
-    if tco_stackTrace in context^.threadOptions
-    then context^.callStackPush(eachLocation,@pEachStructureMarker,nil);
+    if tco_stackTrace in context^.threadOptions then context^.callStackPush(eachLocation,'pEach',eachLocation,nil);
     {$endif}
     recycling.fill:=0;
     toQueueLimit:=TASKS_TO_QUEUE_PER_CPU*settings.cpuCount;
@@ -336,8 +330,7 @@ PROCEDURE aggregate(CONST input:P_literal; CONST aggregator: P_aggregator; CONST
       iter:T_arrayOfLiteral;
   begin
     {$ifdef fullVersion}
-    if tco_stackTrace in context^.threadOptions
-    then context^.callStackPush(location,@aggStructureMarker,nil);
+    if tco_stackTrace in context^.threadOptions then context^.callStackPush(location,'agg',location,nil);
     {$endif}
     if (input^.literalType=lt_expression) and (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then begin
       x:=P_expressionLiteral(input)^.evaluateToLiteral(location,context,recycler,nil,nil);
@@ -575,16 +568,5 @@ FUNCTION T_futureLiteral.isDone:boolean;
     leaveCriticalSection(criticalSection);
   end;
 
-{$ifdef fullVersion}
-INITIALIZATION
-  eachStructureMarker .create('each');
-  pEachStructureMarker.create('pEach');
-  aggStructureMarker  .create('agg');
-
-FINALIZATION
-  eachStructureMarker .destroy;
-  pEachStructureMarker.destroy;
-  aggStructureMarker  .destroy;
-{$endif}
 end.
 

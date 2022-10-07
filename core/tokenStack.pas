@@ -39,7 +39,7 @@ TYPE
   {$ifdef fullVersion}
   T_callStackEntry=record
     callerLocation:T_tokenLocation;
-    calleeId:ansistring;
+    calleeId:T_idString;
     calleeLocation:T_tokenLocation;
     callerFuncLocation:T_tokenLocation;
     timeForProfiling_inclusive,
@@ -61,7 +61,7 @@ TYPE
       PROCEDURE push(CONST wallclockTime:double;
                      CONST parameters:P_variableTreeEntryCategoryNode;
                      CONST callerLocation: T_tokenLocation;
-                     CONST callee: P_objectWithIdAndLocation);
+                     CONST calleeId: T_idString; CONST calleeLocation:T_tokenLocation);
       FUNCTION pop(CONST wallclockTime:double;CONST profiler:P_profiler):T_tokenLocation;
       PROCEDURE ensureTraceInError(VAR error:T_errorMessage);
       PROPERTY entry[index:longint]:T_callStackEntry read getEntry; default;
@@ -88,12 +88,13 @@ PROCEDURE T_callStack.clear;
 
 PROCEDURE T_callStack.push(CONST wallclockTime:double; CONST parameters:P_variableTreeEntryCategoryNode;
   CONST callerLocation: T_tokenLocation;
-  CONST callee: P_objectWithIdAndLocation);
+  CONST calleeId: T_idString;
+  CONST calleeLocation:T_tokenLocation);
   begin
     if length(dat)<=fill then setLength(dat,length(dat)+16);
     dat[fill].callerLocation:=callerLocation;
-    dat[fill].calleeId:=callee^.getId;
-    dat[fill].calleeLocation:=callee^.getLocation;
+    dat[fill].calleeId:=calleeId;
+    dat[fill].calleeLocation:=calleeLocation;
 
     if fill>0 then begin
       with dat[fill-1] do timeForProfiling_exclusive:=wallclockTime-timeForProfiling_exclusive;

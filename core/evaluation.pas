@@ -34,9 +34,6 @@ USES sysutils,
      aggregators,
      recyclers,
      listProcessing;
-{$ifdef fullVersion}
-VAR whileStructureMarker:T_structureMarker;
-{$endif}
 
 FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recycler:P_recycler):T_reduceResult;
   VAR stack:T_TokenStack;
@@ -331,7 +328,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       end;
       {$ifdef fullVersion}
       if tco_stackTrace in context^.threadOptions
-      then context^.callStackPush(whileLocation,@whileStructureMarker,nil);
+      then context^.callStackPush(whileLocation,'while',whileLocation,nil);
       {$endif}
       if not(parseBodyOk) then exit;
       while (returnValue.reasonForStop=rr_ok)
@@ -1500,9 +1497,4 @@ INITIALIZATION
                'future(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Future tasks are killed at the end of (synchonous) evaluation.#//The resulting expression blocks until the task is finished.'{$endif});
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'peekFuture',@peekFuture_imp,ak_unary{$ifdef fullVersion},
                'peekFuture(F:Future);//peeks (nonblocking) the future F and returns true if its evaluation is finished, false otherwise'{$endif});
-  {$ifdef fullVersion}
-  whileStructureMarker.create('while');
-FINALIZATION
-  whileStructureMarker.destroy;
-  {$endif}
 end.
