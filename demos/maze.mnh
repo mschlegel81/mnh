@@ -1,14 +1,8 @@
-private randomListElement(L:Collection)->L.toList[intRandom(L.size)] orElse [];
-
-//private memoized neighbors(width,height,index)->neighbors(width,height,index mod width,index div width);
-private neighbors(width,height,x,y)->
-  [x>0        ? [x-1,y] : void,
-   y>0        ? [x,y-1] : void,
-   x<width-1  ? [x+1,y] : void,
-   y<height-1 ? [x,y+1] : void];
-
-private unvisitedNeighbor(width,height,p:IntList(2),visited)->
-  neighbors(width,height,p[0],p[1]).minus(visited).randomListElement;
+private steps(width,height,x,y)->
+  [x>0        ? [[x,y],[x-1,y]] : void,
+   y>0        ? [[x,y],[x,y-1]] : void,
+   x<width-1  ? [[x,y],[x+1,y]] : void,
+   y<height-1 ? [[x,y],[x,y+1]] : void].{$L[$L.size.random.sortPerm]};
 
 private randomUnvisitedCell(width,height,visited)->begin
   local L:=[0..width-1].cross([0..height-1]).minus(visited).toList;
@@ -22,28 +16,28 @@ end;
 
 private makeMaze(width,height)->
 begin
-  local visited:=[];
-  visited:=(map([-1..  width],{[$i   ,-1]})|
-            map([-1.. height],{[width,$j]})|
-            map([width..  -1],{[$i   ,height]})|
-            map([height.. -1],{[-1   ,$j]}));
+  local visited:=
+    (map([-1..  width],{[$i   ,-1]})|
+     map([-1.. height],{[width,$j]})|
+     map([width..  -1],{[$i   ,height]})|
+     map([height.. -1],{[-1   ,$j]}));
+  local visitPairs:=[visited,visited.tail(1)|visited.head(1)].transpose.map(::sort).toSet;
+  visited:=visited.toSet;
 
   local position:=randomUnvisitedCell(width,height,visited);
+  local stack:=steps(width,height,position[0],position[1]);
 
-  while(!(position==[]),begin
-    visited||=position;
-    local continue:=true;
-    while(continue,begin
-      local next:=unvisitedNeighbor(width,height,position,visited);
-      next==[] ? continue:=false : begin
-        position:=next;
-        visited||=next;
+  while(stack.size>0,begin
+    local next:=stack.trailing; stack:=stack.leading;
+    next[1] in visited
+    ? void
+    : begin
+        visitPairs||=next.sort;
+        visited|=next;
+        stack|=steps(width,height,next[1,0],next[1,1]);
       end;
-    end);
-    position:=randomUnvisitedCell(width,height,visited);
   end);
 
-  local visitPairs:=[0..size(visited)-2].each(i,sort(visited.get([i,i+1]))).toSet;
   local connectionsAroundDot:={
     ['┼───','┬───','┴───','────',
      '┤   ','┐   ','┘   ','─   ',
