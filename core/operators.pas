@@ -227,60 +227,57 @@ FUNCTION operator_NotIn       intFuncSignature;
   lt_void:       exit(LHS^.rereferenced);
   lt_map,lt_emptyMap: exit(nil)}
 {$define generic_recursions:=FUNCTION recurse_scalar_collection:P_literal;
-    VAR rhsIt:T_arrayOfLiteral;
+    VAR temp:T_arrayOfLiteral;
         i:longint;
-        resultElements:T_arrayOfLiteral;
     begin
-      rhsIt:=P_collectionLiteral(RHS)^.tempIteratableList;
-      setLength(resultElements,length(rhsIt));
-      for i:=0 to length(rhsIt)-1 do begin
-        resultElements[i]:=function_id(LHS,rhsIt[i],tokenLocation,context,recycler);
-        if resultElements[i]=nil then begin
-          setLength(resultElements,i);
-          recycler^.disposeLiterals(resultElements);
+      temp:=P_collectionLiteral(RHS)^.tempIteratableList;
+      for i:=0 to length(temp)-1 do begin
+        temp[i]:=function_id(LHS,temp[i],tokenLocation,context,recycler);
+        if temp[i]=nil then begin
+          setLength(temp,i);
+          recycler^.disposeLiterals(temp);
           exit(nil);
         end;
       end;
       result:=P_collectionLiteral(RHS)^.newOfSameType(recycler,false);
-      P_collectionLiteral(result)^.setContents(resultElements,recycler);
+      P_collectionLiteral(result)^.setContents(temp,recycler);
     end;
 
   FUNCTION recurse_collection_scalar:P_literal;
-    VAR lhsIt:T_arrayOfLiteral;
+    VAR temp:T_arrayOfLiteral;
         i:longint;
-        resultElements:T_arrayOfLiteral;
     begin
-      lhsIt:=P_collectionLiteral(LHS)^.tempIteratableList;
-      setLength(resultElements,length(lhsIt));
-      for i:=0 to length(lhsIt)-1 do begin
-        resultElements[i]:=function_id(lhsIt[i],RHS,tokenLocation,context,recycler);
-        if resultElements[i]=nil then begin
-          setLength(resultElements,i);
-          recycler^.disposeLiterals(resultElements);
+      temp:=P_collectionLiteral(LHS)^.tempIteratableList;
+      for i:=0 to length(temp)-1 do begin
+        temp[i]:=function_id(temp[i],RHS,tokenLocation,context,recycler);
+        if temp[i]=nil then begin
+          setLength(temp,i);
+          recycler^.disposeLiterals(temp);
           exit(nil);
         end;
       end;
       result:=P_collectionLiteral(LHS)^.newOfSameType(recycler,false);
-      P_collectionLiteral(result)^.setContents(resultElements,recycler);
+      P_collectionLiteral(result)^.setContents(temp,recycler);
     end;
 
   FUNCTION recurse_list_list:P_literal;
     VAR i:longint;
-        resultElements:T_arrayOfLiteral;
+        lhsIt,rhsIt:T_arrayOfLiteral;
     begin
       if  (P_listLiteral(LHS)^.size=P_listLiteral(RHS)^.size) then begin
-        setLength(resultElements,P_listLiteral(LHS)^.size);
+        lhsIt:=P_listLiteral(LHS)^.tempIteratableList;
+        rhsIt:=P_listLiteral(RHS)^.tempIteratableList;
+
         for i:=0 to P_listLiteral(LHS)^.size-1 do begin
-          resultElements[i]:=function_id(P_listLiteral(LHS)^.value[i],
-                                         P_listLiteral(RHS)^.value[i],tokenLocation,context,recycler);
-          if resultElements[i]=nil then begin
-            setLength(resultElements,i);
-            recycler^.disposeLiterals(resultElements);
+          lhsIt[i]:=function_id(lhsIt[i],rhsIt[i],tokenLocation,context,recycler);
+          if lhsIt[i]=nil then begin
+            setLength(lhsIt,i);
+            recycler^.disposeLiterals(lhsIt);
             exit(nil);
           end;
         end;
         result:=recycler^.newListLiteral(0);
-        P_listLiteral(result)^.setContents(resultElements,recycler);
+        P_listLiteral(result)^.setContents(lhsIt,recycler);
       end else result:=nil;
     end;
 
