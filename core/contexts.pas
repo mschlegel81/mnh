@@ -111,6 +111,7 @@ TYPE
       FUNCTION continueEvaluation:boolean; virtual;
       {$ifdef fullVersion}
       PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST callee:P_objectWithIdAndLocation; CONST callParameters:P_variableTreeEntryCategoryNode); {$ifndef debugMode} inline; {$endif}
+      PROCEDURE callStackPush(CONST callerLocation:T_tokenLocation; CONST calleeId:T_idString; CONST calleeLocation:T_tokenLocation; CONST callParameters:P_variableTreeEntryCategoryNode); {$ifndef debugMode} inline; {$endif}
       PROCEDURE callStackPushCategory(CONST package:P_objectWithPath; CONST category:T_profileCategory; VAR calls:T_packageProfilingCalls); {$ifndef debugMode} inline; {$endif}
       PROCEDURE callStackPop(CONST first:P_token); {$ifndef debugMode} inline; {$endif}
       FUNCTION stepping(CONST first:P_token; CONST stack:P_tokenStack):boolean; {$ifndef debugMode} inline; {$endif}
@@ -645,18 +646,21 @@ FUNCTION T_context.getNewAsyncContext(CONST recycler:P_recycler; CONST local: bo
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_context.callStackPush(CONST callerLocation: T_tokenLocation;
-  CONST callee: P_objectWithIdAndLocation;
-  CONST callParameters: P_variableTreeEntryCategoryNode);
+PROCEDURE T_context.callStackPush(CONST callerLocation: T_tokenLocation; CONST callee: P_objectWithIdAndLocation; CONST callParameters: P_variableTreeEntryCategoryNode);
   begin
-    if (tco_stackTrace in options) then callStack.push(wallclockTime,callParameters,callerLocation,callee);
+    if (tco_stackTrace in options) then callStack.push(wallclockTime,callParameters,callerLocation,callee^.getId,callee^.getLocation);
+  end;
+
+PROCEDURE T_context.callStackPush(CONST callerLocation:T_tokenLocation; CONST calleeId:T_idString; CONST calleeLocation:T_tokenLocation; CONST callParameters:P_variableTreeEntryCategoryNode);
+  begin
+    if (tco_stackTrace in options) then callStack.push(wallclockTime,callParameters,callerLocation,calleeId,calleeLocation);
   end;
 
 PROCEDURE T_context.callStackPushCategory(CONST package: P_objectWithPath; CONST category: T_profileCategory; VAR calls: T_packageProfilingCalls);
   begin
     if tco_stackTrace in options then begin
       if calls[category]=nil then new(calls[category],create(package,category));
-      callStack.push(wallclockTime,nil,calls[category]^.getLocation,calls[category]);
+      callStack.push(wallclockTime,nil,calls[category]^.getLocation,calls[category]^.getId,calls[category]^.getLocation);
     end;
   end;
 

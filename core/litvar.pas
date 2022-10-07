@@ -7,8 +7,8 @@ USES myGenerics, myStringUtil, serializationUtil, bigint,
      mnh_messages,
      out_adapters;
 
-CONST HASH_GROWTH_THRESHOLD_FACTOR=1.5;
-      HASH_SHRINK_THRESHOLD_FACTOR=2/HASH_GROWTH_THRESHOLD_FACTOR;
+CONST HASH_GROWTH_THRESHOLD_FACTOR=  3;
+      HASH_SHRINK_THRESHOLD_FACTOR=0.5;
       MAX_DEAD_LIST_SIZE=256;
 TYPE T_expressionType=(et_builtin          ,
                        et_builtinIteratable,
