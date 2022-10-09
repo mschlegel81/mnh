@@ -410,7 +410,6 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
     for i:=1 to length(iter)-1 do recycler^.disposeLiterals(iter[i]);
   end;
 
-{$ifdef fullVersion}VAR formatLoc:P_intFuncCallback; {$endif}
 FUNCTION format_imp intFuncSignature;
   VAR txt:T_arrayOfString;
       i:longint;
@@ -434,7 +433,6 @@ FUNCTION format_imp intFuncSignature;
     end;
   end;
 
-{$ifdef fullVersion}VAR printfLoc:P_intFuncCallback;{$endif}
 FUNCTION printf_imp intFuncSignature;
   VAR preparedStatement:P_preparedFormatStatement;
       textToPost: T_arrayOfString;
@@ -539,9 +537,7 @@ FUNCTION parseTime_imp intFuncSignature;
   end;
 
 INITIALIZATION
-  {$ifdef fullVersion}printfLoc:={$endif}
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'           ,@printf_imp,ak_variadic_1{$ifdef fullVersion},'printf(formatString:String,...);//Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>'{$endif});
-  {$ifdef fullVersion}formatLoc:={$endif}
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE       ,'format'           ,@format_imp           ,ak_variadic_1{$ifdef fullVersion},'format(formatString:String,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>'{$endif});
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE       ,'formatTime'       ,@formatTime_imp       ,ak_binary    {$ifdef fullVersion},'formatTime(formatString:String,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>'{$endif});
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE       ,'parseTime'        ,@parseTime_imp        ,ak_binary    {$ifdef fullVersion},'parseTime(formatString:String,input:String);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>'{$endif});
