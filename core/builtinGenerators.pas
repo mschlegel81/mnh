@@ -1337,7 +1337,6 @@ PROCEDURE T_byteStreamIterator.cleanup(CONST literalRecycler: P_literalRecycler)
 FUNCTION byteStreamIterator intFuncSignature;
   VAR timeout:double=-1;
       chunkSize:longint;
-      fileName:string;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=2) and (params^.size<=3) and
@@ -1346,7 +1345,6 @@ FUNCTION byteStreamIterator intFuncSignature;
        (int1^.intValue>0) and
        context^.checkSideEffects('byteStreamIterator',tokenLocation,[se_readFile])
     then begin
-      fileName :=str0^.value;
       chunkSize:=int1^.intValue;
       if (params^.size=3) then begin
         if arg2^.literalType in [lt_real,lt_smallint,lt_bigint]

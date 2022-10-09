@@ -312,9 +312,6 @@ PROCEDURE T_rasterImage.render(CONST opt: T_scalingOptions; CONST screenBox: T_b
       x0:longint=0;
       y0:longint=0;
       x1,y1:longint;
-
-      tmp:double;
-
       tx0,tx1,ty0,ty1:double;
   begin
     x1:=sourceMap.width;
@@ -347,9 +344,7 @@ FUNCTION T_rasterImage.toStatementForExport(CONST firstRow: boolean; CONST liter
   VAR myRowIndex:longint;
       ix,iy:longint;
       data:P_listLiteral;
-      c:T_color;
       pixel: TBGRAPixel;
-
   begin
     myRowIndex:=globalRowData.size;
     result:='plotRasterImage(ROW['+intToStr(myRowIndex)+']*(1/255),'+intToStr(width);

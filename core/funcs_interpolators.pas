@@ -578,6 +578,79 @@ FUNCTION bSplineApproximator_imp intFuncSignature;
   end;
 
 TYPE
+  P_localInterpolator=^T_localInterpolator;
+  T_localInterpolator=object(T_interpolator)
+    protected
+      FUNCTION getSingleInterpolatedValue(CONST floatIdx:double):double; virtual;
+    public
+      CONSTRUCTOR create(CONST values:P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context);
+  end;
+
+FUNCTION T_localInterpolator.getSingleInterpolatedValue(CONST floatIdx: double): double;
+  VAR i,k:longint;
+      t:double;
+      x,y:array[-1..2] of double;
+      a,b,c,d,
+      s0,s1       :double;
+  begin
+    if accessByIndex then begin
+      if (floatIdx>maxLongint) or (floatIdx<1-maxLongint) then exit(Nan);
+      i:=floor(floatIdx); t:=floatIdx-i;
+      for k:=-1 to 2 do begin
+        if      i+k<0                then y[k]:=yValues[                0]+(i+k)                  *(yValues[                1]-yValues[                0])
+        else if i+k>=length(yValues) then y[k]:=yValues[length(yValues)-1]+(i+k-length(yValues)+1)*(yValues[length(yValues)-1]-yValues[length(yValues)-2])
+                                     else y[k]:=yValues[i+k];
+
+      end;
+      result:= y[-1]*(t*(-0.5+(1-t*0.5)*t))
+              +y[ 0]*(1+t*t*(-2.5+(3*t)*0.5))
+              +y[+1]*(t*(0.5+(2-(3*t)*0.5)*t))
+              +y[+2]*((-0.5+t*0.5)*t*t);
+    end else begin
+      i:=findIndexForX(floatIdx);
+      if (i>=1) and (i<length(yValues)-2) then begin
+        for k:=-1 to 2 do begin y[k]:=yValues[i+k]; x[k]:=xValues[i+k]; end;
+        s0:=(y[1]-y[-1])/(x[1]-x[-1])*(x[1]-x[0]);
+        s1:=(y[2]-y[ 0])/(x[2]-x[ 0])*(x[1]-x[0]);
+      end else if i=0 then begin
+        for k:=0 to 2 do begin y[k]:=yValues[i+k]; x[k]:=xValues[i+k]; end;
+        s0:=(y[1]-y[0]);
+        s1:=(y[2]-y[0])/(x[2]-x[0]) *(x[1]-x[0]);
+      end else if i=length(yValues)-2 then begin
+        for k:=-1 to 1 do begin y[k]:=yValues[i+k]; x[k]:=xValues[i+k]; end;
+        s0:=(y[1]-y[-1])/(x[1]-x[-1])*(x[1]-x[0]);
+        s1:=(y[1]-y[0]);
+      end;
+      t:=(floatIdx-x[0])/(x[1]-x[0]);
+      if      t<0 then result:=y[0]+ t   *s0
+      else if t>1 then result:=y[1]+(t-1)*s1
+      else begin
+        a:=y[0];
+        b:=s0;
+        c:=y[1]-a-b;
+        d:=s1-b-2*c;
+        c-=d;
+        result:=a+t*(b+t*(c+t*d));
+      end;
+    end;
+  end;
+
+CONSTRUCTOR T_localInterpolator.create(CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context);
+  begin
+    inherited createInterpolator('local',values,location,context);
+    if length(yValues)<2 then context^.raiseError('localInterpolator requires at least 2 points.',location);
+  end;
+
+FUNCTION localInterpolator_imp intFuncSignature;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_numList,lt_realList,lt_intList,lt_list]) then begin
+      new(P_localInterpolator(result),create(list0,tokenLocation,context));
+      if not(context^.continueEvaluation) then recycler^.disposeLiteral(result);
+    end;
+  end;
+
+TYPE
   P_fourierSeries=^T_fourierSeries;
   T_fourierSeries=object(T_interpolator)
     protected
@@ -671,5 +744,6 @@ INITIALIZATION
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'newBSpline'           ,@bSplineApproximator_imp,ak_unary{$ifdef fullVersion},'newBezierSpline(L:List);//returns an Bezier approximator'{$endif});
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'newFourierSeries'     ,@fourierSeries_imp      ,ak_unary{$ifdef fullVersion},'newFourierSeries(L:List);//returns an Fourier Series with coefficients L=[[c0,s0],[c1,s1]...]'{$endif});
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'calculateFourierCoefficients',@calcFourierCoeff_im,ak_unary{$ifdef fullVersion},'calculateFourierCoefficients(L:List,maxWaveNumber>=0);//Calculates fourier coefficients for nonequidistant points in L given as [[t0,y0],[t1,y1],...]'{$endif});
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newLocalInterpolator' ,@localInterpolator_imp,ak_unary{$ifdef fullVersion},'newLocalInterpolator(L:List);//returns an local non-convex smooth interpolator'{$endif});
 
 end.

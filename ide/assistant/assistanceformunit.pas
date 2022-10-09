@@ -5,7 +5,7 @@ UNIT assistanceFormUnit;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms, Controls, Graphics, Dialogs, Menus, StdCtrls,
+  Classes, sysutils, Forms, Controls, Dialogs, Menus,
   SynEdit, ideLayoutUtil, codeAssistance, SynHighlighterMnh, editorMeta,
   mnh_settings, basicTypes;
 

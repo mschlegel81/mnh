@@ -796,7 +796,7 @@ PROCEDURE T_localLiteralRecycler.exchangeLiterals(CONST pushOnly:boolean=false);
     begin with globalLiteralRecycler.setLiterals do begin
       if tryEnterCriticalsection(cs)=0 then exit else
       try
-        while (fill>0) and (setLiterals.fill<length(setLiterals.dat) shr 1) do begin
+        while (fill>0) and (setLiterals.fill<RETAIN_COUNT) do begin
           dec(fill);
           setLiterals.dat[setLiterals.fill]:=dat[fill];
           inc(setLiterals.fill);
