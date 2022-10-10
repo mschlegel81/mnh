@@ -1,4 +1,4 @@
-explainPlot(text:String)->drawTextAbsolute(0,1,text.split("\n"),10,'TL','Times New Roman',[0,0,0],[1,1,1]);
+explainPlot(text:String)->drawTextAbsolute(0,1,text.split("\n"),10,'TL','Times New Roman',[0,0,0],[1,1,1,0.5]);
 
 sample(0)->begin
   plot();
@@ -103,7 +103,30 @@ sample(13)->begin
   explainPlot('In a tube plot the upper and lower bound do not have to be aligned');
 end;
 
+
 sample(14)->begin
+  local h:=1/5;
+  local hue:=(x:Numeric)->begin
+    local w:=(x-floor(x))*6; w-=local k:=floor(w);
+    [{[1,$h,0]},
+     {[1-$h,1,0]},
+     {[0,1,$h]},
+     {[0,1-$h,1]},
+     {[$h,0,1]},
+     {[1,0,1-$h]}][k](w);
+  end;
+
+  local P:=[-20..20]/5;
+        P:=P.cross(P);
+  plot();
+  P.map({sin($x.sqr.agg(+).sqrt)})
+   .map((y)->hue(y/2-0.5))
+   .plotRasterImage(41,h,-4.1,-4.1);
+
+  explainPlot("Use plotRasterImage to plot images or density plots.\nNote that the rows are ordered from top to bottom.");
+end;
+
+sample(15)->begin
   local h:=1/5;
   local P:=[-20..20]/5;
   P:=P.cross(P);
@@ -114,7 +137,12 @@ sample(14)->begin
   explainPlot('You can emulate other plot styles using the builtin styles');
 end;
 
-sample(15)->begin
+sample(16)->begin
+  removePlot(3);
+  explainPlot('You can remove individual "rows" using removePlot');
+end;
+
+sample(17)->begin
   plot([-0.1,0],'blue box fs');
   ([1..10]/10).each(alpha,addPlot([[alpha-0.09,-0.05],[alpha-0.01, 0.1]],'box fs RGB1,0,0,'&alpha));
   explainPlot('You may also specify colors as RGBA or as HSVA.');
@@ -122,7 +150,7 @@ end;
 
 main->begin
   clearAnimation;
-  [0..15].each(case,
+  [0..17].each(case,
     resetOptions,
     sample(case),
     addAnimationFrame);
