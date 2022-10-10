@@ -901,7 +901,7 @@ PROCEDURE G_literalKeyMap.rehash(CONST grow:boolean);
   VAR i,i0,j,c0,c1:longint;
       hashMask:dword;
   begin
-    {$ifdef debugMode}
+    {$ifdef rehashLogging}
     c0:=maxLongint;
     c1:=0;
     for i:=0 to length(bin)-1 do begin
