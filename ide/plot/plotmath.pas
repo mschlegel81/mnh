@@ -805,7 +805,7 @@ PROCEDURE T_customText.render(CONST opt: T_scalingOptions;
 
     if absolutePosition then begin
       try
-        x:=              round(p[0]*target.width);
+        x:=              round(p[0]*target.width+opt.axisTrafo['x'].screenMin);
         y:=target.height-round(p[1]*target.height);
       except
         exit;
