@@ -250,7 +250,6 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       end;
       if not(parseBodyOk) then exit;
       input:=P_literal(first^.data);
-      if (eachType = tt_parallelEach) and (input^.literalType in C_compoundTypes) and (P_compoundLiteral(input)^.size<=2) then eachType:=tt_each;
       first^.next:=recycler^.disposeToken(first^.next);
       //iterate over itList----------------------------------------------------------
       if length(bodyRule)>0 then begin
