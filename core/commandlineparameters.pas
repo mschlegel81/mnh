@@ -50,6 +50,8 @@ TYPE
     PROCEDURE setCallLightFlavour(CONST b:boolean);
     PROPERTY callLightFlavour:boolean read isCallLightFlavour write setCallLightFlavour;
     FUNCTION allowedSideEffects:T_sideEffects;
+
+    FUNCTION usingConsoleOutput:boolean;
   end;
 
   T_commandLineParameters=object
@@ -443,6 +445,15 @@ PROCEDURE T_mnhExecutionOptions.setCallLightFlavour(CONST b: boolean);
 FUNCTION T_mnhExecutionOptions.allowedSideEffects:T_sideEffects;
   begin
     result:=C_sideEffectProfile[sideEffectProfile].allowed;
+  end;
+
+FUNCTION T_mnhExecutionOptions.usingConsoleOutput:boolean;
+  VAR adapter:T_textFileAdapterSpecification;
+  begin
+    if not(clf_QUIET    in flags) then exit(true); //console potentially used as output
+    if not(clf_HEADLESS in flags) then exit(true); //console potentially used as input
+    for adapter in deferredAdapterCreations do if adapter.textFileCase in [tfc_stdout,tfc_stderr] then exit(true);
+    result:=false;
   end;
 
 FUNCTION T_commandLineParameters.getFileToInterpretFromCommandLine: ansistring;
