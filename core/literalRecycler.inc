@@ -39,12 +39,12 @@
 
   T_localLiteralRecycler=object(T_literalRecycler)
     private
-      smallIntLiterals:record dat:array [0..2047] of P_smallIntLiteral; fill:longint; end;
-      bigIntLiterals  :record dat:array [0..511 ] of P_bigIntLiteral;   fill:longint; end;
-      realLiterals    :record dat:array [0..2047] of P_realLiteral;     fill:longint; end;
-      stringLiterals  :record dat:array [0..511 ] of P_stringLiteral;   fill:longint; end;
-      listLiterals    :record dat:array [0..1023] of P_listLiteral;     fill:longint; end;
-      setLiterals     :record dat:array [0..1023] of P_setLiteral;      fill:longint; end;
+      smallIntLiterals:record dat:array of P_smallIntLiteral; fill:longint; end;
+      bigIntLiterals  :record dat:array of P_bigIntLiteral;   fill:longint; end;
+      realLiterals    :record dat:array of P_realLiteral;     fill:longint; end;
+      stringLiterals  :record dat:array of P_stringLiteral;   fill:longint; end;
+      listLiterals    :record dat:array of P_listLiteral;     fill:longint; end;
+      setLiterals     :record dat:array of P_setLiteral;      fill:longint; end;
     public
       PROCEDURE freeMemory(CONST hard:boolean); virtual;
       CONSTRUCTOR create;
@@ -95,12 +95,12 @@ PROCEDURE T_localLiteralRecycler.freeMemory(CONST hard:boolean);
   VAR threshold:longint;
   begin
     if not(hard) then exchangeLiterals(true);
-    with smallIntLiterals do begin if hard then threshold:=0 else threshold:=length(dat) shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; end;
-    with bigIntLiterals   do begin if hard then threshold:=0 else threshold:=length(dat) shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; end;
-    with realLiterals     do begin if hard then threshold:=0 else threshold:=length(dat) shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; end;
-    with stringLiterals   do begin if hard then threshold:=0 else threshold:=length(dat) shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; end;
-    with listLiterals     do begin if hard then threshold:=0 else threshold:=length(dat) shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; end;
-    with setLiterals      do begin if hard then threshold:=0 else threshold:=length(dat) shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; end;
+    with smallIntLiterals do begin if hard then threshold:=0 else threshold:=length(dat) shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
+    with bigIntLiterals   do begin if hard then threshold:=0 else threshold:=length(dat) shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
+    with realLiterals     do begin if hard then threshold:=0 else threshold:=length(dat) shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
+    with stringLiterals   do begin if hard then threshold:=0 else threshold:=length(dat) shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
+    with listLiterals     do begin if hard then threshold:=0 else threshold:=length(dat) shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
+    with setLiterals      do begin if hard then threshold:=0 else threshold:=length(dat) shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
   end;
 
 CONSTRUCTOR T_globalLiteralRecycler.create;
@@ -115,12 +115,12 @@ CONSTRUCTOR T_globalLiteralRecycler.create;
 
 CONSTRUCTOR T_localLiteralRecycler.create;
   begin
-    smallIntLiterals.fill:=0;
-    bigIntLiterals  .fill:=0;
-    realLiterals    .fill:=0;
-    stringLiterals  .fill:=0;
-    listLiterals    .fill:=0;
-    setLiterals     .fill:=0;
+    with smallIntLiterals do begin fill:=0; setLength(dat,0); end;
+    with bigIntLiterals   do begin fill:=0; setLength(dat,0); end;
+    with realLiterals     do begin fill:=0; setLength(dat,0); end;
+    with stringLiterals   do begin fill:=0; setLength(dat,0); end;
+    with listLiterals     do begin fill:=0; setLength(dat,0); end;
+    with setLiterals      do begin fill:=0; setLength(dat,0); end;
   end;
 
 DESTRUCTOR T_globalLiteralRecycler.destroy;
@@ -135,12 +135,12 @@ DESTRUCTOR T_globalLiteralRecycler.destroy;
 
 DESTRUCTOR T_localLiteralRecycler.destroy;
   begin
-    with smallIntLiterals do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); end;
-    with bigIntLiterals   do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); end;
-    with realLiterals     do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); end;
-    with stringLiterals   do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); end;
-    with listLiterals     do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); end;
-    with setLiterals      do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); end;
+    with smallIntLiterals do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); end;
+    with bigIntLiterals   do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); end;
+    with realLiterals     do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); end;
+    with stringLiterals   do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); end;
+    with listLiterals     do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); end;
+    with setLiterals      do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); end;
   end;
 
 PROCEDURE T_globalLiteralRecycler.disposeLiteral(VAR l: P_literal);
@@ -242,49 +242,67 @@ PROCEDURE T_localLiteralRecycler.disposeLiteral(VAR l: P_literal);
     case l^.literalType of
       lt_smallint:
         with smallIntLiterals do begin
-          if (fill>=length(dat)) then dispose(l,destroy) else begin
-            dat[fill]:=P_smallIntLiteral(l);
-            inc(fill);
+          if (fill>=length(dat)) then begin
+            if length(dat)=0
+            then setLength(dat,32)
+            else setLength(dat,length(dat)*2);
           end;
+          dat[fill]:=P_smallIntLiteral(l);
+          inc(fill);
         end;
       lt_bigint:
         with bigIntLiterals do begin
           l^.cleanup(@self);
-          if (fill>=length(dat)) then dispose(l,destroy) else begin
-            dat[fill]:=P_bigIntLiteral(l);
-            inc(fill);
+          if (fill>=length(dat)) then begin
+            if length(dat)=0
+            then setLength(dat,32)
+            else setLength(dat,length(dat)*2);
           end;
+          dat[fill]:=P_bigIntLiteral(l);
+          inc(fill);
         end;
       lt_real:
         with realLiterals do begin
-          if (fill>=length(dat)) then dispose(l,destroy) else begin
-            dat[fill]:=P_realLiteral(l);
-            inc(fill);
+          if (fill>=length(dat)) then begin
+            if length(dat)=0
+            then setLength(dat,32)
+            else setLength(dat,length(dat)*2);
           end;
+          dat[fill]:=P_realLiteral(l);
+          inc(fill);
         end;
       lt_string:
         with stringLiterals do begin
           l^.cleanup(@self);
-          if (fill>=length(dat)) then dispose(l,destroy) else begin
-            dat[fill]:=P_stringLiteral(l);
-            inc(fill);
+          if (fill>=length(dat)) then begin
+            if length(dat)=0
+            then setLength(dat,32)
+            else setLength(dat,length(dat)*2);
           end;
+          dat[fill]:=P_stringLiteral(l);
+          inc(fill);
         end;
       lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList, lt_emptyList:
         with listLiterals do begin
           l^.cleanup(@self);
-          if (fill>=length(dat)) then dispose(l,destroy) else begin
-            dat[fill]:=P_listLiteral(l);
-            inc(fill);
+          if (fill>=length(dat)) then begin
+            if length(dat)=0
+            then setLength(dat,32)
+            else setLength(dat,length(dat)*2);
           end;
+          dat[fill]:=P_listLiteral(l);
+          inc(fill);
         end;
       lt_set, lt_booleanSet, lt_intSet, lt_realSet, lt_numSet, lt_stringSet, lt_emptySet:
         with setLiterals do begin
           l^.cleanup(@self);
-          if (fill>=length(dat)) then dispose(l,destroy) else begin
-            dat[fill]:=P_setLiteral(l);
-            inc(fill);
+          if (fill>=length(dat)) then begin
+            if length(dat)=0
+            then setLength(dat,32)
+            else setLength(dat,length(dat)*2);
           end;
+          dat[fill]:=P_setLiteral(l);
+          inc(fill);
         end;
       else begin l^.cleanup(@self); dispose(l,destroy); end;
     end;
@@ -609,9 +627,9 @@ FUNCTION T_literalRecycler.listLiteralOf(CONST a: P_literal; CONST b: P_literal)
 PROCEDURE T_localLiteralRecycler.exchangeLiterals(CONST pushOnly:boolean=false);
 
   PROCEDURE pushSmallInt;
-    CONST RETAIN_COUNT=length(smallIntLiterals.dat) shr 1;
+    VAR RETAIN_COUNT:longint;
     VAR i:longint;
-    begin with globalLiteralRecycler.smallIntLiterals do begin
+    begin RETAIN_COUNT:=length(smallIntLiterals.dat) shr 1; with globalLiteralRecycler.smallIntLiterals do begin
       if tryEnterCriticalsection(cs)=0 then exit else
       try
         i:=fill+smallIntLiterals.fill;
@@ -627,8 +645,8 @@ PROCEDURE T_localLiteralRecycler.exchangeLiterals(CONST pushOnly:boolean=false);
     end; end;
 
   PROCEDURE pullSmallInt;
-    CONST RETAIN_COUNT=length(smallIntLiterals.dat) shr 1;
-    begin with globalLiteralRecycler.smallIntLiterals do begin
+    VAR RETAIN_COUNT:longint;
+    begin RETAIN_COUNT:=length(smallIntLiterals.dat) shr 1; with globalLiteralRecycler.smallIntLiterals do begin
       if tryEnterCriticalsection(cs)=0 then exit else
       try
         while (fill>0) and (smallIntLiterals.fill<RETAIN_COUNT) do begin
@@ -642,9 +660,9 @@ PROCEDURE T_localLiteralRecycler.exchangeLiterals(CONST pushOnly:boolean=false);
     end; end;
 
   PROCEDURE pushBigInt;
-    CONST RETAIN_COUNT=length(bigIntLiterals.dat) shr 1;
+    VAR RETAIN_COUNT:longint;
     VAR i:longint;
-    begin with globalLiteralRecycler.bigIntLiterals do begin
+    begin RETAIN_COUNT:=length(bigIntLiterals.dat) shr 1; with globalLiteralRecycler.bigIntLiterals do begin
       if tryEnterCriticalsection(cs)=0 then exit else
       try
         i:=fill+bigIntLiterals.fill;
@@ -660,8 +678,8 @@ PROCEDURE T_localLiteralRecycler.exchangeLiterals(CONST pushOnly:boolean=false);
     end; end;
 
   PROCEDURE pullBigint;
-    CONST RETAIN_COUNT=length(bigIntLiterals.dat) shr 1;
-    begin with globalLiteralRecycler.bigIntLiterals do begin
+    VAR RETAIN_COUNT:longint;
+    begin RETAIN_COUNT:=length(bigIntLiterals.dat) shr 1; with globalLiteralRecycler.bigIntLiterals do begin
       if tryEnterCriticalsection(cs)=0 then exit else
       try
         while (fill>0) and (bigIntLiterals.fill<RETAIN_COUNT) do begin
@@ -675,9 +693,8 @@ PROCEDURE T_localLiteralRecycler.exchangeLiterals(CONST pushOnly:boolean=false);
     end; end;
 
   PROCEDURE pushReal;
-    CONST RETAIN_COUNT=length(realLiterals.dat) shr 1;
-    VAR i:longint;
-    begin with globalLiteralRecycler.realLiterals do begin
+    VAR RETAIN_COUNT,i:longint;
+    begin RETAIN_COUNT:=length(realLiterals.dat) shr 1; with globalLiteralRecycler.realLiterals do begin
       if tryEnterCriticalsection(cs)=0 then exit else
       try
         i:=fill+realLiterals.fill;
@@ -693,8 +710,8 @@ PROCEDURE T_localLiteralRecycler.exchangeLiterals(CONST pushOnly:boolean=false);
     end; end;
 
   PROCEDURE pullReal;
-    CONST RETAIN_COUNT=length(realLiterals.dat) shr 1;
-    begin with globalLiteralRecycler.realLiterals do begin
+    VAR RETAIN_COUNT:longint;
+    begin RETAIN_COUNT:=length(realLiterals.dat) shr 1; with globalLiteralRecycler.realLiterals do begin
       if tryEnterCriticalsection(cs)=0 then exit else
       try
         while (fill>0) and (realLiterals.fill<RETAIN_COUNT) do begin
@@ -708,9 +725,8 @@ PROCEDURE T_localLiteralRecycler.exchangeLiterals(CONST pushOnly:boolean=false);
     end; end;
 
   PROCEDURE pushString;
-    CONST RETAIN_COUNT=length(stringLiterals.dat) shr 1;
-    VAR i:longint;
-    begin with globalLiteralRecycler.stringLiterals do begin
+    VAR RETAIN_COUNT,i:longint;
+    begin RETAIN_COUNT:=length(stringLiterals.dat) shr 1; with globalLiteralRecycler.stringLiterals do begin
       if tryEnterCriticalsection(cs)=0 then exit else
       try
         i:=fill+stringLiterals.fill;
@@ -726,8 +742,8 @@ PROCEDURE T_localLiteralRecycler.exchangeLiterals(CONST pushOnly:boolean=false);
     end; end;
 
   PROCEDURE pullString;
-    CONST RETAIN_COUNT=length(stringLiterals.dat) shr 1;
-    begin with globalLiteralRecycler.stringLiterals do begin
+    VAR RETAIN_COUNT:longint;
+    begin RETAIN_COUNT:=length(stringLiterals.dat) shr 1; with globalLiteralRecycler.stringLiterals do begin
       if tryEnterCriticalsection(cs)=0 then exit else
       try
         while (fill>0) and (stringLiterals.fill<RETAIN_COUNT) do begin
@@ -741,9 +757,8 @@ PROCEDURE T_localLiteralRecycler.exchangeLiterals(CONST pushOnly:boolean=false);
     end; end;
 
   PROCEDURE pushList;
-    CONST RETAIN_COUNT=length(listLiterals.dat) shr 1;
-    VAR i:longint;
-    begin with globalLiteralRecycler.listLiterals do begin
+    VAR RETAIN_COUNT,i:longint;
+    begin RETAIN_COUNT:=length(listLiterals.dat) shr 1; with globalLiteralRecycler.listLiterals do begin
       if tryEnterCriticalsection(cs)=0 then exit else
       try
         i:=fill+listLiterals.fill;
@@ -759,8 +774,8 @@ PROCEDURE T_localLiteralRecycler.exchangeLiterals(CONST pushOnly:boolean=false);
     end; end;
 
   PROCEDURE pullList;
-    CONST RETAIN_COUNT=length(listLiterals.dat) shr 1;
-    begin with globalLiteralRecycler.listLiterals do begin
+    VAR RETAIN_COUNT:longint;
+    begin RETAIN_COUNT:=length(listLiterals.dat) shr 1; with globalLiteralRecycler.listLiterals do begin
       if tryEnterCriticalsection(cs)=0 then exit else
       try
         while (fill>0) and (listLiterals.fill<RETAIN_COUNT) do begin
@@ -774,9 +789,8 @@ PROCEDURE T_localLiteralRecycler.exchangeLiterals(CONST pushOnly:boolean=false);
     end; end;
 
   PROCEDURE pushSet;
-    CONST RETAIN_COUNT=length(setLiterals.dat) shr 1;
-    VAR i:longint;
-    begin with globalLiteralRecycler.setLiterals do begin
+    VAR RETAIN_COUNT,i:longint;
+    begin RETAIN_COUNT:=length(setLiterals.dat) shr 1; with globalLiteralRecycler.setLiterals do begin
       if tryEnterCriticalsection(cs)=0 then exit else
       try
         i:=fill+setLiterals.fill;
@@ -792,8 +806,8 @@ PROCEDURE T_localLiteralRecycler.exchangeLiterals(CONST pushOnly:boolean=false);
     end; end;
 
   PROCEDURE pullSet;
-    CONST RETAIN_COUNT=length(setLiterals.dat) shr 1;
-    begin with globalLiteralRecycler.setLiterals do begin
+    VAR RETAIN_COUNT:longint;
+    begin RETAIN_COUNT:=length(setLiterals.dat) shr 1; with globalLiteralRecycler.setLiterals do begin
       if tryEnterCriticalsection(cs)=0 then exit else
       try
         while (fill>0) and (setLiterals.fill<RETAIN_COUNT) do begin
