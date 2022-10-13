@@ -128,7 +128,7 @@ end}
       proceed:boolean=true;
   begin
     {$ifdef fullVersion}
-    if tco_stackTrace in context^.threadOptions then context^.callStackPush(eachLocation,'each',eachLocation,nil);
+    if tco_stackTrace in context^.threadOptions then context^.callStackPush(eachLocation,'each',stepForward(eachLocation,5),nil);
     {$endif}
     if (input^.literalType=lt_expression) and (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then begin
       x:=P_expressionLiteral(input)^.evaluateToLiteral(eachLocation,context,recycler,nil,nil).literal;
@@ -229,7 +229,7 @@ end}
 
   begin
     {$ifdef fullVersion}
-    if tco_stackTrace in context^.threadOptions then context^.callStackPush(eachLocation,'pEach',eachLocation,nil);
+    if tco_stackTrace in context^.threadOptions then context^.callStackPush(eachLocation,'pEach',stepForward(eachLocation,6),nil);
     {$endif}
     recycling.fill:=0;
     toQueueLimit:=TASKS_TO_QUEUE_PER_CPU*settings.cpuCount;
@@ -330,7 +330,7 @@ PROCEDURE aggregate(CONST input:P_literal; CONST aggregator: P_aggregator; CONST
       iter:T_arrayOfLiteral;
   begin
     {$ifdef fullVersion}
-    if tco_stackTrace in context^.threadOptions then context^.callStackPush(location,'agg',location,nil);
+    if tco_stackTrace in context^.threadOptions then context^.callStackPush(location,'agg',stepForward(location,4),nil);
     {$endif}
     if (input^.literalType=lt_expression) and (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then begin
       x:=P_expressionLiteral(input)^.evaluateToLiteral(location,context,recycler,nil,nil);
