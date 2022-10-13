@@ -326,7 +326,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
         exit;
       end;
       {$ifdef fullVersion}
-      if tco_stackTrace in context^.threadOptions then context^.callStackPush(whileLocation,'while',whileLocation,nil);
+      if tco_stackTrace in context^.threadOptions then context^.callStackPush(whileLocation,'while',stepForward(whileLocation,6),nil);
       {$endif}
       if not(parseBodyOk) then exit;
       while (returnValue.reasonForStop=rr_ok)
@@ -529,7 +529,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       if not(context^.checkSideEffects('<mutation>',first^.location,[se_alterPackageState])) then exit;
       newValue:=first^.next^.data;
       {$ifdef fullVersion}
-      if tco_stackTrace in context^.threadOptions then context^.callStackPush(first^.location,'mutate global',first^.location,nil);
+      if tco_stackTrace in context^.threadOptions then context^.callStackPush(first^.location,'mutate global',first^.next^.location,nil);
       {$endif}
       P_variable(first^.data)^.setMutableValue(newValue,false,recycler);
       {$ifdef fullVersion}
@@ -554,7 +554,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
         end;
         tt_mut_nested_assign..tt_mut_nestedDrop: if first^.data=nil then begin
           {$ifdef fullVersion}
-          if tco_stackTrace in context^.threadOptions then context^.callStackPush(first^.location,'mutate local',first^.location,nil);
+          if tco_stackTrace in context^.threadOptions then context^.callStackPush(first^.location,'mutate local',first^.next^.location,nil);
           {$endif}
           newValue:=context^.valueScope^.mutateVariableValue(recycler,first^.txt,kind,newValue,first^.location,context,recycler);
           {$ifdef fullVersion}
@@ -568,7 +568,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
         end else begin
           if not(context^.checkSideEffects('<mutation>',first^.location,[se_alterPackageState])) then exit;
           {$ifdef fullVersion}
-          if tco_stackTrace in context^.threadOptions then context^.callStackPush(first^.location,'mutate global',first^.location,nil);
+          if tco_stackTrace in context^.threadOptions then context^.callStackPush(first^.location,'mutate global',first^.next^.location,nil);
           {$endif}
           newValue:=P_variable(first^.data)^.mutateInline(kind,newValue,first^.location,context,recycler);
           {$ifdef fullVersion}
