@@ -30,7 +30,7 @@ main->begin
   local bestCoeffCount:=
   [1..coeff.size].pEach(h,begin
     local G:=head(coeff,h).newFourierSeries;
-    [integrate((x)->sqr(G(x)-F0(x)), 0,2*pi,1E-6),h];
+    [integrate((x)->sqr(G(x)-F0(x)), 0,2*pi,1000),h];
   end,min)[1];
 
   coeff:=coeff.head(bestCoeffCount);
