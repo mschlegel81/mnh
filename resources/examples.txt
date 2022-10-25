@@ -1228,4 +1228,4 @@ ln(3);
 //Use the function's output to feed math.newFourierSeries
 
 //#math.integrate
-integrate((x)->sin(x)²,0,2,1E-8)
+integrate((x)->sin(x)²,0,2,1000);

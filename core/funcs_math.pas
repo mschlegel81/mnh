@@ -15,7 +15,7 @@ USES sysutils,
 VAR BUILTIN_MIN,
     BUILTIN_MAX:P_intFuncCallback;
 IMPLEMENTATION
-USES mySys;
+USES mySys,heaps;
 {$i func_defines.inc}
 FUNCTION sqrt_imp intFuncSignature;
   VAR intRoot:int64;
@@ -1035,16 +1035,23 @@ FUNCTION euklideanNorm_impl intFuncSignature;
   end;
 
 FUNCTION integrate_impl intFuncSignature;
-  CONST maxSkips=5;
-        epsilon=1E-6;
-  VAR f:P_expressionLiteral;
+  TYPE T_subrange=record
+         area: T_arrayOfDouble;
+         x0,dx:double;
+         y:array[0..4] of T_arrayOfDouble;
+       end;
+       T_subrangeHeap=specialize T_binaryHeap<T_subrange>;
+  VAR subrangeHeap:T_subrangeHeap;
+      f:P_expressionLiteral;
       returnType:T_literalType=lt_error;
       tolerance:double;
+      pointsRemaining:longint;
   FUNCTION evalF(CONST x:double):T_arrayOfDouble; inline;
     VAR evResult:T_evaluationResult;
         parameterList:T_listLiteral;
         i:longint;
     begin
+      dec(pointsRemaining);
       parameterList.create(1);
       parameterList.appendReal(recycler,x);
 
@@ -1067,155 +1074,156 @@ FUNCTION integrate_impl intFuncSignature;
       if evResult.literal<>nil then recycler^.disposeLiteral(evResult.literal);
     end;
 
-  FUNCTION integrate_inner(CONST x0,dx:double; f0,f2,f4:T_arrayOfDouble; CONST skips:byte):T_arrayOfDouble;
-    VAR f1,f3:T_arrayOfDouble;
-    FUNCTION resolveNan:T_arrayOfDouble;
-      VAR k,i:longint;
-          nanAt:array[0..4] of boolean=(false,false,false,false,false);
-          g0,g1,g2,summand:T_arrayOfDouble;
-          y0,   y2:double;
+  PROCEDURE evaluatePart(CONST x0,dx:double; f0,f2,f4:T_arrayOfDouble);
+    FUNCTION anyInvalid(CONST a:T_arrayOfDouble):boolean; inline;
+      VAR d:double;
       begin
-        for k:=0 to length(f0)-1 do nanAt[0]:=nanAt[0] or isNan(f0[k]) or isInfinite(f0[k]);
-        for k:=0 to length(f1)-1 do nanAt[1]:=nanAt[1] or isNan(f1[k]) or isInfinite(f1[k]);
-        for k:=0 to length(f2)-1 do nanAt[2]:=nanAt[2] or isNan(f2[k]) or isInfinite(f2[k]);
-        for k:=0 to length(f3)-1 do nanAt[3]:=nanAt[3] or isNan(f3[k]) or isInfinite(f3[k]);
-        for k:=0 to length(f4)-1 do nanAt[4]:=nanAt[4] or isNan(f4[k]) or isInfinite(f4[k]);
-        setLength(result,min(min(length(f0),length(f1)),min(min(length(f2),length(f3)),length(f4))));
-        for k:=0 to length(result)-1 do result[k]:=0;
-        for i:=0 to 3 do begin
-          if nanAt[i] then begin
-            y0:=x0+dx*0.25*i+epsilon;
-            g0:=evalF(y0);
-          end else begin
-            y0:=x0+dx*i;
-            case byte(i) of 0: g0:=f0; 1: g0:=f1; 2: g0:=f2; 3: g0:=f3; end;
-          end;
-          if nanAt[i+1] then begin
-            y2:=x0+dx*0.25*(i+1)-epsilon;
-            g2:=evalF(y2);
-          end else begin
-            y2:=x0+dx*0.25*(i+1);
-            case byte(i) of 0: g2:=f1; 1: g2:=f2; 2: g2:=f3; 3: g2:=f4; end;
-          end;
-          g1:=evalF((y0+y2)/2);
-          summand:=integrate_inner(y0,y2-y0,g0,g1,g2,skips+1);
-          for k:=0 to min(length(result),length(summand))-1 do result[k]+=summand[k];
+        for d in a do if isNan(d) or isInfinite(d) then exit(true);
+        result:=false;
+      end;
+    CONST highOrderWeights:array[0..31,0..4] of double=(( 0.07777777777777794, 0.35555555555555607, 0.13333333333333286, 0.3555555555555596 , 0.0777777777777775 ),
+                                                        ( 0                  , 0.66666666666666607,-0.3333333333333339 , 0.6666666666666665 , 0                  ),
+                                                        ( 0.16666666666666696, 0                  , 0.666666666666667  , 0                  , 0.16666666666666663),
+                                                        ( 0.6666666666666665 ,-1.333333333333333  , 1.6666666666666665 , 0                  , 0                  ),
+                                                        ( 0.05555555555555558, 0.44444444444444509, 0                  , 0.44444444444444375, 0.0555555555555558 ),
+                                                        ( 0.11111111111111138, 0.33333333333333348, 0                  , 0.55555555555555547, 0                  ),
+                                                        (-0.16666666666666674, 0.8888888888888888 , 0                  , 0                  , 0.27777777777777779),
+                                                        (-1                  , 2                  , 0                  , 0                  , 0                  ),
+                                                        ( 0.16666666666666685, 0                  , 0.66666666666666607, 0                  , 0.16666666666666652),
+                                                        ( 0.22222222222222243, 0                  , 0.33333333333333348, 0.4444444444444442 , 0                  ),
+                                                        ( 0.16666666666666663, 0                  , 0.6666666666666667 , 0                  , 0.16666666666666663),
+                                                        ( 0                  , 0                  , 1                  , 0                  , 0                  ),
+                                                        ( 0.2777777777777779 , 0                  , 0                  , 0.8888888888888888 ,-0.16666666666666674),
+                                                        ( 0.33333333333333337, 0                  , 0                  , 0.6666666666666666 , 0                  ),
+                                                        ( 0.5                , 0                  , 0                  , 0                  , 0.5                ),
+                                                        ( 1                  , 0                  , 0                  , 0                  , 0                  ),
+                                                        ( 0                  , 0.666666666666667  ,-0.33333333333333215, 0.6666666666666678 , 0                  ),
+                                                        ( 0                  , 0.6666666666666665 ,-0.33333333333333304, 0.6666666666666665 , 0                  ),
+                                                        ( 0                  , 0.444444444444444  , 0.33333333333333348, 0                  , 0.22222222222222232),
+                                                        ( 0                  , 0                  , 1                  , 0                  , 0                  ),
+                                                        ( 0                  , 0.55555555555555547, 0                  , 0.33333333333333348, 0.11111111111111116),
+                                                        ( 0                  , 0.5                , 0                  , 0.5                , 0                  ),
+                                                        ( 0                  , 0.6666666666666666 , 0                  , 0                  , 0.3333333333333333 ),
+                                                        ( 0                  , 1                  , 0                  , 0                  , 0                  ),
+                                                        ( 0                  , 0                  , 1.6666666666666665 ,-1.333333333333333  , 0.6666666666666665 ),
+                                                        ( 0                  , 0                  , 1                  , 0                  , 0                  ),
+                                                        ( 0                  , 0                  , 1                  , 0                  , 0                  ),
+                                                        ( 0                  , 0                  , 1                  , 0                  , 0                  ),
+                                                        ( 0                  , 0                  , 0                  , 2                  ,-1                  ),
+                                                        ( 0                  , 0                  , 0                  , 1                  , 0                  ),
+                                                        ( 0                  , 0                  , 0                  , 0                  , 1                  ),
+                                                        ( 0                  , 0                  , 0                  , 0                  , 0                  ));
+    CONST lowOrderWeights:array[0..7,0..2] of double=((0.16666666666666663,0.6666666666666667,0.16666666666666663),
+                                                      (0                  ,1                 ,0                  ),
+                                                      (0.5                ,0                 ,0.5                ),
+                                                      (1                  ,0                 ,0                  ),
+                                                      (0                  ,1                 ,0                  ),
+                                                      (0                  ,1                 ,0                  ),
+                                                      (0                  ,0                 ,1                  ),
+                                                      (0                  ,0                 ,0                  ));
+    VAR subrange:T_subrange;
+        s0:byte=0;
+        s1:byte=0;
+        lowerOrderEstimate:T_arrayOfDouble;
+        resultSize:longint=maxLongint;
+        i,j,k:longint;
+        w:double;
+    begin
+      initialize(subrange);
+      subrange.x0:=x0;
+      subrange.dx:=dx;
+      //complete point list:----------------------------------------------------
+      subrange.y[0]:=f0;
+      subrange.y[1]:=evalF(x0+0.25*dx);
+      subrange.y[2]:=f2;
+      subrange.y[3]:=evalF(x0+0.75*dx);
+      subrange.y[4]:=f4;
+      //----------------------------------------------------:complete point list
+      //determine integration weights:------------------------------------------
+      if anyInvalid(subrange.y[0]) then begin inc(s0  ); inc(s1   ); end;
+      if anyInvalid(subrange.y[1]) then begin            inc(s1, 2); end;
+      if anyInvalid(subrange.y[2]) then begin inc(s0,2); inc(s1, 4); end;
+      if anyInvalid(subrange.y[3]) then begin            inc(s1, 8); end;
+      if anyInvalid(subrange.y[4]) then begin inc(s0,4); inc(s1,16); end;
+      //------------------------------------------:determine integration weights
+      //calculate approximations:-----------------------------------------------
+      for k:=0 to 4 do begin
+        i:=length(subrange.y[k]);
+        if i<resultSize then resultSize:=i;
+      end;
+      setLength(lowerOrderEstimate,resultSize); for k:=0 to resultSize-1 do lowerOrderEstimate[k]:=0;
+      setLength(subrange.area     ,resultSize); for k:=0 to resultSize-1 do subrange.area     [k]:=0;
+      for i:=0 to 4 do begin
+        w:=dx*highOrderWeights[s0,i];
+        if w<>0 then for k:=0 to resultSize-1 do subrange.area[k]+=w*subrange.y[i,k];
+        if not(odd(i)) then begin
+          w:=dx*lowOrderWeights[s1,i shr 1];
+          if w<>0 then for k:=0 to resultSize-1 do lowerOrderEstimate[k]+=w*subrange.y[i,k];
         end;
       end;
-
-    VAR errorEstimate:double;
-        Simpson:T_arrayOfDouble;
-        k:longint;
-        anyNan:boolean=false;
-    begin
-      f1:=evalF(x0+dx*0.25);
-      f3:=evalF(x0+dx*0.75);
-      setLength(result,min(min(length(f0),length(f1)),min(min(length(f2),length(f3)),length(f4))));
-      for k:=0 to length(result)-1 do begin
-        result[k]:=dx*(f0[k]*7/90+f1[k]*32/90+f2[k]*12/90+f3[k]*32/90+f4[k]*7/90);
-        anyNan:=anyNan or isNan(result[k]) or isInfinite(result[k]);
-      end;
-      if anyNan then begin
-        if skips>=maxSkips
-        then exit(result)
-        else exit(resolveNan);
-      end;
-      setLength(Simpson,length(result));
-      for k:=0 to length(Simpson)-1 do
-        Simpson[k]:=dx*(f0[k]*1/6+f2[k]*4/6+f4[k]*1/6);
-
-      errorEstimate:=0;
-      for k:=0 to length(Simpson)-1 do errorEstimate+=abs(Simpson[k]-result[k])*sqr(dx);
-
-      if (errorEstimate>tolerance) then begin
-        result :=integrate_inner(x0       ,dx*0.5,f0,f1,f2,skips);
-        Simpson:=integrate_inner(x0+dx*0.5,dx*0.5,f2,f3,f4,skips);
-        for k:=0 to length(result)-1 do result[k]+=Simpson[k];
-      end;
+      //-----------------------------------------------:calculate approximations
+      //calculate error estimate:-----------------------------------------------
+      w:=0;
+      for k:=0 to resultSize-1 do w+=sqr(lowerOrderEstimate[k]-subrange.area[k]);
+      //Safeguard: make sure that only finite errors are posted
+      if isNan(w) or isInfinite(w) or (w<0) then w:=0;
+      //-----------------------------------------------:calculate error estimate
+      subrangeHeap.insert(subrange,w);
     end;
 
-  TYPE T_samplingPoint=record
-        x:double;
-        y:T_arrayOfDouble;
-        sliceSize:double;
-      end;
+  FUNCTION performIntegration(CONST x0,x1:double):T_arrayOfDouble;
+    VAR initialSubranges:longint;
+        subrange:T_subrange;
+        YStitch:array[0..1] of T_arrayOfDouble;
 
-  VAR points:array of T_samplingPoint;
+        subranges:T_subrangeHeap.T_payloadArray;
 
-  PROCEDURE determineSamplingPoints(CONST x0,x1:double);
-    CONST maxPoints=2000;
-    VAR pointFill:longint=2;
-    FUNCTION maxSliceSize:double;
-      VAR i,k:longint;
-          dy,dx:double;
-      begin
-        result:=0;
-        for i:=0 to pointFill-2 do begin
-          if points[i].sliceSize<0 then begin
-            dy:=0;
-            for k:=0 to min(length(points[i].y),length(points[i+1].y))-1 do dy:=max(dy,abs(points[i].y[k]-points[i+1].y[k]));
-            dx:=points[i+1].x-points[i].x;
-            points[i].sliceSize:=dy*sqr(sqr(dx)*dx);
-          end;
-          if points[i].sliceSize>result then result:=points[i].sliceSize;
-        end;
-      end;
-
-    VAR i,j:longint;
-
+        dx:double;
+        i:longint;
     begin
-      setLength(points,maxPoints);
-      points[0].x:=x0;
-      points[0].y:=evalF(x0);
-      points[0].sliceSize:=-1;
-      points[1].x:=x1;
-      points[1].y:=evalF(x1);
-      points[1].sliceSize:=-1;
+      initialSubranges:=pointsRemaining shr 4;
+      if initialSubranges<1 then initialSubranges:=1;
+      subrangeHeap.createWithNumericPriority(nil); //priority will be explicitly passed to heap
+      dx:=(x1-x0)/initialSubranges;
 
-      while  (pointFill<maxPoints) and (maxSliceSize>tolerance) do begin
-        i:=0;
-        while (i<pointFill-1) and (pointFill<maxPoints) do begin
-          if points[i].sliceSize>tolerance then begin
-            inc(pointFill);
-            points[i].sliceSize:=-1;
-            for j:=pointFill-1 downto i+2 do points[j]:=points[j-1];
-            points[i+1].x:=(points[i].x+points[i+2].x)/2;
-            points[i+1].y:=evalF(points[i+1].x);
-            points[i+1].sliceSize:=-1;
-            inc(i);
-          end;
-          inc(i);
-        end;
+      for i:=0 to initialSubranges-1 do begin
+        if i=0 then YStitch[0]:=evalF(x0);
+        YStitch[(1+i) and 1]:=evalF(x0+(i+1)*dx);
+        evaluatePart(x0+dx*i,dx,
+          YStitch[   i  and 1],          //i=      0 1 2 3 4 5 ...
+          evalF(x0+(i+0.5)*dx),          //YS[0]@  0 2 2 4 4 6 ...
+          YStitch[(1+i) and 1]);         //YS[1]@  1 1 3 3 5 5 ...
       end;
-      setLength(points,pointFill);
 
+      while pointsRemaining>0 do begin
+        subrange:=subrangeHeap.extractHighestPrio;
+        evaluatePart(subrange.x0                ,subrange.dx*0.5,subrange.y[0],subrange.y[1],subrange.y[2]);
+        evaluatePart(subrange.x0+subrange.dx*0.5,subrange.dx*0.5,subrange.y[2],subrange.y[3],subrange.y[4]);
+      end;
+
+      subranges:=subrangeHeap.getAll;
+      setLength(result,length(subranges[0].area));
+      for i:=0 to length(result)-1 do result[i]:=0;
+      for subrange in subranges do begin
+        for i:=0 to min(length(result),length(subrange.area))-1 do
+          result[i]+=subrange.area[i];
+      end;
+      subrangeHeap.destroy;
     end;
 
-  VAR k,i:longint;
-      floatResult,summand:T_arrayOfDouble;
+  VAR floatResult:T_arrayOfDouble;
+      k:longint;
   begin
     if (params<>nil) and (params^.size=4) and
       (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(1)) and
       (arg1^.literalType in [lt_smallint,lt_bigint,lt_real]) and
       (arg2^.literalType in [lt_smallint,lt_bigint,lt_real]) and
-      (arg3^.literalType in [lt_smallint,lt_bigint,lt_real]) and (P_numericLiteral(arg3)^.floatValue>0)
+      (arg3^.literalType = lt_smallint) and (P_smallIntLiteral(arg3)^.value>0)
     then begin
       f :=       P_expressionLiteral(arg0);
-      tolerance:=P_numericLiteral(arg3)^.floatValue*1E3;
-
-      determineSamplingPoints(P_numericLiteral(arg1)^.floatValue,
-                              P_numericLiteral(arg2)^.floatValue);
-      floatResult:=integrate_inner(points[0].x,points[1].x-points[0].x,
-                                   points[0].y,
-                                   evalF((points[0].x+points[1].x)/2),
-                                   points[1].y,0);
-      for i:=1 to length(points)-2 do begin
-        summand:=integrate_inner(points[i].x,points[i+1].x-points[i].x,
-                                 points[i].y,
-                                 evalF((points[i].x+points[i+1].x)/2),
-                                 points[i+1].y,0);
-        for k:=0 to length(floatResult)-1 do floatResult[k]+=summand[k];
-      end;
+      pointsRemaining:=int3^.intValue;
+      floatResult:=performIntegration(P_numericLiteral(arg1)^.floatValue,
+                                      P_numericLiteral(arg2)^.floatValue);
       if returnType in C_listTypes then begin
         result:=recycler^.newListLiteral(length(floatResult));
         for k:=0 to length(floatResult)-1 do listResult^.appendReal(recycler,floatResult[k]);
@@ -1373,7 +1381,7 @@ INITIALIZATION
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'shiftRight'    ,@bitShift_impl      ,ak_binary{$ifdef fullVersion},'bitShift(x:Int,bitsToShift:Int);//Shifts integer x right by the given number of bits#//If bitsToShift<0 a shift-left is performed'{$endif});
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'divMod'        ,@divMod_impl        ,ak_binary{$ifdef fullVersion},'divMod(x:Int,y:Int);//Returns a pair [x div y, x mod y]'{$endif});
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'euklideanNorm' ,@euklideanNorm_impl ,ak_unary {$ifdef fullVersion},'euklideanNorm(v:NumericList);//returns the Euklidean norm of vector v'{$endif});
-  builtinFunctionMap.registerRule(MATH_NAMESPACE,'integrate'     ,@integrate_impl     ,ak_quartary {$ifdef fullVersion},'integrate(f:Expression(1),x0,x1,tolerance);//returns the numeric integral of f over interval [x0,x1]'{$endif});
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'integrate'     ,@integrate_impl     ,ak_quartary {$ifdef fullVersion},'integrate(f:Expression(1),x0,x1,pointCount>1);//returns the numeric integral of f over interval [x0,x1]'{$endif});
 
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'firstOrderUpwind2D',@firstOrderUpwind2D_imp,ak_variadic{$ifdef fullVersion},'firstOrderUpwind2D(c,vx,vy,width:Int,periodicBoundary:Boolean);'{$endif});
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'bitXor',@bitXor,ak_ternary{$ifdef fullVersion},'bitXor(x:Int,y:Int,relevantBits in [1..32]);//Returns x xor y for the given number of relevant bits'{$endif});

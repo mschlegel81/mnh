@@ -25,8 +25,8 @@
       <UseVersionInfo Value="True"/>
       <MajorVersionNr Value="2"/>
       <MinorVersionNr Value="2"/>
-      <RevisionNr Value="9"/>
-      <BuildNr Value="442"/>
+      <RevisionNr Value="10"/>
+      <BuildNr Value="446"/>
       <CharSet Value="04B0"/>
       <StringTable CompanyName="Martin Schlegel" FileDescription="MNH5 IDE and interpreter" InternalName="mnh5_full" LegalCopyright="LGPL" OriginalFilename="mnh" ProductName="MNH5"/>
     </VersionInfo>
@@ -126,7 +126,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="104">
+    <Units Count="105">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -659,6 +659,10 @@
         <Filename Value="../core/funcs_interpolators.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit103>
+      <Unit104>
+        <Filename Value="../common/heaps.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit104>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -725,7 +729,6 @@
       </Item2>
       <Item3>
         <Name Value="EFOpenError"/>
-        <Enabled Value="False"/>
       </Item3>
       <Item4>
         <Name Value="EInvalidOperation"/>
@@ -744,7 +747,6 @@
       </Item7>
       <Item8>
         <Name Value="ERangeError"/>
-        <Enabled Value="False"/>
       </Item8>
       <Item9>
         <Name Value="RunError(201)"/>

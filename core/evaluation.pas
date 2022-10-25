@@ -330,7 +330,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       {$endif}
       if not(parseBodyOk) then exit;
       while (returnValue.reasonForStop=rr_ok)
-            and headRule^.evaluateToBoolean(whileLocation,context,recycler,true,nil,nil)
+            and headRule^.evaluateToBoolean(headRule^.getLocation,context,recycler,true,nil,nil)
             and (context^.continueEvaluation) do evaluateBody;
       first^.txt:='';
       first^.tokType:=tt_literal;

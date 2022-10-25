@@ -11,6 +11,7 @@ USES serializationUtil,
 
 TYPE
   //TODO Make interpolators serializable
+  //TODO Enable analytic integration for interpolators
   T_interpolator=object(T_builtinExpression)
     protected
       underlyingValues:P_listLiteral;
