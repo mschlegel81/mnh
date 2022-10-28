@@ -115,12 +115,12 @@ CONSTRUCTOR T_globalLiteralRecycler.create;
 
 CONSTRUCTOR T_localLiteralRecycler.create;
   begin
-    with smallIntLiterals do begin fill:=0; request:=0; setLength(dat,0); end;
-    with bigIntLiterals   do begin fill:=0; request:=0; setLength(dat,0); end;
-    with realLiterals     do begin fill:=0; request:=0; setLength(dat,0); end;
-    with stringLiterals   do begin fill:=0; request:=0; setLength(dat,0); end;
-    with listLiterals     do begin fill:=0; request:=0; setLength(dat,0); end;
-    with setLiterals      do begin fill:=0; request:=0; setLength(dat,0); end;
+    with smallIntLiterals do begin fill:=0; request:=16; setLength(dat,0); end;
+    with bigIntLiterals   do begin fill:=0; request:=16; setLength(dat,0); end;
+    with realLiterals     do begin fill:=0; request:=16; setLength(dat,0); end;
+    with stringLiterals   do begin fill:=0; request:=16; setLength(dat,0); end;
+    with listLiterals     do begin fill:=0; request:=16; setLength(dat,0); end;
+    with setLiterals      do begin fill:=0; request:=16; setLength(dat,0); end;
   end;
 
 DESTRUCTOR T_globalLiteralRecycler.destroy;
@@ -364,15 +364,17 @@ FUNCTION T_localLiteralRecycler.newBigIntLiteral(value: T_bigInt): P_abstractInt
       value.clear;
       exit(P_smallIntLiteral(intLit[iv].rereferenced));
     end;
-    with bigIntLiterals do if (fill>0) then begin
-      dec(fill);
-      result:=dat[fill];
-      P_bigIntLiteral(result)^.val:=value;
-      result^.numberOfReferences:=1;
-      value.clear;
-    end else begin
+    with bigIntLiterals do begin
+      if (fill>0) then begin
+        dec(fill);
+        result:=dat[fill];
+        P_bigIntLiteral(result)^.val:=value;
+        result^.numberOfReferences:=1;
+        value.clear;
+      end else begin
+        new(P_bigIntLiteral(result),create(value));
+      end;
       inc(request);
-      new(P_bigIntLiteral(result),create(value));
     end;
   end;
 
@@ -413,24 +415,26 @@ FUNCTION T_localLiteralRecycler.newIntLiteral(CONST value: int64): P_abstractInt
     if (value>=low(intLit)) and (value<=high(intLit))
     then exit(P_smallIntLiteral(intLit[value].rereferenced));
     if (value>=-maxLongint) and (value<=maxLongint)
-    then begin
-      with smallIntLiterals do if (fill>0) then begin
+    then with smallIntLiterals do begin
+      if (fill>0) then begin
         dec(fill);
         result:=dat[fill];
         P_smallIntLiteral(result)^.val:=value;
         P_smallIntLiteral(result)^.numberOfReferences:=1;
       end else begin
-        inc(request);
         new(P_smallIntLiteral(result),create(value));
       end;
-    end else with bigIntLiterals do if (fill>0) then begin
-      dec(fill);
-      result:=dat[fill];
-      P_bigIntLiteral(result)^.value.fromInt(value);
-      result^.numberOfReferences:=1;
-    end else begin
       inc(request);
-      new(P_bigIntLiteral(result),create(value));
+    end else with bigIntLiterals do begin
+      if (fill>0) then begin
+        dec(fill);
+        result:=dat[fill];
+        P_bigIntLiteral(result)^.value.fromInt(value);
+        result^.numberOfReferences:=1;
+      end else begin
+        new(P_bigIntLiteral(result),create(value));
+      end;
+      inc(request);
     end;
   end;
 
@@ -480,25 +484,27 @@ FUNCTION T_localLiteralRecycler.newIntLiteral(CONST value: T_bigInt): P_abstract
       exit(P_smallIntLiteral(intLit[iv].rereferenced));
     end;
     if (value.canBeRepresentedAsInt32)
-    then begin
-      with smallIntLiterals do if (fill>0) then begin
+    then with smallIntLiterals do begin
+      if (fill>0) then begin
         dec(fill);
         result:=dat[fill];
         P_smallIntLiteral(result)^.val:=value.toInt;
         P_smallIntLiteral(result)^.numberOfReferences:=1
       end else begin
-        inc(request);
         new(P_smallIntLiteral(result),create(value.toInt));
       end;
-      value.clear;
-    end else with bigIntLiterals do if (fill>0) then begin
-      dec(fill);
-      result:=dat[fill];
-      P_bigIntLiteral(result)^.val:=value;
-      result^.numberOfReferences:=1;
-    end else begin
       inc(request);
-      new(P_bigIntLiteral(result),create(value));
+      value.clear;
+    end else with bigIntLiterals do begin
+      if (fill>0) then begin
+        dec(fill);
+        result:=dat[fill];
+        P_bigIntLiteral(result)^.val:=value;
+        result^.numberOfReferences:=1;
+      end else begin
+        new(P_bigIntLiteral(result),create(value));
+      end;
+      inc(request);
     end;
   end;
 
@@ -529,15 +535,17 @@ FUNCTION T_localLiteralRecycler.newStringLiteral(CONST value: ansistring; CONST 
       if length(value)=1 then exit(P_stringLiteral(charLit[value[1]]   .rereferenced));
       if length(value)=0 then exit(P_stringLiteral(emptyStringSingleton.rereferenced));
     end;
-    with stringLiterals do if (fill>0) then begin
-      dec(fill);
-      result:=dat[fill];
-      result^.val:=value;
-      result^.numberOfReferences:=1;
-      result^.enc:=se_testPending;
-    end else begin
+    with stringLiterals do begin
+      if (fill>0) then begin
+        dec(fill);
+        result:=dat[fill];
+        result^.val:=value;
+        result^.numberOfReferences:=1;
+        result^.enc:=se_testPending;
+      end else begin
+        new(result,create(value));
+      end;
       inc(request);
-      new(result,create(value));
     end;
   end;
 
@@ -559,14 +567,16 @@ FUNCTION T_globalLiteralRecycler.newRealLiteral(CONST value: T_myFloat): P_realL
 
 FUNCTION T_localLiteralRecycler.newRealLiteral(CONST value: T_myFloat): P_realLiteral;
   begin
-    with realLiterals do if (fill>0) then begin
-      dec(fill);
-      result:=dat[fill];
-      result^.val:=value;
-      result^.numberOfReferences:=1;
-    end else begin
+    with realLiterals do begin
+      if (fill>0) then begin
+        dec(fill);
+        result:=dat[fill];
+        result^.val:=value;
+        result^.numberOfReferences:=1;
+      end else begin
+        new(result,create(value));
+      end;
       inc(request);
-      new(result,create(value));
     end;
   end;
 
@@ -589,15 +599,17 @@ FUNCTION T_globalLiteralRecycler.newListLiteral(CONST initialSize: longint): P_l
 
 FUNCTION T_localLiteralRecycler.newListLiteral(CONST initialSize: longint): P_listLiteral;
   begin
-    with listLiterals do if (fill>0) then begin
-      dec(fill);
-      result:=dat[fill];
-      result^.numberOfReferences:=1;
-      if length(result^.dat)<initialSize then setLength(result^.dat,initialSize);
-      result^.fill:=0;
-    end else begin
+    with listLiterals do begin
+      if (fill>0) then begin
+        dec(fill);
+        result:=dat[fill];
+        result^.numberOfReferences:=1;
+        if length(result^.dat)<initialSize then setLength(result^.dat,initialSize);
+        result^.fill:=0;
+      end else begin
+        new(result,create(initialSize));
+      end;
       inc(request);
-      new(result,create(initialSize));
     end;
   end;
 
@@ -619,14 +631,16 @@ FUNCTION T_globalLiteralRecycler.newSetLiteral(CONST expectedSize:longint)    : 
 
 FUNCTION T_localLiteralRecycler.newSetLiteral(CONST expectedSize:longint)    : P_setLiteral;
   begin
-    with setLiterals do if (fill>0) then begin
-      dec(fill);
-      result:=dat[fill];
-      result^.numberOfReferences:=1;
-      result^.dat.prepareForSize(expectedSize);
-    end else begin
+    with setLiterals do begin
+      if (fill>0) then begin
+        dec(fill);
+        result:=dat[fill];
+        result^.numberOfReferences:=1;
+        result^.dat.prepareForSize(expectedSize);
+      end else begin
+        new(result,create(expectedSize));
+      end;
       inc(request);
-      new(result,create(expectedSize));
     end;
   end;
 
@@ -646,11 +660,12 @@ PROCEDURE T_localLiteralRecycler.exchangeLiterals(CONST pushOnly:boolean=false);
   begin with globalLiteralRecycler.key do begin
     if tryEnterCriticalsection(cs)=0 then exit else
     try
-      while key.fill>fill do begin
+      while (key.fill>fill) and (key.request<0) do begin
         if length(dat)<=fill then setLength(dat,length(dat)+key.fill-fill);
         dec(key.fill);
         dat[fill]:=key.dat[key.fill];
         inc(fill);
+        inc(key.request);
       end;
     finally
       leaveCriticalSection(cs);
@@ -661,11 +676,12 @@ PROCEDURE T_localLiteralRecycler.exchangeLiterals(CONST pushOnly:boolean=false);
   begin with globalLiteralRecycler.key do begin
     if tryEnterCriticalsection(cs)=0 then exit else
     try
-      while fill>key.fill do begin
+      while (fill>key.fill) and (key.request>0) do begin
         if length(key.dat)<=key.fill then setLength(key.dat,length(key.dat)+fill-key.fill);
         dec(fill);
         key.dat[key.fill]:=dat[fill];
         inc(key.fill);
+        dec(key.request);
       end;
     finally
       leaveCriticalSection(cs);
@@ -694,12 +710,12 @@ PROCEDURE T_localLiteralRecycler.exchangeLiterals(CONST pushOnly:boolean=false);
   {$undef pull_macro}
   {$undef key}
   begin
-    if (smallIntLiterals.request>0) and not(pushOnly) then pullSmallInt else if (smallIntLiterals.request<0) then pushSmallInt;
-    if (bigIntLiterals  .request>0) and not(pushOnly) then pullBigint   else if (bigIntLiterals  .request<0) then pushBigInt;
-    if (realLiterals    .request>0) and not(pushOnly) then pullReal     else if (realLiterals    .request<0) then pushReal;
-    if (stringLiterals  .request>0) and not(pushOnly) then pullString   else if (stringLiterals  .request<0) then pushString;
-    if (listLiterals    .request>0) and not(pushOnly) then pullList     else if (listLiterals    .request<0) then pushList;
-    if (setLiterals     .request>0) and not(pushOnly) then pullSet      else if (setLiterals     .request<0) then pushSet;
+    if (smallIntLiterals.request>32) and not(pushOnly) then pullSmallInt else if (smallIntLiterals.request<-32) then pushSmallInt;
+    if (bigIntLiterals  .request>32) and not(pushOnly) then pullBigint   else if (bigIntLiterals  .request<-32) then pushBigInt;
+    if (realLiterals    .request>32) and not(pushOnly) then pullReal     else if (realLiterals    .request<-32) then pushReal;
+    if (stringLiterals  .request>32) and not(pushOnly) then pullString   else if (stringLiterals  .request<-32) then pushString;
+    if (listLiterals    .request>32) and not(pushOnly) then pullList     else if (listLiterals    .request<-32) then pushList;
+    if (setLiterals     .request>32) and not(pushOnly) then pullSet      else if (setLiterals     .request<-32) then pushSet;
   end;
 
 {$endif}
