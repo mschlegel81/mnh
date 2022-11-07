@@ -95,12 +95,12 @@ PROCEDURE T_localLiteralRecycler.freeMemory(CONST hard:boolean);
   VAR threshold:longint;
   begin
     if not(hard) then exchangeLiterals(true);
-    with smallIntLiterals do begin if hard then threshold:=0 else threshold:=length(dat) shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
-    with bigIntLiterals   do begin if hard then threshold:=0 else threshold:=length(dat) shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
-    with realLiterals     do begin if hard then threshold:=0 else threshold:=length(dat) shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
-    with stringLiterals   do begin if hard then threshold:=0 else threshold:=length(dat) shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
-    with listLiterals     do begin if hard then threshold:=0 else threshold:=length(dat) shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
-    with setLiterals      do begin if hard then threshold:=0 else threshold:=length(dat) shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
+    with smallIntLiterals do begin if hard then threshold:=0 else threshold:=fill shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
+    with bigIntLiterals   do begin if hard then threshold:=0 else threshold:=fill shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
+    with realLiterals     do begin if hard then threshold:=0 else threshold:=fill shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
+    with stringLiterals   do begin if hard then threshold:=0 else threshold:=fill shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
+    with listLiterals     do begin if hard then threshold:=0 else threshold:=fill shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
+    with setLiterals      do begin if hard then threshold:=0 else threshold:=fill shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
   end;
 
 CONSTRUCTOR T_globalLiteralRecycler.create;
