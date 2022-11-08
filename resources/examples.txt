@@ -1151,6 +1151,10 @@ isSubsetOf([1],[1,2,3]);
 
 isSubsetOf([1,4],[1,2,3]);
 
+//#vectorIfThenElse
+x:=1/[0..3];
+vectorIfThenElse(x.isInfinite,0,x);
+
 //==END REG TEST==
 
 driveInfo;

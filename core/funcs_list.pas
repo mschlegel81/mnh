@@ -660,6 +660,35 @@ FUNCTION toGenerator_imp intFuncSignature;
     end;
   end;
 
+FUNCTION vectorIfThenElse_imp intFuncSignature;
+  VAR i:longint;
+  begin
+    if (params<>nil) and (params^.size=3) and (arg0^.literalType in [lt_emptyList,lt_booleanList]) then begin
+      result:=recycler^.newListLiteral(list0^.size);
+      if (arg1^.literalType in C_listTypes) and (list1^.size=list0^.size) then begin
+        if (arg2^.literalType in C_listTypes) and (list2^.size=list0^.size) then begin
+          for i:=0 to list0^.size-1 do if boolLit[true].equals(list0^.value[i])
+          then listResult^.append(recycler,list1^.value[i]^.rereferenced,false)
+          else listResult^.append(recycler,list2^.value[i]^.rereferenced,false);
+        end else begin
+          for i:=0 to list0^.size-1 do if boolLit[true].equals(list0^.value[i])
+          then listResult^.append(recycler,list1^.value[i]^.rereferenced,false)
+          else listResult^.append(recycler,arg2           ^.rereferenced,false);
+        end;
+      end else begin
+        if (arg2^.literalType in C_listTypes) and (list2^.size=list0^.size) then begin
+          for i:=0 to list0^.size-1 do if boolLit[true].equals(list0^.value[i])
+          then listResult^.append(recycler,arg1           ^.rereferenced,false)
+          else listResult^.append(recycler,list2^.value[i]^.rereferenced,false);
+        end else begin
+          for i:=0 to list0^.size-1 do if boolLit[true].equals(list0^.value[i])
+          then listResult^.append(recycler,arg1^.rereferenced,false)
+          else listResult^.append(recycler,arg2^.rereferenced,false);
+        end;
+      end;
+    end else result:=nil;
+  end;
+
 INITIALIZATION
   //Functions on lists:
   BUILTIN_HEAD:=
@@ -701,5 +730,5 @@ INITIALIZATION
   builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'toGenerator'   ,
   builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'toIteratableExpression',@toGenerator_imp,ak_unary{$ifdef fullVersion},'toIteratableExpression(e:Expression(0));#Marks the expression as IteratableExpression if possible or throws an error'{$endif}),
                                                                             ak_unary{$ifdef fullVersion},'toGenerator(e:Expression(0));#Alias for toIteratableExpression'{$endif});
-
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'vectorIfThenElse',@vectorIfThenElse_imp,ak_ternary{$ifdef fullVersion},'vectorIfThenElse(condition:BooleanList,Then,Else);//Returns the elementwise "if-then-else" result'{$endif});
 end.
