@@ -676,8 +676,8 @@ CONSTRUCTOR T_fourierSeries.create(CONST values: P_listLiteral; CONST location: 
     inherited createInterpolator('fourierSeries',values,location,context,true);
     includeYsin:=false;
     includeXcos:=false;
-    for i:=0 to length(yValues)-1 do includeYsin:=includeYsin or (yValues[i]<>0);
-    for i:=1 to length(xValues)-1 do includeXcos:=includeXcos or (xValues[i]<>0);
+    for i:=1 to length(yValues)-1 do includeYsin:=includeYsin or (yValues[i]<>0);
+    for i:=0 to length(xValues)-1 do includeXcos:=includeXcos or (xValues[i]<>0);
   end;
 
 FUNCTION fourierSeries_imp intFuncSignature;
@@ -714,7 +714,9 @@ FUNCTION calcFourierCoeff_im intFuncSignature;
           sinSum+=x[i]*sin(h*i*k);
           cosSum+=x[i]*cos(h*i*k);
         end;
-        result^.append(recycler,recycler^.newListLiteral^.appendReal(recycler,2*cosSum/length(x))^.appendReal(recycler,2*sinSum/length(x)),false);
+        if k=0
+        then result^.append(recycler,recycler^.newListLiteral^.appendReal(recycler,  cosSum/length(x))^.appendReal(recycler,0),false)
+        else result^.append(recycler,recycler^.newListLiteral^.appendReal(recycler,2*cosSum/length(x))^.appendReal(recycler,2*sinSum/length(x)),false);
       end;
       setLength(x,0);
     end;
