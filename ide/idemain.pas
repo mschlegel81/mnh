@@ -325,7 +325,7 @@ PROCEDURE TIdeMainForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
           runnerModel.postHalt;
           stopQuickEvaluation;
           quitPosted:=true;
-          CanClose:=not(anyEvaluationRunning);
+          CanClose:=true;
         end;
       end;
       timer.enabled:=true;

@@ -230,7 +230,7 @@ PROCEDURE T_codeAssistanceThread.execute;
         {$ifdef debugMode}
         writeln(stdErr,'T_codeAssistanceThread/scanFolder: scanning ',script);
         {$endif}
-        updateScriptUsage(script,findUsedAndExtendedPackages(script))
+        updateScriptUsage(script,findUsedAndExtendedPackages(script));
       end;
       scriptsInThisFolder.free;
 

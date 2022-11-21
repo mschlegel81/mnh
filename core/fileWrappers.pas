@@ -103,9 +103,12 @@ PROCEDURE ensurePath(CONST path:ansistring);
   end;
 
 FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
-  PROCEDURE recursePath(CONST path: ansistring);
+  PROCEDURE scanPath(CONST path: ansistring; CONST recursive:boolean);
     VAR info: TSearchRec;
     begin
+      {$ifdef debugMode}
+      writeln('Scanning path: ',path);
+      {$endif}
       initialize(info);
       if (findFirst(path+id+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0) and
          ((info.Attr and faDirectory)<>faDirectory)
@@ -116,8 +119,8 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
       sysutils.findClose(info);
       if result<>'' then exit;
 
-      if findFirst(path+'*', faAnyFile, info) = 0 then repeat
-        if ((info.Attr and faDirectory)=faDirectory) and (info.name<>'.') and (info.name<>'..') then recursePath(path+info.name+DirectorySeparator);
+      if recursive and (findFirst(path+'*', faAnyFile, info) = 0) then repeat
+        if ((info.Attr and faDirectory)=faDirectory) and (info.name<>'.') and (info.name<>'..') then scanPath(path+info.name+DirectorySeparator,recursive);
       until (findNext(info)<>0) or (result<>'');
       sysutils.findClose(info);
     end;
@@ -127,12 +130,14 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
     result := getCachedFile(rootPath,id);
     if result<>'' then exit(result);
     if result = ''
-    then recursePath(rootPath);
+    then scanPath(rootPath,false);
+    if (result = '')
+    then scanPath(configDir,true);
     if (result = '') and (configDir<>rootPath)
-    then recursePath     (configDir);
+    then scanPath(rootPath,true);
     if (result = '') and (extractFilePath(paramStr(0))<>rootPath)
                      and (extractFilePath(paramStr(0))<>configDir)
-    then recursePath     (extractFilePath(paramStr(0)));
+    then scanPath(extractFilePath(paramStr(0)),true);
     if result<>'' then putFileCache(rootPath,id,result);
   end;
 
