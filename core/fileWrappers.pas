@@ -85,13 +85,7 @@ FUNCTION getCachedFile(CONST searchRoot,searchForId:string):string;
   begin
     enterCriticalSection(fileByIdCs);
     try
-      if GetCurrentDir=lastFileCacheWorkingDir then begin
-        if not(fileByIDCache.containsKey(searchRoot+'#'+searchForId,result)) then result:='';
-      end else begin
-        lastFileCacheWorkingDir:=GetCurrentDir;
-        fileByIDCache.clear;
-        result:='';
-      end;
+      if not(fileByIDCache.containsKey(searchRoot+'#'+searchForId,result)) then result:='';
     finally
       leaveCriticalSection(fileByIdCs);
     end;
@@ -103,25 +97,47 @@ PROCEDURE ensurePath(CONST path:ansistring);
   end;
 
 FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
-  PROCEDURE scanPath(CONST path: ansistring; CONST recursive:boolean);
+  VAR pathsToScan:T_arrayOfString;
+      pathFill:longint=0;
+      pathOffset:longint=0;
+  PROCEDURE addPath(CONST path:string);
+    VAR i:longint;
+    begin
+      if pathFill>=length(pathsToScan) then begin
+        for i:=pathOffset to pathFill-1 do
+          pathsToScan[i-pathOffset]:=pathsToScan[i];
+        dec(pathFill,pathOffset);
+        pathOffset:=0;
+        setLength(pathsToScan,round(length(pathsToScan)*1.2+1));
+      end;
+      pathsToScan[pathFill]:=path;
+      inc(pathFill);
+    end;
+
+  FUNCTION hasNextPath:boolean; begin  result:=pathOffset<pathFill; end;
+  FUNCTION nextPath:string;     begin result:=pathsToScan[pathOffset]; inc(pathOffset); end;
+
+  PROCEDURE scanPath(CONST path: ansistring);
     VAR info: TSearchRec;
     begin
-      {$ifdef debugMode}
-      writeln('Scanning path: ',path);
-      {$endif}
       initialize(info);
-      if (findFirst(path+id+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0) and
+      if (findFirst(path+'*'+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0) and
          ((info.Attr and faDirectory)<>faDirectory)
-      then begin
-        result:=expandFileName(path+info.name);
+      then repeat
+        if (ExtractFileNameOnly(info.name)=id) or not(FilenamesCaseSensitive) and (uppercase(ExtractFileNameOnly(info.name))=uppercase(id))
+        then begin
+          result:=expandFileName(path+info.name);
+          putFileCache(rootPath,id,result);
+        end else putFileCache(rootPath,ExtractFileNameOnly(info.name),expandFileName(path+info.name));
         if (logFolderCallback<>nil) then logFolderCallback(path);
-      end;
+      until (findNext(info)<>0);
       sysutils.findClose(info);
       if result<>'' then exit;
 
-      if recursive and (findFirst(path+'*', faAnyFile, info) = 0) then repeat
-        if ((info.Attr and faDirectory)=faDirectory) and (info.name<>'.') and (info.name<>'..') then scanPath(path+info.name+DirectorySeparator,recursive);
-      until (findNext(info)<>0) or (result<>'');
+      if (findFirst(path+'*', faAnyFile, info) = 0) then repeat
+        if ((info.Attr and faDirectory)=faDirectory) and (info.name<>'.') and (info.name<>'..') then
+        addPath(path+info.name+DirectorySeparator);
+      until (findNext(info)<>0);
       sysutils.findClose(info);
     end;
 
@@ -129,16 +145,13 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
     if id='' then exit('');
     result := getCachedFile(rootPath,id);
     if result<>'' then exit(result);
-    if result = ''
-    then scanPath(rootPath,false);
-    if (result = '')
-    then scanPath(configDir,true);
-    if (result = '') and (configDir<>rootPath)
-    then scanPath(rootPath,true);
-    if (result = '') and (extractFilePath(paramStr(0))<>rootPath)
-                     and (extractFilePath(paramStr(0))<>configDir)
-    then scanPath(extractFilePath(paramStr(0)),true);
-    if result<>'' then putFileCache(rootPath,id,result);
+    setLength(pathsToScan,3);
+    addPath(rootPath);
+    if configDir<>rootPath
+    then addPath(configDir);
+    if (extractFilePath(paramStr(0))<>configDir) and (extractFilePath(paramStr(0))<>rootPath)
+    then addPath(extractFilePath(paramStr(0)));
+    while (result='') and hasNextPath do scanPath(nextPath);
   end;
 
 FUNCTION listScriptIds(CONST rootPath: ansistring): T_arrayOfString;
