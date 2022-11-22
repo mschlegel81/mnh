@@ -1,26 +1,23 @@
 private average(L:NumericList)->L.agg(+)/L.size;
+private fitParameters(x:NumericList,y:NumericList)->begin
+  local mask:=!(isInfinite(x) or isNan(x) or isInfinite(y) or isNan(y));
+  local mx:=(local x_:=x[mask]).average;
+  local my:=(local y_:=y[mask]).average;
+  local linearTerm:=average((x_-mx)*(y_-my))/average(sqr(x_-mx));
+  [my-linearTerm*mx,linearTerm];
+end;
 
-fitParameters(y:NumericList)->begin
-  local mx:=(y.size-1)/2;
-  local my:=y.average;
-  local linearTerm:=average(([0..y.size-1]-mx)*(y-my))/(sqr(y.size)-1)*12;
-  [my-linearTerm*mx,linearTerm];
-end;
-fitParameters(xy:List)->fitParameters(xy.getInner(0),xy.getInner(1));
-fitParameters(x:NumericList,y:NumericList)->begin
-  local mx:=x.average;
-  local my:=y.average;
-  local linearTerm:=average((x-mx)*(y-my))/average(sqr(x-mx));
-  [my-linearTerm*mx,linearTerm];
-end;
+to2D(Y:NumericList)->[[0..Y.size-1],Y];
+to2D(XY:List)->XY.each(p,assert(p.isNumericList(2)),trailing) orElse [XY.getInner(0),XY.getInner(1)];
+to2D(X:NumericList,Y:NumericList)->assert(X.size=Y.size) orElse [X,Y];
 
 @SuppressUnusedWarning=all
 linearFit(...)->begin
-  local p:=fitParameters@(...);
-  p[0]+{$x}*p[1];
+  local p:=fitParameters@(to2D@(...));
+  p[0]+((x)->x)*p[1];
 end;
 
 exponentialFit(...)->begin
-  local p:=fitParameters@ln(...);
-  exp(p[0])*{$x}^p[1];
+  local p:=fitParameters@ln(to2D@(...));
+  exp(p[0])*((x)->x)^p[1];
 end;
