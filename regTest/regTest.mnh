@@ -9,12 +9,12 @@ private printCase(s:String)->begin
 end;
 
 PREFIX_OF_MESSAGE_TYPE:=['el1_note'        =>'Note',
-                         'el1_userNote'    =>'Note',
+                         'el1_userNote'    =>'Note(Usr)',
                          'el2_warning'     =>'Warning',
-                         'el2_userWarning' =>'Warning',
-                         'el3_userDefined' =>'Error',
+                         'el2_userWarning' =>'Warning(Usr)',
+                         'el3_userDefined' =>'Error(Usr)',
                          'el3_evalError'   =>'Error',
-                         'el4_systemError' =>'Error',
+                         'el4_systemError' =>'Error(Fatal)',
                          'echo_input'      =>'in>' ,
                          'echo_declaration'=>'in>' ,
                          'echo_output'     =>'out>'].toMap;
@@ -32,7 +32,7 @@ processSingleOutput('echo_output',     location:String,output       )->'out> '&o
 processSingleOutput('log',             location:String,output       )->'log> '&output.toString&';';
 processSingleOutput(messageType in ['echo_input','echo_declaration'],
                                        location:String,output       )->format("%s %s",PREFIX_OF_MESSAGE_TYPE[messageType] orElse fail('Unkown prefix ',messageType),output.replace("\n","").join);
-processSingleOutput(messageType:String,location:String,output:String)->format("%s %s",PREFIX_OF_MESSAGE_TYPE[messageType] orElse fail('Unkown prefix ',messageType),output);
+processSingleOutput(messageType:String,location:String,output:String)->format("%s %s %s",PREFIX_OF_MESSAGE_TYPE[messageType] orElse fail('Unkown prefix ',messageType),location,output);
 
 
 processSandboxOutput(L:List,excludes:List)->
