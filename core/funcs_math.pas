@@ -15,7 +15,7 @@ USES sysutils,
 VAR BUILTIN_MIN,
     BUILTIN_MAX:P_intFuncCallback;
 IMPLEMENTATION
-USES mySys,heaps;
+USES mySys,heaps,complex;
 {$i func_defines.inc}
 FUNCTION sqrt_imp intFuncSignature;
   VAR intRoot:int64;
@@ -69,7 +69,7 @@ FUNCTION isqrt_imp intFuncSignature;
 FUNCTION sin_imp intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real])
-    then result:=recycler^.newRealLiteral(sin(P_numericLiteral(arg0)^.floatValue))
+    then result:=recycler^.newRealLiteral(system.sin(P_numericLiteral(arg0)^.floatValue))
     else result:=genericVectorization('sin',params,tokenLocation,context,recycler);
   end;
 
@@ -83,7 +83,7 @@ FUNCTION arcsin_imp intFuncSignature;
 FUNCTION cos_imp intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real])
-    then result:=recycler^.newRealLiteral(cos(P_numericLiteral(arg0)^.floatValue))
+    then result:=recycler^.newRealLiteral(system.cos(P_numericLiteral(arg0)^.floatValue))
     else result:=genericVectorization('cos',params,tokenLocation,context,recycler);
   end;
 
@@ -97,7 +97,7 @@ FUNCTION arccos_imp intFuncSignature;
 FUNCTION tan_imp intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint,lt_real])
-    then result:=recycler^.newRealLiteral(tan(P_numericLiteral(arg0)^.floatValue))
+    then result:=recycler^.newRealLiteral(math.tan(P_numericLiteral(arg0)^.floatValue))
     else result:=genericVectorization('tan',params,tokenLocation,context,recycler);
   end;
 
@@ -121,19 +121,19 @@ FUNCTION ln_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-      lt_smallint: result:=recycler^.newRealLiteral(ln(P_smallIntLiteral(arg0)^.value));
-      lt_real    : result:=recycler^.newRealLiteral(ln(real0^.value));
+      lt_smallint: result:=recycler^.newRealLiteral(system.ln(P_smallIntLiteral(arg0)^.value));
+      lt_real    : result:=recycler^.newRealLiteral(system.ln(real0^.value));
       lt_bigint  : begin
         if P_bigIntLiteral(arg0)^.value.isNegative
         then result:=nanLit.rereferenced
         else begin
           r:=P_bigIntLiteral(arg0)^.value.relevantBits-512;
           if r<0
-          then result:=recycler^.newRealLiteral(ln(P_bigIntLiteral(arg0)^.value.toFloat))
+          then result:=recycler^.newRealLiteral(system.ln(P_bigIntLiteral(arg0)^.value.toFloat))
           else begin
             x.create(P_bigIntLiteral(arg0)^.value);
             x.shiftRight(r);
-            result:=recycler^.newRealLiteral(ln(x.toFloat)+ln(2)*r);
+            result:=recycler^.newRealLiteral(system.ln(x.toFloat)+system.ln(2)*r);
             x.clear;
           end;
         end;
@@ -165,10 +165,10 @@ FUNCTION sqr_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1)
     then case arg0^.literalType of
-      lt_smallint : result:=recycler^.newIntLiteral(sqr(int64(P_smallIntLiteral (arg0)^.value)));
+      lt_smallint : result:=recycler^.newIntLiteral(system.sqr(int64(P_smallIntLiteral (arg0)^.value)));
       lt_bigint   : result:=recycler^.newIntLiteral(P_bigIntLiteral(arg0)^.value*
                                           P_bigIntLiteral(arg0)^.value);
-      lt_real: result:=recycler^.newRealLiteral(sqr(P_realLiteral(arg0)^.value));
+      lt_real: result:=recycler^.newRealLiteral(system.sqr(P_realLiteral(arg0)^.value));
       else result:=genericVectorization('sqr',params,tokenLocation,context,recycler);
     end;
   end;
@@ -1025,7 +1025,7 @@ FUNCTION euklideanNorm_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) then begin
       case arg0^.literalType of
         lt_numList,lt_intList,lt_realList:begin
-          for k:=0 to list0^.size-1 do total+=sqr(P_numericLiteral(list0^.value[k])^.floatValue);
+          for k:=0 to list0^.size-1 do total+=system.sqr(P_numericLiteral(list0^.value[k])^.floatValue);
           result:=recycler^.newRealLiteral(sqrt(total));
         end;
         lt_smallint,lt_bigint,lt_real: result:=abs_imp(params,tokenLocation,context,recycler);
@@ -1164,7 +1164,7 @@ FUNCTION integrate_impl intFuncSignature;
       //-----------------------------------------------:calculate approximations
       //calculate error estimate:-----------------------------------------------
       w:=0;
-      for k:=0 to resultSize-1 do w+=sqr(lowerOrderEstimate[k]-subrange.area[k]);
+      for k:=0 to resultSize-1 do w+=system.sqr(lowerOrderEstimate[k]-subrange.area[k]);
       //Safeguard: make sure that only finite errors are posted
       if isNan(w) or isInfinite(w) or (w<0) then w:=0;
       //-----------------------------------------------:calculate error estimate
@@ -1333,6 +1333,91 @@ FUNCTION bitXor intFuncSignature;
     end else result:=nil;
   end;
 
+FUNCTION canConvertToArrayOfComplex(CONST L:P_literal; OUT arr:T_arrayOfComplex):boolean;
+  VAR i:longint;
+  begin
+    case L^.literalType of
+      lt_intList,
+      lt_realList,
+      lt_numList: begin
+        setLength(arr,P_listLiteral(L)^.size);
+        for i:=0 to length(arr)-1 do arr[i]:=P_numericLiteral(P_listLiteral(L)^.value[i])^.floatValue;
+        result:=true;
+      end;
+      lt_list: begin
+        setLength(arr,P_listLiteral(L)^.size);
+        for i:=0 to length(arr)-1 do case P_listLiteral(L)^.value[i]^.literalType of
+          lt_smallint,lt_bigint,lt_real: arr[i]:=P_numericLiteral(P_listLiteral(L)^.value[i])^.floatValue;
+          lt_intList,
+          lt_realList,
+          lt_numList: if P_listLiteral(P_listLiteral(L)^.value[i])^.size=2 then begin
+            arr[i].re:=P_numericLiteral(P_listLiteral(P_listLiteral(L)^.value[i])^.value[0])^.floatValue;
+            arr[i].im:=P_numericLiteral(P_listLiteral(P_listLiteral(L)^.value[i])^.value[1])^.floatValue;
+          end else exit(false);
+          else exit(false);
+        end;
+        result:=true;
+      end;
+      else result:=false;
+    end;
+  end;
+
+FUNCTION arrayOfComplexToLiteral(CONST arr:T_arrayOfComplex; CONST recycler:P_recycler):P_listLiteral;
+  VAR i:longint;
+  begin
+    result:=recycler^.newListLiteral(length(arr));
+    for i:=0 to length(arr)-1 do result^.append(recycler,
+      recycler^.newListLiteral^.appendReal(recycler,arr[i].re)^.appendReal(recycler,arr[i].im),false);
+  end;
+
+FUNCTION DFT_impl intFuncSignature;
+  VAR x,y:T_arrayOfComplex;
+  begin
+    if (params<>nil) and (params^.size=1) then begin
+      if arg0^.literalType=lt_emptyList then exit(recycler^.newListLiteral(0));
+      if canConvertToArrayOfComplex(arg0,x) then y:=DiscreteFourierTransform(x,false) else exit(nil);
+      result:=arrayOfComplexToLiteral(y,recycler);
+      setLength(x,0);
+      setLength(y,0);
+    end else result:=nil;
+  end;
+
+FUNCTION iDFT_impl intFuncSignature;
+  VAR x,y:T_arrayOfComplex;
+  begin
+    if (params<>nil) and (params^.size=1) then begin
+      if arg0^.literalType=lt_emptyList then exit(recycler^.newListLiteral(0));
+      if canConvertToArrayOfComplex(arg0,x) then y:=DiscreteFourierTransform(x,true) else exit(nil);
+      result:=arrayOfComplexToLiteral(y,recycler);
+      setLength(x,0);
+      setLength(y,0);
+    end else result:=nil;
+  end;
+
+FUNCTION FFT_impl intFuncSignature;
+  VAR x,y:T_arrayOfComplex;
+  begin
+    if (params<>nil) and (params^.size=1) then begin
+      if arg0^.literalType=lt_emptyList then exit(recycler^.newListLiteral(0));
+      if canConvertToArrayOfComplex(arg0,x) then y:=FastFourierTransform(x,false) else exit(nil);
+      result:=arrayOfComplexToLiteral(y,recycler);
+      setLength(x,0);
+      setLength(y,0);
+    end else result:=nil;
+  end;
+
+FUNCTION iFFT_impl intFuncSignature;
+  VAR x,y:T_arrayOfComplex;
+  begin
+    if (params<>nil) and (params^.size=1) then begin
+      if arg0^.literalType=lt_emptyList then exit(recycler^.newListLiteral(0));
+      if canConvertToArrayOfComplex(arg0,x) then y:=FastFourierTransform(x,true) else exit(nil);
+      result:=arrayOfComplexToLiteral(y,recycler);
+      setLength(x,0);
+      setLength(y,0);
+    end else result:=nil;
+  end;
+
 INITIALIZATION
   //Unary Numeric -> real
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,ak_unary{$ifdef fullVersion},'sqrt(n);//Returns the square root of numeric or expression parameter n'{$endif});
@@ -1385,4 +1470,9 @@ INITIALIZATION
 
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'firstOrderUpwind2D',@firstOrderUpwind2D_imp,ak_variadic{$ifdef fullVersion},'firstOrderUpwind2D(c,vx,vy,width:Int,periodicBoundary:Boolean);'{$endif});
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'bitXor',@bitXor,ak_ternary{$ifdef fullVersion},'bitXor(x:Int,y:Int,relevantBits in [1..32]);//Returns x xor y for the given number of relevant bits'{$endif});
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'DFT' ,@DFT_impl ,ak_unary{$ifdef fullVersion},'DFT(x:List);//Returns the Discrete Fourier Transform of x'{$endif});
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'iDFT',@iDFT_impl,ak_unary{$ifdef fullVersion},'iDFT(x:List);//Returns the inverse Discrete Fourier Transform of x'{$endif});
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'FFT' ,@FFT_impl ,ak_unary{$ifdef fullVersion},'FFT(x:List);//Returns the Fast Fourier Transform of x'{$endif});
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'iFFT',@iFFT_impl,ak_unary{$ifdef fullVersion},'iFFT(x:List);//Returns the inverse Fast Fourier Transform of x'{$endif});
+
 end.
