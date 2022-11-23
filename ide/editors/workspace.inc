@@ -186,7 +186,11 @@ PROCEDURE T_checkFilesThread.execute;
         end;
         inc(metaIndex);
       end;
-      with workspace.fileHistory do if polishHistory then postIdeMessage('File history cleaned up',false);
+      try
+        with workspace.fileHistory do if polishHistory then postIdeMessage('File history cleaned up',false);
+      except
+        //Ignore potential error on shutdown
+      end;
       for i:=1 to 20 do if not Terminated then sleep(100);
     end;
     threadStopsSleeping;
