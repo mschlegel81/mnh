@@ -119,6 +119,7 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
 
   PROCEDURE scanPath(CONST path: ansistring);
     VAR info: TSearchRec;
+        mnhFilesFound:boolean=false;
     begin
       initialize(info);
       if (findFirst(path+'*'+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0) and
@@ -129,9 +130,10 @@ FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
           result:=expandFileName(path+info.name);
           putFileCache(rootPath,id,result);
         end else putFileCache(rootPath,ExtractFileNameOnly(info.name),expandFileName(path+info.name));
-        if (logFolderCallback<>nil) then logFolderCallback(path);
+        mnhFilesFound:=true;
       until (findNext(info)<>0);
       sysutils.findClose(info);
+      if mnhFilesFound and (logFolderCallback<>nil) then logFolderCallback(path);
       if result<>'' then exit;
 
       if (findFirst(path+'*', faAnyFile, info) = 0) then repeat
