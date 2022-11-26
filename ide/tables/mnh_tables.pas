@@ -25,6 +25,7 @@ TYPE
     MenuItem1: TMenuItem;
     MenuItem2: TMenuItem;
     MenuItem3: TMenuItem;
+    mi_exportToClipboard: TMenuItem;
     mi_exportToAnsi: TMenuItem;
     miDockInMain: TMenuItem;
     mi_exportIncHeader: TMenuItem;
@@ -49,6 +50,7 @@ TYPE
     PROCEDURE mi_exportCsvSemicolonClick(Sender: TObject);
     PROCEDURE mi_exportCsvTabClick(Sender: TObject);
     PROCEDURE mi_exportTextClick(Sender: TObject);
+    PROCEDURE mi_exportToClipboardClick(Sender: TObject);
     PROCEDURE mi_transposeClick(Sender: TObject);
     PROCEDURE stringGridHeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
 
@@ -347,6 +349,11 @@ PROCEDURE TtableForm.mi_exportTextClick(Sender: TObject);
       content:=formatTabs(content);
       writeFileLines(SaveTableDialog.fileName,formatTabs(content),LineEnding,false);
     end;
+  end;
+
+PROCEDURE TtableForm.mi_exportToClipboardClick(Sender: TObject);
+  begin
+    StringGrid.CopyToClipboard(false);
   end;
 
 PROCEDURE TtableForm.mi_transposeClick(Sender: TObject);
