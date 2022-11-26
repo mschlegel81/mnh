@@ -18,6 +18,9 @@ USES
 
 TYPE
   P_tableAdapter=^T_tableAdapter;
+
+  { TtableForm }
+
   TtableForm = class(T_mnhComponentForm)
     MenuItem1: TMenuItem;
     MenuItem2: TMenuItem;
@@ -56,6 +59,8 @@ TYPE
     FUNCTION getDefaultControl:TWinControl; override;
     PROCEDURE stringGridKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
     PROCEDURE exportToCsv(Separator:char);
+    PROCEDURE stringGridPrepareCanvas(Sender: TObject; aCol, aRow: integer;
+      aState: TGridDrawState);
   private
     { private declarations }
     literal:P_listLiteral;
@@ -65,6 +70,10 @@ TYPE
       ascending:boolean;
       byColumn:longint;
     end;
+    cellContents:array of array of record
+                   alignRight:boolean;
+                   txt:string;
+                 end;
   public
     { public declarations }
     PROCEDURE initWithLiteral(CONST L:P_listLiteral; CONST newCaption:string; CONST fixedRows_,fixedColumns_:longint; CONST adapter_:P_tableAdapter);
@@ -299,6 +308,18 @@ PROCEDURE TtableForm.exportToCsv(Separator: char);
     end;
   end;
 
+PROCEDURE TtableForm.stringGridPrepareCanvas(Sender: TObject; aCol, aRow: integer; aState: TGridDrawState);
+  VAR
+    myTextStyle: TTextStyle;
+  begin
+    if FixedRows=0 then aRow-=1;
+    myTextStyle:=StringGrid.Canvas.TextStyle;
+    if (aRow>=0) and (aRow<length(cellContents)) and (aCol>=0) and (aCol<length(cellContents[aRow])) and cellContents[aRow,aCol].alignRight then begin
+      myTextStyle.Alignment:=taRightJustify;
+      StringGrid.Canvas.TextStyle := MyTextStyle;
+    end;
+  end;
+
 PROCEDURE TtableForm.mi_exportCsvSemicolonClick(Sender: TObject);
   begin
     exportToCsv(';');
@@ -430,12 +451,12 @@ PROCEDURE TtableForm.initWithLiteral(CONST L: P_listLiteral;
 PROCEDURE TtableForm.fillTable(CONST firstFill:boolean; CONST suppressMarker:boolean=false);
   VAR dataRows:longint;
       dataColumns:longint=0;
-      cellContents:array of T_arrayOfString=();
       i,j:longint;
       rowLit:P_literal;
       cellLit:P_literal;
       iter:T_arrayOfLiteral;
       additionalHeaderRow:longint=0;
+      tmp: T_arrayOfString;
 
   FUNCTION sortMarker(CONST input:string; CONST i:longint):string;
     CONST arrow:array[false..true] of string=(#226#150#188,#226#150#178);
@@ -459,7 +480,12 @@ PROCEDURE TtableForm.fillTable(CONST firstFill:boolean; CONST suppressMarker:boo
     setLength(cellContents,dataRows);
     if literal^.literalType=lt_stringList then begin
       for i:=0 to literal^.size-1 do begin
-        cellContents[i]:=split(P_stringLiteral(literal^.value[i])^.value,C_tabChar);
+        tmp:=split(P_stringLiteral(literal^.value[i])^.value,C_tabChar);
+        setLength(cellContents[i],length(tmp));
+        for j:=0 to length(tmp)-1 do begin
+          cellContents[i,j].txt:=tmp[j];
+          cellContents[i,j].alignRight:=false;
+        end;
         if length(cellContents[i])>dataColumns then dataColumns:=length(cellContents[i]);
       end;
     end else begin
@@ -471,23 +497,25 @@ PROCEDURE TtableForm.fillTable(CONST firstFill:boolean; CONST suppressMarker:boo
           for j:=0 to length(iter)-1 do begin
             cellLit:=iter[j];
             case cellLit^.literalType of
-              lt_string:cellContents[i,j]:=P_stringLiteral(cellLit)^.value;
-              lt_real,lt_realList,lt_numList:if mi_comma.checked then cellContents[i,j]:=ansiReplaceStr(cellLit^.toString,'.',',')
-                                                                 else cellContents[i,j]:=               cellLit^.toString;
-              lt_void: cellContents[i,j]:='';
-              else cellContents[i,j]:=cellLit^.toString;
+              lt_string:cellContents[i,j].txt:=P_stringLiteral(cellLit)^.value;
+              lt_real,lt_realList,lt_numList:if mi_comma.checked then cellContents[i,j].txt:=ansiReplaceStr(cellLit^.toString,'.',',')
+                                                                 else cellContents[i,j].txt:=               cellLit^.toString;
+              lt_void: cellContents[i,j].txt:='';
+              else cellContents[i,j].txt:=cellLit^.toString;
             end;
+            cellContents[i,j].alignRight:=cellLit^.literalType in [lt_real,lt_smallint,lt_bigint];
           end;
           globalLiteralRecycler.disposeLiterals(iter);
         end else begin
           setLength(cellContents[i],1);
           cellLit:=rowLit; j:=0;
           case cellLit^.literalType of
-            lt_string:cellContents[i,j]:=P_stringLiteral(cellLit)^.value;
-            lt_real,lt_realList,lt_numList:if mi_comma.checked then cellContents[i,j]:=ansiReplaceStr(cellLit^.toString,'.',',')
-                                                               else cellContents[i,j]:=               cellLit^.toString;
-            lt_void: cellContents[i,j]:='';
-            else cellContents[i,j]:=cellLit^.toString;
+            lt_string:cellContents[i,j].txt:=P_stringLiteral(cellLit)^.value;
+            lt_real,lt_realList,lt_numList:if mi_comma.checked then cellContents[i,j].txt:=ansiReplaceStr(cellLit^.toString,'.',',')
+                                                               else cellContents[i,j].txt:=               cellLit^.toString;
+            lt_void: cellContents[i,j].txt:='';
+            else cellContents[i,j].txt:=cellLit^.toString;
+            cellContents[i,j].alignRight:=cellLit^.literalType in [lt_real,lt_smallint,lt_bigint];
           end;
         end;
         if length(cellContents[i])>dataColumns then dataColumns:=length(cellContents[i]);
@@ -505,7 +533,7 @@ PROCEDURE TtableForm.fillTable(CONST firstFill:boolean; CONST suppressMarker:boo
     end;
     if (dataRows=0) or (dataColumns=0) then exit;
     for i:=0 to length(cellContents)-1 do begin
-      for j:=0 to length(cellContents[i])-1                   do StringGrid.Cells[j,i+additionalHeaderRow]:=cellContents[i,j];
+      for j:=0 to length(cellContents[i])-1                   do StringGrid.Cells[j,i+additionalHeaderRow]:=cellContents[i,j].txt;
       for j:=length(cellContents[i]) to StringGrid.colCount-1 do StringGrid.Cells[j,i+additionalHeaderRow]:='';
     end;
     if additionalHeaderRow=1 then for j:=0 to dataColumns-1 do StringGrid.Cells[j,0]:=excelStyleColumnIndex(j-fixedColumns);
