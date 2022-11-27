@@ -43,7 +43,6 @@ TYPE
   end;
 
   T_profilingMap=specialize G_stringKeyMap<P_calleeEntry>;
-  T_string2stringMap=specialize G_stringKeyMap<string>;
 
   P_profiler=^T_profiler;
   T_profiler=object

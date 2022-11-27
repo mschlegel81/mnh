@@ -188,7 +188,7 @@ PROCEDURE TprofilingOutputForm.StringGrid1KeyPress(Sender: TObject; VAR key: cha
     if (key=#13) then begin
       i:=StringGrid1.selection.top-1;
       if canOpenLocation then workspace.openDebugLocation(profilingList[i].calleeLocation);
-    end else writeln('StringGridKeyPress ',ord(key));
+    end{$ifdef debugMode} else writeln('StringGridKeyPress ',ord(key)) {$endif};
   end;
 
 PROCEDURE TprofilingOutputForm.StringGrid2KeyPress(Sender: TObject; VAR key: char);
@@ -213,15 +213,13 @@ PROCEDURE TprofilingOutputForm.StringGrid3KeyPress(Sender: TObject; VAR key: cha
     end;
   end;
 
-PROCEDURE TprofilingOutputForm.StringGrid2HeaderSized(Sender: TObject;
-  IsColumn: boolean; index: integer);
+PROCEDURE TprofilingOutputForm.StringGrid2HeaderSized(Sender: TObject; IsColumn: boolean; index: integer);
   begin
     if IsColumn then
     StringGrid3.ColWidths[index]:=StringGrid2.ColWidths[index];
   end;
 
-PROCEDURE TprofilingOutputForm.StringGrid3HeaderSized(Sender: TObject;
-  IsColumn: boolean; index: integer);
+PROCEDURE TprofilingOutputForm.StringGrid3HeaderSized(Sender: TObject; IsColumn: boolean; index: integer);
   begin
     if IsColumn then
     StringGrid2.ColWidths[index]:=StringGrid3.ColWidths[index];
@@ -333,12 +331,31 @@ PROCEDURE TprofilingOutputForm.fillGrids2and3;
   end;
 
 PROCEDURE TprofilingOutputForm.selectLocation(CONST loc:T_searchTokenLocation);
+  FUNCTION isAfterOrEqual(CONST first,second:T_searchTokenLocation):boolean;
+    begin
+      if first.fileName<>second.fileName then exit(false);
+      if first.line>second.line then exit(false);
+      if first.line=second.line then result:=second.column>=first.column
+                                else result:=true;
+    end;
+
   VAR k:longint=0;
+      bestMatch:longint=-1;
   begin
-    while (k<length(profilingList)) and (profilingList[k].calleeLocation<>loc) do inc(k);
+    while (k<length(profilingList)) and (profilingList[k].calleeLocation<>loc) do begin
+      if isAfterOrEqual(profilingList[k].calleeLocation,loc) and
+         ((bestMatch=-1) or isAfterOrEqual(profilingList[bestMatch].calleeLocation,profilingList[k].calleeLocation))
+      then bestMatch:=k;
+      inc(k);
+    end;
     if k<length(profilingList) then begin
+      //Direct matches only...
       StringGrid1.SetFocus;
       StringGrid1.row:=k+1;
+    end else if bestMatch>0 then begin
+      //Best match available...
+      StringGrid1.SetFocus;
+      StringGrid1.row:=bestMatch+1;
     end;
   end;
 
