@@ -13,7 +13,7 @@ object tableForm: TtableForm
   OnShow = FormShow
   PopupMenu = PopupMenu1
   Position = poOwnerFormCenter
-  LCLVersion = '2.0.10.0'
+  LCLVersion = '2.2.2.0'
   object stringGrid: TStringGrid
     Left = 0
     Height = 140
@@ -28,6 +28,7 @@ object tableForm: TtableForm
     TabOrder = 0
     OnHeaderClick = stringGridHeaderClick
     OnKeyUp = stringGridKeyUp
+    OnPrepareCanvas = stringGridPrepareCanvas
   end
   object tableMenu: TMainMenu
     Left = 45
@@ -58,6 +59,10 @@ object tableForm: TtableForm
     end
     object MenuItem2: TMenuItem
       Caption = '&Export'
+      object mi_exportToClipboard: TMenuItem
+        Caption = 'Copy all to clipboard'
+        OnClick = mi_exportToClipboardClick
+      end
       object mi_exportCsvSemicolon: TMenuItem
         Caption = '&Export to ";"-separated CSV'
         OnClick = mi_exportCsvSemicolonClick
