@@ -4,6 +4,7 @@ T_plotDockMeta=object(T_panelMeta)
   private
     relatedPlotAdapter:P_guiPlotSystem;
     plotDockedBefore:T_componentParent;
+    closePlotFormOnDisconnect:boolean;
   public
   CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST recycler:P_literalRecycler; CONST plot:P_guiPlotSystem);
   PROCEDURE update; virtual;
@@ -20,6 +21,7 @@ CONSTRUCTOR T_plotDockMeta.create(CONST parent: P_panelMeta; CONST def: P_mapLit
   begin
     inherited create(parent,def,location,context,recycler,[dmk_type]);
     relatedPlotAdapter:=plot;
+    closePlotFormOnDisconnect:=false;
   end;
 
 PROCEDURE T_plotDockMeta.update; begin end;
@@ -43,7 +45,7 @@ FUNCTION T_plotDockMeta.getName:string;
 PROCEDURE T_plotDockMeta.connect;
   VAR plotForm:TplotForm;
   begin
-    plotForm:=relatedPlotAdapter^.plotFormForConnecting(true);
+    plotForm:=relatedPlotAdapter^.plotFormForConnecting(true,closePlotFormOnDisconnect);
     plotDockedBefore:=plotForm.myComponentParent;
     plotForm.myComponentParent:=cpNone;
     plotForm.ManualDock(TPanel(getControl));
@@ -62,8 +64,10 @@ PROCEDURE T_plotDockMeta.disconnect;
     if control.ClassType.InheritsFrom(T_mnhComponentForm.ClassType)
     then newForm:=T_mnhComponentForm(control)
     else exit;
-    newForm.ManualDock(nil);
-    newForm.myComponentParent:=plotDockedBefore;
-    dockNewForm(newForm);
+    if closePlotFormOnDisconnect then newForm.close else begin
+      newForm.ManualDock(nil);
+      newForm.myComponentParent:=plotDockedBefore;
+      dockNewForm(newForm);
+    end;
   end;
 
