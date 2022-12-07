@@ -160,6 +160,7 @@ TYPE
     fastUpdating,
     slowUpdating,
     quitPosted:boolean;
+    quitTimeout:double;
     subTimerCounter:longint;
     PROCEDURE ensureTimerSuspend;
   public
@@ -315,17 +316,20 @@ PROCEDURE TIdeMainForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
       case closeDialogForm.showOnQuitWhileEvaluating of
         cda_quitAfterEval: begin
           quitPosted:=true;
+          quitTimeout:=now+1; //time out in one day
           if anyEvaluationRunning then CanClose:=false;
         end;
         cda_dontQuit: begin
           quitPosted:=false;
+          quitTimeout:=now+1; //time out in one day
           CanClose:=false;
         end;
         cda_cancelEvalAndQuit: begin
           runnerModel.postHalt;
           stopQuickEvaluation;
           quitPosted:=true;
-          CanClose:=true;
+          quitTimeout:=now+ONE_SECOND*10;
+          CanClose:=false;
         end;
       end;
       timer.enabled:=true;
@@ -750,6 +754,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
           slowUpdating:=false;
           close;
         end;
+        if quitPosted and (now>quitTimeout) then halt;
       finally
         slowUpdating:=false;
       end;
