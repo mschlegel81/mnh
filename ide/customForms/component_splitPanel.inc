@@ -4,6 +4,7 @@ T_splitPanelMeta=object(T_panelMeta)
   Left,Right:T_panelMeta;
   CONSTRUCTOR create(CONST parent:P_panelMeta; CONST def:P_mapLiteral; CONST location:T_tokenLocation; VAR context:T_context; CONST recycler:P_literalRecycler);
   PROCEDURE update; virtual;
+  FUNCTION preferClientAlignment: boolean; virtual;
   PROCEDURE alignContents; virtual;
   DESTRUCTOR destroy; virtual;
   PROCEDURE OnResize(Sender:TObject);
@@ -20,6 +21,8 @@ CONSTRUCTOR T_splitPanelMeta.create(CONST parent: P_panelMeta; CONST def: P_mapL
   end;
 
 PROCEDURE T_splitPanelMeta.update; begin end;
+
+FUNCTION T_splitPanelMeta.preferClientAlignment: boolean; begin result:=Left.preferClientAlignment or Right.preferClientAlignment; end;
 
 PROCEDURE T_splitPanelMeta.alignContents;
   begin
@@ -42,15 +45,23 @@ PROCEDURE T_splitPanelMeta.OnResize(Sender: TObject);
   begin
     if tryEnterCriticalsection(elementCs)=0 then exit;
     try
-      Left .getControl.AutoSize:=true;
-      Left .getControl.GetPreferredSize(leftW ,dummy);
-      Right.getControl.GetPreferredSize(rightW,dummy);
-
-      totalW:=winControl.width;
-      //leftWidth / totalW = leftW /(leftW+rightW)
-      //leftWidth          = leftW /(leftW+rightW) * totalW
-      Left .getControl.AutoSize:=false;
-      Left .getControl.width:=round(leftW/(leftW+rightW)*totalW);
+      if Left.preferClientAlignment then begin
+        Left .getControl.AutoSize:=true;
+        Left .preferredSize(leftW ,dummy);
+        Right.preferredSize(rightW,dummy);
+        totalW:=winControl.width;
+        //leftWidth / totalW = leftW /(leftW+rightW)
+        //leftWidth          = leftW /(leftW+rightW) * totalW
+        Left .getControl.AutoSize:=false;
+        Left .getControl.width:=round(leftW/(leftW+rightW)*totalW);
+      end else begin
+        Right.getControl.AutoSize:=true;
+        Left .preferredSize(leftW ,dummy);
+        Right.preferredSize(rightW,dummy);
+        totalW:=winControl.width;
+        Right .getControl.AutoSize:=false;
+        Right .getControl.width:=round(rightW/(leftW+rightW)*totalW);
+      end;
     finally
       leaveCriticalSection(elementCs);
     end;

@@ -11,6 +11,7 @@ TYPE
     FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean; virtual;
     PROCEDURE update; virtual;
     FUNCTION getControl:TControl; virtual;
+    FUNCTION preferClientAlignment: boolean; virtual;
     PROCEDURE alignContents; virtual;
     DESTRUCTOR destroy; virtual;
     FUNCTION getName:string; virtual;
@@ -136,6 +137,13 @@ PROCEDURE T_panelMeta.update;
 FUNCTION T_panelMeta.getControl: TControl;
   begin
     result:=winControl;
+  end;
+
+FUNCTION T_panelMeta.preferClientAlignment: boolean;
+  VAR e:P_guiElementMeta;
+  begin
+    for e in  elements do if e^.preferClientAlignment then exit(true);
+    result:=false;
   end;
 
 PROCEDURE T_panelMeta.alignContents;
