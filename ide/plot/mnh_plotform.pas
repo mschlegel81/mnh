@@ -356,6 +356,7 @@ PROCEDURE TplotForm.FormResize(Sender: TObject);
   begin
     if relatedPlot<>nil then begin
       updateInteractiveSection;
+      relatedPlot^.logPlotChanged;
     end;
     plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
     relatedPlot^.animation.resolutionChanged(plotImage.width,plotImage.height);
