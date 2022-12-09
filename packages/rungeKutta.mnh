@@ -45,7 +45,7 @@ private embeddedRungeKuttaStepper(Tableau:ERK_ButcherTableau,order:Int)->begin
   save;
     local y:=y0_;
     local dtRest:=dtMacro;
-    dtSub:=dtRest/max(1,ceil(dtRest/dtSub));
+    dtSub:=dtRest/max(1,ceil(min(1000,dtRest/dtSub)));
     while(dtRest>0,begin
       local y1:=microStep(y,dtSub);
       local errorEstimate:=y1[1];
@@ -57,7 +57,7 @@ private embeddedRungeKuttaStepper(Tableau:ERK_ButcherTableau,order:Int)->begin
       : void;
       //pick a sub step size assuming that all remaining steps will be of equal size
       dtRest>0 ? begin
-        dtSub:=dtRest/max(1,ceil(dtRest/dtSub*errorEstimate));
+        dtSub:=dtRest/max(1,ceil(min(1000,dtRest/dtSub*errorEstimate)));
       end : void;
     end);
     y;
