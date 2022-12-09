@@ -547,6 +547,7 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(CONST recycler:P_recycler; CONST l
 
         timeUnit:string;
         longest:longint=0;
+        i:longint;
         formatString:ansistring;
         timingMessage:T_arrayOfString;
 
@@ -570,10 +571,14 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(CONST recycler:P_recycler; CONST l
       for cat:=low(T_profileCategory) to high(T_profileCategory) do timeString[cat]:=fmt(timeValue[cat]);
       for cat:=low(T_profileCategory) to high(T_profileCategory) do timeString[cat]:=CATEGORY_DESCRIPTION[cat]+fmt(timeString[cat]);
       timingMessage:=C_EMPTY_STRING_ARRAY;
+      formatString:='';
+      for i:=0 to length(timeString[pc_total])-1 do formatString+='─';
+      append(timingMessage,'┌'+formatString+'┐');
       for cat:=low(T_profileCategory) to high(T_profileCategory) do begin
-        if cat=high(T_profileCategory) then append(timingMessage,StringOfChar('-',length(timeString[cat])));
-        append(timingMessage,timeString[cat]);
+        if cat=high(T_profileCategory) then append(timingMessage,'├'+formatString+'┤');
+        append(timingMessage,'│'+timeString[cat]+'│');
       end;
+      append(timingMessage,'└'+formatString+'┘');
       primaryContext.messages^.postTextMessage(mt_timing_info,location,timingMessage);
     end;
 
