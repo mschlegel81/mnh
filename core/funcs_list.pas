@@ -720,7 +720,7 @@ INITIALIZATION
   BUILTIN_GET:=
   builtinFunctionMap.registerRule(LIST_NAMESPACE,'get'     ,@get_imp     ,ak_variadic_2{$ifdef fullVersion},'get(L,accessor);//Returns elements of list, set or map L by accessor'{$endif});
   builtinFunctionMap.registerRule(LIST_NAMESPACE,'getAll'  ,@getAll_imp  ,ak_binary    {$ifdef fullVersion},'getAll(L,accessors);//Returns elements of list, set or map L by collection of accessors#getAll(L,accessors:List,fallback:List);//Returns elements of list, set or map L by collection of accessors.#//If no such element is found, the respective fallback entry is used.#//fallback must have the same size as accessors'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,ak_variadic_2{$ifdef fullVersion},'getInner(L:List,index);'{$endif});
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,ak_variadic_2{$ifdef fullVersion},'getInner(L:List,k:Int);//Returns the k-th elements of each entry in nested list L'{$endif});
   builtinFunctionMap.registerRule(LIST_NAMESPACE,'indexOf' ,@indexOf_impl,ak_unary     {$ifdef fullVersion},'indexOf(B:BooleanList);//Returns the indexes for which B is true.'{$endif});
   builtinFunctionMap.registerRule(LIST_NAMESPACE,'cross'   ,@cross_impl  ,ak_variadic_2{$ifdef fullVersion},'cross(A,...);//Returns the cross product of the arguments (each of which must be a list, set or map)'{$endif});
   builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,

@@ -308,6 +308,7 @@ FUNCTION T_intrinsicFunctionDocumentation.getStructuredInfo(OUT examples:T_array
       sigAndComment:T_arrayOfString;
   begin
     parts:=split(description,'#');
+    dropValues(parts,'');
     initialize(result);
     setLength(result,length(parts));
     for i:=0 to length(result)-1 do begin
