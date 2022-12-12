@@ -53,9 +53,12 @@ private consensusNormal(points:Vector3DList)->
   points.size=3 ? normal@points :
   begin
     local center:=points.agg(+)/points.size;
-    local n:=[0..points.size-1].map({normal(center,points[$i],points[($i+1) mod points.size])}).filter({!($n.isNan or $n.isInfinite).agg(or)});
-    local N:=n[0];
-    n.tail.each(x,(x*N).agg(+)>0 ? N+=x : N-=x,trailing)/n.size;
+    local X:=(points.transpose-center).transpose;
+    local Y:=X.trailing(1)|X.leading(1);
+    X:=((X:=X.transpose)[I20]*(Y:=Y.transpose)[Z01]-Y[I20]*X[Z01]);
+    Y:=(X.isNan or X.isInfinite).agg(or);
+    X:=X.transpose[!Y].agg(+);
+    X/euklideanNorm(X);
   end;
 
 ducktype Geometry3DItem(L:List(3))->L[0].isVector3DList AND L[1].isAdjacencyList AND L[2].isMaterial;
@@ -108,18 +111,9 @@ plotBackground(y0:Numeric,c0:NumericList(3),
 end;
 
 approxBoundingSphereCenter(P:Vector3DList)->begin
-  local c:=P.agg(+)/P.size;
-  local step:=0.5;
-  P.size<20
-  ? while(step>1E-3,begin
-      c:=c*(1-step)+step*(P.each(q,[(q-c).euklideanNorm,q]).sort(0).trailing[1]);
-      step*=0.9;
-    end)
-  : while(step>1E-3,begin
-      c:=c*(1-step)+step*(P.each(q,[(q-c).euklideanNorm,q]).sort(0).trailing(5).getInner(1).agg(+)/5);
-      step*=0.9;
-    end);
-  c;
+  local x:=P.min;
+  local y:=P[euklideanNorm((P.transpose-x).transpose).argMax];
+        (y+P[euklideanNorm((P.transpose-y).transpose).argMax])*0.5;
 end;
 
 @SuppressUnusedWarning

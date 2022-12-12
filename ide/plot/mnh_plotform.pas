@@ -44,7 +44,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
       PROCEDURE doPlot;
       PROCEDURE formDestroyed;
-      FUNCTION plotFormForConnecting(CONST forDocking:boolean):TplotForm;
+      FUNCTION plotFormForConnecting(CONST forDocking:boolean; OUT formWasFreshlyCreated:boolean):TplotForm;
       FUNCTION append(CONST message: P_storedMessage): boolean; virtual;
       PROCEDURE disconnect;
       PROCEDURE logPlotChanged;
@@ -277,9 +277,10 @@ PROCEDURE T_guiPlotSystem.formDestroyed;
     myPlotForm:=nil;
   end;
 
-FUNCTION T_guiPlotSystem.plotFormForConnecting(CONST forDocking:boolean): TplotForm;
+FUNCTION T_guiPlotSystem.plotFormForConnecting(CONST forDocking:boolean; OUT formWasFreshlyCreated:boolean): TplotForm;
   begin
     connected:=true;
+    formWasFreshlyCreated:=(myPlotForm=nil);
     ensureForm(not(forDocking));
     result:=myPlotForm;
   end;
@@ -742,7 +743,6 @@ PROCEDURE TplotForm.updateInteractiveSection;
     end else begin
       AnimationGroupBox.AutoSize:=false;
       AnimationGroupBox.height:=0;
-      animateCheckBox.checked:=false;
     end;
   end;
 

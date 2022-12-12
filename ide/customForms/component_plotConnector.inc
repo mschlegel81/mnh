@@ -136,8 +136,9 @@ PROCEDURE T_plotConnectorMeta.plotRescaled(Sender:TObject);
 
 PROCEDURE T_plotConnectorMeta.connect;
   VAR plotForm:TplotForm;
+      formWasFreshlyCreated: boolean;
   begin
-    plotForm:=relatedPlotAdapter^.plotFormForConnecting(false);
+    plotForm:=relatedPlotAdapter^.plotFormForConnecting(false,formWasFreshlyCreated);
     if (config.action<>nil)
     then plotForm.onPlotRescale:=@plotRescaled
     else plotForm.onPlotRescale:=nil;

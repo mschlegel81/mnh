@@ -78,6 +78,7 @@ TYPE
     PROCEDURE connect; virtual;
     PROCEDURE disconnect; virtual;
     FUNCTION getName:string; virtual; abstract;
+    PROCEDURE preferredSize(OUT preferredWidth,preferredHeight:longint); virtual;
   end;
 
   P_customFormAdapter = ^T_customFormAdapter;
@@ -418,6 +419,10 @@ PROCEDURE T_guiElementMeta.onExit(Sender: TObject);
 
 PROCEDURE T_guiElementMeta.connect; begin end;
 PROCEDURE T_guiElementMeta.disconnect; begin end;
+PROCEDURE T_guiElementMeta.preferredSize(OUT preferredWidth,preferredHeight:longint);
+  begin
+    getControl.GetPreferredSize(preferredWidth,preferredHeight);
+  end;
 
 PROCEDURE TscriptedForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   VAR m:P_guiElementMeta;
