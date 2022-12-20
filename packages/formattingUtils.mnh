@@ -44,3 +44,52 @@ roundToRelevantDigits(value:Numeric,digits>0)->
 roundToRelevantDigits(digits>0)->void;
 //*Fallback for non-numeric values
 roundToRelevantDigits(nonNumeric,digits>0)->toString(nonNumeric);
+
+//*Aligns strings by adding spaces in approprate positions
+align(items:StringList,splitters:StringCollection)->begin
+  items.size=1 ? return items[0] :
+  items.size=2 ? begin
+    local parts:=splitters.size==0
+                 ? items.map((s)->chars(s))
+                 : items.map((s)->s.split(splitters,true));
+    local aOut:=[];
+    local bOut:=[];
+    diff(parts[0],parts[1])['edit'].each(e,
+      aOut|=(e[0]='+' ? '' : parts[0,e[1]]),
+      bOut|=(e[0]='-' ? '' : parts[1,e[2]]));
+    formatTabs(  aOut.join("\v")&"\n"&bOut.join("\v"));
+  end : begin
+    local parts:=splitters.size==0
+                 ? items.map((s)->chars(s))
+                 : items.map((s)->s.split(splitters,true));
+    local distances:=
+    cross([0..items.size-1],[0..items.size-1])
+      .filter((i)->i.agg(<))
+      .each(ij,begin
+         local d:=diffStats(parts[ij[0]],parts[ij[1]]);
+         d:=d['matches']-d['adds']-d['deletes']-d['modifies'];
+         [[d,ij],[d,ij.reverseList]];
+       end,|)
+      .sort
+      .reverseList
+      .getInner(1);
+    begin
+      local mergePath:=distances[0];
+      local current:=mergePath.trailing;
+      while(mergePath.size<items.size,begin
+        local step:=distances.filter((d)->d[0]=current and d[1] not in mergePath).head;
+        mergePath|=current:=step[1];
+      end);
+      [mergePath.leading,mergePath.tail].transpose;
+    end.each(pair,begin
+         local i0:=pair[0]; local new0:=[];
+         local i1:=pair[1]; local new1:=[];
+         diff(parts[i0],parts[i1])['edit'].each(e,
+           new0|=(e[0]='+' ? '' : parts[i0,e[1]]),
+           new1|=(e[0]='-' ? '' : parts[i1,e[2]]));
+         parts[i0]:=new0;
+         parts[i1]:=new1;
+       end);
+    parts.map((p)->p.join("\v")).join("\n").formatTabs;
+  end;
+end;
