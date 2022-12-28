@@ -1,3 +1,4 @@
+USE '..\packages\formattingUtils.mnh';
 @demo_for=file processing
 main(rootFolder,...)->begin
   print('Root folder: ',rootFolder);
@@ -40,7 +41,7 @@ main(rootFolder,...)->begin
   findings
   .each(finding,
     print('Found group of ',finding[1].size,' files, ',finding[0],' bytes each (total ',finding[0]*finding[1].size,' bytes):'),
-    printf('  %s',finding[1].systemSpecificFilename));
+    printf('  %s',finding[1].systemSpecificFilename.align(['/','\'])));
   size(...)>0 ? main@... : void;
 
   findings:=findings.getInner(1).flatten;

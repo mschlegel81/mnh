@@ -248,6 +248,16 @@ FUNCTION isGuiStarted_impl intFuncSignature;
     result:=newBoolLiteral(gui_started<>NO);
   end;
 
+FUNCTION showConsole_impl intFuncSignature;
+  begin
+    result:=newBoolLiteral(showConsole);
+  end;
+
+FUNCTION hideConsole_impl intFuncSignature;
+  begin
+    result:=newBoolLiteral(hideConsole);
+  end;
+
 FUNCTION getCPULoadPercentage_impl intFuncSignature;
   begin
     {$ifdef Windows}
@@ -299,6 +309,8 @@ INITIALIZATION
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'callMemoryCleaner',@callMemoryCleaner_impl,ak_nullary{$ifdef fullVersion},'callMemoryCleaner;//Calls the memory cleaner'{$endif},[se_alterContextState]);
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'assertGuiStarted',@assertGuiStarted_impl,ak_nullary{$ifdef fullVersion},'assertGuiStarted;//Enforces GUI initialization'{$endif});
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'isGuiStarted',@isGuiStarted_impl,ak_nullary{$ifdef fullVersion},'isGuiStarted;//Returns true if the GUI is started'{$endif});
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'showConsole',@showConsole_impl,ak_nullary{$ifdef fullVersion},'showConsole; //shows the console'{$endif});
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'hideConsole',@hideConsole_impl,ak_nullary{$ifdef fullVersion},'hideConsole; //hides the console'{$endif});
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'getCPULoadPercentage',@getCPULoadPercentage_impl,ak_nullary{$ifdef fullVersion},'Returns the CPU load in percent (Windows only)'{$endif},[se_executingExternal]);
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'getTaskInfo',@getTaskInfo_impl,ak_nullary{$ifdef fullVersion},'Returns info on running tasks (Windows only)'{$endif},[se_executingExternal]);
 end.

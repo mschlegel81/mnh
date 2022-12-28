@@ -165,6 +165,8 @@ FUNCTION bytes_imp intFuncSignature;
 
 FUNCTION split_imp intFuncSignature;
   VAR splitters:T_arrayOfString;
+      retainSplitters:boolean=false;
+
   PROCEDURE initSplitters;
     VAR i:longint;
     begin
@@ -182,7 +184,7 @@ FUNCTION split_imp intFuncSignature;
     VAR part:string;
     begin
       result:=recycler^.newListLiteral(1);
-      for part in split(s^.value,splitters) do result^.appendString(recycler,part);
+      for part in split(s^.value,splitters,retainSplitters) do result^.appendString(recycler,part);
     end;
 
   FUNCTION splitRecurse(CONST p:P_literal):P_literal;
@@ -205,9 +207,11 @@ FUNCTION split_imp intFuncSignature;
 
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2)
+    if (params<>nil) and (params^.size>=2) and (params^.size<=3)
       and (arg0^.literalType in [lt_string,lt_stringList,lt_list,lt_emptyList])
-      and (arg1^.literalType in [lt_string,lt_stringList,lt_emptyList]) then begin
+      and (arg1^.literalType in [lt_string,lt_stringList,lt_emptyList])
+      and ((params^.size=2) or (arg2^.literalType=lt_boolean)) then begin
+      if params^.size>2 then retainSplitters:=bool2^.value;
       initSplitters;
       result:=splitRecurse(arg0);
     end;
@@ -886,7 +890,7 @@ INITIALIZATION
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE,'charSet'       ,@charSet_imp       ,ak_unary     {$ifdef fullVersion},'charSet(S);//Returns the characters in S as a set (ordered list without duplicates)'{$endif});
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE,'byteToChar'    ,@byteToChar_imp    ,ak_unary     {$ifdef fullVersion},'byteToChar(b in [0..255]);//Returns the corresponding character as a string of one byte length'{$endif});
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE,'bytes'         ,@bytes_imp         ,ak_unary     {$ifdef fullVersion},'bytes(S);//Returns the bytes in S as a list of strings'{$endif});
-  builtinFunctionMap.registerRule(STRINGS_NAMESPACE,'split'         ,@split_imp         ,ak_binary    {$ifdef fullVersion},'split(S:String,splitter:String);//Returns a list of strings obtained by splitting S at the specified splitters#//The splitters themselves are not contained in the result'{$endif});
+  builtinFunctionMap.registerRule(STRINGS_NAMESPACE,'split'         ,@split_imp         ,ak_binary    {$ifdef fullVersion},'split(S:String,splitter:String);//Returns a list of strings obtained by splitting S at the specified splitters without the splitters#split(S:String,splitter:String,retainSplitters:boolean);'{$endif});
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE,'join'          ,@join_impl         ,ak_unary     {$ifdef fullVersion},'join(L:List);//Returns a string-concatenation of all elements in L#join(L:List,joiner:String);//Returns a string-concatenation of all elements, with joiner between.'{$endif});
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE,'trim'          ,@trim_imp          ,ak_unary     {$ifdef fullVersion},'trim(S:String);//Returns string S without leading or trailing spaces'{$endif});
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE,'trimLeft'      ,@trimLeft_imp      ,ak_unary     {$ifdef fullVersion},'trimLeft(S:String);//Returns string S without leading spaces'{$endif});

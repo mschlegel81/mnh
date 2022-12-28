@@ -5,7 +5,7 @@ USES sysutils,
      basicTypes,
      litVar;
 CONST MAX_ACCEPTED_COLLISIONS=10;
-      MIN_BIN_COUNT=1;
+      MIN_BIN_COUNT=4;
 
 TYPE
   T_cacheEntry = record
@@ -30,6 +30,7 @@ TYPE
     DESTRUCTOR destroy;
     PROCEDURE put(CONST key: P_listLiteral; CONST value: P_literal); inline;
     FUNCTION get(CONST key: P_listLiteral): P_literal;
+    FUNCTION getIfNotLocked(CONST key: P_listLiteral): P_literal;
     PROCEDURE clear;
   end;
 
@@ -141,6 +142,30 @@ FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
       binIdx: T_hashInt;
   begin
     enterCriticalSection(criticalSection);
+    try
+      hash:=key^.hash;
+      binIdx:=hash and (length(cached)-1);
+      with cached[binIdx] do begin
+        i := 0;
+        while (i<length(data)) and not((data[i].keyHash=hash) and key^.equals(data[i].key)) do inc(i);
+        if i>=length(data) then result:=nil
+        else begin
+          inc(useCounter);
+          data[i].lastUse:=useCounter;
+          result:=data[i].value;
+        end;
+      end;
+    finally
+      leaveCriticalSection(criticalSection);
+    end;
+  end;
+
+FUNCTION T_cache.getIfNotLocked(CONST key: P_listLiteral): P_literal;
+  VAR i: longint;
+      hash:T_hashInt;
+      binIdx: T_hashInt;
+  begin
+    if tryEnterCriticalsection(criticalSection)=0 then exit(nil) else
     try
       hash:=key^.hash;
       binIdx:=hash and (length(cached)-1);

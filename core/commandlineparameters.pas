@@ -471,7 +471,7 @@ PROCEDURE T_commandLineParameters.pauseIfConfigured(CONST errorOcurred:boolean);
     if (clf_PAUSE_ALWAYS in mnhExecutionOptions.flags) or (clf_PAUSE_ON_ERR in mnhExecutionOptions.flags) and errorOcurred
     then begin
       {$ifdef fullVersion}
-      showConsole;
+      if not(mySys.isConsoleShowing) then mySys.showConsole;
       {$endif}
       Exclude(mnhExecutionOptions.flags,clf_PAUSE_ALWAYS);
       Exclude(mnhExecutionOptions.flags,clf_PAUSE_ON_ERR);

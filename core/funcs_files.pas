@@ -375,7 +375,7 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         else exit(nil);
       end;
 
-      if tee and (teeRoutine=nil) then showConsole;
+      if tee and (teeRoutine=nil) and not(mySys.isConsoleShowing) then mySys.showConsole;
       processExitCode:=runCommand(executable,cmdLinePar,output);
       outputLit:=recycler^.newListLiteral(output.count);
       for i:=0 to output.count-1 do outputLit^.appendString(recycler,output[i]);
@@ -394,6 +394,7 @@ FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean;
       cmdLinePar:T_arrayOfString;
       i:longint;
       processExitCode:int64;
+      consoleShowedBefore:boolean;
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string)
@@ -406,12 +407,13 @@ FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean;
           then cmdLinePar[i]:=P_stringLiteral(list1^.value[i])^.value
           else cmdLinePar[i]:=list1^.value[i]^.toString();
       end;
-      showConsole;
+      consoleShowedBefore:=mySys.isConsoleShowing;
+      if not consoleShowedBefore then mySys.showConsole;
       processExitCode:=runCommandAsyncOrPipeless(executable,cmdLinePar,doAsynch,i);
       if doAsynch
       then result:=literalRecycler^.newIntLiteral(i)
       else result:=literalRecycler^.newIntLiteral(processExitCode);
-      hideConsole;
+      if not consoleShowedBefore then mySys.hideConsole;
     end;
   end;
 

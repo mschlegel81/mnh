@@ -29,7 +29,6 @@ begin
     initAskForm;
     if clf_GUI in commandLine.mnhExecutionOptions.flags
     then begin
-      hideConsole;
       Application.CreateForm(TreevaluationForm,reevaluationForm)
     end
     else if sendParametersToOtherInstance(commandLine.filesToOpenInEditor)
