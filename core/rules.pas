@@ -1328,30 +1328,15 @@ exit}
     result:=false;
     if param=nil then useParam:=recycler^.newListLiteral
                  else useParam:=param;
-    lit:=cache.get(useParam);
+    lit:=cache.getIfNotLocked(useParam);
     if lit<>nil then begin
+      //Result taken from cache
       lit^.rereference;
       output.first:=recycler^.newToken(getLocation,'',tt_literal,lit);
       output.last:=output.first;
       CLEAN_EXIT(true);
     end else if canBeAppliedNaively then begin
-      if (P_context(context)^.callDepth>=STACK_DEPTH_LIMIT) then begin wrapResultInPutCacheRule; CLEAN_EXIT(true); end;
-      if (P_context(context)^.messages^.continueEvaluation) then begin
-        enterCriticalSection(rule_cs);
-        for p in usedGlobalVariables do enterCriticalSection(P_variable(p)^.namedValue.varCs);
-        P_context(context)^.reduceExpression(output.first,recycler);
-        for p in usedGlobalVariables do leaveCriticalSection(P_variable(p)^.namedValue.varCs);
-        leaveCriticalSection(rule_cs);
-      end;
-      if (P_context(context)^.messages^.continueEvaluation) and (output.first^.next=nil) and (output.first^.tokType=tt_literal) then begin
-        lit:=output.first^.data;
-        cache.put(useParam,lit);
-        output.last:=output.first;
-      end else begin
-        recycler^.cascadeDisposeToken(output.first);
-        output.first:=recycler^.newToken(getLocation,'',tt_literal,newVoidLiteral);
-        output.last:=output.first;
-      end;
+      wrapResultInPutCacheRule;
       CLEAN_EXIT(true);
     end;
     CLEAN_EXIT(false);
@@ -1701,15 +1686,13 @@ PROCEDURE T_memoizedRule.clearCache;
   end;
 
 FUNCTION T_memoizedRule.doPutCache(CONST param: P_listLiteral): P_literal;
+  VAR val:P_literal;
   begin
-    enterCriticalSection(rule_cs);
-    try
-      cache.put(P_listLiteral(param^.value[0]),
-                              param^.value[1] );
-      result:=param^.value[1]^.rereferenced;
-    finally
-      leaveCriticalSection(rule_cs);
-    end;
+    val:=param^.value[1];
+    if val=nil then val:=newVoidLiteral;
+
+    cache.put(P_listLiteral(param^.value[0]),val);
+    result:=val^.rereferenced;
   end;
 
 end.
