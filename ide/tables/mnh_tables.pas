@@ -318,7 +318,7 @@ PROCEDURE TtableForm.stringGridPrepareCanvas(Sender: TObject; aCol, aRow: intege
     myTextStyle:=StringGrid.Canvas.TextStyle;
     if (aRow>=0) and (aRow<length(cellContents)) and (aCol>=0) and (aCol<length(cellContents[aRow])) and cellContents[aRow,aCol].alignRight then begin
       myTextStyle.Alignment:=taRightJustify;
-      StringGrid.Canvas.TextStyle := MyTextStyle;
+      StringGrid.Canvas.TextStyle := myTextStyle;
     end;
   end;
 

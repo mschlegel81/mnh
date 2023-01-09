@@ -250,12 +250,12 @@ FUNCTION isGuiStarted_impl intFuncSignature;
 
 FUNCTION showConsole_impl intFuncSignature;
   begin
-    result:=newBoolLiteral(showConsole);
+    result:=newBoolLiteral((gui_started=ide) or showConsole);
   end;
 
 FUNCTION hideConsole_impl intFuncSignature;
   begin
-    result:=newBoolLiteral(hideConsole);
+    result:=newBoolLiteral((gui_started<>ide) and hideConsole);
   end;
 
 FUNCTION getCPULoadPercentage_impl intFuncSignature;
