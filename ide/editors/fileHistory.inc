@@ -3,6 +3,9 @@ CONST FILE_HISTORY_MAX_SIZE=1000;
 TYPE
 
 P_fileHistory=^T_fileHistory;
+
+{ T_fileHistory }
+
 T_fileHistory=object(T_serializable)
   private
     //nonpersistent:
@@ -28,6 +31,7 @@ T_fileHistory=object(T_serializable)
     PROCEDURE clear;
     PROCEDURE updateHistoryMenu;
     PROCEDURE fileHistoryClick(Sender: TObject);
+    PROCEDURE getClonedFileItems(OUT fi:T_arrayOfString);
   end;
 {$endif}
 {$ifdef includeImplementation}
@@ -53,7 +57,8 @@ DESTRUCTOR T_fileHistory.destroy;
 
 FUNCTION T_fileHistory.getSerialVersion: dword; begin result:=176494; end;
 
-FUNCTION T_fileHistory.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
+FUNCTION T_fileHistory.loadFromStream(VAR stream: T_bufferedInputStreamWrapper
+  ): boolean;
   FUNCTION readArray(OUT items:T_arrayOfString):boolean;
     VAR i,count:longint;
     begin
@@ -167,7 +172,7 @@ PROCEDURE T_fileHistory.fileClosed(CONST fileName: ansistring);
     end;
   end;
 
-PROCEDURE T_fileHistory.logFolder(CONST folderName:string);
+PROCEDURE T_fileHistory.logFolder(CONST folderName: string);
   begin
     try
       enterCriticalSection(historyCs);
@@ -253,6 +258,15 @@ PROCEDURE T_fileHistory.fileHistoryClick(Sender: TObject);
     historyIdx:=TMenuItem(Sender).Tag;
     if fileExists(historyItem(historyIdx))
     then workspace.addOrGetEditorMetaForFiles(historyItem(historyIdx),true,false);
+  end;
+
+PROCEDURE T_fileHistory.getClonedFileItems(OUT fi: T_arrayOfString);
+  VAR i:longint;
+  begin
+    enterCriticalSection(historyCs);
+    setLength(fi,length(fileItems));
+    for i:=0 to length(fileItems)-1 do fi[i]:=fileItems[i];
+    leaveCriticalSection(historyCs);
   end;
 
 {$endif}

@@ -1044,7 +1044,6 @@ FUNCTION integrate_impl intFuncSignature;
   VAR subrangeHeap:T_subrangeHeap;
       f:P_expressionLiteral;
       returnType:T_literalType=lt_error;
-      tolerance:double;
       pointsRemaining:longint;
   FUNCTION evalF(CONST x:double):T_arrayOfDouble; inline;
     VAR evResult:T_evaluationResult;
@@ -1126,7 +1125,7 @@ FUNCTION integrate_impl intFuncSignature;
         s1:byte=0;
         lowerOrderEstimate:T_arrayOfDouble;
         resultSize:longint=maxLongint;
-        i,j,k:longint;
+        i,k:longint;
         w:double;
     begin
       initialize(subrange);
