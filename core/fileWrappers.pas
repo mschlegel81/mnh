@@ -68,7 +68,6 @@ PROCEDURE ensurePath(CONST path:ansistring);
 VAR logFolderCallback:PROCEDURE(CONST name:string) of object=nil;
 IMPLEMENTATION
 VAR fileByIDCache:specialize G_stringKeyMap<string>;
-    lastFileCacheWorkingDir:string='';
     fileByIdCs:TRTLCriticalSection;
 
 PROCEDURE putFileCache(CONST searchRoot,searchForId,foundFile:string);
