@@ -338,6 +338,8 @@ PROCEDURE T_rasterImage.render(CONST opt: T_scalingOptions; CONST screenBox: T_b
     then target.AntialiasingMode:=amOff
     else target.AntialiasingMode:=amOn;
     target.CopyRect(dest,sourceMap,source);
+
+    target.AntialiasingMode:=amOn;
   end;
 
 FUNCTION T_rasterImage.toStatementForExport(CONST firstRow: boolean; CONST literalRecycler: P_literalRecycler; VAR globalRowData: T_listLiteral): string;
