@@ -1,3 +1,131 @@
+implicitFunctionContour(F:Expression(2),x0:Numeric,x1>x0,y0:Numeric,y1>y0,samplingPoints,maxSegmentLength>0.0)->begin
+  //Helper function to calculate a root between two points (Regula Falsi)
+  local findRootBetween:=(p0:NumericList(2),f0_:Numeric,p1:NumericList(2),f1_:Numeric)->begin
+    local x0:=p0; local f0:=f0_;
+    local x1:=p1; local f1:=f1_;
+    local counter:=20;
+    while(euklideanNorm(x1-x0)>1E-3 AND (counter-=1)>0,begin
+      local xm:=x0-(x1-x0)*(f0/(f1-f0));
+      local fm:=F@xm;
+      sign(fm)=sign(f0) ? begin x0:=xm; f0:=fm; end :
+      sign(fm)=sign(f1) ? begin x1:=xm; f1:=fm; end : abs(f1)<abs(f0)
+      ? begin x0:=xm; f0:=fm; end
+      : begin x1:=xm; f1:=fm; end;
+    end);
+    x0-(x1-x0)*(f0/(f1-f0));
+  end;
+
+  //Determine points to sample at:
+  local px:=max(1,round(sqrt((x1-x0)/(y1-y0)*samplingPoints))-1); px:=[0..px]*(x1-x0)/px+x0;
+  local py:=max(1,round(sqrt((y1-y0)/(x1-x0)*samplingPoints))-1); py:=[0..py]*(y1-y0)/py+y0;
+
+  local edges:=cross([0..px.size-1],[0..py.size-1]).each(idxPair,
+                     idxPair[0]=px.size-1 ? void : [idxPair,idxPair+[1,0]] ,
+                     idxPair[1]=py.size-1 ? void : [idxPair,idxPair+[0,1]]);
+
+  local pxy:=cross(px,py);
+  local fxy:=pxy.map((p)->F@p);
+
+
+  //filter out edges without sign changes
+  local sxy:=sign(fxy);
+  local edgeIdx :=edges.map((pair)->pair.map((p)->p[0]*py.size+p[1]));
+  local mask:=sxy[edgeIdx.getInner(0)]!=sxy[edgeIdx.getInner(1)];
+  edges  :=edges[mask];
+  edgeIdx:=edgeIdx[mask];
+
+  local edgePoint:=edges.each(edge,begin
+    local I:=edgeIdx[index];
+    findRootBetween(pxy[I[0]],fxy[I[0]],pxy[I[1]],fxy[I[1]]);
+  end);
+
+  local edgeMap:=edges.each(edge,edge=>index).toMap;
+
+  //which edges are adjacent?
+  local adj:=edges
+  .each(e,begin
+     local p0:=e[0]; local p1:=e[1];
+     local myIdx:=edgeMap[e];
+     local horizontal:=p1==p0+[1,0];
+     (horizontal
+      ? [e+[[0,1],[0,1]],[p0,p0+[0,1]],[p1,p1+[0,1]],[p0-[0,1],p0],[p1-[0,1],p1]]
+      : [e+[[1,0],[1,0]],[p0,p0+[1,0]],[p1,p1+[1,0]],[p0-[1,0],p0],[p1-[1,0],p1]])
+     .map((e2)->edgeMap[e2.sort])
+     .each(otherIdx,[myIdx,otherIdx],[otherIdx,myIdx]);
+   end,|)
+  .unique
+  .{$L.getInner(0).group($L.getInner(1))}
+  .each(ad,begin
+     (local A:=ad[1]).size<=2
+     ? void
+     : begin
+         local p0:=edgePoint[ad[0]];
+         A:=
+         A.each(i1,begin
+           local p1:=edgePoint[i1];
+           abs(F@((p0+p1)*0.5))|i1;
+         end).sort.head(2).getInner(1);
+       end;
+     A.each(a,[ad[0],a],[a,ad[0]]);
+   end,|).unique;
+  // adj:=adj[adj.getInner(1)>adj.getInner(0)];
+
+  adj:=adj[adj.getInner(1)>adj.getInner(0)]
+  .each(a,begin
+    local d:=edgePoint[a].agg(-); d/=d.euklideanNorm;
+    d.isNan.agg(or) or d.isInfinite.agg(or)
+    ? void
+    : [a|[-d],a.reverseList|[d]];
+  end,|);
+  adj:=group(adj.map(::tail),adj.map(::head)).map((g)->g[0]=>g[1].toMap).toMap;
+
+  local toBeVisited:=adj.getInner(0);
+
+  local runs:=[];
+  while(toBeVisited.size>0,begin
+    local n0:=toBeVisited.head; toBeVisited>>n0;
+    local n1:=adj[n0].getInner(0).intersect(toBeVisited).head;
+    local direction:=adj[n0,n1];
+    local currentRun:=[n0,n1];
+    [0..1].each(loop,begin
+      local next:=void;
+      while(toBeVisited.size>0 AND !isVoid(next:=adj[n1].orElse([]).each(entry,entry[0] in toBeVisited ? [(direction*entry[1]).agg(+),entry] : void,max)),begin
+        n0:=n1; n1:=next[1,0]; direction:=next[1,1]; currentRun|=n1; toBeVisited>>n1;
+      end);
+      currentRun:=currentRun.reverseList;
+      direction:=adj[currentRun.leading.trailing,currentRun.trailing];
+    end);
+    runs||=currentRun;
+  end);
+
+  runs:=runs
+  .each(run,edgePoint[run])
+  .pEach(run,begin
+    local refined:=run.head(1);
+    local prev:=refined[0];
+    run.tail(1).each(point,begin
+      local distance:=euklideanNorm(local step:=point-prev);
+      while(distance>maxSegmentLength,begin
+        step/=ceil(distance/maxSegmentLength);
+        local side:=step.reverseList*[-0.1,0.1];
+        local p0:=local p1:=
+        local f0:=local f1:=1;
+        while(sign(f0)=sign(f1),begin
+          side*=2;
+          f0:=F@(p0:=prev+step-side);
+          f1:=F@(p1:=prev+step+side);
+        end);
+        refined|=[prev:=findRootBetween(p0,f0,p1,f1)];
+        distance:=euklideanNorm(step:=point-prev);
+      end);
+      refined|=[prev:=point];
+    end);
+    refined;
+  end);
+  runs.each(run,run,[[Nan,Nan]],|);
+end;
+
+
 private hexPoints(x0,x1,y0,y1,n)->
 begin
   // kx*ky = n
@@ -79,57 +207,17 @@ end;
 USE customFormUtil;
 
 @SuppressUnusedWarning=all
-contourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:NumericList,qualityLevel>=0,interactive:Boolean)->
-  plot() orElse addContourPlot(F,x0,x1,y0,y1,triangleCount,contourLevels,qualityLevel,interactive);
-addContourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:NumericList,qualityLevel>=0,interactive:Boolean)->begin
-  local geometry:=hexPoints(x0,x1,y0,y1,triangleCount);
-  local nodes    :=geometry[0].map({$p|(F@$p)});
-  local triangles:=geometry[1];
-  //Convert geometry to a list of adjacent edges
-  local edgePairs:=[].toSet;
-  local edgeList:=[].toSet;
-  triangles.each(tri,begin
-    local e:=tri.edges;
-    e.subSets(2).each(pair,edgePairs|=[pair.sort]);
-    e.each(edge,edgeList|=[edge]);
-    void;
-  end);
-  edgeList:=edgeList.sort;
-  local edgeZ0:=nodes.getAll(edgeList.getInner(0));
-  local edgeZ1:=nodes.getAll(edgeList.getInner(1));
-  local edgeXY0:=edgeZ0.getInner([0,1]); edgeZ0:=edgeZ0.getInner(2);
-  local edgeXY1:=edgeZ1.getInner([0,1]); edgeZ1:=edgeZ1.getInner(2);
-  edgeList:=edgeList.pEach(e,[e,index]).toMap;
-  edgePairs:=edgePairs.pMap({edgeList.getAll($p)});
-
-  edgeZ1 :=1/(edgeZ1 -edgeZ0 );
-  edgeXY1:=  (edgeXY1-edgeXY0);
-
-  local dataForLevel:={begin
-    local t:=($level-edgeZ0)*edgeZ1;
-    local mask:=0<=t<=1;
-    local cut:=edgeXY0+edgeXY1*t;
-    qualityLevel>0
-    ? cut:=mask.pEach(m,m
-         ? cutLine(F,edgeXY0[index], edgeXY1[index],$level,
-                     t[index],edgeZ0[index],edgeZ0[index]+1/edgeZ1[index],qualityLevel)
-         : 0)
-    : void;
-    edgePairs.pEach(p,mask[p[0]] AND mask[p[1]]
-                      ? [cut[p[0]],cut[p[1]],[Nan,Nan]]
-                      : void,|);
-  end};
+contourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:NumericList,maxSegmentLength,interactive:Boolean)->
+  plot() orElse addContourPlot(F,x0,x1,y0,y1,triangleCount,contourLevels,maxSegmentLength,interactive);
+addContourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:NumericList,maxSegmentLength,interactive:Boolean)->begin
+  local contourForLevel:=[].toMap;
+  local dataForLevel:=(level)->contourForLevel[level] orElse contourForLevel[level]:=implicitFunctionContour(level==0 ? F : F-level,x0,x1,y0,y1,triangleCount,maxSegmentLength);
 
   contourLevels
   .sort
-  .map(dataForLevel)
-  .each(sample,
-    sample.size==0
-    ? void
-    : sample.addPlot(contourLevels.size=0 ? 'black' : 'HUE'&(index*2/(3*contourLevels.size-1))));
+  .pEach(level,dataForLevel(level).addPlot(contourLevels.size=0 ? 'black' : 'HUE'&(index*2/(3*contourLevels.size-1))));
 
   interactive ? void : return void;
-
   display;
   local x:=0;
   local y:=0;
@@ -154,24 +242,17 @@ densityPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,sampleCount>=4,interactive:Boolean
   plot() orElse addDensityPlot(F,x0,x1,y0,y1,sampleCount,interactive);
 
 addDensityPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,sampleCount>=4,interactive:Boolean)->begin
-  local geometry:=hexPoints(x0,x1,y0,y1,sampleCount);
-  local nodes    :=geometry[0];
-  local triangles:=geometry[1].pEach(t,
-    [nodes[t],F@(nodes[t].agg(+)/nodes[t].size)]);
+  local h:=sqrt((x1-x0)*(y1-y0)/sampleCount);
+  local px:=max(1,ceil((x1-x0)/h)); px:=([0..px-1]+0.5)*h+x0;
+  local py:=max(1,ceil((y1-y0)/h)); py:=([0..py-1]+0.5)*h+y0;
 
-  local z0:=triangles.getInner(1).min;
-  local z1:=triangles.getInner(1).max;
-  z1:=1/(z1-z0);
-  local c:={format('polygon fs 0 TI0 RGB%s,%s,%s',
-  1-max(2*$x-1       ,0),
-  1-max(1-2*$x,2*$x-1,0),
-  1-max(1-2*$x       ,0))};
-  local style:={c(($z-z0)*z1)};
-
-  triangles
-  .pMap({[$s[0],style($s[1])]})
-  .each(polygon, addPlot@polygon);
-
+  local fxy:=cross(py.reverseList,px).pMap((xy)->F@xy);
+  local Q:=
+  [vectorIfThenElse(fxy<0,1,0),
+   vectorIfThenElse(fxy<0,0,0),
+   vectorIfThenElse(fxy<0,0,1),
+   fxy.abs.sortPerm.sortPerm*(1/fxy.size)].transpose;
+  Q.plotRasterImage(py.size,h,x0,y0);
   interactive ? void : return void;
 
   display;
