@@ -36,7 +36,7 @@ TYPE
     Label1: TLabel;
     searchResultsListBox: TListBox;
     Panel1: TPanel;
-    timer1: TTimer;
+    Timer1: TTimer;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE FormShow(Sender: TObject);

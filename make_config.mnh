@@ -1,7 +1,6 @@
 //Windows only:
 Lazarus64Path:='..\lazarus64';
-Lazarus32Path:='..\lazarus32';
-DelpPath     :='..\lazarus64\fpc\3.0.4\bin\x86_64-win64\delp.exe';
+DelpPath     :='..\lazarus64\fpc\3.2.0\bin\x86_64-win64\delp.exe';
 FPDocPath    :='..\lazarus64\fpc\3.2.0\bin\x86_64-win64\fpdoc.exe';
 SSL32   :=files('../3rd_party/openSsl32/*').expandedFileName;
 SSL64   :=files('../3rd_party/openSsl64/*').expandedFileName;
@@ -13,7 +12,6 @@ isLinux:=mnh.mnhInfo['targetOs']='Linux' orElse false;
 
 private
 TARGET_PLATFORM:=['Linux'=>['compiler'=> 'lazbuild'                                    ].toMap,
-                  'Win32'=>['compiler'=> Lazarus32Path&'\lazbuild.exe','outExt'=>'.exe'].toMap,
                   'Win64'=>['compiler'=> Lazarus64Path&'\lazbuild.exe','outExt'=>'.exe'].toMap].toMap;
 private
 TARGET_PROJECT :=[['light',['lpi' =>'consoles/mnh_light.lpi',

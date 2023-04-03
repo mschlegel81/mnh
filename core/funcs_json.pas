@@ -38,7 +38,7 @@ FUNCTION parseJson_impl intFuncSignature;
         jtObject  : begin
                       result:=newMapLiteral(TJSONObject(json).count);
                       for i:=0 to TJSONObject(json).count-1 do begin
-                        key     :=TJSONObject(json).Names[i];
+                        key     :=TJSONObject(json).names[i];
                         childLit:=jsonToLiteral(TJSONObject(json).elements[key]);
                         if childLit<>nil then P_mapLiteral(result)^.put(recycler,key,childLit,false);
                       end;
