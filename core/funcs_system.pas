@@ -279,12 +279,13 @@ FUNCTION getTaskInfo_impl intFuncSignature;
     if not(context^.checkSideEffects('getTaskInfo',tokenLocation,[se_executingExternal])) then exit(nil);
     info:=mySys.getTaskInfo;
     result:=recycler^.newListLiteral(length(info));
-    for i in info do listResult^.append(recycler,newMapLiteral(5)
+    for i in info do listResult^.append(recycler,newMapLiteral(6)
       ^.put(recycler,'caption',i.caption)
       ^.put(recycler,'commandLine',i.commandLine)
       ^.put(recycler,'PID',i.pid)
       ^.put(recycler,'parentPID',i.parentPID)
-      ^.put(recycler,'workingSetSize',i.workingSetSize),false);
+      ^.put(recycler,'workingSetSize',i.workingSetSize)
+      ^.put(recycler,'userModeTime',i.userModeTime),false);
     {$else}
     context^.raiseError('Implemented for Windows flavours only',tokenLocation);
     result:=nil;
