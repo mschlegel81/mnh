@@ -117,6 +117,7 @@ TYPE
     FUNCTION isBetween(CONST lowInclusive,highInclusive:longint):boolean; virtual; abstract;
     PROCEDURE writeToStream(CONST stream:P_outputStreamWrapper);          virtual; abstract;
     FUNCTION toHexString:string;                                          virtual; abstract;
+    FUNCTION succPred(CONST recycler:P_literalRecycler; CONST stepForward:boolean):P_abstractIntLiteral; virtual; abstract;
   end;
 
   P_bigIntLiteral = ^T_bigIntLiteral;
@@ -139,6 +140,7 @@ TYPE
     PROCEDURE writeToStream(CONST stream:P_outputStreamWrapper);          virtual;
     FUNCTION toHexString:string;                                          virtual;
     PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
+    FUNCTION succPred(CONST recycler:P_literalRecycler; CONST stepForward:boolean):P_abstractIntLiteral;    virtual;
   end;
 
   P_smallIntLiteral = ^T_smallIntLiteral;
@@ -158,6 +160,7 @@ TYPE
     FUNCTION isBetween(CONST lowInclusive,highInclusive:longint):boolean; virtual;
     PROCEDURE writeToStream(CONST stream:P_outputStreamWrapper);          virtual;
     FUNCTION toHexString:string;                                          virtual;
+    FUNCTION succPred(CONST recycler:P_literalRecycler; CONST stepForward:boolean):P_abstractIntLiteral;    virtual;
   end;
 
   P_realLiteral = ^T_realLiteral;
@@ -387,7 +390,8 @@ TYPE
 
       PROCEDURE sort;
       PROCEDURE sortBySubIndex(CONST innerIndex:longint; CONST location:T_tokenLocation; CONST context:P_abstractContext);
-      PROCEDURE customSort(CONST leqExpression: P_expressionLiteral; CONST location: T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer);
+      PROCEDURE customSort_1(CONST mapExpression: P_expressionLiteral; CONST location: T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer);
+      PROCEDURE customSort_2(CONST leqExpression: P_expressionLiteral; CONST location: T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer);
       FUNCTION  sortPerm(CONST literalRecycler:P_literalRecycler): P_listLiteral;
       PROCEDURE unique(CONST literalRecycler:P_literalRecycler);
 
@@ -1533,6 +1537,20 @@ FUNCTION T_bigIntLiteral.toHexString:string;
     result:=val.toHexString;
   end;
 
+FUNCTION T_smallIntLiteral.succPred(CONST recycler:P_literalRecycler; CONST stepForward:boolean):P_abstractIntLiteral;
+  begin
+    if stepForward
+    then result:=recycler^.newIntLiteral(int64(val)+int64(1))
+    else result:=recycler^.newIntLiteral(int64(val)-int64(1));
+  end;
+
+FUNCTION T_bigIntLiteral.succPred(CONST recycler:P_literalRecycler; CONST stepForward:boolean):P_abstractIntLiteral;
+  begin
+    if stepForward
+    then result:=recycler^.newIntLiteral(val+1)
+    else result:=recycler^.newIntLiteral(val-1);
+  end;
+
 PROCEDURE T_bigIntLiteral.cleanup(CONST literalRecycler: P_literalRecycler);
   begin val.clear; end;
 
@@ -2372,6 +2390,7 @@ FUNCTION T_compoundLiteral.toMap(CONST literalRecycler:P_literalRecycler; CONST 
 FUNCTION T_listLiteral.appendConstructing(CONST literalRecycler:P_literalRecycler; CONST L: P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST doRangeAppend:boolean):P_compoundLiteral;
   VAR last: P_literal;
       i0, i1: int64;
+      temp:T_bigInt;
       c0, c1: char;
       newLen: longint;
   begin
@@ -2385,8 +2404,9 @@ FUNCTION T_listLiteral.appendConstructing(CONST literalRecycler:P_literalRecycle
       exit;
     end;
     last:=dat[fill-1];
-    if (last^.literalType in [lt_bigint,lt_smallint]) and P_abstractIntLiteral(last)^.isBetween(-maxLongint,maxLongint) and
-       (L   ^.literalType in [lt_bigint,lt_smallint]) and P_abstractIntLiteral(L   )^.isBetween(-maxLongint,maxLongint) then begin
+    if ((last^.literalType=lt_smallint) or (last^.literalType=lt_bigint) and P_bigIntLiteral(last)^.val.canBeRepresentedAsInt64(false)) and
+       ((L   ^.literalType=lt_smallint) or (L   ^.literalType=lt_bigint) and P_bigIntLiteral(L   )^.val.canBeRepresentedAsInt64(false)) then begin
+      //integer range, completely within 64 bit range
       i0:=P_abstractIntLiteral(last)^.intValue;
       i1:=P_abstractIntLiteral(L   )^.intValue;
       newLen:=fill+abs(i1-i0)+1;
@@ -2399,6 +2419,34 @@ FUNCTION T_listLiteral.appendConstructing(CONST literalRecycler:P_literalRecycle
         dec(i0);
         appendInt(literalRecycler,i0);
       end;
+    end else if (last^.literalType in [lt_bigint,lt_smallint]) and (L^.literalType in [lt_bigint,lt_smallint]) then begin
+      //safeguard...
+      case last^.literalType of
+        lt_bigint: case L^.literalType of
+          lt_bigint:   temp:=P_bigIntLiteral(last)^.val-P_bigIntLiteral(L)^.val;
+          lt_smallint: temp:=P_bigIntLiteral(last)^.val-P_smallIntLiteral(L)^.val;
+        end;
+        lt_smallint: case L^.literalType of
+          lt_bigint:   temp:=P_smallIntLiteral(last)^.val-P_bigIntLiteral(L)^.val;
+          lt_smallint: temp.fromInt(P_smallIntLiteral(last)^.val-P_smallIntLiteral(L)^.val);
+        end;
+      end;
+      if temp.isNegative then temp.flipSign;
+      if temp.canBeRepresentedAsInt32 and (temp.toInt+int64(length(dat))<MaxListSize) then begin
+        setLength(dat,temp.toInt+int64(length(dat)));
+        while last^.isInRelationTo(tt_comparatorLss,L) do begin
+          last:=P_abstractIntLiteral(last)^.succPred(literalRecycler,true);
+          append(literalRecycler,last,false);
+        end;
+        while last^.isInRelationTo(tt_comparatorGrt,L) do begin
+          last:=P_abstractIntLiteral(last)^.succPred(literalRecycler,false);
+          append(literalRecycler,last,false);
+        end;
+      end else begin
+        literalType:=lt_list;
+        context^.raiseError('Invalid range expression '+last^.toString+'..'+L^.toString, location);
+      end;
+      temp.clear;
     end else if (last^.literalType = lt_string) and
       (length(P_stringLiteral(last)^.val) = 1) and (L^.literalType = lt_string) and
       (length(P_stringLiteral(L   )^.val) = 1) then begin
@@ -2687,7 +2735,7 @@ PROCEDURE T_listLiteral.sortBySubIndex(CONST innerIndex: longint; CONST location
     setLength(temp, 0);
   end;
 
-PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; CONST location: T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer);
+PROCEDURE T_listLiteral.customSort_2(CONST leqExpression: P_expressionLiteral; CONST location: T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer);
   VAR temp: T_arrayOfLiteral;
       scale: longint;
       i, j0, j1, k: longint;
@@ -2732,6 +2780,67 @@ PROCEDURE T_listLiteral.customSort(CONST leqExpression: P_expressionLiteral; CON
       end else for k:=0 to fill-1 do dat[k]:=temp[k];
     end;
     setLength(temp, 0);
+  end;
+
+PROCEDURE T_listLiteral.customSort_1(CONST mapExpression: P_expressionLiteral; CONST location: T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer);
+  VAR temp1, temp2: array of record
+        v: P_literal;
+        index: longint;
+      end;
+      scale: longint;
+      i,j0,j1,k: longint;
+  begin
+    if fill = 0 then exit;
+    myHash:=0;
+    setLength(temp1, fill);
+    setLength(temp2, fill);
+    for i:=0 to fill-1 do with temp1[i] do begin
+      v:=mapExpression^.evaluateToLiteral(location,context,recycler,dat[i],nil).literal;
+      if v=nil then begin
+        for k:=0 to i-1 do P_literalRecycler(recycler)^.disposeLiteral(temp1[i].v);
+        exit;
+      end;
+      index:=i;
+    end;
+    scale:=1;
+    while scale<length(temp1) do begin
+      //merge lists of size [scale] to lists of size [scale+scale]:---------------
+      i:=0;
+      while i<length(temp1) do begin
+        j0:=i; j1:=i+scale; k:=i;
+        while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(temp1)) do
+          if temp1[j0].v^.leqForSorting(temp1[j1].v)  then begin temp2[k]:=temp1[j0]; inc(k); inc(j0); end
+                                                      else begin temp2[k]:=temp1[j1]; inc(k); inc(j1); end;
+        while (j0<i+scale)       and (j0<length(temp1)) do begin temp2[k]:=temp1[j0]; inc(k); inc(j0); end;
+        while (j1<i+scale+scale) and (j1<length(temp1)) do begin temp2[k]:=temp1[j1]; inc(k); inc(j1); end;
+        inc(i, scale+scale);
+      end;
+      //---------------:merge lists of size [scale] to lists of size [scale+scale]
+      inc(scale, scale);
+      if (scale<length(temp1)) then begin
+        i:=0;
+        while i<length(temp1) do begin
+          j0:=i; j1:=i+scale; k:=i;
+          while (j0<i+scale) and (j1<i+scale+scale) and (j1<length(temp1)) do
+            if temp2[j0].v^.leqForSorting(temp2[j1].v)  then begin temp1[k]:=temp2[j0]; inc(k); inc(j0); end
+                                                        else begin temp1[k]:=temp2[j1]; inc(k); inc(j1); end;
+          while (j0<i+scale)       and (j0<length(temp1)) do begin temp1[k]:=temp2[j0]; inc(k); inc(j0); end;
+          while (j1<i+scale+scale) and (j1<length(temp1)) do begin temp1[k]:=temp2[j1]; inc(k); inc(j1); end;
+          inc(i, scale+scale);
+        end;
+        //---------------:merge lists of size [scale] to lists of size [scale+scale]
+        inc(scale, scale);
+      end else for k:=0 to length(temp1)-1 do temp1[k]:=temp2[k];
+    end;
+    for i:=0 to length(temp2)-1 do temp2[i].v:=dat[i];
+
+    for i:=0 to length(temp1)-1 do begin
+      P_literalRecycler(recycler)^.disposeLiteral(temp1[i].v);
+      k:=temp1[i].index;
+      dat[i]:=temp2[k].v;
+    end;
+    setLength(temp2,0);
+    setLength(temp1,0);
   end;
 
 FUNCTION T_listLiteral.sortPerm(CONST literalRecycler:P_literalRecycler): P_listLiteral;

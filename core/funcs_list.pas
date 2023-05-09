@@ -150,7 +150,14 @@ FUNCTION sort_imp intFuncSignature;
       {$ifdef fullVersion}
       context^.callStackPush(tokenLocation,builtinFunctionMap.getIntrinsicRuleAsExpression(sortLoc,false),nil);
       {$endif}
-      P_listLiteral(result)^.customSort(P_expressionLiteral(arg1),tokenLocation,context,recycler);
+      if P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(2)
+      then P_listLiteral(result)^.customSort_2(P_expressionLiteral(arg1),tokenLocation,context,recycler)
+      else if P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)
+      then P_listLiteral(result)^.customSort_1(P_expressionLiteral(arg1),tokenLocation,context,recycler)
+      else begin
+        recycler^.disposeLiteral(result);
+        result:=nil;
+      end;
       {$ifdef fullVersion}
       context^.callStackPop(nil);
       {$endif}
@@ -701,7 +708,8 @@ INITIALIZATION
   {$ifdef fullVersion}sortLoc:={$endif}
   builtinFunctionMap.registerRule(LIST_NAMESPACE,'sort'    ,@sort_imp    ,ak_variadic_1{$ifdef fullVersion},
                                                'sort(L);//Returns list L sorted ascending (using fallbacks for uncomparable types)#'+
-                                               'sort(L,leqExpression:Expression);//Returns L sorted using the custom binary expression, interpreted as "is lesser or equal"#'+
+                                               'sort(L,mapExpression:Expression(1));//Returns L sorted using the custom unary expression, behaves as L.get(L.map(mapExpression))#'+
+                                               'sort(L,leqExpression:Expression(2));//Returns L sorted using the custom binary expression, interpreted as "is lesser or equal"#'+
                                                'sort(L,innerIndex:Int);//Returns L sorted by given inner index'{$endif});
   builtinFunctionMap.registerRule(LIST_NAMESPACE,'sortPerm'        ,@sortPerm_imp      ,ak_unary     {$ifdef fullVersion},'sortPerm(L);//Returns indexes I so that L%I==sort(L)'{$endif});
   builtinFunctionMap.registerRule(LIST_NAMESPACE,'unique'          ,@unique_imp        ,ak_unary     {$ifdef fullVersion},'unique(L:List);//Returns list L without duplicates and enhanced for faster lookup'{$endif});
