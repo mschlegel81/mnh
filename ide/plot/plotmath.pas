@@ -1285,9 +1285,7 @@ FUNCTION T_scalingOptions.transformRow(CONST row: T_dataRow; CONST styles:T_plot
   begin
     if ps_bspline   in styles then new(P_bSplineBuilder        (lineBuilder),createBSplineBuilder) else
     if ps_cosspline in styles then new(P_cSplineBuilder        (lineBuilder),createCSplineBuilder) else
-    if strictInput  or (C_stylesRequiringDiscreteSteps*styles<>[])
-                              then new(P_nonSkippingLineBuilder(lineBuilder),createNonSkippingLineBuilder)
-                              else new(P_lineBuilder           (lineBuilder),createLineBuilder);
+                                   new(P_nonSkippingLineBuilder(lineBuilder),createNonSkippingLineBuilder);
     if ps_tube in styles then begin
       otherTubeRow.init();
       for i:=0 to row.size-1 do
@@ -1484,11 +1482,11 @@ PROCEDURE T_sampleRow.updateBoundingBox(CONST scaling: T_scalingOptions;
     end;
   end;
 
-PROCEDURE T_sampleRow.render(CONST opt: T_scalingOptions;
-  CONST screenBox: T_boundingBox; CONST yBaseLine: longint;
-  CONST target: TBGRACanvas);
+PROCEDURE T_sampleRow.render(CONST opt: T_scalingOptions; CONST screenBox: T_boundingBox; CONST yBaseLine: longint; CONST target: TBGRACanvas);
   VAR scaleAndColor:T_scaleAndColor;
       screenRow:T_rowToPaint;
+      opaqueBrush:boolean;
+
   PROCEDURE drawCustomQuad(CONST x0,y0,x1,y1,x2,y2,x3,y3:longint; CONST withBorder:boolean);
     VAR points:array[0..4] of TPoint;
     begin
@@ -1527,7 +1525,7 @@ PROCEDURE T_sampleRow.render(CONST opt: T_scalingOptions;
         if screenRow[i].valid then begin
           if lastWasValid then begin
             target.LineTo  (screenRow[i].point);
-            drawPatternRect(last.x, last.y, screenRow[i].point.x, screenRow[i].point.y,false);
+            if opaqueBrush then drawPatternRect(last.x, last.y, screenRow[i].point.x, screenRow[i].point.y,false);
           end else
             target.MoveTo(screenRow[i].point);
           last:=screenRow[i].point;
@@ -1551,7 +1549,7 @@ PROCEDURE T_sampleRow.render(CONST opt: T_scalingOptions;
           if lastWasValid then begin
             target.LineTo(last.x, screenRow[i].point.y);
             target.LineTo(screenRow[i].point);
-            drawPatternRect(last.x, screenRow[i].point.y, screenRow[i].point.x, screenRow[i].point.y,false);
+            if opaqueBrush then drawPatternRect(last.x, screenRow[i].point.y, screenRow[i].point.x, screenRow[i].point.y,false);
           end else target.MoveTo(screenRow[i].point);
           last:=screenRow[i].point;
         end;
@@ -1574,7 +1572,7 @@ PROCEDURE T_sampleRow.render(CONST opt: T_scalingOptions;
           if lastWasValid then begin
             target.LineTo(screenRow[i].point.x, last.y);
             target.LineTo(screenRow[i].point);
-            drawPatternRect(last.x, last.y, screenRow[i].point.x, last.y,false);
+            if opaqueBrush then drawPatternRect(last.x, last.y, screenRow[i].point.x, last.y,false);
           end else target.MoveTo(screenRow[i].point);
           last:=screenRow[i].point;
         end;
@@ -1809,9 +1807,21 @@ PROCEDURE T_sampleRow.render(CONST opt: T_scalingOptions;
       end;
     end;
 
+  {$ifdef debugMode}
+  VAR startTicks: qword;
+  {$endif}
+
   begin
+    {$ifdef debugMode}
+    startTicks:=GetTickCount64;
+    {$endif}
     screenRow:=opt.transformRow(sample,style.style);
+    {$ifdef debugMode}
+    writeln('     -- row transformation: ',GetTickCount64-startTicks,' ticks');
+    startTicks:=GetTickCount64;
+    {$endif}
     scaleAndColor:=style.getLineScaleAndColor(target.width,target.height);
+    opaqueBrush:=scaleAndColor.solidStyle<>bsClear;
     if ps_stepLeft  in style.style then drawStepsLeft;
     if ps_stepRight in style.style then drawStepsRight;
     if ps_bar       in style.style then drawBars;
@@ -1826,6 +1836,9 @@ PROCEDURE T_sampleRow.render(CONST opt: T_scalingOptions;
     if (ps_bspline   in style.style) or
        (ps_cosspline in style.style) or
        (ps_straight  in style.style) then drawStraightLines;
+    {$ifdef debugMode}
+    writeln('     -- plot execution: ',GetTickCount64-startTicks,' ticks for ',length(screenRow),' points');
+    {$endif}
 
   end;
 
