@@ -25,6 +25,8 @@ end;
 main(...)->begin
   local timedExes:=BUILDS.map({$B['canBuild'] ? $B['targetDest'] : void})
                          .filter({$t.fileExists})
+                         .|(files('target\Win64\*'))
+                         .unique
                          .each(target,[target,timedExecute(target,...)]);
   barPlot(timedExes.getInner(0),timedExes.getInner(1),100).print;
 end;

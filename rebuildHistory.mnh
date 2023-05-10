@@ -21,10 +21,10 @@ end;
 
 build(tag)->begin
   writeFileLines('core\res_version.inc',
-    ["CODE_HASH='x';",
+    ["CODE_HASH=xx_"+escapePascal(tag)+"_xx;",
      'BUILD_NUMBER=1;',
      "VERSION='"&tag&"';"]);
-  writeFileLines('core\code_hash.inc',["CODE_HASH='xxxxxxxx';"]);
+  writeFileLines('core\code_hash.inc',["CODE_HASH=xx_"+escapePascal(tag)+"_xx;"]);
   writeFileLines('core\build_number.inc',['BUILD_NUMBER=0;']);
   myBuilds.each(b,begin
     fileExists(b['compilate']) ? deleteFile(b['compilate']) : void;
