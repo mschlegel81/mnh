@@ -18,21 +18,6 @@ TYPE
   P_point = ^T_point;
   FUNCTION pointOf(CONST x,y:double):T_point; inline;
 TYPE
-  //TODO:        Make T_dataRow abstract
-  //Subclasses:  1 NumericList
-  //               direct
-  //               thinned out
-  //               spline interpolated
-  //               bezier interpolated
-  //             2 NumericLists
-  //               direct
-  //               thinned out
-  //               spline interpolated
-  //               bezier interpolated
-  //             expression -> Numeric         (if not expression.referencesAnyUserPackage)
-  //             expression -> NumericList(2)  (if not expression.referencesAnyUserPackage)
-  //Challenge:   find bounding box
-  //TODO: Overhaul plot serialization based on T_datarow sub types
   T_dataRow = object
     private
       dat:P_point;
@@ -49,9 +34,9 @@ TYPE
       FUNCTION toNewLiteralForExport(CONST literalRecycler:P_literalRecycler):P_listLiteral;
   end;
 
-  T_rowToPaint = array of record
-    point:TPoint;
-    valid:boolean;
+  T_rowToPaintArr = record
+    lineStrips :array of array of TPoint;
+    polygons   :array of array of TPoint;
   end;
 
   T_boundingBox = array['x'..'y', 0..1] of double;
@@ -113,7 +98,7 @@ TYPE
 
     PROCEDURE setDefaults;
     PROCEDURE updateForPlot(CONST Canvas:TBGRACanvas; CONST primitives:T_plotPrimitiveList; VAR grid:T_ticInfos);
-    FUNCTION transformRow(CONST row:T_dataRow; CONST styles:T_plotStyles):T_rowToPaint;
+    FUNCTION transformRow(CONST row:T_dataRow; CONST yBaseLine:longint; CONST style:T_style):T_rowToPaintArr;
     FUNCTION getRefinementSteps(CONST row:T_dataRow; CONST samplesToDistribute:longint):T_arrayOfLongint;
     FUNCTION screenToReal(CONST x,y:integer):T_point;
     FUNCTION realToScreen(CONST p:T_point):T_point;
@@ -210,30 +195,27 @@ FUNCTION boundingBoxOf(CONST x0,y0,x1,y1:double):T_boundingBox;
     result['y',1]:=max(y0,y1);
   end;
 
-TYPE P_nonSkippingLineBuilder=^T_nonSkippingLineBuilder;
-     T_nonSkippingLineBuilder=object
-       row:T_rowToPaint;
-       fill:longint;
-       CONSTRUCTOR createNonSkippingLineBuilder;
-       DESTRUCTOR destroy; virtual;
-       FUNCTION get:T_rowToPaint; virtual;
-       PROCEDURE add(CONST nextPoint:T_point); virtual;
-       PROCEDURE skip; virtual;
-     end;
+TYPE P_lineBuilder=^T_lineBuilder;
 
-     P_lineBuilder=^T_lineBuilder;
-     T_lineBuilder=object(T_nonSkippingLineBuilder)
-       buffer:array of T_point;
+     { T_lineBuilder }
+
+     T_lineBuilder=object
+       row:T_rowToPaintArr;
+       rowFill:longint;
+       buffer:array of TPoint;
        bufferFill:longint;
-       takeNext:boolean;
        CONSTRUCTOR createLineBuilder;
        DESTRUCTOR destroy; virtual;
-       FUNCTION get:T_rowToPaint; virtual;
+       FUNCTION get:T_rowToPaintArr; virtual;
        PROCEDURE add(CONST nextPoint:T_point); virtual;
-       PROCEDURE skip; virtual;
+       FUNCTION skip:boolean; virtual;
+       FUNCTION newInstance:P_lineBuilder; virtual;
      end;
 
      P_bSplineBuilder=^T_bSplineBuilder;
+
+     { T_bSplineBuilder }
+
      T_bSplineBuilder=object(T_lineBuilder)
        toApproximate:array of T_point;
        approxFill   :longint;
@@ -241,12 +223,16 @@ TYPE P_nonSkippingLineBuilder=^T_nonSkippingLineBuilder;
        PROCEDURE flush;
        CONSTRUCTOR createBSplineBuilder;
        DESTRUCTOR destroy; virtual;
-       FUNCTION get:T_rowToPaint; virtual;
+       FUNCTION get:T_rowToPaintArr; virtual;
        PROCEDURE add(CONST nextPoint:T_point); virtual;
-       PROCEDURE skip; virtual;
+       FUNCTION skip:boolean; virtual;
+       FUNCTION newInstance:P_lineBuilder; virtual;
      end;
 
      P_cSplineBuilder=^T_cSplineBuilder;
+
+     { T_cSplineBuilder }
+
      T_cSplineBuilder=object(T_lineBuilder)
        toInterpolate:array of T_point;
        interpFill:longint;
@@ -254,9 +240,26 @@ TYPE P_nonSkippingLineBuilder=^T_nonSkippingLineBuilder;
        PROCEDURE flush;
        CONSTRUCTOR createCSplineBuilder;
        DESTRUCTOR destroy; virtual;
-       FUNCTION get:T_rowToPaint; virtual;
+       FUNCTION get:T_rowToPaintArr; virtual;
        PROCEDURE add(CONST nextPoint:T_point); virtual;
-       PROCEDURE skip; virtual;
+       FUNCTION skip:boolean; virtual;
+       FUNCTION newInstance:P_lineBuilder; virtual;
+     end;
+
+     P_tubeBuilder=^T_tubeBuilder;
+
+     { T_tubeBuilder }
+
+     T_tubeBuilder=object(T_lineBuilder)
+       builders:array [0..1] of P_lineBuilder;
+       tgt:byte;
+
+       CONSTRUCTOR createTubeBuilder(CONST baseBuilder:P_lineBuilder);
+       DESTRUCTOR destroy; virtual;
+       FUNCTION get:T_rowToPaintArr; virtual;
+       PROCEDURE add(CONST nextPoint:T_point); virtual;
+       FUNCTION skip:boolean; virtual;
+       FUNCTION newInstance:P_lineBuilder; virtual;
      end;
 
 FUNCTION pointOf(CONST x,y:double):T_point;
@@ -281,6 +284,77 @@ OPERATOR -(CONST x,y:T_point):T_point;
   begin
     result[0]:=x[0]-y[0];
     result[1]:=x[1]-y[1];
+  end;
+
+{ T_tubeBuilder }
+
+CONSTRUCTOR T_tubeBuilder.createTubeBuilder(CONST baseBuilder: P_lineBuilder);
+  begin
+    builders[0]:=baseBuilder;
+    builders[1]:=baseBuilder^.newInstance;
+    tgt:=0;
+  end;
+
+DESTRUCTOR T_tubeBuilder.destroy;
+  begin
+    dispose(builders[0],destroy);
+    dispose(builders[1],destroy);
+    inherited;
+  end;
+
+FUNCTION T_tubeBuilder.get: T_rowToPaintArr;
+  begin
+    skip;
+    setLength(row.lineStrips,rowFill);
+    result:=row;
+  end;
+
+PROCEDURE T_tubeBuilder.add(CONST nextPoint: T_point);
+  begin
+    builders[tgt]^.add(nextPoint);
+    tgt:=1-tgt;
+  end;
+
+FUNCTION T_tubeBuilder.skip:boolean;
+  VAR i,k:longint;
+      j:longint=0;
+  begin
+    if builders[0]^.skip and builders[1]^.skip then begin
+
+      if rowFill+1>=length(row.lineStrips) then setLength(row.lineStrips,round(length(row.lineStrips)*1.2)+2);
+
+      k:=length(row.polygons);
+      setLength(row.polygons,k+1);
+      setLength(row.polygons[k],length(builders[0]^.row.lineStrips[0])+
+                                length(builders[1]^.row.lineStrips[0]));
+
+      setLength(row.lineStrips[rowFill],length(builders[0]^.row.lineStrips[0]));
+      for i:=0 to length(row.lineStrips[rowFill])-1 do begin
+        row.lineStrips[rowFill][i]:=builders[0]^.row.lineStrips[0][i];
+        row.polygons[k][j]:=builders[0]^.row.lineStrips[0][i];
+        inc(j);
+      end;
+      inc(rowFill);
+
+      setLength(row.lineStrips[rowFill],length(builders[1]^.row.lineStrips[0]));
+      for i:=0 to length(row.lineStrips[rowFill])-1 do row.lineStrips[rowFill][i]:=builders[1]^.row.lineStrips[0][i];
+      for i:=length(row.lineStrips[rowFill])-1 downto 0 do begin
+        row.polygons[k][j]:=builders[1]^.row.lineStrips[0][i];
+        inc(j);
+      end;
+      inc(rowFill);
+
+      result:=true;
+    end else result:=false;
+    builders[0]^.rowFill:=0; builders[0]^.bufferFill:=0;
+    builders[1]^.rowFill:=0; builders[1]^.bufferFill:=0;
+
+    tgt:=1-tgt;
+  end;
+
+FUNCTION T_tubeBuilder.newInstance: P_lineBuilder;
+  begin
+    new(P_tubeBuilder(result),createTubeBuilder(builders[0]^.newInstance));
   end;
 
 CONSTRUCTOR T_rasterImage.create(CONST scale_,offsetX_,offsetY_:double);
@@ -443,6 +517,7 @@ PROCEDURE T_bSplineBuilder.flush;
   VAR support:array[0..3] of T_point;
       i,j:longint;
   begin
+    //TODO: add only points if not "too close"
     if approxFill=1
     then inherited add(toApproximate[0])
     else if approxFill=2 then begin
@@ -472,6 +547,7 @@ PROCEDURE T_cSplineBuilder.flush;
       t:double;
       cub0,cub1, off,lin :T_point;
   begin
+    //TODO: add only points if not "too close"
     if interpFill =1
     then inherited add(toInterpolate[0])
     else if interpFill=2 then begin
@@ -509,18 +585,13 @@ PROCEDURE T_cSplineBuilder.flush;
     interpFill:=0;
   end;
 
-CONSTRUCTOR T_nonSkippingLineBuilder.createNonSkippingLineBuilder;
-  begin
-    setLength(row,0);
-    fill:=0;
-  end;
-
 CONSTRUCTOR T_lineBuilder.createLineBuilder;
   begin
-    inherited createNonSkippingLineBuilder;
     setLength(buffer,100);
     bufferFill:=0;
-    takeNext:=true;
+    setLength(row.lineStrips,0);
+    setLength(row.polygons  ,0);
+    rowFill:=0;
   end;
 
 CONSTRUCTOR T_bSplineBuilder.createBSplineBuilder;
@@ -537,9 +608,6 @@ CONSTRUCTOR T_cSplineBuilder.createCSplineBuilder;
     interpFill:=0;
   end;
 
-DESTRUCTOR T_nonSkippingLineBuilder.destroy;
-  begin fill:=0; end;
-
 DESTRUCTOR T_bSplineBuilder.destroy;
   begin
     setLength(toApproximate,0);
@@ -553,98 +621,35 @@ DESTRUCTOR T_cSplineBuilder.destroy;
   end;
 
 DESTRUCTOR T_lineBuilder.destroy;
-  begin setLength(buffer,0); inherited destroy; end;
+  begin setLength(buffer,0); end;
 
-FUNCTION T_nonSkippingLineBuilder.get: T_rowToPaint;
+FUNCTION T_lineBuilder.get: T_rowToPaintArr;
   begin
-    if (fill>0) and not(row[fill-1].valid)
-    then setLength(row,fill-1)
-    else setLength(row,fill);
+    if bufferFill>0 then skip;
+    setLength(row.lineStrips,rowFill);
     result:=row;
   end;
 
-FUNCTION T_lineBuilder.get: T_rowToPaint;
-  begin
-    if bufferFill>0 then skip;
-    result:=inherited get;
-  end;
-
-FUNCTION T_bSplineBuilder.get: T_rowToPaint;
+FUNCTION T_bSplineBuilder.get: T_rowToPaintArr;
   begin
     flush;
     result:=inherited get;
   end;
 
-FUNCTION T_cSplineBuilder.get: T_rowToPaint;
+FUNCTION T_cSplineBuilder.get: T_rowToPaintArr;
   begin
     flush;
     result:=inherited get;
-  end;
-
-PROCEDURE T_nonSkippingLineBuilder.add(CONST nextPoint: T_point);
-  begin
-    if fill>=length(row) then setLength(row,round(length(row)*1.2)+1);
-    row[fill].point:=point(round(nextPoint[0]),round(nextPoint[1]));
-    row[fill].valid:=true;
-    inc(fill);
   end;
 
 PROCEDURE T_lineBuilder.add(CONST nextPoint: T_point);
-  FUNCTION isHeightLesserThanOnePixel(CONST q:T_point):boolean; inline;
-    VAR a,b:T_point;
-        t:double;
-    begin
-      a:=nextPoint-buffer[0];
-      b:=q    -buffer[0];
-      t:=(a[0]*b[0]+a[1]*b[1])/(sqr(a[0])+sqr(a[1]));
-      result:=sqr(a[0]*t-b[0])+
-              sqr(a[1]*t-b[1])<0.1;
-    end;
-
-  VAR i:longint;
-      canIgnore:boolean=true;
+  VAR p:TPoint;
   begin
-    if takeNext then begin
-      //The first nextPoint and every nextPoint after a skipped nextPoint is taken directly
-      if fill>=length(row) then setLength(row,round(length(row)*1.2)+1);
-      row[fill].point:=point(round(nextPoint[0]),round(nextPoint[1]));
-      row[fill].valid:=true;
-      inc(fill);
-      buffer[0]:=nextPoint;
-      bufferFill:=1;
-      takeNext:=false;
-      exit;
-    end;
-    if (bufferFill<2) then begin
-      //The second nextPoint goes directly to the buffer
-      buffer[bufferFill]:=nextPoint;
-      inc(bufferFill);
-      exit;
-    end;
-    //Check if the first nextPoint in the buffer and the next nextPoint to be added are
-    //suitable to represent all the points in between
-    for i:=1 to bufferFill-1 do canIgnore:=canIgnore and isHeightLesserThanOnePixel(buffer[i]);
-    if canIgnore then begin
-      //All points can be represented.
-      // - add next nextPoint to buffer
-      if bufferFill>=length(buffer) then setLength(buffer,round(length(buffer)*1.2)+1);
-      buffer[bufferFill]:=nextPoint;
-      inc(bufferFill);
-    end else begin
-      //The points cannot be represented
-      //  - add the last nextPoint of the buffer to the output row
-      //  - the last nextPoint of the buffer becomes the new first nextPoint
-      //  - the next nextPoint to be added becomes the second nextPoint in the buffer
-      if fill>=length(row) then setLength(row,round(length(row)*1.2)+1);
-      row[fill].point:=point(round(buffer[bufferFill-1][0]),round(buffer[bufferFill-1][1]));
-      row[fill].valid:=true;
-      inc(fill);
-      buffer[0]:=buffer[bufferFill-1];
-      buffer[0][0]:=round(buffer[0][0]);
-      buffer[0][1]:=round(buffer[0][1]);
-      buffer[1]:=nextPoint;
-      bufferFill:=2;
-    end;
+    if bufferFill>=length(buffer) then setLength(buffer,round(length(buffer)*1.2)+1);
+    p.X:=round(nextPoint[0]);
+    p.Y:=round(nextPoint[1]);
+    buffer[bufferFill]:=p;
+    inc(bufferFill);
   end;
 
 PROCEDURE T_bSplineBuilder.add(CONST nextPoint: T_point);
@@ -661,40 +666,44 @@ PROCEDURE T_cSplineBuilder.add(CONST nextPoint: T_point);
     inc(interpFill);
   end;
 
-PROCEDURE T_nonSkippingLineBuilder.skip;
-  begin
-    if (fill>0) and not(row[fill-1].valid) then exit;
-    if fill>=length(row) then setLength(row,round(length(row)*1.2)+1);
-    row[fill].valid:=false;
-    inc(fill);
-  end;
-
-PROCEDURE T_lineBuilder.skip;
+FUNCTION T_lineBuilder.skip: boolean;
+  VAR i:longint;
   begin
     if bufferFill>0 then begin
-      if fill+1>=length(row) then setLength(row,round(length(row)*1.2)+2);
-      row[fill].point:=point(round(buffer[bufferFill-1][0]),
-                             round(buffer[bufferFill-1][1]));
-      row[fill].valid:=true;
-      inc(fill);
+      if rowFill>=length(row.lineStrips) then setLength(row.lineStrips,round(length(row.lineStrips)*1.2)+2);
+      setLength(row.lineStrips[rowFill],bufferFill);
+      for i:=0 to bufferFill-1 do row.lineStrips[rowFill][i]:=buffer[i];
+      inc(rowFill);
       bufferFill:=0;
-      //add one more invalid point
-      row[fill].valid:=false;
-      inc(fill);
-    end else inherited skip;
-    takeNext:=true;
+      result:=true;
+    end else result:=false;
   end;
 
-PROCEDURE T_bSplineBuilder.skip;
+FUNCTION T_lineBuilder.newInstance: P_lineBuilder;
   begin
-    flush;
-    inherited skip;
+    new(result,createLineBuilder);
   end;
 
-PROCEDURE T_cSplineBuilder.skip;
+FUNCTION T_bSplineBuilder.skip: boolean;
   begin
     flush;
-    inherited skip;
+    result:=inherited skip;
+  end;
+
+FUNCTION T_bSplineBuilder.newInstance: P_lineBuilder;
+  begin
+    new(P_bSplineBuilder(result),createBSplineBuilder);
+  end;
+
+FUNCTION T_cSplineBuilder.skip: boolean;
+  begin
+    flush;
+    result:=inherited skip;
+  end;
+
+FUNCTION T_cSplineBuilder.newInstance: P_lineBuilder;
+  begin
+    new(P_cSplineBuilder(result),createCSplineBuilder);
   end;
 
 FUNCTION T_dataRow.getPoint(CONST index: longint): T_point;
@@ -807,8 +816,8 @@ PROCEDURE T_customText.render(CONST opt: T_scalingOptions;
 
     if absolutePosition then begin
       try
-        x:=              round(p[0]*target.width+opt.axisTrafo['x'].screenMin);
-        y:=target.height-round(p[1]*target.height);
+        x:=round(opt.axisTrafo['x'].screenMin+p[0]*opt.axisTrafo['x'].screenExtend);
+        y:=round(opt.axisTrafo['y'].screenMin-p[1]*opt.axisTrafo['y'].screenExtend);
       except
         exit;
       end;
@@ -1276,52 +1285,92 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST primit
     end;
   end;
 
-FUNCTION T_scalingOptions.transformRow(CONST row: T_dataRow; CONST styles:T_plotStyles): T_rowToPaint;
-  VAR i:longint;
+FUNCTION T_scalingOptions.transformRow(CONST row: T_dataRow; CONST yBaseLine:longint; CONST style:T_style): T_rowToPaintArr;
+  FUNCTION isPointValid(CONST p:T_point; OUT transformed:T_point):boolean;
+    begin
+      transformed[0]:=axisTrafo['x'].apply(p[0]);
+      result:=not(isNan(transformed[0])) and (transformed[0]>=-2147483648) and (transformed[0]<=2147483647);
+      if result then begin
+        transformed[1]:=axisTrafo['y'].apply(p[1]);
+        result:=not(isNan(transformed[1])) and (transformed[1]>=-2147483648) and (transformed[1]<=2147483647);
+      end;
+    end;
+
+  VAR i,j:longint;
+      prev:T_point;
+      prevValid:boolean=false;
       tr:T_point=(Nan,Nan);
       pointIsValid:boolean;
-      lineBuilder:P_nonSkippingLineBuilder;
-      otherTubeRow:T_dataRow;
+      lineBuilder:P_lineBuilder;
   begin
-    if ps_bspline   in styles then new(P_bSplineBuilder        (lineBuilder),createBSplineBuilder) else
-    if ps_cosspline in styles then new(P_cSplineBuilder        (lineBuilder),createCSplineBuilder) else
-                                   new(P_nonSkippingLineBuilder(lineBuilder),createNonSkippingLineBuilder);
-    if ps_tube in styles then begin
-      otherTubeRow.init();
-      for i:=0 to row.size-1 do
-      if odd(i) then otherTubeRow[otherTubeRow.size]:=row[i] else begin
-        tr[0]:=axisTrafo['x'].apply(row[i][0]);
-        pointIsValid:=not(isNan(tr[0])) and (tr[0]>=-2147483648) and (tr[0]<=2147483647);
-        if pointIsValid then begin
-          tr[1]:=axisTrafo['y'].apply(row[i][1]);
-          pointIsValid:=not(isNan(tr[1])) and (tr[1]>=-2147483648) and (tr[1]<=2147483647);
-        end;
-        if pointIsValid then lineBuilder^.add(tr);
+    case style.builderStyle of
+      bs_bSpline : new(P_bSplineBuilder(lineBuilder),createBSplineBuilder);
+      bs_cSpline : new(P_cSplineBuilder(lineBuilder),createCSplineBuilder);
+     else          new(P_lineBuilder   (lineBuilder),createLineBuilder);
+    end;
+    if style.feedStyle=fs_tube then  new(P_tubeBuilder(lineBuilder),createTubeBuilder(lineBuilder));
+
+    case style.feedStyle of
+      fs_direct,fs_tube : for i:=0 to row.size-1 do if isPointValid(row[i],tr) then lineBuilder^.add(tr) else lineBuilder^.skip;
+      fs_stepLeft : for i:=0 to row.size-1 do begin
+        pointIsValid:=isPointValid(row[i],tr);
+        if pointIsValid and prevValid then begin
+          lineBuilder^.add(pointOf(tr[0],prev[1])); //move x first
+          lineBuilder^.add(tr);
+        end else lineBuilder^.skip;
+        prev:=tr;
+        prevValid:=pointIsValid;
       end;
-      lineBuilder^.skip;
-      for i:=otherTubeRow.size-1 downto 0 do begin
-        tr[0]:=axisTrafo['x'].apply(otherTubeRow[i][0]);
-        pointIsValid:=not(isNan(tr[0])) and (tr[0]>=-2147483648) and (tr[0]<=2147483647);
-        if pointIsValid then begin
-          tr[1]:=axisTrafo['y'].apply(otherTubeRow[i][1]);
-          pointIsValid:=not(isNan(tr[1])) and (tr[1]>=-2147483648) and (tr[1]<=2147483647);
-        end;
-        if pointIsValid then lineBuilder^.add(tr);
+      fs_stepRight: for i:=0 to row.size-1 do begin
+        pointIsValid:=isPointValid(row[i],tr);
+        if pointIsValid and prevValid then begin
+          lineBuilder^.add(pointOf(prev[0],tr[1])); //move y first
+          lineBuilder^.add(tr);
+        end else lineBuilder^.skip;
+        prev:=tr;
+        prevValid:=pointIsValid;
       end;
-      otherTubeRow.free;
-    end else begin
-      for i:=0 to row.size-1 do begin
-        tr[0]:=axisTrafo['x'].apply(row[i][0]);
-        pointIsValid:=not(isNan(tr[0])) and (tr[0]>=-2147483648) and (tr[0]<=2147483647);
-        if pointIsValid then begin
-          tr[1]:=axisTrafo['y'].apply(row[i][1]);
-          pointIsValid:=not(isNan(tr[1])) and (tr[1]>=-2147483648) and (tr[1]<=2147483647);
+      fs_pair: begin
+        i:=0;
+        while i<row.size-1 do begin
+          if isPointValid(row[i],prev) and isPointValid(row[i+1],tr)
+          then begin
+            lineBuilder^.add(prev);
+            lineBuilder^.add(tr);
+            lineBuilder^.skip;
+          end;
+          inc(i,2);
         end;
-        if pointIsValid then lineBuilder^.add(tr)
-                        else lineBuilder^.skip;
+      end;
+      fs_bar: for i:=0 to row.size-1 do begin
+        pointIsValid:=isPointValid(row[i],tr);
+        if pointIsValid and prevValid then begin
+          lineBuilder^.add(pointOf(prev[0]*0.95+tr[0]*0.05,yBaseLine));
+          lineBuilder^.add(pointOf(prev[0]*0.05+tr[0]*0.95,tr[1]    ));
+          lineBuilder^.skip;
+        end;
+        prev:=tr;
+        prevValid:=pointIsValid;
       end;
     end;
     result:=lineBuilder^.get;
+
+    if style.polygonStyle=ps_direct then begin
+      result.polygons:=result.lineStrips;
+      setLength(result.lineStrips,0);
+    end;
+    if (style.polygonStyle=ps_additional) and (style.feedStyle<>fs_tube) then begin
+      setLength(result.polygons,length(result.lineStrips));
+      for i:=0 to length(result.polygons)-1 do begin
+        setLength(result.polygons[i],length(result.lineStrips[i])+2);
+        result.polygons[i][0].X:=result.lineStrips[i][length(result.lineStrips[i])-1].X;
+        result.polygons[i][0].Y:=yBaseLine;
+        result.polygons[i][1].X:=result.lineStrips[i][0].X;
+        result.polygons[i][1].Y:=yBaseLine;
+        for j:=0 to length(result.lineStrips[i])-1 do result.polygons[i][j+2]:=result.lineStrips[i][j];
+      end;
+    end;
+
     dispose(lineBuilder,destroy);
   end;
 
@@ -1484,125 +1533,39 @@ PROCEDURE T_sampleRow.updateBoundingBox(CONST scaling: T_scalingOptions;
 
 PROCEDURE T_sampleRow.render(CONST opt: T_scalingOptions; CONST screenBox: T_boundingBox; CONST yBaseLine: longint; CONST target: TBGRACanvas);
   VAR scaleAndColor:T_scaleAndColor;
-      screenRow:T_rowToPaint;
-      opaqueBrush:boolean;
-
-  PROCEDURE drawCustomQuad(CONST x0,y0,x1,y1,x2,y2,x3,y3:longint; CONST withBorder:boolean);
-    VAR points:array[0..4] of TPoint;
-    begin
-      if (scaleAndColor.solidStyle=bsClear) and not(withBorder) then exit;
-      target.Brush.BGRAColor:=scaleAndColor.solidColor;
-      target.Brush.style:=scaleAndColor.solidStyle;
-      points[0].x:=x0; points[0].y:=y0;
-      points[1].x:=x1; points[1].y:=y1;
-      points[2].x:=x2; points[2].y:=y2;
-      points[3].x:=x3; points[3].y:=y3;
-      points[4].x:=x0; points[4].y:=y0;
-      if not(withBorder) then target.Pen.style:=psClear;
-      target.Polygon(points);
-      if not(withBorder) then target.Pen.style:=psSolid;
-    end;
-
-  PROCEDURE drawPatternRect(CONST x0, y0, x1, y1: longint; CONST withBorder:boolean);
-    begin
-      drawCustomQuad(x0,y0,
-                     x0,yBaseLine,
-                     x1,yBaseLine,
-                     x1,y1,withBorder);
-    end;
+      screenRow:T_rowToPaintArr;
 
   PROCEDURE drawStraightLines;
     VAR i:longint;
-        last:TPoint=(x:0;y:0);
-        lastWasValid:boolean;
     begin
       target.Pen.style:=psSolid;
       target.Pen.BGRAColor:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecRound;
-      lastWasValid:=false;
-      for i:=0 to length(screenRow)-1 do begin
-        if screenRow[i].valid then begin
-          if lastWasValid then begin
-            target.LineTo  (screenRow[i].point);
-            if opaqueBrush then drawPatternRect(last.x, last.y, screenRow[i].point.x, screenRow[i].point.y,false);
-          end else
-            target.MoveTo(screenRow[i].point);
-          last:=screenRow[i].point;
-        end;
-        lastWasValid:=screenRow[i].valid;
-      end;
+      for i:=0 to length(screenRow.lineStrips)-1 do
+        target.Polyline(screenRow.lineStrips[i]);
     end;
 
-  PROCEDURE drawStepsLeft;
+  PROCEDURE drawPolygons;
     VAR i:longint;
-        last:TPoint=(x:0;y:0);
-        lastWasValid:boolean;
     begin
-      target.Pen.style:=psSolid;
-      target.Pen.BGRAColor:=scaleAndColor.lineColor;
-      target.Pen.width:=scaleAndColor.lineWidth;
-      target.Pen.EndCap:=pecRound;
-      lastWasValid:=false;
-      for i:=0 to length(screenRow)-1 do begin
-        if screenRow[i].valid then begin
-          if lastWasValid then begin
-            target.LineTo(last.x, screenRow[i].point.y);
-            target.LineTo(screenRow[i].point);
-            if opaqueBrush then drawPatternRect(last.x, screenRow[i].point.y, screenRow[i].point.x, screenRow[i].point.y,false);
-          end else target.MoveTo(screenRow[i].point);
-          last:=screenRow[i].point;
-        end;
-        lastWasValid:=screenRow[i].valid;
+      if length(screenRow.lineStrips)=0 then begin
+        target.Pen.style:=psSolid;
+        target.Pen.BGRAColor:=scaleAndColor.lineColor;
+        target.Pen.width:=scaleAndColor.lineWidth;
+        target.Pen.EndCap:=pecRound;
+      end else begin
+        target.Pen.style:=psClear;
       end;
-    end;
-
-  PROCEDURE drawStepsRight;
-    VAR i:longint;
-        last:TPoint=(x:0;y:0);
-        lastWasValid:boolean;
-    begin
-      target.Pen.style:=psSolid;
-      target.Pen.BGRAColor:=scaleAndColor.lineColor;
-      target.Pen.width:=scaleAndColor.lineWidth;
-      target.Pen.EndCap:=pecRound;
-      lastWasValid:=false;
-      for i:=0 to length(screenRow)-1 do begin
-        if screenRow[i].valid then begin
-          if lastWasValid then begin
-            target.LineTo(screenRow[i].point.x, last.y);
-            target.LineTo(screenRow[i].point);
-            if opaqueBrush then drawPatternRect(last.x, last.y, screenRow[i].point.x, last.y,false);
-          end else target.MoveTo(screenRow[i].point);
-          last:=screenRow[i].point;
-        end;
-        lastWasValid:=screenRow[i].valid;
-      end;
-    end;
-
-  PROCEDURE drawBars;
-    VAR i:longint;
-        last:TPoint=(x:0;y:0);
-        lastWasValid:boolean;
-    begin
-      target.Pen.style:=psSolid;
-      target.Pen.BGRAColor:=scaleAndColor.lineColor;
-      target.Pen.width:=scaleAndColor.lineWidth;
-      target.Pen.EndCap:=pecRound;
-      lastWasValid:=false;
-      for i:=0 to length(screenRow)-1 do begin
-        if screenRow[i].valid then begin
-          if lastWasValid then
-            drawPatternRect(round(last.x*0.95+screenRow[i].point.x*0.05), last.Y,
-                            round(last.x*0.05+screenRow[i].point.x*0.95), last.Y,scaleAndColor.lineWidth>0);
-          last:=screenRow[i].point;
-          lastWasValid:=screenRow[i].valid;
-        end;
-      end;
+      target.Brush.style:=scaleAndColor.solidStyle;
+      target.Brush.BGRAColor:=scaleAndColor.solidColor;
+      for i:=0 to length(screenRow.polygons)-1 do
+        target.Polygon(screenRow.polygons[i]);
     end;
 
   PROCEDURE drawBoxes;
     VAR i:longint;
+        withPen:boolean=false;
     begin
       if scaleAndColor.lineWidth<=0
       then target.Pen.style:=psClear
@@ -1611,20 +1574,21 @@ PROCEDURE T_sampleRow.render(CONST opt: T_scalingOptions; CONST screenBox: T_bou
         target.Pen.BGRAColor:=scaleAndColor.lineColor;
         target.Pen.width:=scaleAndColor.lineWidth;
         target.Pen.EndCap:=pecRound;
+        withPen:=true;
       end;
       target.Brush.BGRAColor:=scaleAndColor.solidColor;
       target.Brush.style:=scaleAndColor.solidStyle;
-      i:=0;
-      while i+1<length(screenRow) do begin
-        if screenRow[i  ].valid and
-           screenRow[i+1].valid and
-           intersect(screenBox,boundingBoxOf(screenRow[i].point.x, screenRow[i].point.y,screenRow[i+1].point.x, screenRow[i+1].point.y)) then begin
-          if scaleAndColor.lineWidth<=0
-          then target.FillRect (screenRow[i].point.x,screenRow[i].point.y,screenRow[i+1].point.x,screenRow[i+1].point.y)
-          else target.Rectangle(screenRow[i].point.x,screenRow[i].point.y,screenRow[i+1].point.x,screenRow[i+1].point.y);
-        end;
-        inc(i, 2);
-      end;
+      for i:=0 to length(screenRow.lineStrips)-1 do
+        if withPen
+        then target.Rectangle(screenRow.lineStrips[i][0].X,
+                             screenRow.lineStrips[i][0].Y,
+                             screenRow.lineStrips[i][1].X,
+                             screenRow.lineStrips[i][1].Y)
+        else target.FillRect(screenRow.lineStrips[i][0].X,
+                             screenRow.lineStrips[i][0].Y,
+                             screenRow.lineStrips[i][1].X,
+                             screenRow.lineStrips[i][1].Y);
+
     end;
 
   PROCEDURE drawEllipses;
@@ -1656,154 +1620,85 @@ PROCEDURE T_sampleRow.render(CONST opt: T_scalingOptions; CONST screenBox: T_bou
       target.Brush.BGRAColor:=scaleAndColor.solidColor;
       target.Brush.style:=scaleAndColor.solidStyle;
       i:=0;
-      while i+1<length(screenRow) do begin
-        if screenRow[i  ].valid and
-           screenRow[i+1].valid then
-          drawEllipse(screenRow[i  ].point.x, screenRow[i  ].point.y,
-                      screenRow[i+1].point.x, screenRow[i+1].point.y);
-        inc(i, 2);
+      for i:=0 to length(screenRow.lineStrips)-1 do begin
+        drawEllipse(screenRow.lineStrips[i][0].X,
+                    screenRow.lineStrips[i][0].Y,
+                    screenRow.lineStrips[i][1].X,
+                    screenRow.lineStrips[i][1].Y);
       end;
-      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psSolid;
-    end;
-
-  PROCEDURE drawTubes;
-    VAR i :longint=0;
-        k :longint=0;
-        polyBetween:array of TPoint=();
-        lastWasValid:boolean=false;
-    begin
-      target.Brush.BGRAColor:=scaleAndColor.solidColor;
-      target.Brush.style:=scaleAndColor.solidStyle;
-      target.Pen.style:=psClear;
-      if scaleAndColor.solidStyle<>bsClear then begin
-        setLength(polyBetween,length(screenRow));
-        for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
-          polyBetween[k]:=screenRow[i].point;
-          inc(k);
-        end;
-        setLength(polyBetween,k);
-        target.Polygon(polyBetween);
-      end;
-      target.Pen.style:=psSolid;
-      target.Pen.BGRAColor:=scaleAndColor.lineColor;
-      target.Pen.width:=scaleAndColor.lineWidth;
-      target.Pen.EndCap:=pecRound;
-      if scaleAndColor.lineWidth>0 then begin
-        for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
-          if lastWasValid then target.LineTo(screenRow[i].point)
-                          else target.MoveTo(screenRow[i].point);
-          lastWasValid:=true;
-        end else lastWasValid:=false;
-      end;
-    end;
-
-  PROCEDURE drawPolygons;
-    VAR points:array of TPoint;
-    PROCEDURE screenRowPoly(CONST i0,i1:longint); inline;
-      VAR i:longint;
-      begin
-        if (i0<0) or (i1<i0+1) then exit;
-        if scaleAndColor.solidStyle=bsClear then begin
-                             target.MoveTo(screenRow[i1].point);
-          for i:=i0 to i1 do target.LineTo(screenRow[i].point);
-        end else begin
-          setLength(points,i1-i0+1);
-          for i:=0 to i1-i0 do begin
-            points[i].x:=screenRow[i0+i].point.x;
-            points[i].y:=screenRow[i0+i].point.y;
-          end;
-          target.Polygon(points);
-        end;
-      end;
-
-    VAR i,j:longint;
-    begin
-      if (scaleAndColor.solidStyle=bsClear) and (scaleAndColor.lineWidth<=0) then exit;
-      target.Pen.style:=psSolid;
-      target.Pen.BGRAColor:=scaleAndColor.lineColor;
-      target.Pen.width:=scaleAndColor.lineWidth;
-      target.Pen.EndCap:=pecRound;
-      if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psClear;
-      target.Brush.BGRAColor:=scaleAndColor.solidColor;
-      target.Brush.style:=scaleAndColor.solidStyle;
-      j:=-1;
-      for i:=0 to length(screenRow)-1 do if not(screenRow[i].valid) then begin
-        if j>=0 then screenRowPoly(j,i-1);
-        j:=-1;
-      end else if j<0 then j:=i;
-      i:=length(screenRow)-1;
-      if j>=0 then screenRowPoly(j,i);
-      setLength(points,0);
       if (scaleAndColor.lineWidth<=0) then target.Pen.style:=psSolid;
     end;
 
   PROCEDURE drawPluses;
     VAR i:longint;
+        p:TPoint;
     begin
       target.Pen.style:=psSolid;
       target.Pen.BGRAColor:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecSquare;
-      for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
-        target.MoveTo(screenRow[i].point.x-scaleAndColor.symbolWidth,
-                      screenRow[i].point.y);
-        target.LineTo(screenRow[i].point.x+scaleAndColor.symbolWidth,
-                      screenRow[i].point.y);
-        target.MoveTo(screenRow[i].point.x,
-                      screenRow[i].point.y-scaleAndColor.symbolWidth);
-        target.LineTo(screenRow[i].point.x,
-                      screenRow[i].point.y+scaleAndColor.symbolWidth);
+      for i:=0 to length(screenRow.lineStrips)-1 do for p in screenRow.lineStrips[i] do begin
+        target.MoveTo(p.x-scaleAndColor.symbolWidth,
+                      p.y);
+        target.LineTo(p.x+scaleAndColor.symbolWidth,
+                      p.y);
+        target.MoveTo(p.x,
+                      p.y-scaleAndColor.symbolWidth);
+        target.LineTo(p.x,
+                      p.y+scaleAndColor.symbolWidth);
       end;
     end;
 
   PROCEDURE drawCrosses;
     VAR i:longint;
+        p:TPoint;
     begin
       target.Pen.style:=psSolid;
       target.Pen.BGRAColor:=scaleAndColor.lineColor;
       target.Pen.width:=scaleAndColor.lineWidth;
       target.Pen.EndCap:=pecSquare;
-      for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
-        target.MoveTo(screenRow[i].point.x-scaleAndColor.symbolRadius,
-                      screenRow[i].point.y-scaleAndColor.symbolRadius);
-        target.LineTo(screenRow[i].point.x+scaleAndColor.symbolRadius,
-                      screenRow[i].point.y+scaleAndColor.symbolRadius);
-        target.MoveTo(screenRow[i].point.x+scaleAndColor.symbolRadius,
-                      screenRow[i].point.y-scaleAndColor.symbolRadius);
-        target.LineTo(screenRow[i].point.x-scaleAndColor.symbolRadius,
-                      screenRow[i].point.y+scaleAndColor.symbolRadius);
+      for i:=0 to length(screenRow.lineStrips)-1 do for p in screenRow.lineStrips[i] do begin
+        target.MoveTo(p.x-scaleAndColor.symbolRadius,
+                      p.y-scaleAndColor.symbolRadius);
+        target.LineTo(p.x+scaleAndColor.symbolRadius,
+                      p.y+scaleAndColor.symbolRadius);
+        target.MoveTo(p.x+scaleAndColor.symbolRadius,
+                      p.y-scaleAndColor.symbolRadius);
+        target.LineTo(p.x-scaleAndColor.symbolRadius,
+                      p.y+scaleAndColor.symbolRadius);
       end;
     end;
 
   PROCEDURE drawDots;
     VAR i:longint;
+        p:TPoint;
     begin
       target.Pen.style:=psClear;
       target.Brush.style:=bsSolid;
       target.Brush.BGRAColor:=scaleAndColor.solidColor;
       if scaleAndColor.symbolWidth>=1 then begin
-        for i:=0 to length(screenRow)-1 do if screenRow[i].valid then
-          target.Ellipse(screenRow[i].point.x-scaleAndColor.symbolWidth,
-                         screenRow[i].point.y-scaleAndColor.symbolWidth,
-                         screenRow[i].point.x+scaleAndColor.symbolWidth,
-                         screenRow[i].point.y+scaleAndColor.symbolWidth);
+        for i:=0 to length(screenRow.lineStrips)-1 do for p in screenRow.lineStrips[i] do
+          target.Ellipse(p.x-scaleAndColor.symbolWidth,
+                         p.y-scaleAndColor.symbolWidth,
+                         p.x+scaleAndColor.symbolWidth+1,
+                         p.y+scaleAndColor.symbolWidth+1);
       end else begin
-        for i:=0 to length(screenRow)-1 do if screenRow[i].valid then
-          target.Pixels[screenRow[i].point.x,
-                        screenRow[i].point.y]:=scaleAndColor.lineColor;
+        for i:=0 to length(screenRow.lineStrips)-1 do for p in screenRow.lineStrips[i] do
+          target.Pixels[p.x,p.y]:=scaleAndColor.lineColor;
       end;
     end;
 
   PROCEDURE drawImpulses;
     VAR i:longint;
+        p: TPoint;
     begin
       target.Pen.style     :=psSolid;
       target.Pen.BGRAColor:=scaleAndColor.lineColor;
       target.Pen.width    :=scaleAndColor.lineWidth;
       target.Pen.EndCap   :=pecSquare;
-      for i:=0 to length(screenRow)-1 do if screenRow[i].valid then begin
-        target.MoveTo(screenRow[i].point.x, yBaseLine     );
-        target.LineTo(screenRow[i].point);
+      for i:=0 to length(screenRow.lineStrips)-1 do for p in screenRow.lineStrips[i] do begin
+        target.MoveTo(p.x, yBaseLine     );
+        target.LineTo(p);
       end;
     end;
 
@@ -1815,29 +1710,26 @@ PROCEDURE T_sampleRow.render(CONST opt: T_scalingOptions; CONST screenBox: T_bou
     {$ifdef debugMode}
     startTicks:=GetTickCount64;
     {$endif}
-    screenRow:=opt.transformRow(sample,style.style);
+    screenRow:=opt.transformRow(sample,yBaseLine,style);
     {$ifdef debugMode}
     writeln('     -- row transformation: ',GetTickCount64-startTicks,' ticks');
     startTicks:=GetTickCount64;
     {$endif}
     scaleAndColor:=style.getLineScaleAndColor(target.width,target.height);
-    opaqueBrush:=scaleAndColor.solidStyle<>bsClear;
-    if ps_stepLeft  in style.style then drawStepsLeft;
-    if ps_stepRight in style.style then drawStepsRight;
-    if ps_bar       in style.style then drawBars;
-    if ps_box       in style.style then drawBoxes;
-    if ps_ellipse   in style.style then drawEllipses;
-    if ps_tube      in style.style then drawTubes;
-    if ps_polygon   in style.style then drawPolygons;
-    if ps_dot       in style.style then drawDots;
-    if ps_plus      in style.style then drawPluses;
-    if ps_cross     in style.style then drawCrosses;
-    if ps_impulse   in style.style then drawImpulses;
-    if (ps_bspline   in style.style) or
-       (ps_cosspline in style.style) or
-       (ps_straight  in style.style) then drawStraightLines;
+
+    if ds_continuous in style.drawStyles then begin
+      drawPolygons;
+      drawStraightLines;
+    end;
+    if ds_plus     in style.drawStyles then drawPluses;
+    if ds_cross    in style.drawStyles then drawCrosses;
+    if ds_dot      in style.drawStyles then drawDots;
+    if ds_impulse  in style.drawStyles then drawImpulses;
+    if ds_box      in style.drawStyles then drawBoxes;
+    if ds_ellipse  in style.drawStyles then drawEllipses;
+
     {$ifdef debugMode}
-    writeln('     -- plot execution: ',GetTickCount64-startTicks,' ticks for ',length(screenRow),' points');
+    writeln('     -- plot execution: ',GetTickCount64-startTicks,' in style: "',style.toString,'"');
     {$endif}
 
   end;

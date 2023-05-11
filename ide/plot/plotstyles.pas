@@ -2,26 +2,35 @@ UNIT plotstyles;
 INTERFACE
 USES sysutils,math,FPCanvas,BGRABitmapTypes;
 TYPE
-  T_plotStyle=(ps_none,
-               ps_straight,
-               ps_bspline,
-               ps_cosspline,
-               ps_stepLeft,
-               ps_stepRight,
-               ps_filled,
-               ps_fillSolid,
-               ps_bar,
-               ps_box,
-               ps_tube,
-               ps_dot,
-               ps_plus,
-               ps_cross,
-               ps_impulse,
-               ps_polygon,
-               ps_ellipse);
-  T_plotStyles=set of T_plotStyle;
+  T_feedStyle   =(fs_direct, fs_stepLeft, fs_stepRight, fs_tube, fs_pair, fs_bar);
+  T_builderStyle=(bs_straight, bs_bSpline, bs_cSpline);
+  T_polygonStyle=(ps_noPoly, ps_direct, ps_additional);
+  T_brushStyle  =(bs_noBrush, bs_solidBrush, bs_transparentBrush);
+  T_drawStyle   =(ds_continuous, ds_plus, ds_cross, ds_dot, ds_impulse, ds_box, ds_ellipse);
+  T_drawStyles  =set of T_drawStyle;
+
   T_colorChannel = (cc_red, cc_green, cc_blue,cc_alpha);
   T_color = array[T_colorChannel] of byte;
+
+  T_plotStyle=(ps_none,               // defaults to ps_straight
+               ps_straight,           // fs_direct    + bs_straight + ps_*                     + bs_*
+               ps_bspline,            // fs_*         + bs_bSpline  + ps_*                     + bs_*
+               ps_cosspline,          // fs_*         + bs_cSpline  + ps_*                     + bs_*
+               ps_stepLeft,           // fs_stepLeft  + bs_straight + ps_*                     + bs_*
+               ps_stepRight,          // fs_stepRight + bs_straight + ps_*                     + bs_*
+               ps_filled,             // fs_*         + bs_*        + (default to ps_baseLine) + bs_solidBrush
+               ps_fillSolid,          // fs_*         + bs_*        + (default to ps_baseLine) + bs_transparentBrush
+               ps_bar,                // ?
+               ps_box,                // ?
+               ps_tube,               // fs_tube      + bs_*        + ps_*                     + bs_*
+               ps_dot,                //
+               ps_plus,               //
+               ps_cross,              //
+               ps_impulse,            //
+               ps_polygon,            //
+               ps_ellipse);           // ?
+
+  T_plotStyles=set of T_plotStyle;
 
 CONST
   C_lineStyles:T_plotStyles=[ps_straight..ps_stepRight];
@@ -54,20 +63,25 @@ TYPE
     solidStyle  :TFPBrushStyle;
   end;
 
-  T_styleTemplateDefault =(std_defaultColor);
-  T_styleTemplateDefaults=set of T_styleTemplateDefault;
   T_style = object
     private
+      defaultColor:boolean       ;
+      style:T_plotStyles;
       PROCEDURE parseStyle(CONST styleString: ansistring);
       PROCEDURE setDefaults(CONST index:longint);
     public
-      defaults:T_styleTemplateDefaults;
-      style: T_plotStyles;
       color: T_color;
       styleModifier: double;
+
       PROCEDURE init();
       FUNCTION toString:ansistring;
       FUNCTION getLineScaleAndColor(CONST xRes,yRes:longint):T_scaleAndColor;
+
+      FUNCTION feedStyle   :T_feedStyle   ;
+      FUNCTION builderStyle:T_builderStyle;
+      FUNCTION polygonStyle:T_polygonStyle ;
+      FUNCTION brushStyle  :T_brushStyle  ;
+      FUNCTION drawStyles  :T_drawStyles  ;
   end;
 
   T_arrayOfStyle = array of T_style;
@@ -117,8 +131,8 @@ CONST C_defaultColor: array[0..7] of record
 
 PROCEDURE T_style.init();
   begin
+    defaultColor:=true;
     style:=[];
-    defaults:=[low(T_styleTemplateDefault)..high(T_styleTemplateDefault)];
     color:=C_defaultColor[0].color;
     styleModifier:=1;
   end;
@@ -225,7 +239,7 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
           mightBeColor:=false;
         end;
         if mightBeColor then begin
-          if parseColorOption(part, color) then defaults-=[std_defaultColor];
+          if parseColorOption(part, color) then defaultColor:=false;
         end;
       end;
     until options = '';
@@ -234,7 +248,7 @@ PROCEDURE T_style.parseStyle(CONST styleString: ansistring);
 
 PROCEDURE T_style.setDefaults(CONST index:longint);
   begin
-    if std_defaultColor in defaults then color:=C_defaultColor[index mod length(C_defaultColor)].color;
+    if defaultColor then color:=C_defaultColor[index mod length(C_defaultColor)].color;
   end;
 
 FUNCTION T_style.toString:ansistring;
@@ -274,53 +288,80 @@ FUNCTION T_style.getLineScaleAndColor(CONST xRes,yRes:longint):T_scaleAndColor;
     result.symbolRadius:=round(scalingFactor*3/sqrt(2)*styleModifier);
   end;
 
+FUNCTION T_style.feedStyle   :T_feedStyle   ;
+  begin
+    if [ps_ellipse,ps_box]*style<>[] then result:=fs_pair
+    else if ps_tube      in style    then result:=fs_tube
+    else if ps_stepLeft  in style    then result:=fs_stepLeft
+    else if ps_stepRight in style    then result:=fs_stepRight
+    else if ps_bar       in style    then result:=fs_bar
+                                     else result:=fs_direct;
+  end;
+
+FUNCTION T_style.builderStyle:T_builderStyle;
+  begin
+    if ps_bspline in style        then result:=bs_bSpline
+    else if ps_cosspline in style then result:=bs_cSpline
+                                  else result:=bs_straight;
+  end;
+
+FUNCTION T_style.polygonStyle :T_polygonStyle ;
+  begin
+    if   ps_polygon in style                   then result:=ps_direct
+    else if ps_tube in style                   then result:=ps_additional
+    else if [ps_filled,ps_fillSolid]*style<>[] then result:=ps_additional
+                                               else result:=ps_noPoly;
+  end;
+
+FUNCTION T_style.brushStyle  :T_brushStyle  ;
+  begin
+    if ps_filled in style         then result:=bs_transparentBrush
+    else if ps_fillSolid in style then result:=bs_solidBrush
+                                  else result:=bs_noBrush;
+  end;
+
+FUNCTION T_style.drawStyles  :T_drawStyles   ;
+  begin
+    result:=[];
+    if ps_ellipse in style then result+=[ds_ellipse];
+    if [ps_box,ps_bar]*style<>[] then result+=[ds_box];
+    if ps_impulse in style then result+=[ds_impulse];
+    if ps_dot     in style then result+=[ds_dot];
+    if ps_cross   in style then result+=[ds_cross];
+    if ps_plus    in style then result+=[ds_plus];
+    if (ps_straight in style) or (ps_tube in style) or (result=[]) then result+=[ds_continuous];
+  end;
+
 FUNCTION splitIntoConsistentStyles(style:T_style):T_arrayOfStyle;
-{$MACRO ON}
-{$define recursion:=begin
-  result:=splitIntoConsistentStyles(s1);
-  rest  :=splitIntoConsistentStyles(s2);
-  i0:=length(result);
-  setLength(result,i0+length(rest));
-  for i:=0 to length(rest)-1 do result[i+i0]:=rest[i]
-end}
+  CONST inconsistent:array[0..6] of record
+          s1,s2:T_plotStyles;
+        end=((s1:[ps_tube];                 s2:[ps_ellipse,ps_box]),
+             (s1:[ps_stepLeft];             s2:[ps_ellipse,ps_box]),
+             (s1:[ps_stepRight];            s2:[ps_ellipse,ps_box]),
+             (s1:[ps_bar];                  s2:[ps_ellipse,ps_box]),
+             (s1:[ps_dot,ps_plus,ps_cross]; s2:[ps_ellipse,ps_box]),
+             (s1:[ps_dot,ps_plus,ps_cross]; s2:[ps_cosspline,ps_bspline]),
+             (s1:[ps_cosspline];            s2:[ps_bspline]));
+
   VAR s1,s2:T_style;
       rest:T_arrayOfStyle;
-      i,i0:longint;
+      i,i0,k:longint;
   begin
-    if (ps_filled in style.style) and (ps_fillSolid in style.style) then begin
-      //inconsistent fillings
-      s1:=style; s1.style:=s1.style-[ps_filled];
-      s2:=style; s2.style:=s2.style-[ps_fillSolid];
-      recursion;
-    end else if (ps_dot in style.style) and (style.style<>[ps_dot]) then begin
-      //dot miust be alone
-      s1:=style; s1.style:=         [ps_dot];
-      s2:=style; s2.style:=s2.style-[ps_dot];
-      recursion;
-    end else if (ps_tube in style.style) and (style.style*C_stylesRequiringDiscreteSteps<>[]) then begin
-      //inconsistent step requirements
-      s1:=style; s1.style:=s1.style-[ps_tube];
-      s2:=style; s2.style:=s2.style-C_stylesRequiringDiscreteSteps;
-      recursion;
-    end else if (ps_bspline in style.style) and (ps_cosspline in style.style) then begin
-      //inconsistent interpolation/approximation requirements
-      s1:=style; s1.style:=s1.style-[ps_bspline];
-      s2:=style; s2.style:=s2.style-[ps_cosspline];
-      recursion;
-    end else if (ps_bspline in style.style) and (style.style*C_stylesRequiringDiscreteSteps<>[]) then begin
-      //inconsistent step requirements
-      s1:=style; s1.style:=s1.style-[ps_bspline];
-      s2:=style; s2.style:=s2.style-C_stylesRequiringDiscreteSteps;
-      recursion;
-    end else if (ps_cosspline in style.style) and (style.style*C_stylesRequiringDiscreteSteps<>[]) then begin
-      //inconsistent step requirements
-      s1:=style; s1.style:=s1.style-[ps_cosspline];
-      s2:=style; s2.style:=s2.style-C_stylesRequiringDiscreteSteps;
-      recursion;
-    end else begin
-      setLength(result,1);
-      result[0]:=style;
+    //inconsistent fillings
+    if (ps_filled in style.style) and (ps_fillSolid in style.style) then style.style:=style.style-[ps_filled];
+
+    for k:=0 to length(inconsistent)-1 do if (style.style*inconsistent[k].s1<>[]) and (style.style*inconsistent[k].s2<>[]) then begin
+      s1:=style; s1.style:=s1.style-inconsistent[k].s1;
+      s2:=style; s2.style:=s2.style-inconsistent[k].s2;
+      result:=splitIntoConsistentStyles(s1);
+      rest  :=splitIntoConsistentStyles(s2);
+      i0:=length(result);
+      setLength(result,i0+length(rest));
+      for i:=0 to length(rest)-1 do result[i+i0]:=rest[i];
+      exit(result);
     end;
+    setLength(result,1);
+    result[0]:=style;
   end;
 
 PROCEDURE clearStyles;

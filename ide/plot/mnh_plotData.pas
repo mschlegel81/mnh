@@ -1734,8 +1734,8 @@ PROCEDURE T_plotSystem.logPlotDone;
   end;
 
 INITIALIZATION
-  MAJOR_TIC_STYLE.init; MAJOR_TIC_STYLE.styleModifier:=0.2; MAJOR_TIC_STYLE.defaults:=[];
-  MINOR_TIC_STYLE.init; MINOR_TIC_STYLE.styleModifier:=0.1; MAJOR_TIC_STYLE.defaults:=[];
+  MAJOR_TIC_STYLE.init; MAJOR_TIC_STYLE.styleModifier:=0.2;
+  MINOR_TIC_STYLE.init; MINOR_TIC_STYLE.styleModifier:=0.1;
 {$ifdef enable_render_threads}
 FINALIZATION
   while preparationThreadsRunning>0 do sleep(100);
