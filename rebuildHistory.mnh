@@ -20,18 +20,20 @@ checkout(commitHash)->begin
 end;
 
 build(tag)->begin
+  local prefix:=0;
+save;
   writeFileLines('core\res_version.inc',
-    ["CODE_HASH=xx_"+escapePascal(tag)+"_xx;",
+    ["CODE_HASH="+escapePascal('xx_'+tag+'_xx')+";",
      'BUILD_NUMBER=1;',
      "VERSION='"&tag&"';"]);
-  writeFileLines('core\code_hash.inc',["CODE_HASH=xx_"+escapePascal(tag)+"_xx;"]);
+  writeFileLines('core\code_hash.inc',["CODE_HASH="+escapePascal('xx_'+tag+'_xx')+";"]);
   writeFileLines('core\build_number.inc',['BUILD_NUMBER=0;']);
   myBuilds.each(b,begin
     fileExists(b['compilate']) ? deleteFile(b['compilate']) : void;
     local buildResult:=exec@(b['compilerCall']);
-    buildResult[1]==0 ? void : warn('COMPILATION FAILED: ',"\n",buildResult[0].join("\n"));
-    moveFile(b['compilate'],
-             changeFileExt(b['targetDest'],'_'+tag+b['targetDest'].extractFileExt));
+    buildResult[1]==0
+    ? moveFile(b['compilate'],changeFileExt(b['targetDest'],'_'+format('%3.3d',prefix+=1)+'_'+tag+b['targetDest'].extractFileExt))
+    : warn('COMPILATION FAILED: ',"\n",buildResult[0].join("\n"));
   end);
 end;
 
