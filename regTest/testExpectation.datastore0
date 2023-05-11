@@ -200,7 +200,7 @@ expectations:=
  ['[]               o.k.','][][             NOT o.k.','][][][           NOT o.k.',']][][][[         NOT o.k.',
   '][[[]]][][       NOT o.k.','[][][][]]][[     NOT o.k.','][]][][[][[[]]   NOT o.k.','[[]]]][[][]][[][ NOT o.k.'],
  'barnsleyFern'=>
- ['png hash: 589386DB0CCC9288FBCE580182A8F4BCBF5E9241F6B21D6C3C0E9A67D05BFA1D'],
+ ['png hash: E944CBD3F180F2222E13800058D8A824A6F24BB93F0A7914D322B70B5DDDA8D0'],
  'benford'=>
  ['actual expected','   300   301.03','   177   176.09','   125   124.94','    96    96.91','    80    79.18','    67    66.95',
   '    57    57.99','    53    51.15','    45    45.76'],
@@ -2650,14 +2650,8 @@ expectations:=
   ['See http://rosettacode.org/wiki/Roots_of_a_function','Analyzing $x^3-3*$x^2+2*$x','Root found at   0.0',
    'Root found at   1.0','Root found at   2.0']].toMap,
  'rotatingCube'=>
- ['FDLinux'=>
-  ['png hash: F47A32011FFA2691F53DF384435D29B9BFF469AA7D191EFA74BFCB7926ADE1E0'],
-  'FDWin64'=>
-  ['png hash: F47A32011FFA2691F53DF384435D29B9BFF469AA7D191EFA74BFCB7926ADE1E0'],
-  'FOLinux'=>
-  ['png hash: F47A32011FFA2691F53DF384435D29B9BFF469AA7D191EFA74BFCB7926ADE1E0'],
-  'FOWin64'=>
-  ['png hash: F47A32011FFA2691F53DF384435D29B9BFF469AA7D191EFA74BFCB7926ADE1E0']].toMap,
+ ['FOWin64'=>
+  ['png hash: 9542A95102CC2E39D3FAF29BF61873D207874CD1033686CB7DA4B393890CA502']].toMap,
  'rsa'=>
  ['Creating key pair',' private key: [128143,593].toKey','  public key: [128143,65537].toKey','',
   'Cipher: 102030405060708090 with public...','        104399454243902252327','Decipher with private...',
@@ -2790,7 +2784,7 @@ expectations:=
   '[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]'
  ],
  'sierpinskiCurve'=>
- ['png hash: 218DBE2CB5C79809DFCB3B53287D7750C3DACB43B581B27DC007ED214F171AEE'],
+ ['png hash: 4EB8A27AA01E17EA2D6D227A16056E44F0E24157D4C565158AB2B67187642D64'],
  'sierpinskiTriangle'=>
  ['                               A                                                               ',
   '                              A A                                                             ',
@@ -3369,7 +3363,7 @@ expectations:=
  ['0110100110010110100101100110100110010110011010010110100110010110100101100110100101101001100101100110'],
  'travellingSalesmanProblem'=>
  ['Path length after construction is 32.932','Path length after polishing is    31.713',
-  'png hash: 99658276B92466BF110F5793C3A068DFD5E350047B0437DDC9D53B652EAFBE00'],
+  'png hash: 65C63E46542CBBDF7ECC2CB2EF420290F964042C85BFA457AA775CD9662E48BF'],
  'treePrint'=>
  ["┐","├──1","├──2","├──┐","│  ├──3","│  │  ├──X","│  │  ├──Y",
   "│  │  └──Z","│  └──4","│     └──5","└──┐","   ├──a","   ├──b","   └──c"],
