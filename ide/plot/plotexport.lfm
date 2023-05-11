@@ -10,7 +10,7 @@ object ExportPlotForm: TExportPlotForm
   ClientWidth = 311
   DesignTimePPI = 120
   Position = poOwnerFormCenter
-  LCLVersion = '2.0.2.0'
+  LCLVersion = '2.2.2.0'
   object Panel1: TPanel
     Left = 0
     Height = 34
@@ -41,6 +41,7 @@ object ExportPlotForm: TExportPlotForm
       Height = 28
       Top = 3
       Width = 235
+      OnAcceptFileName = OutputFileNameEditAcceptFileName
       DialogKind = dkPictureSave
       FilterIndex = 0
       HideDirectories = False
@@ -218,7 +219,7 @@ object ExportPlotForm: TExportPlotForm
       Top = 24
       Width = 307
       Align = alClient
-      Caption = '(series of) .png'
+      Caption = '(series of) .png / .bmp'
       Checked = True
       OnChange = rbExportToPngChange
       TabOrder = 1

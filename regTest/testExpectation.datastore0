@@ -2650,7 +2650,9 @@ expectations:=
   ['See http://rosettacode.org/wiki/Roots_of_a_function','Analyzing $x^3-3*$x^2+2*$x','Root found at   0.0',
    'Root found at   1.0','Root found at   2.0']].toMap,
  'rotatingCube'=>
- ['FOWin64'=>
+ ['FDWin64'=>
+  ['png hash: 9542A95102CC2E39D3FAF29BF61873D207874CD1033686CB7DA4B393890CA502'],
+  'FOWin64'=>
   ['png hash: 9542A95102CC2E39D3FAF29BF61873D207874CD1033686CB7DA4B393890CA502']].toMap,
  'rsa'=>
  ['Creating key pair',' private key: [128143,593].toKey','  public key: [128143,65537].toKey','',
