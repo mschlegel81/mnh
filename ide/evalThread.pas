@@ -245,10 +245,10 @@ CONSTRUCTOR T_reevaluationWithGui.create();
     if (clf_HEADLESS in commandLine.mnhExecutionOptions.flags) then begin
       messages.addOutAdapter(newPlotAdapter('-',true),true);
     end else begin
-      plot:=P_guiPlotSystem (newPlotAdapter      ('MNH plot'));
+      plot:=P_guiPlotSystem (newPlotAdapter      ('MNH plot: '+commandLine.scriptName));
       messages.addOutAdapter(newCustomFormAdapter(           plot),true);
-      messages.addOutAdapter(newTableAdapter     ('MNH table')    ,true);
-      messages.addOutAdapter(newTreeAdapter      ('MNH tree view'),true);
+      messages.addOutAdapter(newTableAdapter     ('MNH table: '+commandLine.scriptName)    ,true);
+      messages.addOutAdapter(newTreeAdapter      ('MNH tree view: '+commandLine.scriptName),true);
       messages.addOutAdapter(                                plot ,true);
     end;
     messages.addOutAdapter(newProfilingAdapter (false)          ,true);
