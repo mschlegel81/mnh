@@ -12,7 +12,7 @@ object VarTreeViewForm: TVarTreeViewForm
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   PopupMenu = PopupMenu1
-  LCLVersion = '2.0.8.0'
+  LCLVersion = '2.2.2.0'
   object VarTreeView: TTreeView
     Left = 0
     Height = 300
@@ -23,15 +23,16 @@ object VarTreeViewForm: TVarTreeViewForm
     PopupMenu = PopupMenu1
     ReadOnly = True
     TabOrder = 0
+    OnEdited = VarTreeViewEdited
     OnKeyUp = VarTreeViewKeyUp
     Options = [tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
   end
   object MainMenu1: TMainMenu
-    left = 81
-    top = 72
+    Left = 81
+    Top = 72
   end
   object PopupMenu1: TPopupMenu
-    left = 162
-    top = 111
+    Left = 162
+    Top = 111
   end
 end

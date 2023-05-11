@@ -60,7 +60,7 @@ TYPE
 
 FUNCTION newCallParametersNode(CONST L:P_listLiteral):P_variableTreeEntryCategoryNode;
 IMPLEMENTATION
-USES recyclers;
+USES recyclers,myStringUtil,LazUTF8;
 FUNCTION newCallParametersNode(CONST L:P_listLiteral):P_variableTreeEntryCategoryNode;
   VAR i:longint;
   begin
@@ -164,28 +164,40 @@ CONSTRUCTOR T_variableTreeEntryAnonymousValue.create(CONST L:P_literal; CONST ma
     setLength(preparedChildren,0);
   end;
 
+FUNCTION toStringForTree(CONST value:P_literal; CONST isKeyValuePair:boolean):string;
+  VAR
+    nonescapableFound: boolean;
+  begin
+    if isKeyValuePair and (value^.literalType in C_listTypes) then begin
+      result:=toStringForTree(P_listLiteral(value)^.value[0],false)+' => '+
+              toStringForTree(P_listLiteral(value)^.value[1],false);
+    end else if value^.literalType=lt_string then begin
+      result:=P_stringLiteral(value)^.value;
+      if length(result)>100 then begin
+        if P_stringLiteral(value)^.getEncoding=se_utf8
+        then result:=UTF8Copy(result,1,97)+'...'
+        else result:=copy    (result,1,97)+'...';
+      end;
+      result:=escapeString(result,es_pickShortest,P_stringLiteral(value)^.getEncoding,nonescapableFound);
+    end else result:=value^.toString(100);
+  end;
+
 FUNCTION T_variableTreeEntryAnonymousValue.canExpand: boolean;
   begin
     if value=nil then exit(false);
     if isKeyValuePair
-    then result:=(length(P_listLiteral(value)^.value[0]^.toString(50))>=50) or
-                 (length(P_listLiteral(value)^.value[1]^.toString(50))>=50)
-    else result:=(value^.literalType in C_compoundTypes) and (length(value^.toString(100))>=100);
+    then result:=length(toStringForTree(value,true))>50
+    else result:=(value^.literalType in C_compoundTypes);
   end;
 
 FUNCTION T_variableTreeEntryAnonymousValue.toString: string;
   begin
     if value=nil then exit(' ');
     if isKeyValuePair then begin
-      result:=P_listLiteral(value)^.value[0]^.toString();
-      if length(result)>=50
-      then result:='key-value-pair'
-      else result:=result+' => ';
-      if length(P_listLiteral(value)^.value[1]^.toString(50))>=50
-      then result:=result+P_listLiteral(value)^.value[1]^.typeString
-      else result:=result+P_listLiteral(value)^.value[1]^.toString();
-    end else if canExpand then result:=value^.typeString
-    else                       result:=value^.toString();
+      result:=toStringForTree(value,true);
+      if length(result)>50 then result:=toStringForTree(P_listLiteral(value)^.value[0],false)+' =>';
+    end else if value^.literalType in C_compoundTypes then exit(value^.typeString)
+    else result:=toStringForTree(value,isKeyValuePair);
   end;
 
 FUNCTION T_variableTreeEntryAnonymousValue.toStringForErrorTrace:string;
@@ -203,14 +215,8 @@ FUNCTION T_variableTreeEntryAnonymousValue.getChildren: T_treeEntries;
     if (length(preparedChildren)=0) and (canExpand) then begin
       recycler:=newRecycler;
       if isKeyValuePair then begin
-        if length(P_listLiteral(value)^.value[0]^.toString())>=50 then begin
-          setLength(preparedChildren,2);
-          new(preparedChildren[0],create(P_listLiteral(value)^.value[0],false));
-          new(preparedChildren[1],create(P_listLiteral(value)^.value[1],false));
-        end else begin
           setLength(preparedChildren,1);
           new(preparedChildren[0],create(P_listLiteral(value)^.value[1],false));
-        end;
       end else begin
         iter:=P_compoundLiteral(value)^.forcedIteratableList(recycler);
         setLength(preparedChildren,length(iter));
