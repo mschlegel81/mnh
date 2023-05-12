@@ -357,7 +357,8 @@ CONSTRUCTOR T_basicEditorMeta.createWithExistingEditor(CONST existingEditor:TSyn
     isRealEditor:=bookmarkImages<>nil;
     completionLogic.create;
     editor_.ScrollBars:=ssAutoBoth;
-    editor_.WantTabs:=false;
+    editor_.WantTabs:=true;
+    editor_.TabWidth:=2;
     editor_.Gutter.MarksPart.visible:=Assigned(bookmarkImages);
     editor_.Gutter.MarksPart.width:=45;
     editor_.Gutter.CodeFoldPart.visible:=false;
@@ -425,7 +426,7 @@ CONSTRUCTOR T_basicEditorMeta.createWithExistingEditor(CONST existingEditor:TSyn
     addKeystroke(ecUndo              ,scCtrl + ord('Z'));
     addKeystroke(ecRedo              ,scShift + scCtrl + ord('Z'));
     addKeystroke(editCommandToggleComment  ,scShift + scCtrl + ord('C'));
-    addKeystroke(ecShiftTab          ,scShift + tabKey);
+    addKeystroke(ecTab,tabKey);
     if isRealEditor then
     addKeystroke(editCommandToggleBookmark,scShift + scCtrl + ord('B'));
     addKeystroke(ecColSelUp          ,scShift + scAlt + upArrow);

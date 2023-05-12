@@ -11,9 +11,13 @@ TYPE
     DESTRUCTOR destroy; virtual; abstract;
   end;
 
+  { T_treeModel }
+
   T_treeModel=object
     private
       view:TTreeView;
+      FUNCTION variablesTreeViewHasChildren(Sender: TCustomTreeView;
+        ANode: TTreeNode): boolean;
     public
       CONSTRUCTOR create(CONST tree:TTreeView);
       DESTRUCTOR destroy;
@@ -22,10 +26,12 @@ TYPE
   end;
 
 IMPLEMENTATION
+
 CONSTRUCTOR T_treeModel.create(CONST tree: TTreeView);
   begin
     view:=tree;
     view.OnExpanding:=@variablesTreeViewExpanding;
+    view.OnHasChildren:=@variablesTreeViewHasChildren;
   end;
 
 DESTRUCTOR T_treeModel.destroy;
@@ -43,12 +49,14 @@ PROCEDURE T_treeModel.addChildren(CONST node: TTreeNode);
   end;
 
 PROCEDURE T_treeModel.variablesTreeViewExpanding(Sender: TObject; node: TTreeNode; VAR AllowExpansion: boolean);
-  VAR i:longint;
   begin
     AllowExpansion:=P_treeEntry(node.data)^.canExpand;
-    if not(AllowExpansion) then exit;
-    for i:=0 to node.count-1 do
-    if not(node.items[i].HasChildren) and (P_treeEntry(node.items[i].data)^.canExpand) then addChildren(node.items[i]);
+    if AllowExpansion and (node.GetFirstChild=nil) then addChildren(node);
+  end;
+
+FUNCTION T_treeModel.variablesTreeViewHasChildren(Sender: TCustomTreeView; ANode: TTreeNode): boolean;
+  begin
+    result:=P_treeEntry(anode.data)^.canExpand;
   end;
 
 end.

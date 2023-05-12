@@ -75,6 +75,7 @@ TYPE
       PROCEDURE initFromIde(CONST scriptName,parameters:string);
       FUNCTION getCommandLineArgumentsArray:T_arrayOfString;
       {$endif}
+      FUNCTION scriptName:string;
     private
       parsingState:T_parsingState;
   end;
@@ -497,6 +498,15 @@ FUNCTION T_commandLineParameters.getCommandLineArgumentsArray:T_arrayOfString;
     append(result,mainParameters);
   end;
 {$endif}
+
+FUNCTION T_commandLineParameters.scriptName:string;
+  begin
+    result:=fileOrCommandToInterpret;
+    if mnhExecutionOptions.executeCommand
+    then begin
+      if result.length>30 then result:=copy(result,0,27)+'...';
+    end else result:=extractFileName(result);
+  end;
 
 FUNCTION T_commandLineParameters.getCommandToInterpretFromCommandLine: ansistring;
   begin if mnhExecutionOptions.executeCommand then result:=fileOrCommandToInterpret else result:=''; end;

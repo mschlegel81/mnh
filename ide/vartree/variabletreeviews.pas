@@ -11,6 +11,9 @@ USES
 
 TYPE
   P_treeAdapter=^T_treeAdapter;
+
+  { TVarTreeViewForm }
+
   TVarTreeViewForm = class(T_mnhComponentForm)
     MainMenu1: TMainMenu;
     PopupMenu1: TPopupMenu;
@@ -24,6 +27,8 @@ TYPE
     PROCEDURE performFastUpdate; override;
     PROCEDURE dockChanged; override;
     FUNCTION getDefaultControl:TWinControl; override;
+    PROCEDURE VarTreeViewEdited(Sender: TObject; node: TTreeNode; VAR S: string
+      );
     PROCEDURE VarTreeViewKeyUp(Sender: TObject; VAR key: word;
       Shift: TShiftState);
   private
@@ -165,8 +170,12 @@ FUNCTION TVarTreeViewForm.getDefaultControl: TWinControl;
     result:=VarTreeView;
   end;
 
-PROCEDURE TVarTreeViewForm.VarTreeViewKeyUp(Sender: TObject; VAR key: word;
-  Shift: TShiftState);
+PROCEDURE TVarTreeViewForm.VarTreeViewEdited(Sender: TObject; node: TTreeNode; VAR S: string);
+  begin
+    S:=P_treeEntry(node.data)^.toString;
+  end;
+
+PROCEDURE TVarTreeViewForm.VarTreeViewKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
   begin
     tabNextKeyHandling(Sender,key,Shift);
   end;

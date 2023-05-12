@@ -358,6 +358,9 @@ sort(intRandom(10,5));
 //#sort
 sort(['01','10','100','1','010'],(x,y)->softCast(x)<=softCast(y));
 
+//#sort
+sort(['01','10','100','1','010'],::length);
+
 //#sortPerm
 //A random permutation:
 sortPerm(random(10));

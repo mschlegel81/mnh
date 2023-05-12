@@ -13,6 +13,9 @@ USES
 CONST EXECUTE_BUTTON_CAPTION:array[false..true] of string=('Create Script','Render to file(s)');
 
 TYPE
+
+  { TExportPlotForm }
+
   TExportPlotForm = class(TForm)
     GroupBox3: TGroupBox;
     OKButton: TButton;
@@ -33,6 +36,8 @@ TYPE
     rbExportCurrentOnly: TRadioButton;
     PROCEDURE cancelButtonClick(Sender: TObject);
     PROCEDURE okButtonClick(Sender: TObject);
+    PROCEDURE OutputFileNameEditAcceptFileName(Sender: TObject;
+      VAR value: string);
     PROCEDURE OutputFileNameEditEditingDone(Sender: TObject);
     PROCEDURE rbExportToPngChange(Sender: TObject);
     PROCEDURE widthEditChange(Sender: TObject);
@@ -68,8 +73,10 @@ FUNCTION exportPlotForm: TExportPlotForm;
 PROCEDURE TExportPlotForm.OutputFileNameEditEditingDone(Sender: TObject);
   begin
     if rbExportToPng.checked
-    then OutputFileNameEdit.text:=ChangeFileExt(OutputFileNameEdit.text,'.png')
-    else OutputFileNameEdit.text:=ChangeFileExt(OutputFileNameEdit.text,'.mnh');
+    then begin
+      if lowercase(extractFileExt(OutputFileNameEdit.text))<>'.bmp'
+      then OutputFileNameEdit.text:=ChangeFileExt(OutputFileNameEdit.text,'.png')
+    end else OutputFileNameEdit.text:=ChangeFileExt(OutputFileNameEdit.text,'.mnh');
     enableOkButton;
   end;
 
@@ -163,13 +170,24 @@ PROCEDURE TExportPlotForm.okButtonClick(Sender: TObject);
     enableAll;
   end;
 
+PROCEDURE TExportPlotForm.OutputFileNameEditAcceptFileName(Sender: TObject; VAR value: string);
+  begin
+    if rbExportToPng.checked
+    then begin
+      if lowercase(extractFileExt(value))<>'.bmp'
+      then value:=ChangeFileExt(value,'.png')
+    end else value:=ChangeFileExt(value,'.mnh');
+  end;
+
 PROCEDURE TExportPlotForm.rbExportToPngChange(Sender: TObject);
   begin
     GroupBox1.visible:=rbExportToPng.checked;
     Panel1.visible:=rbExportToPng.checked or (mainForm=nil);
     if rbExportToPng.checked
-    then OutputFileNameEdit.text:=ChangeFileExt(OutputFileNameEdit.text,'.png')
-    else OutputFileNameEdit.text:=ChangeFileExt(OutputFileNameEdit.text,'.mnh');
+    then begin
+      if lowercase(extractFileExt(OutputFileNameEdit.text))<>'.bmp'
+      then OutputFileNameEdit.text:=ChangeFileExt(OutputFileNameEdit.text,'.png')
+    end else OutputFileNameEdit.text:=ChangeFileExt(OutputFileNameEdit.text,'.mnh');
     OKButton.caption:=EXECUTE_BUTTON_CAPTION[rbExportToPng.checked];
     enableOkButton;
   end;
@@ -231,7 +249,7 @@ FUNCTION TExportPlotForm.animationFileName(CONST frameIndex, framesTotal: longin
     digits:=length(intToStr(framesTotal-1));
     idx:=intToStr(frameIndex);
     while length(idx)<digits do idx:='0'+idx;
-    result:=ChangeFileExt(OutputFileNameEdit.caption,'_'+idx+'.png');
+    result:=ChangeFileExt(OutputFileNameEdit.caption,'_'+idx+extractFileExt(OutputFileNameEdit.caption));
   end;
 
 end.

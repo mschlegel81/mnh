@@ -1271,11 +1271,20 @@ PROCEDURE T_plot.drawCoordSys(CONST target: TBGRACanvas; VAR gridTic: T_ticInfos
 
 PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
   VAR gridTics:T_ticInfos;
-
-  VAR bgrabmp:TBGRABitmap;
+      bgrabmp:TBGRABitmap;
+      {$ifdef debugMode}
+      startTicks: qword;
+      {$endif}
   begin
+    {$ifdef debugMode}
+    startTicks:=GetTickCount64;
+    {$endif}
     if (plotImage.width<5) or (plotImage.height<5) then exit;
     system.enterCriticalSection(plotCs);
+    {$ifdef debugMode}
+    writeln('   -- renderPlot: waited ',GetTickCount64-startTicks,' ticks for the critical section');
+    startTicks:=GetTickCount64;
+    {$endif}
     try
       if (length(row)=0) then begin
         plotImage.Canvas.clear;
@@ -1295,6 +1304,10 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
         bgrabmp.draw(plotImage.Canvas,0,0,false);
         bgrabmp.free;
       end;
+      {$ifdef debugMode}
+      writeln('   -- renderPlot: plotted in ',GetTickCount64-startTicks,' ticks');
+      startTicks:=GetTickCount64;
+      {$endif}
     finally
       system.leaveCriticalSection(plotCs);
     end;
@@ -1721,8 +1734,8 @@ PROCEDURE T_plotSystem.logPlotDone;
   end;
 
 INITIALIZATION
-  MAJOR_TIC_STYLE.init; MAJOR_TIC_STYLE.styleModifier:=0.2; MAJOR_TIC_STYLE.defaults:=[];
-  MINOR_TIC_STYLE.init; MINOR_TIC_STYLE.styleModifier:=0.1; MAJOR_TIC_STYLE.defaults:=[];
+  MAJOR_TIC_STYLE.init; MAJOR_TIC_STYLE.styleModifier:=0.2;
+  MINOR_TIC_STYLE.init; MINOR_TIC_STYLE.styleModifier:=0.1;
 {$ifdef enable_render_threads}
 FINALIZATION
   while preparationThreadsRunning>0 do sleep(100);
