@@ -1089,13 +1089,11 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST primit
       end;
 
     PROCEDURE addTic(CONST realPos: double; CONST realTxt: ansistring; CONST isMajorTic: boolean);
-      VAR screenPos: double;
       begin
         if axisTrafo[axis].sampleIsInRange(realPos) then begin
-          screenPos:=axisTrafo[axis].apply(realPos);
           setLength(grid[axis], length(grid[axis])+1);
           with grid[axis][length(grid[axis])-1] do begin
-            pos:=screenPos;
+            pos:=realPos;
             major:=isMajorTic;
             if major then txt:=realTxt
                      else txt:='';
@@ -1233,9 +1231,10 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST primit
 
       axisTrafo['x'].screenRange[0]:=newX0;
       axisTrafo['x'].screenRange[1]:=Canvas.width;
+      axisTrafo['x'].prepare;
+
       axisTrafo['y'].screenRange[0]:=newY0;
       axisTrafo['y'].screenRange[1]:=0;
-      axisTrafo['x'].prepare;
       axisTrafo['y'].prepare;
     end;
 
@@ -1250,6 +1249,13 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST primit
       end;
     end;
 
+  PROCEDURE transformTics;
+    VAR a:char;
+        i:longint;
+    begin
+      for a:='x' to 'y' do for i:=0 to length(grid[a])-1 do grid[a,i].pos:=axisTrafo[a].apply(grid[a,i].pos);
+    end;
+
   VAR axis:char;
   begin
     enterCriticalSection(globalTextRenderingCs);
@@ -1257,15 +1263,16 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST primit
       Canvas.Font.height:=absoluteFontSize(Canvas.width,Canvas.height);
       ticSampleText:='.0E12';
       updateBorders;
-    finally
-      leaveCriticalSection(globalTextRenderingCs);
-    end;
-    prepareRanges;
-    for axis:='x' to 'y' do if axisStyle[axis]<>[] then initTics(axis);
-    ticSampleText:=longestTic;
-    if updateBorders then begin
       prepareRanges;
       for axis:='x' to 'y' do if axisStyle[axis]<>[] then initTics(axis);
+      ticSampleText:=longestTic;
+      if updateBorders then begin
+        prepareRanges;
+        for axis:='x' to 'y' do if axisStyle[axis]<>[] then initTics(axis);
+      end;
+      transformTics;
+    finally
+      leaveCriticalSection(globalTextRenderingCs);
     end;
   end;
 
