@@ -482,70 +482,96 @@ DESTRUCTOR T_rasterImage.destroy;
   end;
 
 PROCEDURE T_bSplineBuilder.flush;
-  CONST coeff:array[0..31,0..3] of double=((0.16666666666666666    ,0.6666666666666666 ,0.16666666666666666,0),
-                                           (0.15105233124097883    ,0.66564286753270008,0.18329920669553446,0.000005594530786702918),
-                                           (0.13644501135689752    ,0.66263860450024059,0.20087162789656832,0.000044756246293623344),
-                                           (0.12281113982970247    ,0.6577545791234489 ,0.2192832287156076 ,0.0001510523312409788),
-                                           (0.11011714947467355    ,0.6510914929564857 ,0.2384333075984917 ,0.00035804997034898675),
-                                           (0.098329473107090518   ,0.6427500475535117 ,0.25822116299105996,0.0006993163483378648),
-                                           (0.087414543542233089   ,0.63283094446868737,0.27854609333915165,0.0012084186499278305),
-                                           (0.07733879359538115    ,0.6214348852561736 ,0.29930739708860615,0.0019189240598391011),
-                                           (0.06806865608181442    ,0.6086625714701308 ,0.32040437268526284,0.002864399762791894),
-                                           (0.0595705638168127     ,0.59461470466471977,0.3417363185749611 ,0.004078412943506428),
-                                           (0.05181094961565575    ,0.57939198639410117,0.36320253320354023,0.005594530786702918),
-                                           (0.044756246293623347   ,0.5630951182124355 ,0.38470231501683955,0.0074463204771015876),
-                                           (0.03837288666599532    ,0.5458248016738837 ,0.4061349624606984 ,0.009667349199422643),
-                                           (0.03262730354805141    ,0.527681738332606  ,0.42739977398095624,0.012291184138386315),
-                                           (0.027485929755071439   ,0.5087666297427634 ,0.44839604802345229,0.015351392478712809),
-                                           (0.022915198102335152   ,0.4891801774585165 ,0.469023083034026  ,0.018881541405122354),
-                                           (0.018881541405122354   ,0.469023083034026  ,0.4891801774585165 ,0.022915198102335152),
-                                           (0.015351392478712816   ,0.44839604802345229,0.5087666297427634 ,0.027485929755071439),
-                                           (0.012291184138386311   ,0.42739977398095624,0.5276817383326061 ,0.032627303548051427),
-                                           (0.009667349199422643   ,0.4061349624606984 ,0.5458248016738837 ,0.03837288666599532),
-                                           (0.0074463204771015876  ,0.38470231501683955,0.5630951182124355 ,0.044756246293623347),
-                                           (0.0055945307867029219  ,0.36320253320354023,0.57939198639410117,0.05181094961565572),
-                                           (0.0040784129435064266  ,0.3417363185749611 ,0.59461470466471977,0.0595705638168127),
-                                           (0.002864399762791894   ,0.32040437268526284,0.6086625714701307 ,0.06806865608181442),
-                                           (0.001918924059839102   ,0.2993073970886062 ,0.6214348852561735 ,0.07733879359538115),
-                                           (0.0012084186499278316  ,0.27854609333915176,0.63283094446868737,0.087414543542233089),
-                                           (0.00069931634833786448 ,0.25822116299105985,0.6427500475535117 ,0.098329473107090518),
-                                           (0.00035804997034898675 ,0.23843330759849177,0.6510914929564857 ,0.11011714947467355),
-                                           (0.00015105233124097894 ,0.2192832287156076 ,0.6577545791234489 ,0.12281113982970247),
-                                           (0.00004475624629362347 ,0.2008716278965684 ,0.66263860450024048,0.13644501135689746),
-                                           (0.000005594530786702904,0.18329920669553443,0.66564286753270008,0.15105233124097883),
-                                           (0                      ,0.16666666666666666,0.6666666666666666 ,0.16666666666666666));
+  FUNCTION N(CONST i,p:longint; CONST u:double):double;
+    begin
+      if p=0 then begin
+        if (i<=u) and (u<i+1) then result:=1 else result:=0;
+      end else
+        result:=(u-i    )/p*N(i  ,p-1,u)+
+                (i+p+1-u)/p*N(i+1,p-1,u);
+    end;
+
   VAR support:array[0..3] of T_point;
-      i,j:longint;
+
+  FUNCTION interpolate(CONST u:double):T_point;
+    begin
+      result:=support[0]*N(-3,3,u)+
+              support[1]*N(-2,3,u)+
+              support[2]*N(-1,3,u)+
+              support[3]*N( 0,3,u);
+    end;
+
+  PROCEDURE addInterpolated;
+    PROCEDURE addPointBetween(CONST u0,u1:double; CONST p0,p1:T_point);
+      VAR um:double;
+          pm:T_point;
+      begin
+        um:=(u0+u1)*0.5;
+        pm:=interpolate(um);
+        if sqr(pm[0]-p0[0])+sqr(pm[1]-p0[1])>100 then addPointBetween(u0,um,p0,pm);
+        inherited add(pm);
+        if sqr(pm[0]-p1[0])+sqr(pm[1]-p1[1])>100 then addPointBetween(um,u1,pm,p1);
+      end;
+
+    VAR p0,p1:T_point;
+    begin
+      p0:=interpolate(0);
+      p1:=interpolate(1);
+      inherited add(p0);
+      if sqr(p0[0]-p1[0])+sqr(p0[1]-p1[1])>100 then addPointBetween(0,1,p0,p1);
+    end;
+
+  VAR i:longint;
   begin
-    //TODO: add only points if not "too close"
     if approxFill=1
     then inherited add(toApproximate[0])
     else if approxFill=2 then begin
       inherited add(toApproximate[0]);
       inherited add(toApproximate[1]);
-    end else if approxFill>=2 then for i:=-2 to approxFill-2 do begin
-      if i  <0            then support[0]:=toApproximate[0           ] else support[0]:=toApproximate[i  ];
-      if i+1<0            then support[1]:=toApproximate[0           ] else support[1]:=toApproximate[i+1];
-      if i+2>approxFill-1 then support[2]:=toApproximate[approxFill-1] else support[2]:=toApproximate[i+2];
-      if i+3>approxFill-1 then support[3]:=toApproximate[approxFill-1] else support[3]:=toApproximate[i+3];
-      for j:=0 to length(coeff)-1 do begin
-        inherited add(support[0]*coeff[j,0]+
-                      support[1]*coeff[j,1]+
-                      support[2]*coeff[j,2]+
-                      support[3]*coeff[j,3]);
+    end else if approxFill>=2 then begin
+      for i:=-2 to approxFill-2 do begin
+        if i  <0            then support[0]:=toApproximate[0           ] else support[0]:=toApproximate[i  ];
+        if i+1<0            then support[1]:=toApproximate[0           ] else support[1]:=toApproximate[i+1];
+        if i+2>approxFill-1 then support[2]:=toApproximate[approxFill-1] else support[2]:=toApproximate[i+2];
+        if i+3>approxFill-1 then support[3]:=toApproximate[approxFill-1] else support[3]:=toApproximate[i+3];
+        addInterpolated;
       end;
+      inherited add(interpolate(1));
     end;
     approxFill:=0;
   end;
 
 PROCEDURE T_cSplineBuilder.flush;
-  CONST precision=32;
-        dt=1/precision;
   VAR M:array of T_point=();
       C:array of double=();
-      i,n,j:longint;
-      t:double;
+      i,n:longint;
       cub0,cub1, off,lin :T_point;
+
+  FUNCTION interpolate(CONST t:double):T_point;
+    begin
+      result:=off+(lin+cub1*sqr(t))*t+cub0*sqr(1-t)*(1-t);
+    end;
+
+  PROCEDURE addInterpolated;
+    PROCEDURE addPointBetween(CONST u0,u1:double; CONST p0,p1:T_point);
+      VAR um:double;
+          pm:T_point;
+      begin
+        um:=(u0+u1)*0.5;
+        pm:=interpolate(um);
+        if sqr(pm[0]-p0[0])+sqr(pm[1]-p0[1])>100 then addPointBetween(u0,um,p0,pm);
+        inherited add(pm);
+        if sqr(pm[0]-p1[0])+sqr(pm[1]-p1[1])>100 then addPointBetween(um,u1,pm,p1);
+      end;
+
+    VAR p0,p1:T_point;
+    begin
+      p0:=interpolate(0);
+      p1:=interpolate(1);
+      inherited add(p0);
+      if sqr(p0[0]-p1[0])+sqr(p0[1]-p1[1])>100 then addPointBetween(0,1,p0,p1);
+    end;
+
   begin
     //TODO: add only points if not "too close"
     if interpFill =1
@@ -574,11 +600,7 @@ PROCEDURE T_cSplineBuilder.flush;
         cub1:=M[i+1]*(1/6);
         off :=toInterpolate[i]-M[i]*(1/6);
         lin :=toInterpolate[i+1]-toInterpolate[i]-(M[i+1]-M[i])*(1/6);
-        t:=0;
-        for j:=0 to precision-1 do begin
-          inherited add(off+(lin+cub1*sqr(t))*t+cub0*sqr(1-t)*(1-t));
-          t+=dt;
-        end;
+        addInterpolated;
       end;
       inherited add(toInterpolate[n]);
     end;
