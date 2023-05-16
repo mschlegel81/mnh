@@ -333,7 +333,7 @@ FUNCTION T_style.drawStyles  :T_drawStyles   ;
   end;
 
 FUNCTION splitIntoConsistentStyles(style:T_style):T_arrayOfStyle;
-  CONST inconsistent:array[0..6] of record
+  CONST inconsistent:array[0..7] of record
           s1,s2:T_plotStyles;
         end=((s1:[ps_tube];                 s2:[ps_ellipse,ps_box]),
              (s1:[ps_stepLeft];             s2:[ps_ellipse,ps_box]),
@@ -341,7 +341,8 @@ FUNCTION splitIntoConsistentStyles(style:T_style):T_arrayOfStyle;
              (s1:[ps_bar];                  s2:[ps_ellipse,ps_box]),
              (s1:[ps_dot,ps_plus,ps_cross]; s2:[ps_ellipse,ps_box]),
              (s1:[ps_dot,ps_plus,ps_cross]; s2:[ps_cosspline,ps_bspline]),
-             (s1:[ps_cosspline];            s2:[ps_bspline]));
+             (s1:[ps_cosspline];            s2:[ps_bspline]),
+             (s1:[ps_dot];                  s2:[ps_filled]));
 
   VAR s1,s2:T_style;
       rest:T_arrayOfStyle;
