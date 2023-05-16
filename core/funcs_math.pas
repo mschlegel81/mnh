@@ -545,8 +545,7 @@ FUNCTION factorize_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType in [lt_smallint,lt_bigint]) then begin
       if arg0^.literalType=lt_smallint
       then begin
-        factors.smallFactors:=factorizeSmall(P_smallIntLiteral(arg0)^.value);
-        setLength(factors.bigFactors,0);
+        factors:=factorizeSmall(P_smallIntLiteral(arg0)^.value);
       end else begin
         factors:=bigint.factorize(P_bigIntLiteral(arg0)^.value,@context^.continueEvaluation);
       end;
