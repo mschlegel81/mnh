@@ -1454,7 +1454,7 @@ FUNCTION T_listLiteral.toString(CONST lengthLimit: longint): ansistring;
     else begin
       remainingLength:=lengthLimit-1;
       result:='['+value[0]^.toString(remainingLength);
-      for i:=1 to size-1 do if remainingLength>0 then begin
+      for i:=1 to fill-1 do if remainingLength>0 then begin
         remainingLength:=lengthLimit-length(result);
         result:=result+','+value[i]^.toString(remainingLength);
       end else begin

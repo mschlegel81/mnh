@@ -195,8 +195,7 @@ PROCEDURE TVarTreeViewForm.FormClose(Sender: TObject;
     CloseAction:=caFree;
   end;
 
-PROCEDURE TVarTreeViewForm.initWithLiteral(CONST L: P_literal;
-  CONST newCaption: string; CONST adapter_: P_treeAdapter);
+PROCEDURE TVarTreeViewForm.initWithLiteral(CONST L: P_literal; CONST newCaption: string; CONST adapter_: P_treeAdapter);
   VAR node:TTreeNode;
   begin
     adapter:=adapter_;
@@ -207,7 +206,6 @@ PROCEDURE TVarTreeViewForm.initWithLiteral(CONST L: P_literal;
     new(rootNode,create(L,false));
     node:=VarTreeView.items.add(nil,rootNode^.toString);
     node.data:=rootNode;
-    model.addChildren(node);
     caption:=newCaption;
   end;
 
