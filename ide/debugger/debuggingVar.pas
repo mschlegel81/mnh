@@ -168,23 +168,28 @@ FUNCTION toStringForTree(CONST value:P_literal; CONST isKeyValuePair:boolean):st
   VAR
     nonescapableFound: boolean;
   begin
-    if isKeyValuePair and (value^.literalType in C_listTypes) then begin
-      result:=toStringForTree(P_listLiteral(value)^.value[0],false)+' => '+
-              toStringForTree(P_listLiteral(value)^.value[1],false);
-    end else if value^.literalType=lt_string then begin
-      result:=P_stringLiteral(value)^.value;
-      if length(result)>100 then begin
-        if P_stringLiteral(value)^.getEncoding=se_utf8
-        then result:=UTF8Copy(result,1,97)+'...'
-        else result:=copy    (result,1,97)+'...';
-      end;
-      result:=escapeString(result,es_pickShortest,P_stringLiteral(value)^.getEncoding,nonescapableFound);
-    end else result:=value^.toString(100);
+    try
+      if isKeyValuePair and (value^.literalType in C_listTypes) and (P_listLiteral(value)^.size=2) then begin
+        result:=toStringForTree(P_listLiteral(value)^.value[0],false)+' => '+
+                toStringForTree(P_listLiteral(value)^.value[1],false);
+      end else if value^.literalType=lt_string then begin
+        result:=P_stringLiteral(value)^.value;
+        if length(result)>100 then begin
+          if P_stringLiteral(value)^.getEncoding=se_utf8
+          then result:=UTF8Copy(result,1,97)+'...'
+          else result:=copy    (result,1,97)+'...';
+        end;
+        result:=escapeString(result,es_pickShortest,P_stringLiteral(value)^.getEncoding,nonescapableFound);
+      end else result:=value^.toString(100);
+    except
+      result:='<error>';
+    end;
   end;
 
 FUNCTION T_variableTreeEntryAnonymousValue.canExpand: boolean;
   begin
     if value=nil then exit(false);
+    if length(preparedChildren)>0 then exit(true);
     if isKeyValuePair
     then result:=length(toStringForTree(value,true))>50
     else result:=(value^.literalType in C_compoundTypes);
@@ -215,12 +220,12 @@ FUNCTION T_variableTreeEntryAnonymousValue.getChildren: T_treeEntries;
     if (length(preparedChildren)=0) and (canExpand) then begin
       recycler:=newRecycler;
       if isKeyValuePair then begin
-          setLength(preparedChildren,1);
-          new(preparedChildren[0],create(P_listLiteral(value)^.value[1],false));
+        setLength(preparedChildren,1);
+        new(preparedChildren[0],create(P_listLiteral(value)^.value[1],false));
       end else begin
         iter:=P_compoundLiteral(value)^.forcedIteratableList(recycler);
         setLength(preparedChildren,length(iter));
-        for i:=0 to length(iter)-1 do new(preparedChildren[i],create(iter[i],value^.literalType in C_mapTypes));
+        for i:=0 to length(iter)-1 do new(P_variableTreeEntryAnonymousValue(preparedChildren[i]),create(iter[i],value^.literalType in C_mapTypes));
         recycler^.disposeLiterals(iter);
       end;
       freeRecycler(recycler);

@@ -529,7 +529,6 @@ PROCEDURE T_standardEvaluation.execute(CONST recycler: P_recycler);
     SetCurrentDir(evalRequest.folder);
     package.load(C_loadMode[evalRequest.callMain],globals,recycler,evalRequest.parameters);
     globals.afterEvaluation(recycler,packageTokenLocation(@package));
-    package.clear(true);
     recyclers.cleanupRecyclerPools;
   end;
 
