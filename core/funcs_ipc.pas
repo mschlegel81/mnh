@@ -169,7 +169,7 @@ FUNCTION readMessage(VAR receiver:TSimpleIPCServer;
     messageHash:=streamWrapper.readDWord;
     statusOk:=streamWrapper.readBoolean;
     typeMap:=P_abstractPackage(location.package)^.getTypeMap;
-    if statusOk then payload:=newLiteralFromStream(recycler,@streamWrapper,location,adapters,typeMap)
+    if statusOk then payload:=newLiteralFromStream(@streamWrapper,location,adapters,typeMap)
                 else payload:=nil;
     typeMap.destroy;
     streamWrapper.destroy;

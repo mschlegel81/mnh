@@ -45,7 +45,7 @@ TYPE
       FUNCTION getBuiltinCheckParameter:longint;
       FUNCTION isTypeCheckOnly:boolean;
 
-      FUNCTION loadFromStream(CONST literalRecycler:P_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
+      FUNCTION loadFromStream(VAR deserializer:T_literalDeserializer):boolean;
       FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean;
   end;
 
@@ -100,7 +100,7 @@ TYPE
       FUNCTION getFirst:T_patternElement;
       FUNCTION usesStrictCustomTyping:boolean;
 
-      FUNCTION loadFromStream(CONST literalRecycler:P_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
+      FUNCTION loadFromStream(VAR deserializer:T_literalDeserializer):boolean;
       FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean;
   end;
 
@@ -362,36 +362,24 @@ FUNCTION T_patternElement.isTypeCheckOnly: boolean;
     result:=restrictionType in [tt_typeCheck,tt_customTypeCheck,tt_literal];
   end;
 
-FUNCTION T_patternElement.loadFromStream(CONST literalRecycler:P_literalRecycler; CONST stream: P_inputStreamWrapper; CONST location: T_tokenLocation; CONST adapters: P_messages; VAR typeMap: T_typeMap): boolean;
-  VAR customTypeName:string;
+FUNCTION T_patternElement.loadFromStream(VAR deserializer:T_literalDeserializer): boolean;
   begin
-    elementLocation:=location;
-    id:=stream^.readAnsiString;
-    restrictionType :=T_tokenType(stream^.readByte([byte(low(T_tokenType))..byte(high(T_tokenType))]));
-    builtinTypeCheck:=T_typeCheck(stream^.readByte([byte(low(T_typeCheck))..byte(high(T_typeCheck))]));
+    id:=deserializer.wrappedRaw^.readAnsiString;
+    restrictionType :=T_tokenType(deserializer.wrappedRaw^.readByte([byte(low(T_tokenType))..byte(high(T_tokenType))]));
+    builtinTypeCheck:=T_typeCheck(deserializer.wrappedRaw^.readByte([byte(low(T_typeCheck))..byte(high(T_typeCheck))]));
     if restrictionType in [tt_comparatorEq..tt_comparatorListEq,tt_operatorIn] then begin
-      restrictionIdx:=stream^.readInteger;
+      restrictionIdx:=deserializer.wrappedRaw^.readInteger;
       if restrictionIdx<0
-      then restrictionValue:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap)
+      then restrictionValue:=deserializer.getLiteral
       else restrictionValue:=nil;
-      if restrictionIdx>=0 then restrictionId:=stream^.readAnsiString;
+      if restrictionIdx>=0 then restrictionId:=deserializer.wrappedRaw^.readAnsiString;
     end else if (restrictionType=tt_typeCheck) and C_typeCheckInfo[builtinTypeCheck].modifiable
-      then restrictionIdx:=stream^.readInteger
+      then restrictionIdx:=deserializer.wrappedRaw^.readInteger
     else if (restrictionType=tt_customTypeCheck) then begin
-      customTypeName:=stream^.readAnsiString;
-      if typeMap.containsKey(customTypeName,customTypeCheck) then begin
-        skipCustomCheck :=customTypeCheck^.isDucktyping and
-                          customTypeCheck^.isAlwaysTrue;
-      end else begin
-        if adapters<>nil
-        then adapters^.raiseSimpleError('Unknown custom type in rule pattern: '+customTypeName,location)
-        else raise Exception.create    ('Unknown custom type in rule pattern: '+customTypeName);
-        stream^.logWrongTypeError;
-        exit(false);
-      end;
+      customTypeCheck:=deserializer.getTypeCheck(skipCustomCheck);
     end;
     thinOutWhitelistAndPlausibilize(nil);
-    result:=stream^.allOkay;
+    result:=deserializer.wrappedRaw^.allOkay;
   end;
 
 FUNCTION T_patternElement.writeToStream(VAR serializer:T_literalSerializer): boolean;
@@ -873,16 +861,16 @@ FUNCTION T_pattern.usesStrictCustomTyping: boolean;
     for s in sig do if (s.customTypeCheck<>nil) and not(s.customTypeCheck^.isDucktyping) then exit(true);
   end;
 
-FUNCTION T_pattern.loadFromStream(CONST literalRecycler:P_literalRecycler; CONST stream: P_inputStreamWrapper; CONST location: T_tokenLocation; CONST adapters: P_messages; VAR typeMap: T_typeMap): boolean;
+FUNCTION T_pattern.loadFromStream(VAR deserializer:T_literalDeserializer): boolean;
   VAR i:longint;
   begin
-    setLength(sig,stream^.readNaturalNumber);
-    hasOptionals:=stream^.readBoolean;
-    for i:=0 to length(sig)-1 do if stream^.allOkay then begin
-      sig[i].createAnonymous(location);
-      sig[i].loadFromStream(literalRecycler,stream,location,adapters,typeMap);
+    setLength(sig,deserializer.wrappedRaw^.readNaturalNumber);
+    hasOptionals:=deserializer.wrappedRaw^.readBoolean;
+    for i:=0 to length(sig)-1 do if deserializer.wrappedRaw^.allOkay then begin
+      sig[i].createAnonymous(deserializer.getLocation);
+      sig[i].loadFromStream(deserializer);
     end;
-    result:=stream^.allOkay;
+    result:=deserializer.wrappedRaw^.allOkay;
   end;
 
 FUNCTION T_pattern.writeToStream(VAR serializer:T_literalSerializer): boolean;

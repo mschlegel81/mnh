@@ -1919,113 +1919,110 @@ FUNCTION T_vanDerCorputGenerator.writeToStream(VAR serializer:T_literalSerialize
     result:=true;
   end;
 
-FUNCTION newGeneratorFromStream(CONST literalRecycler:P_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_builtinGeneratorExpression;
+FUNCTION newGeneratorFromStream(VAR deserializer:T_literalDeserializer):P_builtinGeneratorExpression;
   VAR generatorType:T_builtinGeneratorType;
       lit,lit2:P_literal;
       intParameter:longint;
       bigint:T_bigInt;
       bounded:boolean;
   begin
-    generatorType:=T_builtinGeneratorType(stream^.readByte([byte(low(T_builtinGeneratorType))..byte(high(T_builtinGeneratorType))]));
+    generatorType:=T_builtinGeneratorType(deserializer.wrappedRaw^.readByte([byte(low(T_builtinGeneratorType))..byte(high(T_builtinGeneratorType))]));
     result:=nil;
     case generatorType of
       bgt_listIterator: begin
-        lit:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
+        lit:=deserializer.getLiteral;
         if lit^.literalType in C_compoundTypes
-        then new(P_listIterator(result),create(literalRecycler,P_compoundLiteral(lit),location))
-        else stream^.logWrongTypeError;
-        literalRecycler^.disposeLiteral(lit); //is rereferenced in T_listIterator.create;
+        then new(P_listIterator(result),create(@globalLiteralRecycler,P_compoundLiteral(lit),deserializer.getLocation))
+        else deserializer.wrappedRaw^.logWrongTypeError;
+        globalLiteralRecycler.disposeLiteral(lit); //is rereferenced in T_listIterator.create;
       end;
       bgt_singleValueIterator: begin
-        lit:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
+        lit:=deserializer.getLiteral;
         if lit^.literalType in C_compoundTypes
-        then new(P_listIterator(result),create(literalRecycler,P_compoundLiteral(lit),location))
-        else stream^.logWrongTypeError;
-        literalRecycler^.disposeLiteral(lit); //is rereferenced in T_singleValueIterator.create;
+        then new(P_listIterator(result),create(@globalLiteralRecycler,P_compoundLiteral(lit),deserializer.getLocation))
+        else deserializer.wrappedRaw^.logWrongTypeError;
+        globalLiteralRecycler.disposeLiteral(lit); //is rereferenced in T_singleValueIterator.create;
       end;
       bgt_rangeGenerator: begin
-        bounded:=stream^.readBoolean;
+        bounded:=deserializer.wrappedRaw^.readBoolean;
         bigint.createZero;
-        bigint.readFromStream(stream);
-        lit:=literalRecycler^.newIntLiteral(bigint);
+        bigint.readFromStream(deserializer.wrappedRaw);
+        lit:=globalLiteralRecycler.newIntLiteral(bigint);
         if bounded then begin
           bigint.createZero;
-          bigint.readFromStream(stream);
-          lit2:=literalRecycler^.newIntLiteral(bigint);
+          bigint.readFromStream(deserializer.wrappedRaw);
+          lit2:=globalLiteralRecycler.newIntLiteral(bigint);
         end else lit2:=nil;
-        new(P_rangeGenerator(result),create(P_abstractIntLiteral(lit),P_abstractIntLiteral(lit2),location));
-        literalRecycler^.disposeLiteral(lit);                    //is rereferenced in T_rangeGenerator.create
-        if lit2<>nil then literalRecycler^.disposeLiteral(lit2); //is rereferenced in T_rangeGenerator.create
+        new(P_rangeGenerator(result),create(P_abstractIntLiteral(lit),P_abstractIntLiteral(lit2),deserializer.getLocation));
+        globalLiteralRecycler.disposeLiteral(lit);                    //is rereferenced in T_rangeGenerator.create
+        if lit2<>nil then globalLiteralRecycler.disposeLiteral(lit2); //is rereferenced in T_rangeGenerator.create
       end;
       bgt_permutationIterator: begin
-        lit:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
+        lit:=deserializer.getLiteral;
         if lit^.literalType in C_compoundTypes
-        then new(P_permutationIterator(result),create(literalRecycler,P_compoundLiteral(lit),location))
+        then new(P_permutationIterator(result),create(@globalLiteralRecycler,P_compoundLiteral(lit),deserializer.getLocation))
         else if lit^.literalType=lt_smallint
-             then new(P_permutationIterator(result),create(literalRecycler,P_smallIntLiteral(lit)^.value,location));
-        literalRecycler^.disposeLiteral(lit);
+             then new(P_permutationIterator(result),create(@globalLiteralRecycler,P_smallIntLiteral(lit)^.value,deserializer.getLocation));
+        globalLiteralRecycler.disposeLiteral(lit);
       end;
       bgt_filterGenerator: begin
-        lit :=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
-        lit2:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
+        lit :=deserializer.getLiteral;
+        lit2:=deserializer.getLiteral;
         if (lit^.literalType=lt_expression) and (lit2^.literalType=lt_expression)
-        then new(P_filterGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),location));
-        literalRecycler^.disposeLiteral(lit);
-        literalRecycler^.disposeLiteral(lit2);
+        then new(P_filterGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),deserializer.getLocation));
+        globalLiteralRecycler.disposeLiteral(lit);
+        globalLiteralRecycler.disposeLiteral(lit2);
       end;
       bgt_mapGenerator: begin
-        lit :=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
-        lit2:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
+        lit :=deserializer.getLiteral;
+        lit2:=deserializer.getLiteral;
         if (lit^.literalType=lt_expression) and (lit2^.literalType=lt_expression)
-        then new(P_mapGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),location));
-        literalRecycler^.disposeLiteral(lit);
-        literalRecycler^.disposeLiteral(lit2);
+        then new(P_mapGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),deserializer.getLocation));
+        globalLiteralRecycler.disposeLiteral(lit);
+        globalLiteralRecycler.disposeLiteral(lit2);
       end;
       bgt_parallelFilterGenerator: begin
-        lit :=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
-        lit2:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
+        lit :=deserializer.getLiteral;
+        lit2:=deserializer.getLiteral;
         if (lit^.literalType=lt_expression) and (lit2^.literalType=lt_expression)
-        then new(P_parallelFilterGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),location));
-        literalRecycler^.disposeLiteral(lit);
-        literalRecycler^.disposeLiteral(lit2);
+        then new(P_parallelFilterGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),deserializer.getLocation));
+        globalLiteralRecycler.disposeLiteral(lit);
+        globalLiteralRecycler.disposeLiteral(lit2);
       end;
       bgt_parallelMapGenerator: begin
-        lit :=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
-        lit2:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
+        lit :=deserializer.getLiteral;
+        lit2:=deserializer.getLiteral;
         if (lit^.literalType=lt_expression) and (lit2^.literalType=lt_expression)
-        then new(P_parallelMapGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),location));
-        literalRecycler^.disposeLiteral(lit);
-        literalRecycler^.disposeLiteral(lit2);
+        then new(P_parallelMapGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),deserializer.getLocation));
+        globalLiteralRecycler.disposeLiteral(lit);
+        globalLiteralRecycler.disposeLiteral(lit2);
       end;
       bgt_flatMapGenerator: begin
-        lit :=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
-        if stream^.readBoolean
-        then lit2:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap)
+        lit :=deserializer.getLiteral;
+        if deserializer.wrappedRaw^.readBoolean
+        then lit2:=deserializer.getLiteral
         else lit2:=nil;
         if (lit^.literalType=lt_expression) and ((lit2=nil) or (lit2^.literalType=lt_expression))
-        then new(P_flatMapGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),location));
-        literalRecycler^.disposeLiteral(lit);
-        if lit2<>nil then literalRecycler^.disposeLiteral(lit2);
+        then new(P_flatMapGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),deserializer.getLocation));
+        globalLiteralRecycler.disposeLiteral(lit);
+        if lit2<>nil then globalLiteralRecycler.disposeLiteral(lit2);
       end;
       bgt_chunkMapGenerator: begin
-        lit :=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap);
-        intParameter:=stream^.readNaturalNumber;
-        if stream^.readBoolean
-        then lit2:=newLiteralFromStream(literalRecycler,stream,location,adapters,typeMap)
+        lit :=deserializer.getLiteral;
+        intParameter:=deserializer.wrappedRaw^.readNaturalNumber;
+        if deserializer.wrappedRaw^.readBoolean
+        then lit2:=deserializer.getLiteral
         else lit2:=nil;
         if (lit^.literalType=lt_expression) and ((lit2=nil) or (lit2^.literalType=lt_expression))
-        then new(P_chunkIterator(result),create(P_expressionLiteral(lit),intParameter,P_expressionLiteral(lit2),location));
-        literalRecycler^.disposeLiteral(lit);
-        if lit2<>nil then literalRecycler^.disposeLiteral(lit2);
+        then new(P_chunkIterator(result),create(P_expressionLiteral(lit),intParameter,P_expressionLiteral(lit2),deserializer.getLocation));
+        globalLiteralRecycler.disposeLiteral(lit);
+        if lit2<>nil then globalLiteralRecycler.disposeLiteral(lit2);
       end;
-      bgt_primeGenerator: new(P_primeGenerator(result),create(location));
-      bgt_vanDerCorputGenerator: new(P_vanDerCorputGenerator(result),create(stream^.readNaturalNumber,location));
+      bgt_primeGenerator: new(P_primeGenerator(result),create(deserializer.getLocation));
+      bgt_vanDerCorputGenerator: new(P_vanDerCorputGenerator(result),create(deserializer.wrappedRaw^.readNaturalNumber,deserializer.getLocation));
     end;
     if result=nil then begin
-      stream^.logWrongTypeError;
-      if adapters<>nil
-      then adapters^.raiseSimpleError('Cannot deserialize generator/iterator expression of type: '+getEnumName(TypeInfo(generatorType),ord(generatorType)),location)
-      else raise Exception.create    ('Cannot deserialize generator/iterator expression of type: '+getEnumName(TypeInfo(generatorType),ord(generatorType)));
+      deserializer.raiseError('Cannot deserialize generator/iterator expression of type: '+getEnumName(TypeInfo(generatorType),ord(generatorType)));
     end;
   end;
 

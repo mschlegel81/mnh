@@ -126,7 +126,7 @@ TYPE
       FUNCTION patternString:string;
       FUNCTION containsReturnToken:boolean; virtual;
       FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
-      FUNCTION loadFromStream(CONST literalRecycler:P_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
+      FUNCTION loadFromStream(VAR deserializer:T_literalDeserializer):boolean;
       FUNCTION referencesAnyUserPackage:boolean; virtual;
       FUNCTION getSideEffects:T_sideEffects;
   end;
@@ -236,7 +236,7 @@ FUNCTION getParametersForUncurrying   (CONST givenParameters:P_listLiteral; CONS
 FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:P_recycler):P_literal;
 
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
-    newGeneratorFromStreamCallback: FUNCTION(CONST literalRecycler:P_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_builtinGeneratorExpression;
+    newGeneratorFromStreamCallback: FUNCTION(VAR deserializer:T_literalDeserializer):P_builtinGeneratorExpression;
     BUILTIN_PMAP:P_intFuncCallback;
 VAR identifiedInternalFunctionTally:longint=0;
 IMPLEMENTATION
@@ -1378,34 +1378,26 @@ FUNCTION T_inlineExpression.writeToStream(VAR serializer:T_literalSerializer):bo
     result:=result and serializer.wrappedRaw^.allOkay;
   end;
 
-FUNCTION T_inlineExpression.loadFromStream(CONST literalRecycler:P_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
+FUNCTION T_inlineExpression.loadFromStream(VAR deserializer:T_literalDeserializer):boolean;
   VAR i:longint;
-      customTypeName:string;
+    dummy: boolean;
   begin
     //This must happen on construction:
     //typ=T_expressionType(stream^.readByte([low(T_expressionType)..high(T_expressionType)]));
-    customId:=stream^.readAnsiString;
-    result:=pattern.loadFromStream(literalRecycler,stream,location,adapters,typeMap)
-            and stream^.allOkay;
-    setLength(preparedBody,stream^.readNaturalNumber);
+    customId:=deserializer.wrappedRaw^.readAnsiString;
+    result:=pattern.loadFromStream(deserializer)
+            and deserializer.wrappedRaw^.allOkay;
+    setLength(preparedBody,deserializer.wrappedRaw^.readNaturalNumber);
     for i:=0 to length(preparedBody)-1 do begin
       preparedBody[i].token.create;
-      preparedBody[i].token.deserializeSingleToken(literalRecycler,location,adapters,stream,typeMap);
-      preparedBody[i].parIdx:=stream^.readInteger;
+      preparedBody[i].token.deserializeSingleToken(deserializer);
+      preparedBody[i].parIdx:=deserializer.wrappedRaw^.readInteger;
     end;
-    customTypeName:=stream^.readAnsiString;
-    if customTypeName<>'' then begin
-      if not(typeMap.containsKey(customTypeName,customType)) then begin
-        if adapters<>nil
-        then adapters^.raiseSimpleError('Unknown custom type for expression: '+customTypeName,location)
-        else raise Exception.create    ('Unknown custom type for expression: '+customTypeName);
-        stream^.logWrongTypeError;
-      end;
-    end;
+    customType:=deserializer.getTypeCheck(dummy);
     if typ in C_statefulExpressionTypes
-    then indexOfSave:=stream^.readNaturalNumber
+    then indexOfSave:=deserializer.wrappedRaw^.readNaturalNumber
     else indexOfSave:=-1;
-    result:=result and stream^.allOkay;
+    result:=result and deserializer.wrappedRaw^.allOkay;
   end;
 
 FUNCTION T_inlineExpression.inspect(CONST literalRecycler:P_literalRecycler): P_mapLiteral;
@@ -2009,28 +2001,26 @@ FUNCTION interpret_imp intFuncSignature;
     end;
   end;
 
-FUNCTION readExpressionFromStream(CONST literalRecycler:P_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_expressionLiteral;
+FUNCTION readExpressionFromStream(VAR deserializer:T_literalDeserializer):P_expressionLiteral;
   VAR expressionType:T_expressionType;
       builtinId :string;
       inlineEx :P_inlineExpression;
   begin
-    expressionType:=T_expressionType(stream^.readByte([byte(low(T_expressionType))..byte(high(T_expressionType))]));
+    expressionType:=T_expressionType(deserializer.wrappedRaw^.readByte([byte(low(T_expressionType))..byte(high(T_expressionType))]));
     result:=nil;
-    if stream^.allOkay then case expressionType of
+    if deserializer.wrappedRaw^.allOkay then case expressionType of
       et_builtin          :
         begin
-          builtinId:=stream^.readAnsiString;
+          builtinId:=deserializer.wrappedRaw^.readAnsiString;
           if not(builtinFunctionMap.canGetIntrinsicRuleAsExpression(builtinId,result)) then begin
-            if adapters<>nil
-            then adapters^.raiseSimpleError('Cannot deserialize builtin function: '+builtinId,location)
-            else raise Exception.create    ('Cannot deserialize builtin function: '+builtinId);
-            stream^.logWrongTypeError;
+            deserializer.raiseError('Cannot deserialize builtin function: '+builtinId);
+            deserializer.wrappedRaw^.logWrongTypeError;
           end;
         end;
       //TODO: et_builtinStateful!
       et_builtinIteratable,
       et_builtinAsyncOrFuture    :
-        result:=newGeneratorFromStreamCallback(literalRecycler,stream,location,adapters,typeMap);
+        result:=newGeneratorFromStreamCallback(deserializer);
       et_subrule          ,
       et_inline           ,
       et_subruleIteratable,
@@ -2038,16 +2028,14 @@ FUNCTION readExpressionFromStream(CONST literalRecycler:P_literalRecycler; CONST
       et_subruleStateful  ,
       et_inlineStateful:
         begin
-          new(inlineEx,init(expressionType,location));
-          if not(inlineEx^.loadFromStream(literalRecycler,stream,location,adapters,typeMap))
+          new(inlineEx,init(expressionType,deserializer.getLocation));
+          if not(inlineEx^.loadFromStream(deserializer))
           then dispose(inlineEx,destroy)
           else result:=inlineEx;
         end;
       else begin
-        if adapters<>nil
-        then adapters^.raiseSimpleError('Cannot deserialize expression of type: '+getEnumName(TypeInfo(expressionType),ord(expressionType)),location)
-        else raise Exception.create    ('Cannot deserialize expression of type: '+getEnumName(TypeInfo(expressionType),ord(expressionType)));
-        stream^.logWrongTypeError;
+        deserializer.raiseError('Cannot deserialize expression of type: '+getEnumName(TypeInfo(expressionType),ord(expressionType)));
+        deserializer.wrappedRaw^.logWrongTypeError;
       end;
     end;
   end;

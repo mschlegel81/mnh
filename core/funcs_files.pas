@@ -187,7 +187,7 @@ FUNCTION deserialize_impl intFuncSignature;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then begin
       typeMap:=P_abstractPackage(tokenLocation.package)^.getTypeMap;
-      result:=deserialize(recycler,P_stringLiteral(arg0)^.value,tokenLocation,context^.messages,typeMap);
+      result:=deserialize(P_stringLiteral(arg0)^.value,tokenLocation,context^.messages,typeMap);
       typeMap.destroy;
     end else result:=nil;
   end;
