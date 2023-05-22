@@ -170,10 +170,24 @@ FUNCTION readDatastore_impl intFuncSignature;
   end;
 
 FUNCTION serialize_impl intFuncSignature;
+  VAR deflate:boolean=true;
+      reuse:boolean=false;
   VAR void:P_literal;
   begin
-    if (params<>nil) and (params^.size=1)
-    then result:=recycler^.newStringLiteral(serialize(arg0,tokenLocation,context^.messages,true,false))
+    if (params<>nil) and (params^.size>=1)
+    then begin
+      if (params^.size>=2) then begin
+        if arg1^.literalType=lt_boolean
+        then deflate:=boolLit[true].equals(bool1)
+        else exit(nil);
+      end;
+      if (params^.size>=3) then begin
+        if arg2^.literalType=lt_boolean
+        then reuse:=boolLit[true].equals(bool2)
+        else exit(nil);
+      end;
+      result:=recycler^.newStringLiteral(serialize(arg0,tokenLocation,context^.messages,deflate,reuse))
+    end
     else if (params=nil) then begin
       void:=newVoidLiteral;
       result:=recycler^.newStringLiteral(serialize(void,tokenLocation,context^.messages,true,false));
@@ -618,7 +632,7 @@ INITIALIZATION
   builtinFunctionMap.registerRule(FILES_BUILTIN_NAMESPACE,'fileContents'   ,@fileContents_impl  ,ak_unary     {$ifdef fullVersion},'fileContents(filename:String);//Returns the contents of the specified file as one string'{$endif});
   builtinFunctionMap.registerRule(FILES_BUILTIN_NAMESPACE,'readDatastore'  ,@readDatastore_impl  ,ak_variadic_1{$ifdef fullVersion},'readDatastore(scriptPath:String,ruleName:String);//Tries to read the specified datastore; returns void if the datastore does not exist#'+
                                                                                                                 'readDatastore(datastorePath:String);//Tries to read the specified datastore - returns a map with keys "id" and "content"'{$endif});
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize'    ,@serialize_impl   ,ak_unary   {$ifdef fullVersion},'serialize(x);//Returns a string representing x.'{$endif});
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'serialize'    ,@serialize_impl   ,ak_unary   {$ifdef fullVersion},'serialize(x);//Returns a string representing x.#serialize(x,deflate:Boolean,reuse:Boolean);//Custom serialization.'{$endif});
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'deserialize'  ,@deserialize_impl ,ak_unary   {$ifdef fullVersion},'deserialize(s:string);//Returns the literal represented by s which was created using serialize(x)'{$endif});
   builtinFunctionMap.registerRule(FILES_BUILTIN_NAMESPACE,'fileLines'      ,@fileLines_impl     ,ak_unary     {$ifdef fullVersion},'fileLines(filename:String);//Returns the contents of the specified file as a list of strings#//Information on the line breaks is lost'{$endif});
   builtinFunctionMap.registerRule(FILES_BUILTIN_NAMESPACE,'writeFile'      ,@writeFile_impl     ,ak_binary    {$ifdef fullVersion},'writeFile(filename:String, content:String);//Writes the specified content to the specified file and returns true'{$endif});
