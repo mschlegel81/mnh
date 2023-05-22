@@ -80,6 +80,149 @@ FUNCTION newBoolLiteral(CONST value: boolean)      : P_boolLiteral; begin result
 FUNCTION newVoidLiteral                            : P_voidLiteral; begin result:=P_voidLiteral(voidLit       .rereferenced); end;
 FUNCTION newMapLiteral (CONST expectedSize: longint): P_mapLiteral; begin new(result,create(expectedSize)); end;
 
+{ T_literalSerializer }
+
+constructor T_literalSerializer.create(const deflate, reuse: boolean; const location_: T_tokenLocation; const adapters_: P_messages);
+  begin
+    useZStream:=deflate;;
+    useReusableMap:=reuse;
+    location:=location_;
+    adapters:=adapters_;
+    if useReusableMap then reusableMap.create();
+    stream:=TStringStream.Create();
+    new(streamWrapper,create(stream));
+  end;
+
+function T_literalSerializer.getData: ansistring;
+  VAR outputStream: T_outputStreamWrapper;
+      vDest: TStringStream;
+  begin
+    vDest:= TStringStream.create('');
+    outputStream.create(vDest);
+    writeSerializedToStream(@outputStream);
+    vDest.position:=0;
+    result:=vDest.DataString;
+    outputStream.destroy;
+  end;
+
+procedure T_literalSerializer.writeSerializedToStream(const outputStream: P_outputStreamWrapper);
+  VAR vCompressor: TCompressionStream;
+      vDest: TStringStream;
+  begin
+    outputStream^.writeByte(variantByte);
+    if useZStream then begin
+      vDest   := TStringStream.create('');
+      vCompressor := TCompressionStream.create(clMax, vDest,false);
+      vCompressor.CopyFrom(stream,0);
+      vCompressor.Free;
+      outputStream^.writeAnsiString(vDest.DataString);
+      vDest.Free;
+    end else outputStream^.writeAnsiString(stream.DataString);
+  end;
+
+procedure T_literalSerializer.raiseError(const message: string);
+  begin
+    if adapters<>nil
+    then adapters^.raiseSimpleError(message,location)
+    else raise Exception.create    (message);
+  end;
+
+destructor T_literalSerializer.destroy;
+  begin
+    if useReusableMap then reusableMap.destroy;
+    dispose(streamWrapper,destroy);
+  end;
+
+function T_literalSerializer.variantByte: byte;
+  begin
+    if useReusableMap then begin
+      if useZStream
+      then result:=249
+      else result:=251;
+    end else begin
+      if useZStream
+      then result:=250
+      else result:=248;
+    end;
+  end;
+
+procedure T_literalSerializer.writeLiteral(const l: P_literal);
+  VAR reusableIndex:longint;
+      x:P_literal;
+      iter:T_arrayOfLiteral;
+      mapEntry: T_literalKeyLiteralValueMap.CACHE_ENTRY;
+  FUNCTION typeByte:byte;
+    begin
+      result:=byte(L^.literalType)*2;
+      if (L^.literalType in C_typables) and (P_typableLiteral(L)^.customType<>nil) then inc(result);
+    end;
+
+  begin
+    if useReusableMap then begin
+      reusableIndex:=reusableMap.get(L,2097151);
+      if reusableIndex<2097151 then begin
+        inc(reusableIndex,2*byte(high(T_literalType))+2);
+        streamWrapper^.writeNaturalNumber(reusableIndex);
+        exit;
+      end;
+    end;
+    streamWrapper^.writeNaturalNumber(typeByte);
+    if (L^.literalType in C_typables) and (P_typableLiteral(L)^.customType<>nil) then streamWrapper^.writeAnsiString(P_typableLiteral(L)^.customType^.name);
+    case L^.literalType of
+      lt_boolean : streamWrapper^.writeBoolean   (P_boolLiteral  (L)^.val);
+      lt_smallint,lt_bigint  : P_abstractIntLiteral(L)^.writeToStream(streamWrapper);
+      lt_real:   streamWrapper^.writeDouble    (P_realLiteral  (L)^.val);
+      lt_string: streamWrapper^.writeAnsiString(P_stringLiteral(L)^.val);
+      lt_booleanList,lt_booleanSet:begin
+        streamWrapper^.writeNaturalNumber(P_compoundLiteral(L)^.size);
+        iter:=P_collectionLiteral(L)^.tempIteratableList;
+        for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then streamWrapper^.writeBoolean(P_boolLiteral(x)^.val);
+      end;
+      lt_intList,lt_intSet:begin
+        streamWrapper^.writeNaturalNumber(P_compoundLiteral(L)^.size);
+        iter:=P_collectionLiteral(L)^.tempIteratableList;
+        for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then P_abstractIntLiteral(x)^.writeToStream(streamWrapper);
+      end;
+      lt_realList,lt_realSet:begin
+        streamWrapper^.writeNaturalNumber(P_compoundLiteral(L)^.size);
+        iter:=P_collectionLiteral(L)^.tempIteratableList;
+        for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then streamWrapper^.writeDouble(P_realLiteral(x)^.val);
+      end;
+      lt_stringList,lt_stringSet:begin
+        streamWrapper^.writeNaturalNumber(P_compoundLiteral(L)^.size);
+        iter:=P_collectionLiteral(L)^.tempIteratableList;
+        for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then streamWrapper^.writeAnsiString(P_stringLiteral(x)^.val);
+      end;
+      lt_void, lt_emptyList,lt_emptySet,lt_emptyMap: begin end; //completely defined by type
+      lt_list,lt_set,
+      lt_numList,lt_numSet:begin
+        streamWrapper^.writeNaturalNumber(P_compoundLiteral(L)^.size);
+        iter:=P_collectionLiteral(L)^.tempIteratableList;
+        for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then writeLiteral(x);
+      end;
+      lt_map: begin
+        streamWrapper^.writeNaturalNumber(P_mapLiteral(L)^.size);
+        for mapEntry in P_mapLiteral(L)^.dat.keyValueList do begin
+          writeLiteral(mapEntry.key);
+          writeLiteral(mapEntry.value);
+        end;
+      end;
+      lt_expression: begin
+        if not(P_expressionLiteral(L)^.writeToStream(self)) then begin
+          if adapters<>nil then adapters^.raiseSimpleError('Cannot represent '+L^.typeString+' literal in binary form!',location)
+                           else raise Exception.create    ('Cannot represent '+L^.typeString+' literal in binary form!');
+        end;
+      end
+      else begin
+        if adapters<>nil then adapters^.raiseSimpleError('Cannot represent '+L^.typeString+' literal in binary form!',location)
+                         else raise Exception.create    ('Cannot represent '+L^.typeString+' literal in binary form!');
+      end;
+    end;
+    if useReusableMap and (reusableMap.fill<2097151) and ((L^.literalType in [lt_string,lt_expression]) or (L^.literalType in C_typables)) then
+      reusableMap.putNew(L,reusableMap.fill,reusableIndex);
+  end;
+
+
 PROCEDURE T_globalLiteralRecycler.freeMemory(CONST hard:boolean);
   VAR threshold:longint;
   begin

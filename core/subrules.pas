@@ -125,7 +125,7 @@ TYPE
       FUNCTION inspect(CONST literalRecycler:P_literalRecycler):P_mapLiteral; virtual;
       FUNCTION patternString:string;
       FUNCTION containsReturnToken:boolean; virtual;
-      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
       FUNCTION loadFromStream(CONST literalRecycler:P_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;
       FUNCTION referencesAnyUserPackage:boolean; virtual;
       FUNCTION getSideEffects:T_sideEffects;
@@ -190,7 +190,7 @@ TYPE
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
       FUNCTION equals(CONST other:P_literal):boolean; virtual;
       FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual;
-      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
     end;
 
   T_builtinGeneratorType=(bgt_future,
@@ -224,7 +224,7 @@ TYPE
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual; abstract;
       FUNCTION getId:T_idString; virtual;
-      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual;
+      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
       FUNCTION referencesAnyUserPackage:boolean; virtual;
   end;
 
@@ -1343,41 +1343,39 @@ FUNCTION T_inlineExpression.containsReturnToken: boolean;
     for p in preparedBody do if p.token.tokType=tt_return then exit(true);
   end;
 
-FUNCTION T_builtinExpressionProxy.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+FUNCTION T_builtinExpressionProxy.writeToStream(VAR serializer:T_literalSerializer):boolean;
   begin
-    stream^.writeByte(byte(typ));
-    stream^.writeAnsiString(id);
+    serializer.wrappedRaw^.writeByte(byte(typ));
+    serializer.wrappedRaw^.writeAnsiString(id);
     result:=true;
   end;
 
-FUNCTION T_builtinGeneratorExpression.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+FUNCTION T_builtinGeneratorExpression.writeToStream(VAR serializer:T_literalSerializer):boolean;
   begin
-    stream^.logWrongTypeError;
-    if adapters<>nil
-    then adapters^.raiseSimpleError('Cannot serialize builtin generator expression.',locationOfSerializeCall)
-    else raise Exception.create(    'Cannot serialize builtin generator expression.');
+    serializer.wrappedRaw^.logWrongTypeError;
+    serializer.raiseError('Cannot serialize builtin generator expression.');
     result:=false;
   end;
 
-FUNCTION T_inlineExpression.writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+FUNCTION T_inlineExpression.writeToStream(VAR serializer:T_literalSerializer):boolean;
   VAR i:longint;
   begin
     if referencesAnyUserPackage then exit(false);
-    stream^.writeByte(byte(typ));
-    stream^.writeAnsiString(customId);
-    result:=pattern.writeToStream(literalRecycler,locationOfSerializeCall,adapters,stream)
-            and stream^.allOkay;
-    stream^.writeNaturalNumber(length(preparedBody));
+    serializer.wrappedRaw^.writeByte(byte(typ));
+    serializer.wrappedRaw^.writeAnsiString(customId);
+    result:=pattern.writeToStream(serializer)
+            and serializer.wrappedRaw^.allOkay;
+    serializer.wrappedRaw^.writeNaturalNumber(length(preparedBody));
     for i:=0 to length(preparedBody)-1 do begin
-      result:=result and preparedBody[i].token.serializeSingleToken(literalRecycler,locationOfSerializeCall,adapters,stream);
-      stream^.writeInteger(preparedBody[i].parIdx);
+      result:=result and preparedBody[i].token.serializeSingleToken(serializer);
+      serializer.wrappedRaw^.writeInteger(preparedBody[i].parIdx);
     end;
     if (customType=nil)
-    then stream^.writeAnsiString('')
-    else stream^.writeAnsiString(customType^.getName);
+    then serializer.wrappedRaw^.writeAnsiString('')
+    else serializer.wrappedRaw^.writeAnsiString(customType^.getName);
     if typ in C_statefulExpressionTypes
-    then stream^.writeNaturalNumber(indexOfSave);
-    result:=result and stream^.allOkay;
+    then serializer.wrappedRaw^.writeNaturalNumber(indexOfSave);
+    result:=result and serializer.wrappedRaw^.allOkay;
   end;
 
 FUNCTION T_inlineExpression.loadFromStream(CONST literalRecycler:P_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):boolean;

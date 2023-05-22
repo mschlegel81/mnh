@@ -53,7 +53,7 @@ TYPE
     FUNCTION getModifier:T_modifier;
     PROCEDURE setModifier(CONST modifier:T_modifier);
 
-    FUNCTION serializeSingleToken(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean;
+    FUNCTION serializeSingleToken(VAR dest:T_literalSerializer):boolean;
     PROCEDURE deserializeSingleToken(CONST literalRecycler:P_literalRecycler; CONST locationOfDeserializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream: P_inputStreamWrapper; VAR typeMap:T_typeMap);
   end;
 
@@ -400,17 +400,17 @@ PROCEDURE T_token.setModifier(CONST modifier: T_modifier);
     tokType:=tt_modifier;
   end;
 
-FUNCTION T_token.serializeSingleToken(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream: P_outputStreamWrapper): boolean;
-  PROCEDURE writeType; begin stream^.writeByte(byte(tokType)); end;
-  PROCEDURE writeTxt;  begin stream^.writeAnsiString(txt); end;
+FUNCTION T_token.serializeSingleToken(VAR dest:T_literalSerializer): boolean;
+  PROCEDURE writeType; begin dest.wrappedRaw^.writeByte(byte(tokType)); end;
+  PROCEDURE writeTxt;  begin dest.wrappedRaw^.writeAnsiString(txt); end;
 
   begin
     case tokType of
       tt_literal:
         try
           writeType;
-          writeLiteralToStream(literalRecycler,P_literal(data),stream,locationOfSerializeCall,adapters);
-          result:=stream^.allOkay;
+          dest.writeLiteral(P_literal(data));
+          result:=dest.wrappedRaw^.allOkay;
         except
           result:=false
         end;
@@ -437,7 +437,7 @@ FUNCTION T_token.serializeSingleToken(CONST literalRecycler:P_literalRecycler; C
         begin
           writeType;
           writeTxt;
-          result:=stream^.allOkay;
+          result:=dest.wrappedRaw^.allOkay;
         end;
       tt_eachIndex,
       tt_ponFlipper,
@@ -469,13 +469,13 @@ FUNCTION T_token.serializeSingleToken(CONST literalRecycler:P_literalRecycler; C
       tt_nameOf:
         begin
           writeType;
-          result:=stream^.allOkay;
+          result:=dest.wrappedRaw^.allOkay;
         end;
       tt_modifier:
         begin
           writeType;
-          stream^.writeByte(byte(getModifier));
-          result:=stream^.allOkay;
+          dest.wrappedRaw^.writeByte(byte(getModifier));
+          result:=dest.wrappedRaw^.allOkay;
         end;
       //To ignore:
       tt_EOL,
@@ -509,10 +509,8 @@ FUNCTION T_token.serializeSingleToken(CONST literalRecycler:P_literalRecycler; C
       //                                tt_mut_nestedAppendAlt,
       //                                tt_mut_nestedDrop,
       else begin
-        if adapters<>nil
-        then adapters^.raiseSimpleError('Cannot serialize token of type '+getEnumName(TypeInfo(tokType),ord(tokType)),locationOfSerializeCall)
-        else raise Exception.create    ('Cannot serialize token of type '+getEnumName(TypeInfo(tokType),ord(tokType)));
-        stream^.logWrongTypeError;
+        dest.raiseError('Cannot serialize token of type '+getEnumName(TypeInfo(tokType),ord(tokType)));
+        dest.wrappedRaw^.logWrongTypeError;
         result:=false;
       end;
     end;

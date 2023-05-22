@@ -128,7 +128,7 @@ PROCEDURE sendMessage(senderServerId,receiverServerId:string; CONST statusOk:boo
     sendStatusOk:=statusOk and ((adapters=nil) or (adapters^.continueEvaluation)) and (payload<>nil);
     streamWrapper.writeBoolean(sendStatusOk);
     try
-      if sendStatusOk then writeLiteralToStream(recycler,payload,@streamWrapper,location,adapters);
+      if sendStatusOk then writeLiteralToStream(payload,location,adapters,true,false,@streamWrapper);
     except
       serializationOk:=false;
     end;

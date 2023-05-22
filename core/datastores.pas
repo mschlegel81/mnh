@@ -323,7 +323,7 @@ FUNCTION T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLo
     end else begin
       wrapper.createToWriteToFile(result.tempFileName);
       wrapper.writeAnsiString(ruleId);
-      writeLiteralToStream(recycler,L,@wrapper,location,threadLocalMessages);
+      writeLiteralToStream(L,location,threadLocalMessages,true,false,@wrapper);
       result.finishedOk:=threadLocalMessages^.continueEvaluation and wrapper.allOkay;
       wrapper.destroy;
     end;

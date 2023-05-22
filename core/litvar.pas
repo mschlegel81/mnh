@@ -5,7 +5,8 @@ USES myGenerics, myStringUtil, serializationUtil, bigint,
      mnh_constants,
      basicTypes,
      mnh_messages,
-     out_adapters;
+     out_adapters,
+     Classes;
 
 CONST HASH_GROWTH_THRESHOLD_FACTOR=  3;
       HASH_SHRINK_THRESHOLD_FACTOR=0.5;
@@ -81,6 +82,87 @@ TYPE
     FUNCTION getLocation:T_tokenLocation; virtual;
     PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
   end;
+
+  GENERIC G_literalKeyMap<VALUE_TYPE>= object
+    TYPE CACHE_ENTRY=record
+           key:P_literal;
+           keyHash:T_hashInt;
+           value:VALUE_TYPE;
+         end;
+         P_CACHE_ENTRY=^CACHE_ENTRY;
+         KEY_VALUE_LIST=array of CACHE_ENTRY;
+         BIN_ENTRY=record
+           binFill:longint;
+           arr:KEY_VALUE_LIST;
+         end;
+         P_BIN_ENTRY=^BIN_ENTRY;
+         MY_TYPE=specialize G_literalKeyMap<VALUE_TYPE>;
+    VAR bin:array of BIN_ENTRY;
+        fill:longint;
+    CONSTRUCTOR create(CONST expectedSize:longint=0);
+    PROCEDURE prepareForSize(CONST expectedSize:longint);
+    CONSTRUCTOR createClone(VAR map:MY_TYPE);
+    DESTRUCTOR destroy;
+    PROCEDURE clear;
+    PROCEDURE polish;
+    PROCEDURE rehash(CONST grow:boolean);
+    PROCEDURE put(CONST key:P_literal; CONST value:VALUE_TYPE);
+    FUNCTION putNew(CONST newEntry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
+    FUNCTION putNew(CONST key:P_literal; CONST value:VALUE_TYPE; OUT previousValue:VALUE_TYPE):boolean;
+    FUNCTION get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
+    FUNCTION getEntry(CONST key:P_literal):P_CACHE_ENTRY;
+    FUNCTION containsKey(CONST entry:CACHE_ENTRY):boolean;
+    FUNCTION drop(CONST key:P_literal):CACHE_ENTRY;
+    FUNCTION keyValueList:KEY_VALUE_LIST;
+    FUNCTION keySet:T_arrayOfLiteral;
+    {$ifdef debugMode}
+    PROCEDURE writeDump;
+    {$endif}
+  end;
+
+
+  { T_literalSerializer }
+
+  T_literalSerializer=object
+    private
+      useZStream,useReusableMap:boolean;
+      location:T_tokenLocation;
+      adapters:P_messages;
+
+      streamWrapper:P_outputStreamWrapper;
+      reusableMap:specialize G_literalKeyMap<longint>;
+      stream:TStringStream;
+
+      //vDest: TStringStream;
+      //vSource: TStream;
+      //vCompressor: TCompressionStream;
+
+    public
+      CONSTRUCTOR create(CONST deflate,reuse:boolean; CONST location_:T_tokenLocation; CONST adapters_:P_messages);
+      DESTRUCTOR destroy;
+
+      FUNCTION variantByte:byte;
+      PROCEDURE writeLiteral(CONST l:P_literal);
+      FUNCTION getData:ansistring;
+      PROCEDURE writeSerializedToStream(CONST outputStream: P_outputStreamWrapper);
+      PROCEDURE raiseError(CONST message:string);
+      PROPERTY wrappedRaw:P_outputStreamWrapper read streamWrapper;
+  end;
+  //
+  //T_literalDeserializer=object
+  //  private
+  //    useZStream,useReusableMap:boolean;
+  //    //reusableMap:specialize G_literalKeyMap<longint>;
+  //    //previousMapValueDummy:longint;
+  //    //mapEntry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
+  //    //vDest: TStringStream;
+  //    //vSource: TStream;
+  //    //vCompressor: TCompressionStream;
+  //    //typeMap:T_typeMap;
+  //
+  //  CONSTRUCTOR create(CONST typeMap_:T_typeMap);
+  //
+  //end;
 
   P_voidLiteral = ^T_voidLiteral;
   T_voidLiteral = object(T_literal)
@@ -247,7 +329,7 @@ TYPE
       FUNCTION equals(CONST other:P_literal):boolean; virtual;
       FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
       FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_expressionLiteral; virtual; abstract;
-      FUNCTION writeToStream(CONST literalRecycler:P_literalRecycler; CONST locationOfSerializeCall:T_tokenLocation; CONST adapters:P_messages; CONST stream:P_outputStreamWrapper):boolean; virtual; abstract;
+      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual; abstract;
       FUNCTION referencesAnyUserPackage:boolean; virtual; abstract;
       FUNCTION mustBeDroppedBeforePop:boolean; virtual;
   end;
@@ -279,43 +361,6 @@ TYPE
       FUNCTION getDocTxt:string;
       PROPERTY getDuckTypeRule:P_expressionLiteral read ducktyperule;
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler);
-  end;
-
-  GENERIC G_literalKeyMap<VALUE_TYPE>= object
-    TYPE CACHE_ENTRY=record
-           key:P_literal;
-           keyHash:T_hashInt;
-           value:VALUE_TYPE;
-         end;
-         P_CACHE_ENTRY=^CACHE_ENTRY;
-         KEY_VALUE_LIST=array of CACHE_ENTRY;
-         BIN_ENTRY=record
-           binFill:longint;
-           arr:KEY_VALUE_LIST;
-         end;
-         P_BIN_ENTRY=^BIN_ENTRY;
-         MY_TYPE=specialize G_literalKeyMap<VALUE_TYPE>;
-    VAR bin:array of BIN_ENTRY;
-        fill:longint;
-    CONSTRUCTOR create(CONST expectedSize:longint=0);
-    PROCEDURE prepareForSize(CONST expectedSize:longint);
-    CONSTRUCTOR createClone(VAR map:MY_TYPE);
-    DESTRUCTOR destroy;
-    PROCEDURE clear;
-    PROCEDURE polish;
-    PROCEDURE rehash(CONST grow:boolean);
-    PROCEDURE put(CONST key:P_literal; CONST value:VALUE_TYPE);
-    FUNCTION putNew(CONST newEntry:CACHE_ENTRY; OUT previousValue:VALUE_TYPE):boolean;
-    FUNCTION putNew(CONST key:P_literal; CONST value:VALUE_TYPE; OUT previousValue:VALUE_TYPE):boolean;
-    FUNCTION get(CONST key:P_literal; CONST fallbackIfNotFound:VALUE_TYPE):VALUE_TYPE;
-    FUNCTION getEntry(CONST key:P_literal):P_CACHE_ENTRY;
-    FUNCTION containsKey(CONST entry:CACHE_ENTRY):boolean;
-    FUNCTION drop(CONST key:P_literal):CACHE_ENTRY;
-    FUNCTION keyValueList:KEY_VALUE_LIST;
-    FUNCTION keySet:T_arrayOfLiteral;
-    {$ifdef debugMode}
-    PROCEDURE writeDump;
-    {$endif}
   end;
 
   P_literalKeyBooleanValueMap=^T_literalKeyBooleanValueMap;
@@ -486,10 +531,10 @@ FUNCTION myFloatToStr(CONST x: T_myFloat): string;
 FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppressOutput: boolean; CONST literalRecycler:P_literalRecycler; OUT parsedLength: longint): P_literal; inline;
 
 FUNCTION newLiteralFromStream(CONST literalRecycler:P_literalRecycler; CONST stream:P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_literal;
-PROCEDURE writeLiteralToStream(CONST literalRecycler:P_literalRecycler; CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages);
+PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_messages; CONST deflate,reuse:boolean; CONST stream:P_outputStreamWrapper);
 FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLocation; CONST adapters:P_messages; CONST maxLineLength:longint=128):T_arrayOfString;
 
-FUNCTION serialize(CONST literalRecycler:P_literalRecycler; CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_messages):ansistring;
+FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_messages; CONST deflate,reuse:boolean):ansistring;
 FUNCTION deserialize(CONST literalRecycler:P_literalRecycler; CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_literal;
 FUNCTION toParameterListString(CONST list:P_listLiteral; CONST isFinalized: boolean; CONST lengthLimit:longint=maxLongint): ansistring;
 FUNCTION parameterListTypeString(CONST list:P_listLiteral):string;
@@ -505,7 +550,7 @@ FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; 
 IMPLEMENTATION
 USES sysutils, math,
      zstream,
-     Classes,LazUTF8;
+     LazUTF8;
 CONST C_listType:array[false..true,false..true,false..true,false..true] of T_literalType=
          ((((lt_emptyList  ,lt_stringList),    //                     + string?
             (lt_realList   ,lt_list      )),   //              + real + string?
@@ -3982,92 +4027,92 @@ FUNCTION newLiteralFromStream(CONST literalRecycler:P_literalRecycler; CONST str
     freeMem(reusableLiterals,sizeOf(P_literal)*2097151);
   end;
 
-PROCEDURE writeLiteralToStream(CONST literalRecycler:P_literalRecycler; CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages);
-  VAR mapEntry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
-      zStreamAdapter: P_outputStreamWrapper;
-
-  PROCEDURE writeLiteral(CONST L:P_literal);
-    VAR x:P_literal;
-        iter:T_arrayOfLiteral;
-    FUNCTION typeByte:byte;
-      begin
-        result:=byte(L^.literalType)*2;
-        if (L^.literalType in C_typables) and (P_typableLiteral(L)^.customType<>nil) then inc(result);
-      end;
-
-    begin
-      zStreamAdapter^.writeNaturalNumber(typeByte);
-      if (L^.literalType in C_typables) and (P_typableLiteral(L)^.customType<>nil) then zStreamAdapter^.writeAnsiString(P_typableLiteral(L)^.customType^.name);
-      case L^.literalType of
-        lt_boolean : zStreamAdapter^.writeBoolean   (P_boolLiteral  (L)^.val);
-        lt_smallint,lt_bigint  : P_abstractIntLiteral(L)^.writeToStream(zStreamAdapter);
-        lt_real:   zStreamAdapter^.writeDouble    (P_realLiteral  (L)^.val);
-        lt_string: zStreamAdapter^.writeAnsiString(P_stringLiteral(L)^.val);
-        lt_booleanList,lt_booleanSet:begin
-          zStreamAdapter^.writeNaturalNumber(P_compoundLiteral(L)^.size);
-          iter:=P_collectionLiteral(L)^.tempIteratableList;
-          for x in iter do zStreamAdapter^.writeBoolean(P_boolLiteral(x)^.val);
-        end;
-        lt_intList,lt_intSet:begin
-          zStreamAdapter^.writeNaturalNumber(P_compoundLiteral(L)^.size);
-          iter:=P_collectionLiteral(L)^.tempIteratableList;
-          for x in iter do P_abstractIntLiteral(x)^.writeToStream(zStreamAdapter);
-        end;
-        lt_realList,lt_realSet:begin
-          zStreamAdapter^.writeNaturalNumber(P_compoundLiteral(L)^.size);
-          iter:=P_collectionLiteral(L)^.tempIteratableList;
-          for x in iter do zStreamAdapter^.writeDouble(P_realLiteral(x)^.val);
-        end;
-        lt_stringList,lt_stringSet:begin
-          zStreamAdapter^.writeNaturalNumber(P_compoundLiteral(L)^.size);
-          iter:=P_collectionLiteral(L)^.tempIteratableList;
-          for x in iter do zStreamAdapter^.writeAnsiString(P_stringLiteral(x)^.val);
-        end;
-        lt_void, lt_emptyList,lt_emptySet,lt_emptyMap: begin end; //completely defined by type
-        lt_list,lt_set,
-        lt_numList,lt_numSet:begin
-          zStreamAdapter^.writeNaturalNumber(P_compoundLiteral(L)^.size);
-          iter:=P_collectionLiteral(L)^.tempIteratableList;
-          for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then writeLiteral(x);
-        end;
-        lt_map: begin
-          zStreamAdapter^.writeNaturalNumber(P_mapLiteral(L)^.size);
-          for mapEntry in P_mapLiteral(L)^.dat.keyValueList do if (adapters=nil) or (adapters^.continueEvaluation) then  begin
-            writeLiteral(mapEntry.key);
-            writeLiteral(mapEntry.value);
-          end;
-        end;
-        lt_expression: begin
-          if not(P_expressionLiteral(L)^.writeToStream(literalRecycler,location,adapters,zStreamAdapter)) then begin
-            if adapters<>nil then adapters^.raiseSimpleError('Cannot represent '+L^.typeString+' literal in binary form!',location)
-                             else raise Exception.create    ('Cannot represent '+L^.typeString+' literal in binary form!');
-          end;
-        end
-        else begin
-          if adapters<>nil then adapters^.raiseSimpleError('Cannot represent '+L^.typeString+' literal in binary form!',location)
-                           else raise Exception.create    ('Cannot represent '+L^.typeString+' literal in binary form!');
-        end;
-      end;
-    end;
-  VAR vDest: TStringStream;
-      vSource: TStream;
-      vCompressor: TCompressionStream;
-  begin
-    stream^.writeByte(250);
-    vSource := TMemoryStream.create;
-    new(zStreamAdapter,create(vSource));
-    writeLiteral(L);
-
-    vDest   := TStringStream.create('');
-    vCompressor := TCompressionStream.create(clMax, vDest,false);
-    vCompressor.copyFrom(vSource, 0);
-    dispose(zStreamAdapter,destroy);
-    vCompressor.free;
-
-    vDest.position := 0;
-    stream^.writeAnsiString(vDest.DataString);
-    vDest.free;
-  end;
+//PROCEDURE writeLiteralToStream(CONST literalRecycler:P_literalRecycler; CONST L:P_literal; CONST stream:P_outputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages);
+//  VAR mapEntry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
+//      zStreamAdapter: P_outputStreamWrapper;
+//
+//  PROCEDURE writeLiteral(CONST L:P_literal);
+//    VAR x:P_literal;
+//        iter:T_arrayOfLiteral;
+//    FUNCTION typeByte:byte;
+//      begin
+//        result:=byte(L^.literalType)*2;
+//        if (L^.literalType in C_typables) and (P_typableLiteral(L)^.customType<>nil) then inc(result);
+//      end;
+//
+//    begin
+//      zStreamAdapter^.writeNaturalNumber(typeByte);
+//      if (L^.literalType in C_typables) and (P_typableLiteral(L)^.customType<>nil) then zStreamAdapter^.writeAnsiString(P_typableLiteral(L)^.customType^.name);
+//      case L^.literalType of
+//        lt_boolean : zStreamAdapter^.writeBoolean   (P_boolLiteral  (L)^.val);
+//        lt_smallint,lt_bigint  : P_abstractIntLiteral(L)^.writeToStream(zStreamAdapter);
+//        lt_real:   zStreamAdapter^.writeDouble    (P_realLiteral  (L)^.val);
+//        lt_string: zStreamAdapter^.writeAnsiString(P_stringLiteral(L)^.val);
+//        lt_booleanList,lt_booleanSet:begin
+//          zStreamAdapter^.writeNaturalNumber(P_compoundLiteral(L)^.size);
+//          iter:=P_collectionLiteral(L)^.tempIteratableList;
+//          for x in iter do zStreamAdapter^.writeBoolean(P_boolLiteral(x)^.val);
+//        end;
+//        lt_intList,lt_intSet:begin
+//          zStreamAdapter^.writeNaturalNumber(P_compoundLiteral(L)^.size);
+//          iter:=P_collectionLiteral(L)^.tempIteratableList;
+//          for x in iter do P_abstractIntLiteral(x)^.writeToStream(zStreamAdapter);
+//        end;
+//        lt_realList,lt_realSet:begin
+//          zStreamAdapter^.writeNaturalNumber(P_compoundLiteral(L)^.size);
+//          iter:=P_collectionLiteral(L)^.tempIteratableList;
+//          for x in iter do zStreamAdapter^.writeDouble(P_realLiteral(x)^.val);
+//        end;
+//        lt_stringList,lt_stringSet:begin
+//          zStreamAdapter^.writeNaturalNumber(P_compoundLiteral(L)^.size);
+//          iter:=P_collectionLiteral(L)^.tempIteratableList;
+//          for x in iter do zStreamAdapter^.writeAnsiString(P_stringLiteral(x)^.val);
+//        end;
+//        lt_void, lt_emptyList,lt_emptySet,lt_emptyMap: begin end; //completely defined by type
+//        lt_list,lt_set,
+//        lt_numList,lt_numSet:begin
+//          zStreamAdapter^.writeNaturalNumber(P_compoundLiteral(L)^.size);
+//          iter:=P_collectionLiteral(L)^.tempIteratableList;
+//          for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then writeLiteral(x);
+//        end;
+//        lt_map: begin
+//          zStreamAdapter^.writeNaturalNumber(P_mapLiteral(L)^.size);
+//          for mapEntry in P_mapLiteral(L)^.dat.keyValueList do if (adapters=nil) or (adapters^.continueEvaluation) then  begin
+//            writeLiteral(mapEntry.key);
+//            writeLiteral(mapEntry.value);
+//          end;
+//        end;
+//        lt_expression: begin
+//          if not(P_expressionLiteral(L)^.writeToStream(literalRecycler,location,adapters,zStreamAdapter)) then begin
+//            if adapters<>nil then adapters^.raiseSimpleError('Cannot represent '+L^.typeString+' literal in binary form!',location)
+//                             else raise Exception.create    ('Cannot represent '+L^.typeString+' literal in binary form!');
+//          end;
+//        end
+//        else begin
+//          if adapters<>nil then adapters^.raiseSimpleError('Cannot represent '+L^.typeString+' literal in binary form!',location)
+//                           else raise Exception.create    ('Cannot represent '+L^.typeString+' literal in binary form!');
+//        end;
+//      end;
+//    end;
+//  VAR vDest: TStringStream;
+//      vSource: TStream;
+//      vCompressor: TCompressionStream;
+//  begin
+//    stream^.writeByte(250);
+//    vSource := TMemoryStream.create;
+//    new(zStreamAdapter,create(vSource));
+//    writeLiteral(L);
+//
+//    vDest   := TStringStream.create('');
+//    vCompressor := TCompressionStream.create(clMax, vDest,false);
+//    vCompressor.copyFrom(vSource, 0);
+//    dispose(zStreamAdapter,destroy);
+//    vCompressor.free;
+//
+//    vDest.position := 0;
+//    stream^.writeAnsiString(vDest.DataString);
+//    vDest.free;
+//  end;
 
 FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLocation; CONST adapters:P_messages; CONST maxLineLength:longint=128):T_arrayOfString;
   VAR indent:longint=0;
@@ -4164,17 +4209,24 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLo
     result:=prevLines;
   end;
 
-FUNCTION serialize(CONST literalRecycler:P_literalRecycler; CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_messages):ansistring;
-  VAR wrapper:T_outputStreamWrapper;
-      stream:TStringStream;
+FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_messages; CONST deflate,reuse:boolean):ansistring;
+  VAR serializer:T_literalSerializer;
   begin
-    stream:= TStringStream.create('');
-    wrapper.create(stream);
-    writeLiteralToStream(literalRecycler,L,@wrapper,location,adapters);
-    stream.position:=0;
-    result:=stream.DataString;
-    wrapper.destroy; //implicitly destroys stream
+    serializer.create(deflate,reuse,location,adapters);
+    serializer.writeLiteral(L);
+    result:=serializer.getData;
+    serializer.destroy;
   end;
+
+PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_messages; CONST deflate,reuse:boolean; CONST stream:P_outputStreamWrapper);
+  VAR serializer:T_literalSerializer;
+  begin
+    serializer.create(deflate,reuse,location,adapters);
+    serializer.writeLiteral(L);
+    serializer.writeSerializedToStream(stream);
+    serializer.destroy;
+  end;
+
 
 FUNCTION deserialize(CONST literalRecycler:P_literalRecycler; CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_literal;
   VAR wrapper:T_inputStreamWrapper;

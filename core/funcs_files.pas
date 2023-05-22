@@ -173,10 +173,10 @@ FUNCTION serialize_impl intFuncSignature;
   VAR void:P_literal;
   begin
     if (params<>nil) and (params^.size=1)
-    then result:=recycler^.newStringLiteral(serialize(recycler,arg0,tokenLocation,context^.messages))
+    then result:=recycler^.newStringLiteral(serialize(arg0,tokenLocation,context^.messages,true,false))
     else if (params=nil) then begin
       void:=newVoidLiteral;
-      result:=recycler^.newStringLiteral(serialize(recycler,void,tokenLocation,context^.messages));
+      result:=recycler^.newStringLiteral(serialize(void,tokenLocation,context^.messages,true,false));
       recycler^.disposeLiteral(void);
     end else result:=nil;
   end;
