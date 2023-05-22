@@ -29,7 +29,7 @@ TYPE
     flags:set of T_cmdLineFlag;
     executor:string;
     deferredAdapterCreations:array of T_textFileAdapterSpecification;
-    sideEffectProfile:longint;
+    sideEffectProfile,cpuCount:longint;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
     PROCEDURE clear;
@@ -166,6 +166,7 @@ DESTRUCTOR T_mnhExecutionOptions.destroy;
 
 PROCEDURE T_mnhExecutionOptions.clear;
   begin
+    cpuCount:=-1;
     sideEffectProfile:=0;
     verbosityString:=DEF_VERBOSITY_STRING;
     setLength(deferredAdapterCreations,0);
@@ -290,6 +291,15 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
           verbosityString+=app;
           exit(true);
         end;
+        //cpuCount
+        if startsWith(param,'-cpu') then begin
+          app:=copy(param,5,length(param)-4);
+          i:=strToIntDef(app,-1);
+          if i>0 then begin
+            cpuCount:=i;
+            exit(true);
+          end;
+        end;
         //flags:
         if param=FLAG_EDIT         then begin parsingState.parsingState:=pst_parsingFileToEdit; exit(true); end;
         if param=FLAG_PROFILE      then begin include(flags,{$ifdef fullVersion}clf_PROFILE{$else}clf_GUI{$endif}); exit(true); end;
@@ -377,9 +387,7 @@ PROCEDURE T_commandLineParameters.initFromCommandLine;
           fileOrCommandToInterpret:=paramStr(i);
           if not(mnhExecutionOptions.executeCommand) then begin
             if fileExists(fileOrCommandToInterpret) then begin
-              if i=1 //If the script is the first parameter, then no parameters were given by the command line and parameters from shebang must be taken into account
-              then mnhExecutionOptions.parseShebangParameters(fileOrCommandToInterpret,parsingState)
-              else if parsingState.parsingState=pst_initial then parsingState.parsingState:=pst_parsingScriptParameters;
+              mnhExecutionOptions.parseShebangParameters(fileOrCommandToInterpret,parsingState);
               fileOrCommandToInterpret:=expandFileName(fileOrCommandToInterpret);
               if parsingState.parsingState=pst_parsingFileToEdit then begin
                 {$ifdef fullVersion}
@@ -585,6 +593,7 @@ FUNCTION T_mnhExecutionOptions.getCommandLineArgumentsArray: T_arrayOfString;
       append(result,MARK_RESTRICT);
       append(result,C_sideEffectProfile[sideEffectProfile].name);
     end;
+    if cpuCount>0 then append(result,'-cpu'+intToStr(cpuCount));
     for k:=0 to length(deferredAdapterCreations)-1 do
     if deferredAdapterCreations[k].handlePrintAsLog
     then anyHandlePrintAsLog:=true
@@ -656,6 +665,7 @@ PROCEDURE displayHelp(CONST adapters:P_messages);
     append(linesToPrint,C_tabChar+MARK_LOCLEN+' <length>'+C_tabChar+'location length for log output. Applies to all logs defined afterwards');
     append(linesToPrint,C_tabChar+C_tabChar+'A length of zero is interpreted as "full location"');
     append(linesToPrint,C_tabChar+MARK_RESTRICT+' <profileName>'+C_tabChar+'Restricts the allowed side effects. Available restriction profiles:');
+    append(linesToPrint,C_tabChar+'-cpu[n]'+C_tabChar+'Sets the number of (logical) CPUs to use');
     for i:=0 to length(C_sideEffectProfile)-1 do if C_sideEffectProfile[i].name<>'' then
     append(linesToPrint,C_tabChar+C_tabChar+'  '+C_sideEffectProfile[i].name);
     linesToPrint:=formatTabs(linesToPrint);
@@ -714,6 +724,7 @@ FUNCTION T_commandLineParameters.applyAndReturnOk(CONST adapters: P_messagesDist
       ExitCode:=1;
       result:=false;
     end;
+    if result and (mnhExecutionOptions.cpuCount>0) then settings.cpuCount:=mnhExecutionOptions.cpuCount;
   end;
 
 end.
