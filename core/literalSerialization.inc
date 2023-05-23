@@ -1,6 +1,4 @@
 {$ifdef include_interface}
-{ T_literalSerializer }
-
 T_literalSerializer=object
   private
     useZStream,useReusableMap:boolean;
@@ -10,11 +8,6 @@ T_literalSerializer=object
     streamWrapper:P_outputStreamWrapper;
     reusableMap:specialize G_literalKeyMap<longint>;
     stream:TStringStream;
-
-    //vDest: TStringStream;
-    //vSource: TStream;
-    //vCompressor: TCompressionStream;
-
   public
     CONSTRUCTOR create(CONST deflate,reuse:boolean; CONST location_:T_tokenLocation; CONST adapters_:P_messages);
     DESTRUCTOR destroy;
@@ -26,8 +19,6 @@ T_literalSerializer=object
     PROCEDURE raiseError(CONST message:string);
     PROPERTY wrappedRaw:P_outputStreamWrapper read streamWrapper;
 end;
-
-{ T_literalDeserializer }
 
 T_literalDeserializer=object
   private
@@ -49,9 +40,6 @@ T_literalDeserializer=object
 end;
 {$endif}
 {$ifdef include_implementation}
-
-{ T_literalDeserializer }
-
 CONSTRUCTOR T_literalDeserializer.create(CONST typeMap_: T_typeMap; CONST location_: T_tokenLocation; CONST adapters_: P_messages; CONST inputStream: P_inputStreamWrapper);
   VAR variant: byte;
       sourceStream: TStringStream;
@@ -237,8 +225,6 @@ FUNCTION T_literalDeserializer.getTypeCheck(OUT skipCustomCheck:boolean): P_type
       streamWrapper^.logWrongTypeError;
     end;
   end;
-
-{ T_literalSerializer }
 
 CONSTRUCTOR T_literalSerializer.create(CONST deflate, reuse: boolean; CONST location_: T_tokenLocation; CONST adapters_: P_messages);
   begin
