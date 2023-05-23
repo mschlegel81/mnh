@@ -75,7 +75,7 @@ FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOf
       try
         initialize(dummyLocation);
         dummyTypeMap.create();
-        literal:=newLiteralFromStream(@globalLiteralRecycler,@wrapper,dummyLocation,nil,dummyTypeMap);
+        literal:=newLiteralFromStream(@wrapper,dummyLocation,nil,dummyTypeMap);
         dummyTypeMap.destroy;
         if wrapper.allOkay and (literal<>nil) then begin
           dataAsStringList:=id+':=';
@@ -268,7 +268,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; CONST context
       wrapper.readAnsiString;
       result:=nil;
       typeMap:=P_abstractPackage(location.package)^.getTypeMap;
-      if wrapper.allOkay then result:=newLiteralFromStream(recycler,@wrapper,location,context^.messages,typeMap);
+      if wrapper.allOkay then result:=newLiteralFromStream(@wrapper,location,context^.messages,typeMap);
       typeMap.destroy;
       if not(wrapper.allOkay) then begin
         if result<>nil then recycler^.disposeLiteral(result);
@@ -323,7 +323,7 @@ FUNCTION T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLo
     end else begin
       wrapper.createToWriteToFile(result.tempFileName);
       wrapper.writeAnsiString(ruleId);
-      writeLiteralToStream(recycler,L,@wrapper,location,threadLocalMessages);
+      writeLiteralToStream(L,location,threadLocalMessages,true,false,@wrapper);
       result.finishedOk:=threadLocalMessages^.continueEvaluation and wrapper.allOkay;
       wrapper.destroy;
     end;

@@ -20,6 +20,7 @@ TYPE
     cmdLinePreviewEdit: TEdit;
     forceStdErrCb: TCheckBox;
     forceStdOutCb: TCheckBox;
+    GroupBox7: TGroupBox;
     Label4: TLabel;
     outputFileComboBox: TComboBox;
     Panel1: TPanel;
@@ -27,6 +28,7 @@ TYPE
     Label3: TLabel;
     logLocationLengthEdit: TEdit;
     formatPreviewMemo: TMemo;
+    cpuCountComboBox: TComboBox;
     timeFormatEdit: TEdit;
     GroupBox6: TGroupBox;
     Label2: TLabel;
@@ -519,6 +521,7 @@ PROCEDURE TCmdLineParametersFrame.headlessFlagCbClick(Sender: TObject);
 PROCEDURE TCmdLineParametersFrame.anyPage1Change(Sender: TObject);
   begin
     if initializing then exit;
+    optionsToUpdate^.cpuCount:=cpuCountComboBox.ItemIndex;
     optionsToUpdate^.setCallLightFlavour(lightVersionRb.checked);
     optionsToUpdate^.flags:=[];
     optionsToUpdate^.verbosityString:=consoleVerbosityEdit.text;

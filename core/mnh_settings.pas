@@ -59,6 +59,7 @@ FUNCTION defaultWorkspaceFilename:string;
 FUNCTION ideSettingsFilename: string;
 FUNCTION runParameterHistoryFileName:string;
 PROCEDURE saveSettings;
+PROCEDURE loadSettings;
 VAR settings:T_settings;
 IMPLEMENTATION
 
@@ -168,11 +169,16 @@ PROCEDURE T_settings.fixLocations;
     {$endif};
   end;
 
+PROCEDURE loadSettings;
+  begin
+    if fileExists(settingsFileName)
+    then settings.loadFromFile(settingsFileName)
+    else settings.initDefaults;
+  end;
+
 INITIALIZATION
   settings.create;
-  if fileExists(settingsFileName)
-  then settings.loadFromFile(settingsFileName)
-  else settings.initDefaults;
+  loadSettings;
   {$ifndef FULLVERSION}
   settings.fixLocations;
   {$endif}

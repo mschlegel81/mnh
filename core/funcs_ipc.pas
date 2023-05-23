@@ -128,7 +128,7 @@ PROCEDURE sendMessage(senderServerId,receiverServerId:string; CONST statusOk:boo
     sendStatusOk:=statusOk and ((adapters=nil) or (adapters^.continueEvaluation)) and (payload<>nil);
     streamWrapper.writeBoolean(sendStatusOk);
     try
-      if sendStatusOk then writeLiteralToStream(recycler,payload,@streamWrapper,location,adapters);
+      if sendStatusOk then writeLiteralToStream(payload,location,adapters,true,false,@streamWrapper);
     except
       serializationOk:=false;
     end;
@@ -169,7 +169,7 @@ FUNCTION readMessage(VAR receiver:TSimpleIPCServer;
     messageHash:=streamWrapper.readDWord;
     statusOk:=streamWrapper.readBoolean;
     typeMap:=P_abstractPackage(location.package)^.getTypeMap;
-    if statusOk then payload:=newLiteralFromStream(recycler,@streamWrapper,location,adapters,typeMap)
+    if statusOk then payload:=newLiteralFromStream(@streamWrapper,location,adapters,typeMap)
                 else payload:=nil;
     typeMap.destroy;
     streamWrapper.destroy;

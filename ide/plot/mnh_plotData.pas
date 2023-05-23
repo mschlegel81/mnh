@@ -1589,10 +1589,9 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
         myGenerics.append(commands,currentPlot.getRowStatements(prevOptions,@globalLiteralRecycler,globalRowData^,haltExport,Application,progress));
       end;
       DataString:=base92Encode(
-                     serialize(@globalLiteralRecycler,
-                               globalRowData,
+                     serialize(globalRowData,
                                dummyLocation,
-                               nil));
+                               nil,true,true));
       myGenerics.append(result,'ROW:=//!~'+copy(DataString,1,151));
       dsOffset:=152;
       progress.max:=(length(DataString) div 160)*2;

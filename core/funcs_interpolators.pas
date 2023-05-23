@@ -36,7 +36,7 @@ TYPE
       PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
 
       FUNCTION referencesAnyUserPackage: boolean; virtual;
-      FUNCTION writeToStream(CONST literalRecycler: P_literalRecycler; CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean; virtual;
+      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
   end;
 
 IMPLEMENTATION
@@ -193,12 +193,10 @@ FUNCTION T_interpolator.referencesAnyUserPackage: boolean;
     result:=false;
   end;
 
-FUNCTION T_interpolator.writeToStream(CONST literalRecycler: P_literalRecycler; CONST locationOfSerializeCall: T_tokenLocation; CONST adapters: P_messages; CONST stream: P_outputStreamWrapper): boolean;
+FUNCTION T_interpolator.writeToStream(VAR serializer:T_literalSerializer):boolean;
   begin
-    stream^.logWrongTypeError;
-    if adapters<>nil
-    then adapters^.raiseSimpleError('Cannot serialize builtin generator expression.',locationOfSerializeCall)
-    else raise Exception.create(    'Cannot serialize builtin generator expression.');
+    serializer.wrappedRaw^.logWrongTypeError;
+    serializer.raiseError('Cannot serialize builtin generator expression.');
     result:=false;
   end;
 
