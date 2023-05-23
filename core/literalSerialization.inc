@@ -70,6 +70,9 @@ CONSTRUCTOR T_literalDeserializer.create(CONST typeMap_: T_typeMap; CONST locati
       else begin
         raiseError('Invalid literal encoding: '+intToStr(variant));
         inputStream^.logWrongTypeError;
+        //Even if this fails, a graceful error handling must be possible afterwards.
+        useZStream:=false;
+        streamWrapper:=inputStream;
         exit;
       end;
     end;
@@ -129,6 +132,7 @@ FUNCTION T_literalDeserializer.getLiteral: P_literal;
     end;
 
   begin
+    if not(streamWrapper^.allOkay) then exit(newVoidLiteral);
     reusableIndex:=streamWrapper^.readNaturalNumber;
     if reusableIndex<=47 then begin
       literalType:=byteToType(reusableIndex);
@@ -173,7 +177,7 @@ FUNCTION T_literalDeserializer.getLiteral: P_literal;
           lt_stringList,lt_stringSet:
             for i:=0 to listSize-1 do if streamWrapper^.allOkay then P_collectionLiteral(result)^.appendString(@globalLiteralRecycler,streamWrapper^.readAnsiString);
           else
-            for i:=0 to listSize-1 do if streamWrapper^.allOkay then P_collectionLiteral(result)^.append(@globalLiteralRecycler,getLiteral,false);
+            for i:=0 to listSize-1 do if streamWrapper^.allOkay then P_collectionLiteral(result)^.append(@globalLiteralRecycler,getLiteral(),false);
         end;
         if P_collectionLiteral(result)^.size<>listSize then raiseError('Invalid collection. Expected size of '+intToStr(listSize)+' but got '+result^.typeString);
       end;
@@ -181,8 +185,8 @@ FUNCTION T_literalDeserializer.getLiteral: P_literal;
         result:=newMapLiteral(0);
         listSize:=streamWrapper^.readNaturalNumber;
         for i:=0 to listSize-1 do if streamWrapper^.allOkay then begin
-          mapKey  :=getLiteral;
-          mapValue:=getLiteral;
+          mapKey  :=getLiteral();
+          mapValue:=getLiteral();
           P_mapLiteral(result)^.dat.put(mapKey,mapValue);
         end;
         result^.literalType:=lt_map;
@@ -271,7 +275,7 @@ PROCEDURE T_literalSerializer.writeSerializedToStream(CONST outputStream: P_outp
       vCompressor.free;
       outputStream^.writeAnsiString(vDest.DataString);
       vDest.free;
-    end else outputStream^.writeAnsiString(stream.DataString);
+    end else outputStream^.write(stream.memory^,stream.size);
   end;
 
 PROCEDURE T_literalSerializer.raiseError(CONST message: string);

@@ -518,6 +518,7 @@ FUNCTION T_token.serializeSingleToken(VAR dest:T_literalSerializer): boolean;
 
 PROCEDURE T_token.deserializeSingleToken(VAR deserializer:T_literalDeserializer);
   begin
+    location:=deserializer.getLocation;
     tokType:=T_tokenType(deserializer.wrappedRaw^.readByte([byte(low(T_tokenType))..byte(high(T_tokenType))]));
     if deserializer.wrappedRaw^.allOkay then case tokType of
       tt_literal:

@@ -23,9 +23,9 @@ testSerialize(x:Expression)->begin
 end;
 
 main->begin
-  ['+wwEAAEAAiR4AB4GHfz/APsEAfz/O/z/AwIkeAAe/P8b/P8A',
-   '+wwACG1hdGguY29z',
-   '+wwEAAEAAiR4AB4NBQNzaW78/x38/wMCJHgAHvz/Pfz/Hfz/APsEAfz/Ovz/BQNjb3P8/x38/wMCJHgAHvz/Hvz/AA==']
+  ['+iF42uNhYWBkYKxgkGNhYGH889/6z38mIE/6z38GAERJB3Q=',
+   '+hN42uNh4MhNLMnQS84vBgAO2AMy',
+   '+jd42uNhYWBkYFKpYJDjZWUuzsz781/2z39msMCf/7ZgHgML45//Vn/+szIn5xejyAMRAwAC0Buy']
   .map(::testUnary);
   testBinaryWithParameterRestriction;
   [{$x+1},

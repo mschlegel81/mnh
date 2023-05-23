@@ -1380,7 +1380,7 @@ FUNCTION T_inlineExpression.writeToStream(VAR serializer:T_literalSerializer):bo
 
 FUNCTION T_inlineExpression.loadFromStream(VAR deserializer:T_literalDeserializer):boolean;
   VAR i:longint;
-    dummy: boolean;
+      dummy: boolean;
   begin
     //This must happen on construction:
     //typ=T_expressionType(stream^.readByte([low(T_expressionType)..high(T_expressionType)]));
@@ -1390,8 +1390,10 @@ FUNCTION T_inlineExpression.loadFromStream(VAR deserializer:T_literalDeserialize
     setLength(preparedBody,deserializer.wrappedRaw^.readNaturalNumber);
     for i:=0 to length(preparedBody)-1 do begin
       preparedBody[i].token.create;
-      preparedBody[i].token.deserializeSingleToken(deserializer);
-      preparedBody[i].parIdx:=deserializer.wrappedRaw^.readInteger;
+      if deserializer.wrappedRaw^.allOkay then begin
+        preparedBody[i].token.deserializeSingleToken(deserializer);
+        preparedBody[i].parIdx:=deserializer.wrappedRaw^.readInteger;
+      end;
     end;
     customType:=deserializer.getTypeCheck(dummy);
     if typ in C_statefulExpressionTypes
