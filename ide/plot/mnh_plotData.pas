@@ -831,18 +831,10 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
     end;
 
   begin
-    enterCriticalSection(seriesCs);
-    if (frameIndex<0) or (frameIndex>=length(frame)) then begin
-      leaveCriticalSection(seriesCs);
-      exit;
-    end;
-    try
-      current:=frame[frameIndex];
-      if not(volatile) then handleImagesToFree;
-      current^.obtainImage(target,timing);
-    finally
-      leaveCriticalSection(seriesCs);
-    end;
+    if (frameIndex<0) or (frameIndex>=length(frame)) then exit;
+    current:=frame[frameIndex];
+    if not(volatile) then handleImagesToFree;
+    current^.obtainImage(target,timing);
   end;
 
 PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; CONST width,height:longint; CONST exportingAll:boolean);
@@ -902,58 +894,53 @@ FUNCTION T_plotSeries.nextFrame(VAR frameIndex: longint; CONST cycle:boolean; CO
   {$endif}
   VAR i,j,k:longint;
   begin
-    enterCriticalSection(seriesCs);
-    try
-      if length(frame)=0 then begin
-        frameIndex:=-1;
-        result:=false;
-      end else begin
-        if volatile then begin
-          j:=0;
-          k:=0;
-          for i:=0 to length(frame)-1 do if (i>=frameIndex) then begin
-            frame[j]:=frame[i];
-            inc(j);
-          end else begin
-            dispose(frame[i],destroy);
-            inc(k);
-          end;
-          if k>0 then begin
-            setLength(frame,j);
-            dec(frameIndex,k);
-          end;
+    if length(frame)=0 then begin
+      frameIndex:=-1;
+      result:=false;
+    end else begin
+      if volatile then begin
+        j:=0;
+        k:=0;
+        for i:=0 to length(frame)-1 do if (i>=frameIndex) then begin
+          frame[j]:=frame[i];
+          inc(j);
+        end else begin
+          dispose(frame[i],destroy);
+          inc(k);
         end;
-        result:=true;
-        inc(frameIndex);
-        if frameIndex>=length(frame) then begin
-          if cycle then frameIndex:=0
-                   else begin
-                     frameIndex:=length(frame)-1;
-                     result:=false;
-                   end;
+        if k>0 then begin
+          setLength(frame,j);
+          dec(frameIndex,k);
         end;
-        {$ifdef enable_render_threads}
-        if result then begin
-          lastToPrepare:=frameIndex+settings.cpuCount;
-          if cycle
-          then lastToPrepare:=lastToPrepare mod length(frame)
-          else if lastToPrepare>=length(frame) then lastToPrepare:=length(frame)-1;
-
-          toPrepare:=frameIndex+1;
-          imageSizeEstimate:=(width+4)*height*5+8192; //conservative estimate
-
-          memoryRemaining:=memoryCleaner.memoryComfortThreshold-memoryCleaner.getMemoryUsedInBytes-imageSizeEstimate*8; //assume, that those have not been taken into account yet
-
-          while (toPrepare<length(frame)) and (toPrepare<>lastToPrepare) and (preparationThreadsRunning<settings.cpuCount) and (memoryRemaining>imageSizeEstimate) do begin
-            if frame[toPrepare]^.postPreparation(width,height) then dec(memoryRemaining,imageSizeEstimate);
-            inc(toPrepare);
-            if cycle then toPrepare:=toPrepare mod length(frame);
-          end;
-        end;
-        {$endif}
       end;
-    finally
-      leaveCriticalSection(seriesCs);
+      result:=true;
+      inc(frameIndex);
+      if frameIndex>=length(frame) then begin
+        if cycle then frameIndex:=0
+                 else begin
+                   frameIndex:=length(frame)-1;
+                   result:=false;
+                 end;
+      end;
+      {$ifdef enable_render_threads}
+      if result then begin
+        lastToPrepare:=frameIndex+settings.cpuCount;
+        if cycle
+        then lastToPrepare:=lastToPrepare mod length(frame)
+        else if lastToPrepare>=length(frame) then lastToPrepare:=length(frame)-1;
+
+        toPrepare:=frameIndex+1;
+        imageSizeEstimate:=(width+4)*height*5+8192; //conservative estimate
+
+        memoryRemaining:=memoryCleaner.memoryComfortThreshold-memoryCleaner.getMemoryUsedInBytes-imageSizeEstimate*8; //assume, that those have not been taken into account yet
+
+        while (toPrepare<length(frame)) and (toPrepare<>lastToPrepare) {and (preparationThreadsRunning<settings.cpuCount)} and (memoryRemaining>imageSizeEstimate) do begin
+          if frame[toPrepare]^.postPreparation(width,height) then dec(memoryRemaining,imageSizeEstimate);
+          inc(toPrepare);
+          if cycle then toPrepare:=toPrepare mod length(frame);
+        end;
+      end;
+      {$endif}
     end;
   end;
 
@@ -1695,7 +1682,8 @@ FUNCTION T_plotSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
   begin
     if collectedFill=0 then exit([]);
     start:=now;
-    enterCriticalSection(adapterCs);
+
+    if tryEnterCriticalsection(adapterCs)=0 then exit([]);
     setLength(toProcessInThisRun,collectedFill);
     for i:=0 to collectedFill-1 do toProcessInThisRun[i]:=collected[i];
     collectedFill:=0;

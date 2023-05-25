@@ -603,7 +603,7 @@ PROCEDURE TplotForm.performFastUpdate;
           framesTimer.start(fpsSamplingStart);
           animationFPSLabel.caption:=formatFloat('#0.0',1/secondsPerFrame)+'fps';
           //:FPS label
-        end;
+        end else relatedPlot^.flushToGui(false);
         frameTrackBar.max:=relatedPlot^.animation.frameCount-1;
         frameTrackBar.position:=animationFrameIndex;
         frameIndexLabel.caption:=intToStr(animationFrameIndex);
