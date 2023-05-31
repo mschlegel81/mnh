@@ -171,8 +171,7 @@ FUNCTION getOptions intFuncSignature;
         .put(recycler,'logscaleX'      ,opt.axisTrafo['x'].logscale)^
         .put(recycler,'logscaleY'      ,opt.axisTrafo['y'].logscale)^
         .put(recycler,'axisStyleX'     ,byte(opt.axisStyle['x']))^
-        .put(recycler,'axisStyleY'     ,byte(opt.axisStyle['y']))^
-        .put(recycler,'strictInput'    ,opt.strictInput);
+        .put(recycler,'axisStyleY'     ,byte(opt.axisStyle['y']));
     end;
   end;
 
@@ -240,10 +239,6 @@ FUNCTION setOptions intFuncSignature;
       end else
       if (key='axisStyleY'    ) and (value^.literalType in [lt_smallint,lt_bigint]) then begin
         opt.axisStyle['y']:=P_abstractIntLiteral(value)^.intValue and 7;
-        include(modified,soe_axisStyleY);
-      end else
-      if (key='strictInput'    ) and (value^.literalType=lt_boolean) then begin
-        opt.strictInput:=P_boolLiteral(value)^.value;
         include(modified,soe_axisStyleY);
       end else fail;
     end;
