@@ -52,7 +52,7 @@ TYPE
 FUNCTION newFileCodeProvider(CONST path:ansistring):P_codeProvider;
 FUNCTION newVirtualFileCodeProvider(CONST path:ansistring; CONST lineData:T_arrayOfString):P_virtualFileCodeProvider;
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
-PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint; OUT hash:T_sha256Hash);
+PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:int64; OUT hash:T_sha256Hash);
 FUNCTION fileLines(CONST name: ansistring; OUT accessed: boolean): T_arrayOfString;
 FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
 FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfString; CONST lineSeparator:string; CONST doAppend:boolean): boolean;
@@ -214,7 +214,7 @@ FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
     end;
   end;
 
-PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:longint; OUT hash:T_sha256Hash);
+PROCEDURE fileStats(CONST name:ansistring; OUT lineCount,wordCount,byteCount:int64; OUT hash:T_sha256Hash);
   CONST BUFFER_SIZE=8192;
   VAR buffer:array[0..BUFFER_SIZE-1] of byte;
       bufferFill:longint;

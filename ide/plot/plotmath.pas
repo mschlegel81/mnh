@@ -86,11 +86,10 @@ TYPE
   P_plotPrimitive=^T_plotPrimitive;
   T_plotPrimitiveList=array of P_plotPrimitive;
 
-  T_scalingOptionElement=(soe_x0,soe_x1,soe_y0,soe_y1,soe_fontsize,soe_autoscaleFactor,soe_preserveAspect,soe_autoscaleX,soe_autoscaleY,soe_logscaleX,soe_logscaleY,soe_axisStyleX,soe_axisStyleY,soe_strict);
+  T_scalingOptionElement=(soe_x0,soe_x1,soe_y0,soe_y1,soe_fontsize,soe_autoscaleFactor,soe_preserveAspect,soe_autoscaleX,soe_autoscaleY,soe_logscaleX,soe_logscaleY,soe_axisStyleX,soe_axisStyleY);
   T_scalingOptionElements=set of T_scalingOptionElement;
   T_scalingOptions=object
-    preserveAspect,
-    strictInput: boolean;
+    preserveAspect  : boolean;
     relativeFontSize: double;
     autoscaleFactor : double;
     axisTrafo:array['x'..'y'] of T_axisTrafo;
@@ -1015,7 +1014,6 @@ PROCEDURE T_scalingOptions.setDefaults;
     preserveAspect:=true;
     relativeFontSize:=10;
     autoscaleFactor:=1;
-    strictInput:=false;
   end;
 
 PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST primitives:T_plotPrimitiveList; VAR grid: T_ticInfos);
@@ -1513,13 +1511,11 @@ PROCEDURE T_scalingOptions.modifyOptions(CONST o:T_scalingOptions; CONST modifie
     if soe_logscaleY       in modified then axisTrafo['y'].logscale :=o.axisTrafo['y'].logscale ;
     if soe_axisStyleX      in modified then axisStyle['x']          :=o.axisStyle['x']          ;
     if soe_axisStyleY      in modified then axisStyle['y']          :=o.axisStyle['y']          ;
-    if soe_strict          in modified then strictInput             :=o.strictInput;
   end;
 
 FUNCTION T_scalingOptions.equals(CONST other:T_scalingOptions):boolean;
   begin
     result:=(preserveAspect=other.preserveAspect) and
-            (strictInput   =other.strictInput) and
             (relativeFontSize=other.relativeFontSize) and
             (autoscaleFactor=other.autoscaleFactor) and
             (axisTrafo['x'].equals(other.axisTrafo['x'])) and
