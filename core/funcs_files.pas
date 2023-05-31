@@ -522,7 +522,8 @@ FUNCTION fileInfo_imp intFuncSignature;
   end; //fileInfo_imp
 
 FUNCTION fileStats_imp intFuncSignature;
-  VAR lineCount,wordCount,byteCount,i:longint;
+  VAR lineCount,wordCount,byteCount:int64;
+      i:longint;
       sha256Int:T_bigInt;
       sha256Digest:T_sha256Hash;
       sha256Digits:T_arrayOfLongint;
