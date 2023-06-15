@@ -1160,7 +1160,7 @@ PROCEDURE T_package.finalize(CONST context:P_context; CONST recycler:P_recycler)
     for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(context,recycler);
     ruleMap.executeAfterRules(context,recycler);
     if isMain then begin
-      flush.create;
+      flush.create(tb_undefined,tb_undefined);
       writeDataStores(context^.messages,true,recycler,flush);
       flush.finalize(context^.messages,recycler);
       flush.destroy;

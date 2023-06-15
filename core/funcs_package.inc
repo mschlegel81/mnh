@@ -273,24 +273,60 @@ FUNCTION inspectAll_imp intFuncSignature;
 
 FUNCTION writeAllDataStores_imp intFuncSignature;
   VAR flush:T_datastoreFlush;
+      deflate:T_ternaryBool=tb_undefined;
+      reuse  :T_ternaryBool=tb_undefined;
   begin
-    if (params=nil) or (params^.size=0) then begin
-      flush.create;
-      result:=newBoolLiteral(P_package(tokenLocation.package)^.writeDataStores(context^.messages,true,recycler,flush));
-      flush.finalize(context^.messages,recycler);
-      flush.destroy;
-    end else result:=nil;
+    if (params<>nil) and (params^.size>0) then begin
+      if arg0^.literalType=lt_boolean
+      then begin
+        if bool0^.value
+        then deflate:=tb_true
+        else deflate:=tb_false;
+      end else exit(nil);
+    end;
+    if (params<>nil) and (params^.size>1) then begin
+      if arg1^.literalType=lt_boolean
+      then begin
+        if bool1^.value
+        then reuse:=tb_true
+        else reuse:=tb_false;
+      end else exit(nil);
+    end;
+    if (params<>nil) and (params^.size>2) then exit(nil);
+
+    flush.create(deflate,reuse);
+    result:=newBoolLiteral(P_package(tokenLocation.package)^.writeDataStores(context^.messages,true,recycler,flush));
+    flush.finalize(context^.messages,recycler);
+    flush.destroy;
   end;
 
 FUNCTION writeDataStores_imp intFuncSignature;
   VAR flush:T_datastoreFlush;
+      deflate:T_ternaryBool=tb_undefined;
+      reuse  :T_ternaryBool=tb_undefined;
   begin
-    if (params=nil) or (params^.size=0) then begin
-      flush.create;
-      result:=newBoolLiteral(P_package(tokenLocation.package)^.writeDataStores(context^.messages,false,recycler,flush));
-      flush.finalize(context^.messages,recycler);
-      flush.destroy;
-    end else result:=nil;
+    if (params<>nil) and (params^.size>0) then begin
+      if arg0^.literalType=lt_boolean
+      then begin
+        if bool0^.value
+        then deflate:=tb_true
+        else deflate:=tb_false;
+      end else exit(nil);
+    end;
+    if (params<>nil) and (params^.size>1) then begin
+      if arg1^.literalType=lt_boolean
+      then begin
+        if bool1^.value
+        then reuse:=tb_true
+        else reuse:=tb_false;
+      end else exit(nil);
+    end;
+    if (params<>nil) and (params^.size>2) then exit(nil);
+
+    flush.create(deflate,reuse);
+    result:=newBoolLiteral(P_package(tokenLocation.package)^.writeDataStores(context^.messages,false,recycler,flush));
+    flush.finalize(context^.messages,recycler);
+    flush.destroy;
   end;
 
 {$endif}
@@ -313,9 +349,9 @@ FUNCTION writeDataStores_imp intFuncSignature;
   builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect'          ,@inspect_imp           ,ak_variadic_1{$ifdef fullVersion},'inspect;//Returs information on the current package#inspect(idOrPath:String);//Returns information on an imported package or a specified MNH source file#inspect(path:String,source:StringList);//Returns information of a package with given path and source'{$endif});
   builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspectAll'       ,@inspectAll_imp        ,ak_nullary{$ifdef fullVersion},'inspectAll;//Returs information on all currently loaded packages'{$endif});
   BUILTIN_WRITE_ALL_DATA_STORES:=
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,ak_nullary{$ifdef fullVersion},'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages) and returns true if any store was updated.'{$endif});
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,ak_variadic{$ifdef fullVersion},'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages) and returns true if any store was updated.#writeAllDatastores(deflate:Boolean,reuse:Boolean);//Write binary datastores in a certain format, priorizing speed or size'{$endif});
   BUILTIN_WRITE_DATA_STORES:=
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeDataStores'   ,@writeDataStores_imp   ,ak_nullary{$ifdef fullVersion},'writeDataStores;//Writes back all modified datastores of the current package (i.e. excluding stores in imported packages) and returns true if any store was updated.'{$endif});
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeDataStores'   ,@writeDataStores_imp   ,ak_variadic{$ifdef fullVersion},'writeDataStores;//Writes back all modified datastores of the current package (i.e. excluding stores in imported packages) and returns true if any store was updated.#writeDatastores(deflate:Boolean,reuse:Boolean);//Write binary datastores in a certain format, priorizing speed or size'{$endif});
   builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'helpOnMain'       ,@helpOnMain_imp        ,ak_nullary{$ifdef fullVersion},'helpOnMain;//Returns help text for the current package''s main method.'{$endif});
 {$endif}
 {$ifdef include_finalization}
