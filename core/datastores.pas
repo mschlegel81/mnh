@@ -22,13 +22,16 @@ TYPE
     tempFileName,fileName:string;
   end;
 
+  T_ternaryBool=(tb_undefined,tb_true,tb_false);
+
   { T_datastoreFlush }
 
   T_datastoreFlush=object
     private
       pendingWrites:array of T_writeTempRequest;
+      deflate,reuse:boolean;
     public
-      CONSTRUCTOR create;
+      CONSTRUCTOR create(CONST deflate_,reuse_:T_ternaryBool);
       PROCEDURE addStoreToFlush(CONST meta:P_datastoreMeta; CONST L: P_literal; CONST location: T_tokenLocation; CONST writePlainText:boolean);
       PROCEDURE finalize(CONST threadLocalMessages: P_messages; CONST recycler:P_literalRecycler);
       DESTRUCTOR destroy;
@@ -43,7 +46,7 @@ TYPE
       FUNCTION newStoreName:string;
       {Returns true if new name is returned}
       FUNCTION tryObtainName(CONST createIfMissing:boolean; CONST enforcedName:string=''):boolean;
-      FUNCTION writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean; CONST recycler:P_literalRecycler):T_writeTempResult;
+      FUNCTION writeValue(CONST L: P_literal; CONST location: T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText,deflate,reuse:boolean; CONST recycler:P_literalRecycler):T_writeTempResult;
     public
       CONSTRUCTOR create(CONST packagePath_,ruleId_:string);
       DESTRUCTOR destroy;
@@ -92,9 +95,11 @@ FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOf
 
 { T_datastoreFlush }
 
-CONSTRUCTOR T_datastoreFlush.create;
+CONSTRUCTOR T_datastoreFlush.create(CONST deflate_,reuse_:T_ternaryBool);
   begin
     setLength(pendingWrites,0);
+    deflate:=deflate_ in [tb_true,tb_undefined];
+    reuse  :=reuse_   =   tb_true;
   end;
 
 PROCEDURE T_datastoreFlush.addStoreToFlush(CONST meta: P_datastoreMeta; CONST L: P_literal; CONST location: T_tokenLocation; CONST writePlainText: boolean);
@@ -128,7 +133,7 @@ PROCEDURE T_datastoreFlush.finalize(CONST threadLocalMessages: P_messages;
       for i:=0 to length(pendingWrites)-1 do with pendingWrites[i] do begin
         if threadLocalMessages^.continueEvaluation
         then begin
-          pendingRenames[i]:=meta^.writeValue(L,location,threadLocalMessages,writePlainText,recycler);
+          pendingRenames[i]:=meta^.writeValue(L,location,threadLocalMessages,writePlainText,deflate,reuse,recycler);
           allOk:=allOk and pendingRenames[i].finishedOk;
         end
         else pendingRenames[i].tempFileName:='';
@@ -305,7 +310,7 @@ FUNCTION T_datastoreMeta.readFromSpecificFileIncludingId(CONST fname:string; CON
     end else result:=newVoidLiteral;
   end;
 
-FUNCTION T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText:boolean; CONST recycler:P_literalRecycler):T_writeTempResult;
+FUNCTION T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLocation; CONST threadLocalMessages: P_messages; CONST writePlainText,deflate,reuse:boolean; CONST recycler:P_literalRecycler):T_writeTempResult;
   VAR wrapper:T_bufferedOutputStreamWrapper;
       plainText:T_arrayOfString;
   begin
@@ -323,7 +328,7 @@ FUNCTION T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLo
     end else begin
       wrapper.createToWriteToFile(result.tempFileName);
       wrapper.writeAnsiString(ruleId);
-      writeLiteralToStream(L,location,threadLocalMessages,true,false,@wrapper);
+      writeLiteralToStream(L,location,threadLocalMessages,deflate,reuse,@wrapper);
       result.finishedOk:=threadLocalMessages^.continueEvaluation and wrapper.allOkay;
       wrapper.destroy;
     end;

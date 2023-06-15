@@ -56,7 +56,7 @@ PROCEDURE T_treeModel.variablesTreeViewExpanding(Sender: TObject; node: TTreeNod
 
 FUNCTION T_treeModel.variablesTreeViewHasChildren(Sender: TCustomTreeView; ANode: TTreeNode): boolean;
   begin
-    result:=P_treeEntry(anode.data)^.canExpand;
+    result:=P_treeEntry(ANode.data)^.canExpand;
   end;
 
 end.
