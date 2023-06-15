@@ -613,6 +613,7 @@ PROCEDURE TplotForm.performFastUpdate;
         if frameTrackBar.max> 100 then frameTrackBar.frequency:= 10 else
         if frameTrackBar.max>  50 then frameTrackBar.frequency:=  5
                                   else frameTrackBar.frequency:=  1;
+        frameTrackBar.min:=0;
       end;
     finally
       relatedPlot^.doneGuiInteraction;
