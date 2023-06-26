@@ -28,14 +28,18 @@ FUNCTION try_imp intFuncSignature;
     VAR messagesLiteral:P_literal;
         tryMessages:T_messagesErrorHolder;
         oldMessages:P_messages;
+        evaluationResult: T_evaluationResult;
     begin
       oldMessages:=context^.messages;
-      tryMessages.createErrorHolder(context^.messages,[mt_el3_evalError..mt_el3_userDefined]);
+      tryMessages.createErrorHolder(oldMessages,[mt_el3_evalError..mt_el3_userDefined]);
       context^.messages:=@tryMessages;
 
-      result:=toTry^.evaluate(tokenLocation,context,recycler,toTryParameters).literal;
-      if ((result=nil) or (tryMessages.getFlags*[FlagError,FlagFatalError]<>[])) and oldMessages^.continueEvaluation then begin
-        if (result<>nil) then recycler^.disposeLiteral(result);
+      evaluationResult:=toTry^.evaluate(tokenLocation,context,recycler,toTryParameters);
+
+      if (not(evaluationResult.reasonForStop in [rr_ok,rr_okWithReturn]) or
+          (evaluationResult.literal=nil) or
+          (tryMessages.getFlags*[FlagError,FlagFatalError]<>[])) and oldMessages^.continueEvaluation then begin
+        if (evaluationResult.literal<>nil) then recycler^.disposeLiteral(evaluationResult.literal);
         //Error handling
         if inCaseOfFailure=nil then begin
           tryMessages.clear;
@@ -56,6 +60,8 @@ FUNCTION try_imp intFuncSignature;
           tryMessages.clear;
           result:=inCaseOfFailure^.rereferenced;
         end;
+      end else begin
+        result:=evaluationResult.literal;
       end;
       tryMessages.destroy;
       context^.messages:=oldMessages;
