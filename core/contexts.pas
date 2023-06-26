@@ -227,7 +227,7 @@ TYPE
       PROPERTY options:T_evaluationContextOptions read globalOptions;
       PROCEDURE timeBaseComponent(CONST component: T_profileCategory);
 
-      PROCEDURE resolveMainParameter(VAR first:P_token; CONST recycler:P_recycler);
+      PROCEDURE resolveMainParameter(VAR first:P_token; CONST currentContext:P_context; CONST recycler:P_recycler);
 
       {$ifdef fullVersion}
       FUNCTION stepper:P_debuggingStepper;
@@ -362,7 +362,7 @@ FUNCTION T_contextRecycler.newContext(CONST recycler:P_recycler; CONST parentThr
       options           :=parentThread^.options;
       allowedSideEffects:=parentThread^.allowedSideEffects;
       {$ifdef fullVersion}
-      callStack.clear;
+      callStack.clear; //TODO: Copying from parent context may lead to a better traceback...
       {$endif}
 
       related.evaluation:=parentThread^.related.evaluation;
@@ -779,7 +779,7 @@ FUNCTION T_context.continueEvaluation: boolean;
     result:=messages^.continueEvaluation;
   end;
 
-PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token; CONST recycler:P_recycler);
+PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token; CONST currentContext:P_context; CONST recycler:P_recycler);
   VAR parameterIndex:longint;
       s:string;
       newValue:P_literal=nil;
@@ -793,7 +793,7 @@ PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token; CONST recy
             P_listLiteral(newValue)^.appendString(recycler,first^.location.package^.getPath);
             for s in mainParameters do P_listLiteral(newValue)^.appendString(recycler,s);
           end else begin
-            primaryContext.raiseError('Invalid parameter identifier',first^.location);
+            currentContext^.raiseError('Invalid parameter identifier "'+first^.txt+'"',first^.location);
             exit;
           end;
         end else if parameterIndex=0 then
@@ -804,7 +804,7 @@ PROCEDURE T_evaluationGlobals.resolveMainParameter(VAR first:P_token; CONST recy
           newValue:=newVoidLiteral;
         first^.data:=newValue;
         first^.tokType:=tt_literal;
-      end else primaryContext.raiseError('Invalid parameter identifier',first^.location);
+      end else currentContext^.raiseError('Invalid parameter identifier "'+first^.txt+'"',first^.location);
     end;
   end;
 

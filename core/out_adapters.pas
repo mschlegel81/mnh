@@ -275,7 +275,6 @@ TYPE
       //flags
       FUNCTION continueEvaluation:boolean; virtual;
       //messages
-      PROCEDURE raiseSimpleError(CONST text:string; CONST location:T_searchTokenLocation; CONST kind:T_messageType=mt_el3_evalError); virtual;
       PROCEDURE postCustomMessage(CONST message:P_storedMessage; CONST disposeAfterPosting:boolean=false);                            virtual;
       PROCEDURE clear(CONST clearAllAdapters:boolean=true);                                                                           virtual;
       FUNCTION isCollecting(CONST messageType:T_messageType):boolean;                                                                 virtual;
@@ -954,8 +953,7 @@ PROCEDURE T_messagesDistributor.awaitAllFlushed(CONST timeOutInSeconds:double);
     until allFlushed or (now>=timeOutAt);
   end;
 
-CONSTRUCTOR T_messagesErrorHolder.createErrorHolder(CONST parent: P_messages;
-  CONST typesToHold: T_messageTypeSet);
+CONSTRUCTOR T_messagesErrorHolder.createErrorHolder(CONST parent: P_messages; CONST typesToHold: T_messageTypeSet);
   begin
     inherited create();
     heldTypes:=typesToHold;
@@ -1054,13 +1052,6 @@ PROCEDURE T_messages.postTextMessage(CONST kind: T_messageType; CONST location: 
   end;
 
 PROCEDURE T_messages.raiseSimpleError(CONST text: string; CONST location: T_searchTokenLocation; CONST kind: T_messageType);
-  VAR message:P_errorMessage;
-  begin
-    new(message,create(kind,location,split(text,C_lineBreakChar)));
-    postCustomMessage(message,true);
-  end;
-
-PROCEDURE T_messagesErrorHolder.raiseSimpleError(CONST text: string; CONST location: T_searchTokenLocation; CONST kind: T_messageType);
   VAR message:P_errorMessage;
   begin
     new(message,create(kind,location,split(text,C_lineBreakChar)));

@@ -1261,7 +1261,7 @@ end}
           didSubstitution:=true;
         end;
         tt_parameterIdentifier: begin
-          context^.getGlobals^.resolveMainParameter(first,recycler);
+          context^.getGlobals^.resolveMainParameter(first,context,recycler);
           didSubstitution:=true;
         end;
 {cT[0]=}tt_mutate: begin stack.push(first); didSubstitution:=true; end;
