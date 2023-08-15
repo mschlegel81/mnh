@@ -1,5 +1,7 @@
 type RegularContinuedFraction(x:IntList)->x.size>=1;
 type Rational(x:IntList(2))->!x.isRegularContinuedFraction;
+ducktype GeneralNumber(x)->x.isNumeric OR x.isRational;
+ducktype GeneralNumberList(l:List)->!l.isRational AND l.each(entry,entry.isGeneralNumber,AND);
 
 //*Returns rational number r in canonical form or as integer
 @SuppressUnusedWarning=all
@@ -63,6 +65,9 @@ OPERATOR_PLUS(a:Rational,b:Int     )->[a[0]+b*a[1],a[1]].toRational;
 OPERATOR_PLUS(a:Rational,b:Real    )->a.toReal+b;
 OPERATOR_PLUS(a:Int     ,b:Rational)->[a*b[1]+b[0],b[1]].toRational;
 OPERATOR_PLUS(a:Real    ,b:Rational)->a+b.toReal;
+OPERATOR_PLUS(A:GeneralNumberList,b:GeneralNumber)->A.map((a)->a+b);
+OPERATOR_PLUS(a:GeneralNumber,B:GeneralNumberList)->B.map((b)->a+b);
+OPERATOR_PLUS(A:GeneralNumberList,B:GeneralNumberList)->[A,B].transpose.map((pair)->pair[0]+pair[1]);
 
 @Override
 OPERATOR_MINUS(a:Rational,b:Rational)->[a[0]*b[1]-b[0]*a[1],a[1]*b[1]].shortenRational;
@@ -70,24 +75,36 @@ OPERATOR_MINUS(a:Rational,b:Int     )->[a[0]-b*a[1],a[1]].toRational;
 OPERATOR_MINUS(a:Rational,b:Real    )->a.toReal-b;
 OPERATOR_MINUS(a:Int     ,b:Rational)->[a*b[1]-b[0],b[1]].toRational;
 OPERATOR_MINUS(a:Real    ,b:Rational)->a-b.toReal;
+OPERATOR_MINUS(A:GeneralNumberList,b:Rational)->A.map((a)->a-b);
+OPERATOR_MINUS(a:Rational,B:GeneralNumberList)->B.map((b)->a-b);
+OPERATOR_MINUS(A:GeneralNumberList,B:GeneralNumberList)->[A,B].transpose.map((pair)->pair[0]-pair[1]);
 
 @Override
-OPERATOR_MULT(a:Rational,b:Rational)->shortenRational(a.toBuiltin*b);
-OPERATOR_MULT(a:Rational,b:Int     )->shortenRational(a*[b,1]);
+OPERATOR_MULT(a:Rational,b:Rational)->shortenRational([a[0]*b[0],a[1]*b[1]]);
+OPERATOR_MULT(a:Rational,b:Int     )->shortenRational([a[0]*b,a[1]]);
 OPERATOR_MULT(a:Rational,b:Real    )->a.toReal*b;
-OPERATOR_MULT(a:Int     ,b:Rational)->shortenRational([a,1]*b);
+OPERATOR_MULT(a:Int     ,b:Rational)->shortenRational([a*b[0],b[1]]);
 OPERATOR_MULT(a:Real    ,b:Rational)->a*b.toReal;
+OPERATOR_MULT(A:GeneralNumberList,b:GeneralNumber)->A.map((a)->a*b);
+OPERATOR_MULT(a:GeneralNumber,B:GeneralNumberList)->B.map((b)->a*b);
+OPERATOR_MULT(A:GeneralNumberList,B:GeneralNumberList)->[A,B].transpose.map((pair)->pair[0]*pair[1]);
+
 
 @Override
-OPERATOR_DIVREAL(a:Rational,b:Rational)->shortenRational(a*b.reverseList);
+OPERATOR_DIVREAL(a:Rational,b:Rational)->shortenRational([a[0]*b[1],a[1]*b[0]]);
 OPERATOR_DIVREAL(a:Int     ,b:Int     )->shortenRational([a,b]);
-OPERATOR_DIVREAL(a:Rational,b:Int     )->shortenRational(a*[1,b]);
+OPERATOR_DIVREAL(a:Rational,b:Int     )->shortenRational([a[0],b*a[1]]);
 OPERATOR_DIVREAL(a:Rational,b:Real    )->a.toReal/b;
-OPERATOR_DIVREAL(a:Int     ,b:Rational)->shortenRational([a,1]*b.reverseList);
+OPERATOR_DIVREAL(a:Int     ,b:Rational)->shortenRational([a*b[1],b[0]]);
 OPERATOR_DIVREAL(a:Real    ,b:Rational)->a/b.toReal;
+OPERATOR_DIVREAL(A:GeneralNumberList,b:GeneralNumber)->A.map((a)->a/b);
+OPERATOR_DIVREAL(a:GeneralNumber,B:GeneralNumberList)->B.map((b)->a/b);
+OPERATOR_DIVREAL(A:GeneralNumberList,B:GeneralNumberList)->[A,B].transpose.map((pair)->pair[0]/pair[1]);
 
 @Override
 OPERATOR_POT(a:Rational,p>=0)->(a.toBuiltin^p).toRational;
+OPERATOR_POT(a:Rational,p<0)->(a.reverseList^-p).toRational;
+OPERATOR_POT(L:GeneralNumberList,p>=0)->L.map((x)->x^p);
 
 @Override
 toRegularContinuedFraction(r:Real)->r.toRational.toRegularContinuedFraction;
