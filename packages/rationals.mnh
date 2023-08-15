@@ -103,6 +103,7 @@ OPERATOR_DIVREAL(A:GeneralNumberList,B:GeneralNumberList)->[A,B].transpose.map((
 
 @Override
 OPERATOR_POT(a:Rational,p>=0)->(a.toBuiltin^p).toRational;
+OPERATOR_POT(a:Rational,p<0)->(a.reverseList^-p).toRational;
 OPERATOR_POT(L:GeneralNumberList,p>=0)->L.map((x)->x^p);
 
 @Override
