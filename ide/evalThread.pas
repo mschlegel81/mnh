@@ -537,6 +537,7 @@ PROCEDURE T_standardEvaluation.callMain(CONST provider: P_codeProvider; CONST pa
 PROCEDURE T_standardEvaluation.execute(CONST recycler: P_recycler);
   CONST C_loadMode:array[false..true] of T_packageLoadUsecase=(lu_forDirectExecution,lu_forCallingMain);
   begin
+    package.clear(true);
     globals.resetForEvaluation(@package,@package.reportVariables,C_allSideEffects,evalRequest.contextType,evalRequest.parameters,recycler);
     SetCurrentDir(evalRequest.folder);
     package.load(C_loadMode[evalRequest.callMain],globals,recycler,evalRequest.parameters);

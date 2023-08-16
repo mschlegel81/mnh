@@ -344,7 +344,7 @@ PROCEDURE TIdeMainForm.FormResize(Sender: TObject);
 
 PROCEDURE TIdeMainForm.MemoryUsageShapeMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
   begin
-    memoryCleaner.callCleanupMethods(0);
+    memoryCleaner.callCleanupMethods(5);
   end;
 
 PROCEDURE TIdeMainForm.miAboutClick(Sender: TObject);

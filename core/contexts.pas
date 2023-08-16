@@ -90,7 +90,7 @@ TYPE
       PROPERTY getGlobals:P_evaluationGlobals read related.evaluation;
       FUNCTION wallclockTime:double;
       //Side effects
-      FUNCTION checkSideEffects(CONST id:string; CONST location:T_tokenLocation; CONST functionSideEffects:T_sideEffects):boolean; inline;
+      FUNCTION checkSideEffects(CONST id:string; CONST location:T_tokenLocation; CONST functionSideEffects:T_sideEffects):boolean; {$ifndef debugMode}inline;{$endif}
       PROPERTY sideEffectWhitelist:T_sideEffects read allowedSideEffects;
       FUNCTION setAllowedSideEffectsReturningPrevious(CONST se:T_sideEffects):T_sideEffects;
       //Messaging
