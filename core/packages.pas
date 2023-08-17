@@ -1222,6 +1222,7 @@ PROCEDURE T_package.complainAboutUnused(CONST messages:P_messages; CONST functio
   begin
     if functionCallInfos=nil then exit;
     ruleMap.complainAboutUnused(messages,functionCallInfos);
+    //TODO: Don't complain, if the import overloads operators.
     for import in packageUses do if not(import.supressUnusedWarning) and not(functionCallInfos^.isPackageReferenced(import.pack^.getPath)) then
       messages^.postTextMessage(mt_el2_warning,import.locationOfDeclaration,'Unused import '+import.pack^.getId+' ('+import.pack^.getPath+')');
   end;
