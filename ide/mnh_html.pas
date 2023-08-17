@@ -12,6 +12,7 @@ VAR rawTokenizeCallback:T_rawTokenizeCallback;
 
 FUNCTION span(CONST sc,txt:ansistring):ansistring;
 //FUNCTION imageTag(CONST fileName:ansistring):ansistring;
+//TODO: Use SynEdit for conversion to highlighted html
 FUNCTION toHtmlCode(raw:T_rawTokenArray):ansistring;
 FUNCTION toHtmlCode(line:ansistring):ansistring;
 FUNCTION escapeHtml(CONST line:ansistring):ansistring;

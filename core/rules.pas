@@ -1116,9 +1116,11 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
       if isUnaryOperatorId(getId) then begin
         if not(rule^.canApplyToNumberOfParameters(1)) then context^.messages^.raiseSimpleError('Overloaded operator must accept one parameter',rule^.getLocation);
       end else begin
-        if not(rule^.canApplyToNumberOfParameters(2)) then context^.messages^.raiseSimpleError('Overloaded operator must accept two parameter',rule^.getLocation);
+        if not(rule^.canApplyToNumberOfParameters(2)) then context^.messages^.raiseSimpleError('Overloaded operator must accept two parameters',rule^.getLocation);
       end;
-      if not(rule^.getPattern.usesStrictCustomTyping) then context^.messages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overloading operators based on ducktype is discouraged! Use explicit types instead.');
+
+      if not(rule^.getPattern.usesStrictCustomTyping) and not(rule^.metaData.hasAttribute(SUPPRESS_WARNING_ATTRIBUTE))
+      then context^.messages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overloading operators based on ducktype is discouraged. Use explicit types instead.');
     end;
     i:=0;
     while (i<length(subrules)) and not(rule^.hasEquivalentPattern(subrules[i])) do inc(i);
@@ -1127,7 +1129,7 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
       for j:=0 to i-1 do if subrules[j]^.hidesSubrule(rule) then context^.messages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Rule '+rule^.getId+' seems to be hidden by '+subrules[j]^.getId+' @'+ansistring(subrules[j]^.getLocation));
     end else begin
       recycler^.disposeLiteral(subrules[i]);
-      if not(rule^.metaData.hasAttribute(OVERRIDE_ATTRIBUTE))
+      if not(rule^.metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) and not(rule^.metaData.hasAttribute(SUPPRESS_WARNING_ATTRIBUTE))
       then context^.messages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overriding rule '+rule^.getId+'; you can suppress this warning with '+ATTRIBUTE_PREFIX+OVERRIDE_ATTRIBUTE);
     end;
     subrules[i]:=rule;
@@ -1139,7 +1141,9 @@ PROCEDURE T_typeCastRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; CON
   begin
     inherited addOrReplaceSubRule(rule,context,recycler);
     if not(rule^.metaData.hasAttribute(OVERRIDE_ATTRIBUTE)) and
-       not(rule^.metaData.hasAttribute(OVERLOAD_ATTRIBUTE)) then context^.messages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overloading implicit typecast rule');
+       not(rule^.metaData.hasAttribute(OVERLOAD_ATTRIBUTE)) and
+       not(rule^.metaData.hasAttribute(SUPPRESS_WARNING_ATTRIBUTE))
+    then context^.messages^.postTextMessage(mt_el2_warning,rule^.getLocation,'Overloading implicit typecast rule');
   end;
 
 PROCEDURE T_typeCheckRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; CONST context:P_context; CONST recycler:P_recycler);

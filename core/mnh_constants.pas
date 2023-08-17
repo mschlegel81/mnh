@@ -77,6 +77,8 @@ CONST
   ATTRIBUTE_PREFIX              ='@';
   SPECIAL_COMMENT_BLOB_BEGIN_INFIX='!';
   FORCE_GUI_PSEUDO_PACKAGE      ='GUI';
+
+  SUPPRESS_WARNING_ATTRIBUTE='SuppressWarning';
   SUPPRESS_UNUSED_WARNING_ATTRIBUTE='SuppressUnusedWarning';
   SUPPRESS_ALL_UNUSED_VALUE='all';
   {$ifdef fullVersion}
@@ -387,7 +389,8 @@ CONST
   {tt_blank}                      '');
 {$ifdef fullVersion}
   C_tokenDoc:array[T_tokenType] of record
-                                 defaultHtmlSpan:string; reservedWordClass:T_reservedWordClass;  helpText,helpLink:string; end=(
+    //TOOD: Remove defaultHtmlSpan
+                                 defaultHtmlSpan:string;       reservedWordClass:T_reservedWordClass;  helpText,helpLink:string; end=(
 {tt_literal}                    (defaultHtmlSpan:'literal';    reservedWordClass:rwc_not_reserved;     helpText:'A literal'; helpLink:''),
 {tt_aggregatorExpressionLiteral}(defaultHtmlSpan:'literal';    reservedWordClass:rwc_not_reserved;     helpText:'An aggregator expression literal'; helpLink:''),
 {tt_identifier}                 (defaultHtmlSpan:'identifier'; reservedWordClass:rwc_not_reserved;     helpText:'An identifier (unresolved)'; helpLink:''),
