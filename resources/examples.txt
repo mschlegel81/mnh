@@ -2200,7 +2200,14 @@ fileStats(executor);
 #C Executes the specified program and returns the text output optionally including stdErr output#
 #S exec(programPath:String,parameters:flatList,parameters:flatList);
 #C Executes the specified program with given command line parameters and returns the text output optionally including stdErr output
-executor.exec(['-h']).head(5).join("\n").print;
+ExecutionResult:=executor.exec(['-h']);
+print('Execution returned with code ',
+      ExecutionResult[1],"\n",
+      ExecutionResult[0]
+        .tail(3)
+        .head(7)
+        .join("\n")
+        .clean([#10,' ',')','/','\','_','|'],''));
 
 #I teeExec
 #S teeExec(...);

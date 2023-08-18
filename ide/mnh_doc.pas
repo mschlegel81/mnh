@@ -254,13 +254,16 @@ DESTRUCTOR T_intrinsicFunctionDocumentation.destroy;
 
 FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
   VAR docTxtLine: string;
+      lastWasCode:boolean=false;
+  FUNCTION br:string;
+    begin if lastWasCode then result:='' else result:='<br>'; end;
   begin
     result:='<h4><br><a name="'+id+'">'+id+'</a></h4>';
     for docTxtLine in docTxt do begin
-      if startsWith(docTxtLine,'#S ') then result+=LineEnding+lineToHtml(copy(docTxtLine,4,maxLongint),true) else
-      if startsWith(docTxtLine,'#C ') then result+=LineEnding+escapeHtml(copy(docTxtLine,4,maxLongint)) else
-      if startsWith(docTxtLine,'#H ') then result+=LineEnding+           copy(docTxtLine,4,maxLongint)  else
-                                           result+=LineEnding+lineToHtml(     docTxtLine,false);
+      if startsWith(docTxtLine,'#S ') then begin result+=LineEnding+lineToHtml(copy(docTxtLine,4,maxLongint),true); lastWasCode:=true;  end else
+      if startsWith(docTxtLine,'#C ') then begin result+=LineEnding+br+ escapeHtml(copy(docTxtLine,4,maxLongint) ); lastWasCode:=false; end else
+      if startsWith(docTxtLine,'#H ') then begin result+=LineEnding+br+            copy(docTxtLine,4,maxLongint)  ; lastWasCode:=false; end else
+                                           begin result+=LineEnding+lineToHtml(docTxtLine,false);                   lastWasCode:=true;  end;
     end;
   end;
 

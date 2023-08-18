@@ -29,17 +29,22 @@ FUNCTION imageTag(CONST fileName:ansistring):ansistring;
 
 FUNCTION escapeHtml(CONST line:ansistring):ansistring;
   VAR i0,i1,i:longint;
+      leadingSpace:boolean=true;
   begin
     result:='';
     i0:=1; i1:=0;
     for i:=1 to length(line) do begin
+      if (line[i]=' ') and leadingSpace then begin
+        result+=copy(line,i0,i1-i0+1)+'&#8199;'; i0:=i+1; i1:=i;
+      end else leadingSpace:=false;
       case line[i] of
-        '&': begin result:=result+copy(line,i0,i1-i0+1)+'&amp;'; i0:=i+1; i1:=i; end;
-        '<': begin result:=result+copy(line,i0,i1-i0+1)+'&lt;' ; i0:=i+1; i1:=i; end;
-        '>': begin result:=result+copy(line,i0,i1-i0+1)+'&gt;' ; i0:=i+1; i1:=i; end;
+        '&': begin result+=copy(line,i0,i1-i0+1)+'&amp;'; i0:=i+1; i1:=i; end;
+        '<': begin result+=copy(line,i0,i1-i0+1)+'&lt;' ; i0:=i+1; i1:=i; end;
+        '>': begin result+=copy(line,i0,i1-i0+1)+'&gt;' ; i0:=i+1; i1:=i; end;
       else i1:=i;
       end;
     end;
+
     result:=result+copy(line,i0,i1-i0+1);
   end;
 

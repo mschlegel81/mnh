@@ -462,9 +462,11 @@ PROCEDURE T_sandbox.demoCallInterpretation(CONST input:T_arrayOfString; CONST re
     end;
 
     storedMessages:=executeInternally;
-    new(message,create(mt_echo_input,C_nilSearchTokenLocation,codeInput));
-    append(textOut,formatter.formatMessage(message));
-    disposeMessage(message);
+    if length(codeInput)>0 then begin
+      new(message,create(mt_echo_input,C_nilSearchTokenLocation,codeInput));
+      append(textOut,formatter.formatMessage(message));
+      disposeMessage(message);
+    end;
 
     for m in storedMessages do begin
       if not(m^.messageType in [mt_timing_info,mt_echo_input]) then append(textOut,formatter.formatMessage(m));
