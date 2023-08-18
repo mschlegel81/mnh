@@ -467,7 +467,7 @@ PROCEDURE T_guiFormatter.formatMessageAndLocation(CONST message: P_storedMessage
       marker      :string='';
       nextLine    :string='';
       s           :string;
-      i           :longint;
+      i           :longint=0;
       messageLoc  :T_searchTokenLocation;
       echo        :T_arrayOfString;
   begin
@@ -486,11 +486,14 @@ PROCEDURE T_guiFormatter.formatMessageAndLocation(CONST message: P_storedMessage
           then nextLine:=C_echoInInfix
           else nextLine:=C_echoDeclInfix;
           for s in P_storedMessageWithText(message)^.txt do begin
-            if wrapEcho and (length(nextLine)>10) and (length(nextLine)+length(s)>preferredLineLength)
+            if (formatterForDemos and (i>0)) or wrapEcho and (length(nextLine)+length(s)>preferredLineLength)
             then begin
               messagesAndLocations.append(marker+trimRight(nextLine),messageLoc);
-              nextLine:=C_echoContdInfix+trimLeft(s);
+              if formatterForDemos
+              then nextLine:=C_echoContdInfix+         s
+              else nextLine:=C_echoContdInfix+trimLeft(s);
             end else nextLine+=s;
+            inc(i);
           end;
           messagesAndLocations.append(marker+trimRight(nextLine),messageLoc);
         end;
@@ -540,7 +543,7 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
       marker      :string='';
       nextLine    :string='';
       s           :string;
-      i           :longint;
+      i           :longint=0;
   begin
     if (message=nil) or (not(message^.isTextMessage) and (message^.messageType<>mt_echo_output))  then exit(C_EMPTY_STRING_ARRAY);
     if not(formatterForDemos)
@@ -557,11 +560,14 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
           then nextLine:=C_echoInInfix
           else nextLine:=C_echoDeclInfix;
           for s in P_storedMessageWithText(message)^.txt do begin
-            if wrapEcho and (length(nextLine)>10) and (length(nextLine)+length(s)>preferredLineLength)
+            if (formatterForDemos and (message^.messageType=mt_echo_input) and (i>0)) or wrapEcho and (length(nextLine)>10) and (length(nextLine)+length(s)>preferredLineLength)
             then begin
               append(result,marker+trimRight(nextLine));
-              nextLine:=C_echoContdInfix+trimLeft(s);
+              if formatterForDemos and (message^.messageType=mt_echo_input)
+              then nextLine:=C_echoContdInfix+         s
+              else nextLine:=C_echoContdInfix+trimLeft(s);
             end else nextLine+=s;
+            inc(i);
           end;
           append(result,marker+trimRight(nextLine));
         end;

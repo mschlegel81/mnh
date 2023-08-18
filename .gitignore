@@ -5,7 +5,6 @@
 *.compiled
 *.a
 gui/res_*.inc
-demos/inputs/*.txt
 demos/*.datastore*
 */lib/*/*.lfm
 *.res
@@ -31,6 +30,3 @@ versions/*.zip
 /core/res_version.inc
 /*/wpoData*
 *.lps
-
-
-/unixdict*.txt

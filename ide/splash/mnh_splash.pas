@@ -93,7 +93,6 @@ PROCEDURE TSplashForm.FormActivate(Sender: TObject);
       loadStepDone(workspace.loadFromFile(ideSettings.workspaceFilename));
       workspace.fileHistory.updateHistoryMenu;
       loadStepDone(runParameterHistory.loadFromFile(runParameterHistoryFileName));
-
       prepareDoc;
       if not(ideSettings.doShowSplashScreen) then close;
     end;

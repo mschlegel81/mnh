@@ -1,16 +1,6 @@
-private ensureLocal(path,src)->
-fileExists(path)
-? path
-: fileExists (src)
-  ? begin
-      path.writeFile(src.fileContents.decompress).assert('Writing ',path,' failed');
-      path;
-    end
-  : fail;
-webPageDataFolder:=expandedFileName(myPath.extractFileDirectory&'/../../../web/page/data/');
-
-kjv ->ensureLocal(extractFileDirectory(myPath)&"/kjv.txt"     ,webPageDataFolder&'kjv.dat');
-dict->ensureLocal(extractFileDirectory(myPath)&"/unixdict.txt",webPageDataFolder&'dict.dat');
+private assertingExistence(path:String)->assert(fileExists(path)) orElse path;
+kjv ->assertingExistence(extractFileDirectory(myPath)&"/kjv.txt"     );
+dict->assertingExistence(extractFileDirectory(myPath)&"/unixdict.txt");
 editedDict->begin
   local path:=dict.changeFileExt('2.txt');
   fileExists(path)

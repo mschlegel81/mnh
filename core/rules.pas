@@ -227,6 +227,7 @@ TYPE
       suppressAllUnusedWarnings,
       {$endif}
       merging:boolean;
+      builtinOverrides:T_arrayOfString;
       afterRules:array of P_subruleExpression;
       localPackage:P_abstractPackage;
       FUNCTION mergeEntry(CONST id:T_idString; entry:T_ruleMapEntry):boolean;
@@ -257,6 +258,7 @@ TYPE
       PROCEDURE complainAboutUnused(CONST messages:P_messages; CONST functionCallInfos:P_callAndIdInfos);
       PROCEDURE fillCallInfos(CONST functionCallInfos:P_callAndIdInfos);
       {$endif}
+      PROPERTY getBuiltinOverrides:T_arrayOfString read builtinOverrides;
   end;
 
 FUNCTION isIdOfAnyOverloadableOperator(CONST id:T_idString):boolean;
@@ -323,6 +325,7 @@ FUNCTION T_ruleMap.mergeEntry(CONST id: T_idString; entry: T_ruleMapEntry): bool
       end;
     end else begin
       if builtinFunctionMap.containsKey(id) and not(isOperatorName(id)) then begin
+        appendIfNew(builtinOverrides,id);
         new(delegator,create(id,localPackage));
         if entry.isImported then begin
           //An imported rule is converted to a locally declared delegator
@@ -364,6 +367,7 @@ PROCEDURE T_ruleMap.clear;
   VAR i:longint;
   begin
     inherited clear;
+    setLength(builtinOverrides,0);
     for i:=0 to length(afterRules)-1 do globalLiteralRecycler.disposeLiteral(afterRules[i]);
     setLength(afterRules,0);
     {$ifdef fullVersion}
@@ -554,6 +558,7 @@ PROCEDURE T_ruleMap.declare(CONST ruleId: T_idString;
           rt_customOperator                    : new(P_ruleWithSubrules         (rule),create(ruleId,ruleDeclarationStart,ruleType));
           else assert(false,'Unexpected rule type '+C_ruleTypeText[ruleType]);
         end;
+        if ruleType=rt_customOperator then appendIfNew(builtinOverrides,ruleId);
       end;
       assert(rule<>nil);
       assert(rule^.getRuleType in [rt_memoized,rt_memoized_curry,rt_synchronized,rt_synchronized_curry,rt_normal,rt_normal_curry,rt_customOperator,rt_customTypeCast,rt_customTypeCheck]);

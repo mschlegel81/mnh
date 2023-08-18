@@ -321,15 +321,12 @@ FUNCTION T_regexMapEntry.canBeUsed: boolean;
     end else result:=false;
   end;
 
-{$ifdef fullVersion}
-CONST SYNTAX_LINK='#For the syntax of regular expressions see <a href="https://regex.sorokin.engineer/en/latest/regular_expressions.html">the used library''s website.</a>';
-{$endif}
 INITIALIZATION
-  builtinFunctionMap.registerRule(REGEX_NAMESPACE,'validateRegex' ,@regexValidate_imp      ,ak_variadic_1{$ifdef fullVersion},'validateRegex(regex:String);//Returns true iff regex is valid, false otherwise#validateRegex(regex:String,feedback:expression(1));//Returns void iff regex is valid, invokes feedback with error message otherwise'{$endif});
-  builtinFunctionMap.registerRule(REGEX_NAMESPACE,'matches'       ,@regexMatch_imp         ,ak_binary    {$ifdef fullVersion},'matches(searchString,regex);//returns true if string/-list searchString matches string/-list regex#//If lists are given they must have equal sizes.'+SYNTAX_LINK{$endif});
-  builtinFunctionMap.registerRule(REGEX_NAMESPACE,'matchComposite',@regexMatchComposite_imp,ak_binary    {$ifdef fullVersion},'matchComposite(searchString,regex);//returns a (list of) triplets: [match,position,length] for string/-list regex and searchString//If lists are given they must have equal sizes.'+SYNTAX_LINK{$endif});
-  builtinFunctionMap.registerRule(REGEX_NAMESPACE,'split'         ,@regexSplit_imp         ,ak_binary    {$ifdef fullVersion},'split(searchString,regex);//splits the string/-list searchString using string/-list regex//If lists are given they must have equal sizes.'+SYNTAX_LINK{$endif},[],true);
-  builtinFunctionMap.registerRule(REGEX_NAMESPACE,'replace'       ,@regexReplace_imp       ,ak_ternary   {$ifdef fullVersion},'replace(searchString,regex,replaceString);//replaces all matching occurences of string/-list regex in string/-list searchString by string/-list replaceString//If lists are given they must have equal sizes.'+SYNTAX_LINK{$endif},[],true);
+  builtinFunctionMap.registerRule(REGEX_NAMESPACE,'validateRegex' ,@regexValidate_imp      ,ak_variadic_1);
+  builtinFunctionMap.registerRule(REGEX_NAMESPACE,'matches'       ,@regexMatch_imp         ,ak_binary    );
+  builtinFunctionMap.registerRule(REGEX_NAMESPACE,'matchComposite',@regexMatchComposite_imp,ak_binary    );
+  builtinFunctionMap.registerRule(REGEX_NAMESPACE,'split'         ,@regexSplit_imp         ,ak_binary    ,[],true);
+  builtinFunctionMap.registerRule(REGEX_NAMESPACE,'replace'       ,@regexReplace_imp       ,ak_ternary   ,[],true);
   initialize(regexCacheCs);
   initCriticalSection(regexCacheCs);
   regexCache.create(@disposeRegex);

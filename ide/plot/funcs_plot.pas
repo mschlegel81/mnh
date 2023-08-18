@@ -414,60 +414,15 @@ FUNCTION drawText_imp    intFuncSignature; begin result:=nil; if context^.checkS
 FUNCTION drawTextAbs_imp intFuncSignature; begin result:=nil; if context^.checkSideEffects('drawTextAbsolute',tokenLocation,[se_alterGuiState]) then result:=drawTextRelativeOrAbsolute(params,tokenLocation,context,true); end;
 
 INITIALIZATION
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plot', @plot, ak_variadic,
-    'plot(list,[options]); //plots flat numeric list or xy-list'+
-    '#plot(xList,yList,[options]); //plots flat numeric list or xy-list'+
-    '#plot(f:expression(1),t0,t1>t0,samples>=2,[options]); //plots f versus t in [t0,t1]'+
-    '#options are optional and given in the form of a string, the individual option items being delimited by spaces'+
-    '#valid options are:'+'#Style/size modifier: any real number'+
-    '#Styles:'+
-    '#  line; l;'+
-    '#  bspline; b;'+
-    '#  cspline; c;'+
-    '#  stepLeft;'+
-    '#  stepRight;'+
-    '#  fill; f;'+
-    '#  fillSolid; fs;'+
-    '#  bar;'+
-    '#  box;'+
-    '#  ellipse; e;'+
-    '#  tube;'+
-    '#  dot; .;'+
-    '#  plus; +;'+
-    '#  cross; x;'+
-    '#  impulse; i;'+
-    '#  polygon; p;'+
-    '#Colors:'+'#  black;'+
-    '#  red;'+'#  blue;'+'#  green;'+'#  purple;'+
-    '#  orange;'+'#  RGB$,$,$; //With three real numbers in range [0,1]'+
-    '#  HSV$,$,$; //With three real numbers in range [0,1]'+
-    '#  HUE$; //With one real number '+
-    '#  GREY$; //With one real number in range [0,1]'+
-    '#Transparency Index:'+'  #  TI$;// with an integer $',[se_alterGuiState]);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'addPlot', @addPlot, ak_variadic_1,
-    'addPlot(list,[options]); //adds plot of flat numeric list or xy-list'+
-    '#addPlot(xList,yList,[options]); //adds plot of flat numeric list or xy-list'+
-    '#addPlot(f:expression(1),t0,t1>t0,samples>=2,[options]); //adds plot of f versus t in [t0,t1]',[se_alterGuiState]);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plotRasterImage',@plotRasterImage,ak_variadic,
-    'plotRasterImage(colors:List;width>=1);//Plots a raster image given by a 1D-List of colors#'+
-    'plotRasterImage(colors:List;width>=1,scale:Numeric,offsetX:Numeric,offsetY:Numeric);//Plots a raster image with custom scaling');
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'getOptions',@getOptions, ak_nullary,
-    'getOptions;//returns plot options as a key-value-list.',[se_readGuiState]);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'setOptions',@setOptions, ak_variadic_1,
-    'setOptions(set:keyValueList);//Sets options via a key value list of the same form as returned by plot.getOptions#'+
-    'setOptions(key:string,value);//Sets a single plot option',[se_alterGuiState]);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'resetOptions',@resetOptions_impl, ak_nullary,
-    'resetOptions;//Sets the default plot options',[se_alterGuiState]);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl, ak_variadic_3,
-    'renderToFile(filename<>'',width>=1,height>=1);//Renders the current plot to a file.#renderToFile(filename<>'',width>=1,height>=1,background:true);//Renders the current plot to a file in a background thread.',[se_writeFile,se_readGuiState]);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl, ak_binary,
-    'renderToString(width,height);//Renders the current plot to a string.',[se_readGuiState]);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, ak_variadic,
-    'removePlot;//Removes the last row from the plot#removePlot(n>=1);//Removed the last n rows from the plot',[se_alterGuiState]);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'drawText',@drawText_imp, ak_variadic_3,
-    'drawText(x,y,text);//Draws custom text#'+
-    'drawText(x,y,text,size:Numeric,anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"],font:String,textCol:IntList(3),backgroundCol:IntList(3));//Draws text with custom options. Custom parameters are optional',[se_alterGuiState]);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'drawTextAbsolute',@drawTextAbs_imp, ak_variadic_3,
-    'drawTextAbsolute(x,y,text);//Draws custom text at absolute position#'+
-    'drawTextAbsolute(x,y,text,size:Numeric,anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"],font:String,textCol:IntList(3),backgroundCol:IntList(3));//Draws text with custom options. Custom parameters are optional',[se_alterGuiState]);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plot', @plot, ak_variadic,[se_alterGuiState]);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'addPlot', @addPlot, ak_variadic_1,[se_alterGuiState]);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plotRasterImage',@plotRasterImage,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'getOptions',@getOptions, ak_nullary,[se_readGuiState]);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'setOptions',@setOptions, ak_variadic_1,[se_alterGuiState]);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'resetOptions',@resetOptions_impl, ak_nullary,[se_alterGuiState]);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl, ak_variadic_3,[se_writeFile,se_readGuiState]);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl, ak_binary,[se_readGuiState]);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, ak_variadic,[se_alterGuiState]);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'drawText',@drawText_imp, ak_variadic_3,[se_alterGuiState]);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'drawTextAbsolute',@drawTextAbs_imp, ak_variadic_3,[se_alterGuiState]);
 end.

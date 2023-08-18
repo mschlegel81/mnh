@@ -293,25 +293,23 @@ FUNCTION getTaskInfo_impl intFuncSignature;
   end;
 
 INITIALIZATION
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'resetRandom',@resetRandom_impl        ,ak_variadic  {$ifdef fullVersion},'resetRandom(seed:Int);//Resets internal PRNG with the given seed'{$endif},[se_readContextState,se_alterContextState]);
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'random'     ,@random_imp              ,ak_variadic  {$ifdef fullVersion},'random;//Returns a random value in range [0,1]#random(n);//Returns a list of n random values in range [0,1]'{$endif},[se_readContextState,se_alterContextState]);
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom'  ,@intRandom_imp           ,ak_variadic_1{$ifdef fullVersion},'intRandom(k>1);//Returns an integer random value in range [0,k-1]#intRandom(k>1,n>0);//Returns a list of n integer random values in range [0,k-1]'{$endif},[se_readContextState,se_alterContextState]);
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'systime'    ,@systime_imp             ,ak_nullary   {$ifdef fullVersion},'systime;//Returns the current time as a real number'{$endif},[se_readContextState]);
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'beep'       ,@beep_imp                ,ak_variadic  {$ifdef fullVersion},'beep;//Makes a beep'{$endif},[se_sound]);
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo'  ,@driveInfo_imp           ,ak_nullary   {$ifdef fullVersion},'driveInfo;//Returns info on the computer''''s drives/volumes (Windows only).'{$endif},[se_executingExternal]);
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv'         ,@getEnv_impl         ,ak_nullary   {$ifdef fullVersion},'getEnv;//Returns the current environment variables as a nested list.'{$endif},[se_executingExternal]);
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'changeDirectory',@changeDirectory_impl,ak_unary     {$ifdef fullVersion},'changeDirectory(folder:String);//Sets the working directory'{$endif},[se_alterContextState]);
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,ak_unary     {$ifdef fullVersion},'setExitCode(code:Int);//Sets the exit code of the executable.#//Might be overridden by an evaluation error.'{$endif},[se_alterContextState]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'resetRandom',@resetRandom_impl        ,ak_variadic  ,[se_readContextState,se_alterContextState]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'random'     ,@random_imp              ,ak_variadic  ,[se_readContextState,se_alterContextState]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandom'  ,@intRandom_imp           ,ak_variadic_1,[se_readContextState,se_alterContextState]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'systime'    ,@systime_imp             ,ak_nullary   ,[se_readContextState]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'beep'       ,@beep_imp                ,ak_variadic  ,[se_sound]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'driveInfo'  ,@driveInfo_imp           ,ak_nullary   ,[se_executingExternal]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'getEnv'         ,@getEnv_impl         ,ak_nullary   ,[se_executingExternal]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'changeDirectory',@changeDirectory_impl,ak_unary     ,[se_alterContextState]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'setExitCode'    ,@setExitCode_impl    ,ak_unary     ,[se_alterContextState]);
   {$ifdef fullVersion}timeLoc:={$endif}
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'scriptTime',@scriptTime_imp,ak_variadic{$ifdef fullVersion},'scriptTime;//Returns an internal time for time difference measurement.'{$endif},[se_readContextState]);
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,ak_variadic_1{$ifdef fullVersion},'time;//DEPRECATED Returns an internal time for time difference measurement.#'+
-               'time(E:expression);//Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
-               'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.'{$endif},[se_readContextState]);
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'callMemoryCleaner',@callMemoryCleaner_impl,ak_nullary{$ifdef fullVersion},'callMemoryCleaner;//Calls the memory cleaner'{$endif},[se_alterContextState]);
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'assertGuiStarted',@assertGuiStarted_impl,ak_nullary{$ifdef fullVersion},'assertGuiStarted;//Enforces GUI initialization'{$endif});
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'isGuiStarted',@isGuiStarted_impl,ak_nullary{$ifdef fullVersion},'isGuiStarted;//Returns true if the GUI is started'{$endif});
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'showConsole',@showConsole_impl,ak_nullary{$ifdef fullVersion},'showConsole; //shows the console'{$endif});
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'hideConsole',@hideConsole_impl,ak_nullary{$ifdef fullVersion},'hideConsole; //hides the console'{$endif});
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'getCPULoadPercentage',@getCPULoadPercentage_impl,ak_nullary{$ifdef fullVersion},'Returns the CPU load in percent (Windows only)'{$endif},[se_executingExternal]);
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'getTaskInfo',@getTaskInfo_impl,ak_nullary{$ifdef fullVersion},'Returns info on running tasks (Windows only)'{$endif},[se_executingExternal]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'scriptTime',@scriptTime_imp,ak_variadic,[se_readContextState]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'time',@time_imp,ak_variadic_1,[se_readContextState]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'callMemoryCleaner',@callMemoryCleaner_impl,ak_nullary,[se_alterContextState]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'assertGuiStarted',@assertGuiStarted_impl,ak_nullary);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'isGuiStarted',@isGuiStarted_impl,ak_nullary);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'showConsole',@showConsole_impl,ak_nullary);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'hideConsole',@hideConsole_impl,ak_nullary);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'getCPULoadPercentage',@getCPULoadPercentage_impl,ak_nullary,[se_executingExternal]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'getTaskInfo',@getTaskInfo_impl,ak_nullary,[se_executingExternal]);
 end.

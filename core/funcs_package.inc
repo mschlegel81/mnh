@@ -337,28 +337,17 @@ FUNCTION writeDataStores_imp intFuncSignature;
 
 {$endif}
 {$ifdef include_initialization}
-  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,ak_unary{$ifdef fullVersion},'sandBoxExecute(source,sideEffectWhitelist:StringCollection);//Executes the source (String or StringList) and returns created messages#//Optionally you can specify allowed side effects'{$endif});
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'try',@try_imp,ak_variadic{$ifdef fullVersion},
-             'try(E:Expression(0));//Evaluates E and returns the result if successful or void if failed.#'+
-             'try(E:Expression,parameters:List);//Evaluates E with the given parameters - the parameter list length must match the arity of E#'+
-             'try(E:Expression(0),except(1):Expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed with the errors as first paramter ($0).#'+
-             'try(E:Expression(0),except:Expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed without paramters.#'+
-             'try(E:Expression(0),except);//Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.'{$endif});
-  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'runScript'     ,@runScript_imp     ,ak_binary{$ifdef fullVersion},'runScript(config:Map);//executes the given script config#'+
-                                                     '//expected keys: "'+RUNSCRIPT_KEY_NAME         +'" (String, mandatory)#'+
-                                                     '//               "'+RUNSCRIPT_KEY_SOURCE       +'" (StringList)#'+
-                                                     '//               "'+RUNSCRIPT_KEY_PARAMETERS   +'" (StringList)#'+
-                                                     '//               "'+RUNSCRIPT_KEY_SIDE_EFFECTS +'" (StringCollection)#'+
-                                                     '//               "'+RUNSCRIPT_KEY_ISOLATION    +'" 0: isolated, 1: print, 2: print and warnings, 3: print, warnings and errors#'+
-                                                     '//               "'+RUNSCRIPT_KEY_DETERMINISTIC+'" (Boolean, true to enforce determinism of PRGNs)'{$endif});
+  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'sandBoxExecute',@sandBoxExecute_imp,ak_unary);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'try',@try_imp,ak_variadic);
+  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'runScript'     ,@runScript_imp     ,ak_binary);
   BUILTIN_INSPECT:=
-  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect'          ,@inspect_imp           ,ak_variadic_1{$ifdef fullVersion},'inspect;//Returs information on the current package#inspect(idOrPath:String);//Returns information on an imported package or a specified MNH source file#inspect(path:String,source:StringList);//Returns information of a package with given path and source'{$endif});
-  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspectAll'       ,@inspectAll_imp        ,ak_nullary{$ifdef fullVersion},'inspectAll;//Returs information on all currently loaded packages'{$endif});
+  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspect'          ,@inspect_imp           ,ak_variadic_1);
+  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'inspectAll'       ,@inspectAll_imp        ,ak_nullary);
   BUILTIN_WRITE_ALL_DATA_STORES:=
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,ak_variadic{$ifdef fullVersion},'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages) and returns true if any store was updated.#writeAllDatastores(deflate:Boolean,reuse:Boolean);//Write binary datastores in a certain format, priorizing speed or size'{$endif});
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeAllDataStores',@writeAllDataStores_imp,ak_variadic);
   BUILTIN_WRITE_DATA_STORES:=
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeDataStores'   ,@writeDataStores_imp   ,ak_variadic{$ifdef fullVersion},'writeDataStores;//Writes back all modified datastores of the current package (i.e. excluding stores in imported packages) and returns true if any store was updated.#writeDatastores(deflate:Boolean,reuse:Boolean);//Write binary datastores in a certain format, priorizing speed or size'{$endif});
-  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'helpOnMain'       ,@helpOnMain_imp        ,ak_nullary{$ifdef fullVersion},'helpOnMain;//Returns help text for the current package''s main method.'{$endif});
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'writeDataStores'   ,@writeDataStores_imp   ,ak_variadic);
+  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'helpOnMain'       ,@helpOnMain_imp        ,ak_nullary);
 {$endif}
 {$ifdef include_finalization}
 {$endif}

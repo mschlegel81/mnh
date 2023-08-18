@@ -172,7 +172,6 @@ private cleanup->begin
    files('core/res_*.inc')|
    files('regTest/testFailures.log')|
    allFiles('versions')|
-   allFiles('demos/inputs','*.txt')|
    files(BUILDS.map({$B['compilate']}))|
    files('build.log'))
   .unique

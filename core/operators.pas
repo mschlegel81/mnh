@@ -1271,15 +1271,13 @@ genericOuter;
 PROCEDURE registerOperator(CONST op:T_tokenType; CONST func:P_intFuncCallback; CONST internal:P_op);
   begin
     OP_IMPL[op]:=internal;
-    intFuncForOperator[op]:=builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,operatorName[op],func,ak_binary{$ifdef fullVersion},
-      operatorName[op]+'(x,y);//Function wrapper for operator '+C_tokenDefaultId[op]{$endif});
+    intFuncForOperator[op]:=builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,operatorName[op],func,ak_binary);
   end;
 
 PROCEDURE registerUnary(CONST op:T_tokenType; CONST func:P_intFuncCallback; CONST internal:P_unary);
   begin
     UN_IMPL[op]:=internal;
-    builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,operatorName[op],func,ak_unary{$ifdef fullVersion},
-      operatorName[op]+'(x,y);//Function wrapper for '+C_tokenDoc[op].helpText{$endif});
+    builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,operatorName[op],func,ak_unary);
   end;
 
 INITIALIZATION

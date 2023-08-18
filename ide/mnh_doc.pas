@@ -7,29 +7,25 @@ USES sysutils,
      basicTypes, mnh_constants,recyclers,
      Forms,ComCtrls,
      litVar, mnh_html;
-TYPE
-  T_demoCodeToHtmlCallback=PROCEDURE(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString; CONST recycler:P_recycler);
-VAR demoCodeToHtmlCallback:T_demoCodeToHtmlCallback;
+TYPE T_demoCodeInterpretCallback=PROCEDURE(CONST input:T_arrayOfString; OUT output,usedBuiltinIDs:T_arrayOfString; CONST recycler:P_recycler);
+VAR demoCodeInterpretCallback:T_demoCodeInterpretCallback;
+    lineToHtml:FUNCTION(CONST s:string; CONST forceSyntaxHighlighting:boolean):string=nil;
 TYPE
   P_intrinsicFunctionDocumentation = ^T_intrinsicFunctionDocumentation;
   T_intrinsicFunctionDocumentation = object
     id, unqualifiedId: T_idString;
-    description: ansistring;
     unqualifiedAccess:boolean;
-    txtExample,htmlExample: T_arrayOfString;
-    relatedDemos:T_arrayOfLongint;
+    docTxt      : T_arrayOfString;
     CONSTRUCTOR create(CONST funcName: ansistring);
     DESTRUCTOR destroy;
     FUNCTION getHtml:ansistring;
     FUNCTION getStructuredInfo(OUT examples:T_arrayOfString):T_structuredRuleInfoList;
-    PROCEDURE addExample(CONST html,txt:T_arrayOfString; CONST skipFirstLine:boolean=false);
+    PROCEDURE addExample(CONST txt:T_arrayOfString);
     FUNCTION getHtmlLink:string;
   end;
 
-FUNCTION addDemoFile(CONST name,content:string):longint;
-PROCEDURE linkDemoToDoc(CONST demoIndex:longint; CONST qualifiedId:string);
 PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
-PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
+PROCEDURE registerDoc(CONST qualifiedId:ansistring; CONST qualifiedOnly:boolean);
 FUNCTION getDocIndexLinkForBrowser(CONST suffix:string=''):ansistring;
 FUNCTION getHtmlRoot:ansistring;
 FUNCTION getDemosRoot:ansistring;
@@ -49,22 +45,6 @@ FUNCTION getHtmlRoot:ansistring; begin result:=configDir+'doc'; end;
 FUNCTION getDemosRoot:ansistring; begin result:=configDir+'demos'; end;
 FUNCTION getPackagesRoot:ansistring; begin result:=configDir+'packages'; end;
 
-FUNCTION addDemoFile(CONST name,content:string):longint;
-  begin
-    result:=length(demoFiles);
-    setLength(demoFiles,result+1);
-    demoFiles[result].sourceName:=name;
-    demoFiles[result].htmlName:=intToStr(result)+ChangeFileExt(demoFiles[length(demoFiles)-1].sourceName,'.html');
-    writeFile(getHtmlRoot+DirectorySeparator+demoFiles[result].htmlName,content);
-  end;
-
-PROCEDURE linkDemoToDoc(CONST demoIndex:longint; CONST qualifiedId:string);
-  VAR doc:P_intrinsicFunctionDocumentation;
-  begin
-    if not(functionDocMap.containsKey(qualifiedId,doc)) then exit;
-    append(doc^.relatedDemos,demoIndex);
-  end;
-
 FUNCTION getDocIndexLinkForBrowser(CONST suffix:string=''):ansistring;
   begin
     if suffix=''
@@ -72,7 +52,7 @@ FUNCTION getDocIndexLinkForBrowser(CONST suffix:string=''):ansistring;
     else result:='file:///'+ansiReplaceStr(expandFileName(getHtmlRoot              ),'\','/')+suffix;
   end;
 
-PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedOnly:boolean);
+PROCEDURE registerDoc(CONST qualifiedId:ansistring; CONST qualifiedOnly:boolean);
   VAR newDoc:P_intrinsicFunctionDocumentation;
       oldDoc:P_intrinsicFunctionDocumentation;
       outdatedDoc:P_intrinsicFunctionDocumentation;
@@ -80,7 +60,6 @@ PROCEDURE registerDoc(CONST qualifiedId,explanation:ansistring; CONST qualifiedO
       replaceUnqualified:boolean=false;
   begin
     new(newDoc,create(qualifiedId));
-    newDoc^.description:=explanation;
     newDoc^.unqualifiedAccess:=not(qualifiedOnly);
     replaceQualified:=functionDocMap.containsKey(qualifiedId,outdatedDoc);
     functionDocMap.put(qualifiedId,newDoc);
@@ -101,18 +80,24 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
       keys:T_arrayOfString=();
       allDocs:array of P_intrinsicFunctionDocumentation=();
 
-  PROCEDURE addExample(CONST exampleSource,html,txt,idList:T_arrayOfString);
+  FUNCTION addExample(CONST exampleSource,txt,idList:T_arrayOfString):T_arrayOfString;
     VAR ids:T_arrayOfString;
         i:longint;
-        leadingIdLine:boolean=false;
         doc:P_intrinsicFunctionDocumentation;
         {$ifdef debugMode} first:boolean=true; j:longint; {$endif}
     begin
+      {$ifdef debugMode}
+      writeln('Adding example: ');
+      writeln('  SOURCE:');
+      for i:=0 to length(exampleSource)-1 do writeln('    ',exampleSource[i]);
+      writeln('  TXT: ');
+      for i:=0 to length(txt)-1 do writeln('    ',txt[i]);
+      {$endif}
+
       if length(exampleSource)<=0 then exit;
-      if copy(exampleSource[0],1,3)='//#' then begin
-        ids:=split(trim(copy(exampleSource[0],4,length(exampleSource[0])-3)),' ');
-        leadingIdLine:=true;
-      end else ids:=idList;
+      if copy(exampleSource[0],1,3)='#I '
+      then ids:=split(trim(copy(exampleSource[0],4,length(exampleSource[0])-3)),' ')
+      else ids:=idList;
       sortUnique(ids);
       for i:=0 to length(ids)-1 do if functionDocMap.containsKey(ids[i],doc) then begin
         {$ifdef debugMode}
@@ -120,43 +105,45 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
           write('The following example is not uniquely assignable. IDs: ');
           for j:=0 to length(ids)-1 do write(ids[j],' ');
           writeln;
-          for j:=0 to length(exampleSource)-1 do writeln(exampleSource[j]);
+          for j:=0 to length(txt)-1 do writeln('  ',txt[j]);
+          writeln;
         end;
         {$endif}
-        doc^.addExample(html,txt,leadingIdLine);
+        doc^.addExample(txt);
       end;
-      {$ifdef debugMode}
-      if first then begin
-        write('The following example is not assignable. IDs: ');
-        for j:=0 to length(ids)-1 do write(ids[j],' ');
-        writeln;
-        for j:=0 to length(exampleSource)-1 do writeln(exampleSource[j]);
-      end;
-      {$endif}
-      setLength(ids,0);
+      result:=ids;
     end;
 
   CONST EXAMPLES_CACHE_FILE= '/examples.dat';
-  VAR examplesToStore:array of array[0..3] of T_arrayOfString;
+  VAR examplesToStore:array of record docTxt,ids:T_arrayOfString; end;
       recycler:P_recycler;
 
   PROCEDURE processExample;
-    VAR html,txt,ids:T_arrayOfString;
+    VAR txt,ids:T_arrayOfString;
+        s:string;
     begin
       if (length(code)<=0) then exit;
-      demoCodeToHtmlCallback(code,txt,html,ids,recycler);
-      addExample(code,html,txt,ids);
-      setLength(examplesToStore,length(examplesToStore)+1);
-      examplesToStore[length(examplesToStore)-1,0]:=code;
-      examplesToStore[length(examplesToStore)-1,1]:=txt;
-      examplesToStore[length(examplesToStore)-1,2]:=html;
-      examplesToStore[length(examplesToStore)-1,3]:=ids;
+      demoCodeInterpretCallback(code,txt,ids,recycler);
+
+      ids:=addExample(code,txt,ids);
+      if length(ids)=0 then begin
+        {$ifdef debugMode}
+        writeln('Found unassignable example:');
+        for s in code do writeln('  ',s);
+        writeln;
+        {$endif}
+      end else begin
+        setLength(examplesToStore,length(examplesToStore)+1);
+        examplesToStore[length(examplesToStore)-1].docTxt:=txt;
+        examplesToStore[length(examplesToStore)-1].ids   :=ids;
+      end;
+
       code:=C_EMPTY_STRING_ARRAY;
     end;
 
   PROCEDURE storeExamples;
     VAR wrapper:T_bufferedOutputStreamWrapper;
-        i,j:longint;
+        i:longint;
     PROCEDURE writeArrayOfString(CONST a:T_arrayOfString);
       VAR s:string;
       begin
@@ -168,7 +155,10 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
       wrapper.createToWriteToFile(getHtmlRoot+EXAMPLES_CACHE_FILE);
       wrapper.writeAnsiString(CODE_HASH);
       wrapper.writeNaturalNumber(length(examplesToStore));
-      for i:=0 to length(examplesToStore)-1 do for j:=0 to 3 do writeArrayOfString(examplesToStore[i,j]);
+      for i:=0 to length(examplesToStore)-1 do begin
+        writeArrayOfString(examplesToStore[i].docTxt);
+        writeArrayOfString(examplesToStore[i].ids);
+      end;
       wrapper.destroy;
     end;
 
@@ -184,7 +174,7 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
         for i:=0 to length(result)-1 do result[i]:=wrapper.readAnsiString;
       end;
 
-    VAR code,txt,html,ids:T_arrayOfString;
+    VAR txt,ids:T_arrayOfString;
     begin
       if not(fileExists(getHtmlRoot+EXAMPLES_CACHE_FILE)) then exit(false);
       wrapper.createToReadFromFile(getHtmlRoot+EXAMPLES_CACHE_FILE);
@@ -198,11 +188,10 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
       if result then begin
         {$ifdef debugMode} writeln(stdErr,'        DEBUG: restoring built-in documentation');{$endif}
         for ei:=0 to exampleCount-1 do begin
-          code:=readArrayOfString;
           txt :=readArrayOfString;
-          html:=readArrayOfString;
           ids :=readArrayOfString;
-          addExample(code,html,txt ,ids);
+          {$ifdef debugMode} if length(ids)=0 then wrapper.logWrongTypeError; {$endif}
+          addExample(C_EMPTY_STRING_ARRAY,txt ,ids);
         end;
       end;
       result:=result and wrapper.allOkay;
@@ -254,46 +243,27 @@ CONSTRUCTOR T_intrinsicFunctionDocumentation.create(CONST funcName: ansistring);
   begin
     id:=funcName;
     unqualifiedId:=shortName(funcName);
-    setLength(txtExample,0);
-    setLength(htmlExample,0);
-    setLength(relatedDemos,0);
+    setLength(docTxt,0);
   end;
 
 DESTRUCTOR T_intrinsicFunctionDocumentation.destroy;
   begin
     id:='';
-    description:='';
-    setLength(txtExample,0);
-    setLength(htmlExample,0);
+    setLength(docTxt,0);
   end;
 
 FUNCTION T_intrinsicFunctionDocumentation.getHtml:ansistring;
-  FUNCTION prettyHtml(CONST s: ansistring): ansistring;
-    CONST splitters:array[0..1] of string=('#','//');
-    VAR lines: T_arrayOfString;
-        i: longint;
-    begin
-      result:=s;
-      lines:=split(s,splitters);
-      result:='';
-      for i:=0 to length(lines)-1 do if lines[i]<>'' then begin
-        if i>0 then result:=result+'<br>';
-        if pos(';', lines [i])>0 then result:=result+'<code>'+toHtmlCode(lines [i])+'</code>'
-        else result:=result+lines [i];
-      end;
-    end;
-  VAR i:longint;
+  VAR docTxtLine: string;
+      lastWasCode:boolean=false;
+  FUNCTION br:string;
+    begin if lastWasCode then result:='' else result:='<br>'; end;
   begin
-    result:='<h4><br><a name="'+id+'">'+id+'</a></h4>'+prettyHtml(description);
-    if length(htmlExample)>0 then begin
-      result:=result+'<br>Examples:<code>';
-      for i:=0 to length(htmlExample)-1 do result:=result+LineEnding+htmlExample[i];
-      result:=result+'</code>';
-    end;
-    if length(relatedDemos)>0 then begin
-      result+='<br>Related demos:<ul>';
-      for i in relatedDemos do result+='<li><a href='+demoFiles[i].htmlName+'>'+demoFiles[i].sourceName+'</a></li>';
-      result+='</ul>';
+    result:='<h4><br><a name="'+id+'">'+id+'</a></h4>';
+    for docTxtLine in docTxt do begin
+      if startsWith(docTxtLine,'#S ') then begin result+=LineEnding+lineToHtml(copy(docTxtLine,4,maxLongint),true); lastWasCode:=true;  end else
+      if startsWith(docTxtLine,'#C ') then begin result+=LineEnding+br+ escapeHtml(copy(docTxtLine,4,maxLongint) ); lastWasCode:=false; end else
+      if startsWith(docTxtLine,'#H ') then begin result+=LineEnding+br+            copy(docTxtLine,4,maxLongint)  ; lastWasCode:=false; end else
+                                           begin result+=LineEnding+lineToHtml(docTxtLine,false);                   lastWasCode:=true;  end;
     end;
   end;
 
@@ -303,40 +273,43 @@ FUNCTION T_intrinsicFunctionDocumentation.getHtmlLink:string;
   end;
 
 FUNCTION T_intrinsicFunctionDocumentation.getStructuredInfo(OUT examples:T_arrayOfString):T_structuredRuleInfoList;
-  VAR i:longint;
-      parts:T_arrayOfString;
-      sigAndComment:T_arrayOfString;
+  VAR info:T_structuredRuleInfo;
+      docTxtLine:string;
+      first:boolean=true;
   begin
-    parts:=split(description,'#');
-    dropValues(parts,'');
-    initialize(result);
-    setLength(result,length(parts));
-    for i:=0 to length(result)-1 do begin
-      result[i].location:=C_nilSearchTokenLocation;
-      sigAndComment:=split(parts[i],'//');
-      result[i].idAndSignature:=sigAndComment[0];
-      if length(sigAndComment)>1
-      then result[i].comment:=sigAndComment[1]
-      else begin
-        if startsWith(parts[i],'//') then begin
-          result[i].comment:=result[i].idAndSignature;
-          result[i].idAndSignature:='';
-        end else result[i].comment:='';
-      end;
+    info.body:='';
+    info.comment:='';
+    info.idAndSignature:='';
+    info.location:=C_nilSearchTokenLocation;
+    setLength(result,0);
+    setLength(examples,0);
+    for docTxtLine in docTxt do begin
+      if docTxtLine.startsWith('#S ') then begin
+        if not(first) then begin
+          setLength(result,length(result)+1);
+          result[length(result)-1]:=info;
+          info.idAndSignature:='';
+          info.comment       :=''
+        end;
+        info.idAndSignature:=copy(docTxtLine,4,maxLongint);
+        first:=false;
+      end else if docTxtLine.startsWith('#C ') then begin
+        if info.comment=''
+        then info.comment:=                copy(docTxtLine,4,maxLongint)
+        else info.comment+=C_lineBreakChar+copy(docTxtLine,4,maxLongint);
+      end
+      else if not docTxtLine.startsWith('#H ') then
+      append(examples,docTxtLine);
     end;
-    examples:=txtExample;
+    if (info.idAndSignature<>'') or (info.comment<>'') then begin
+      setLength(result,length(result)+1);
+      result[length(result)-1]:=info;
+    end;
   end;
 
-PROCEDURE T_intrinsicFunctionDocumentation.addExample(CONST html,txt:T_arrayOfString; CONST skipFirstLine:boolean=false);
-  VAR i:longint;
+PROCEDURE T_intrinsicFunctionDocumentation.addExample(CONST txt:T_arrayOfString);
   begin
-    if skipFirstLine then begin
-      for i:=1 to length(txt )-1 do append(txtExample ,txt [i]);
-      for i:=1 to length(html)-1 do append(htmlExample,html[i]);
-      exit;
-    end;
-    append(txtExample ,txt);
-    append(htmlExample,html);
+    append(docTxt ,txt);
   end;
 
 PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
@@ -510,7 +483,7 @@ PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
     for templateLine in decompressedTemplate do begin
       case context.mode of
         none:            if not(handleCommand(templateLine)) and outFile.isOpen then writeln(outFile.handle,templateLine);
-        beautifying:     if not(contextEnds(templateLine))   and outFile.isOpen then writeln(outFile.handle,toHtmlCode(templateLine));
+        beautifying:     if not(contextEnds(templateLine))   and outFile.isOpen then writeln(outFile.handle,lineToHtml(templateLine,true));
         definingInclude: if not(contextEnds(templateLine))   then append(context.include.content,templateLine);
       end;
       inc(templateLineCount);
