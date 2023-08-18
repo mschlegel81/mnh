@@ -172,7 +172,6 @@ private cleanup->begin
    files('core/res_*.inc')|
    files('regTest/testFailures.log')|
    allFiles('versions')|
-   allFiles('demos/inputs','*.txt')|
    files(BUILDS.map({$B['compilate']}))|
    files('build.log'))
   .unique
@@ -213,7 +212,6 @@ end;
 main('beep')->beep;
 
 main('distro')->isLinux ? fail('Must be executed in windows environment') : begin
-
   BUILDS.each(B,B['canBuild'] AND B['distro'] ? B.testExe : void,AND)
   ? void
   : fail('Cannot make distro because there are failed tests');
