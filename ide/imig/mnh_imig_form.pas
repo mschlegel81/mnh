@@ -233,8 +233,8 @@ FUNCTION imigClosedByUser_impl intFuncSignature;
   end else result:=nil; end;
 
 INITIALIZATION
-  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'getScreenSize',@getScreenSize_imp,ak_nullary,'Returns the current screen size');
-  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageDisplaySize',@imigImageSize_imp,ak_nullary,'Returns the current image display size',[se_readGuiState]);
-  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageDisplayClosedByUser',@imigClosedByUser_impl,ak_nullary,'Returns true if the image display was closed by the user',[se_readGuiState]);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'getScreenSize',@getScreenSize_imp,ak_nullary);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageDisplaySize',@imigImageSize_imp,ak_nullary,[se_readGuiState]);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageDisplayClosedByUser',@imigClosedByUser_impl,ak_nullary,[se_readGuiState]);
 
 end.

@@ -722,26 +722,21 @@ FUNCTION T_imageSystem.flushToGui(CONST forceFlush:boolean):T_messageTypeSet;
 INITIALIZATION
   initialize(workflowCs);
   initCriticalSection(workflowCs);
-  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'validateWorkflow',@validateWorkflow_imp,ak_unary,'validateWorkflow(wf:list);//Validates the workflow returning a boolean flag indicating validity');
-  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'executeWorkflow',@executeWorkflow_imp,ak_variadic_3,'executeWorkflow(wf:list,xRes>0,yRes>0,target:string);#'+
-                                                                     'executeWorkflow(wf:list,source:string,target:string);#'+
-                                                                     'executeWorkflow(wf:list,xRes>0,yRes>0,sizeLimitInBytes>0,target:string);#'+
-                                                                     'executeWorkflow(wf:list,source:string,sizeLimitInBytes>0,target:string);#//Executes the workflow with the given options. Use "-" as source or target to read/write the current image.'+
-                                                                     '#//Give an additional expression(1) parameter for progress output');
-  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'executeTodo',@executeTodo_imp,ak_variadic_1,'executeTodo(filename:String);//Executes the imig-todo defined in the given file and deletes the file after calculation. Returns true if successful.#'+
-                                                                           'executeTodo(filename:String: outputMethod:Expression(1));');
-  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'loadImage'      ,@loadImage_imp      ,ak_unary,'loadImage(filename:string);//Loads image from the given file');
-  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'saveImage'      ,@saveImage_imp      ,ak_unary,'saveImage(filename:string);//Saves the current image to the given file. Supported types: JPG, PNG, BMP, VRAW#saveImage(filename:string,sizeLimit:int);//Saves the current image to the given file limiting the output size (limit=0 for automatic limiting). JPG only.');
-  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'closeImage'     ,@closeImage_imp     ,ak_nullary,'closeImage;//Closes the current image, freeing associated memory');
-  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageSize'      ,@imageSize_imp      ,ak_variadic,'imageSize;//Returns the size as [width,height] of the current image.#imageSize(filename:String);//Returns the size of the given file');
-  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'resizeImage'    ,@resizeImage_imp    ,ak_variadic_2,'resizeImage(xRes>0,yRes>0);//Resizes the current image#resizeImage(xRes>0,yRes>0,style in ["exact","fill","rotFill","fit","fitExpand","rotFit"]);//Resizes the current image with non-default scaling options');
-  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'displayImage'   ,@displayImage_imp   ,ak_nullary,'displayImage;//Displays the current image.');
-  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageJpgRawData',@imageJpgRawData_imp,ak_nullary,'imageJpgRawData;//Returns the image raw data in JPG representation.');
-  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'listManipulations',@listManipulations_imp,ak_nullary,'listManipulations;//Returns a list of all possible image manipulation steps.');
-  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'calculateThumbnail',@getThumbnail_imp,ak_ternary,'calculateThumbnail(file:string,maxXRes:int,maxYRes:int);//Returns a JPG thumbnail data for given input file');
-  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'renderPlotToCurrentImage',@renderPlotToCurrentImage,ak_binary,'renderPlotToCurrentImage(width,height);//Renders the current plot to the current image');
-  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'randomIfs',@randomIfs_impl,ak_nullary,'randomIfs;//returns a random IFS to be fed to executeWorkflow');
-  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'expandImageGeneration',@expandImageGeneration_imp,ak_unary,'expandImageGeneration(s:String);//Returns the generation algorithm with all fields');
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'validateWorkflow',@validateWorkflow_imp,ak_unary);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'executeWorkflow',@executeWorkflow_imp,ak_variadic_3,[se_readFile,se_writeFile]);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'executeTodo',@executeTodo_imp,ak_variadic_1,[se_readFile,se_writeFile]);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'loadImage'      ,@loadImage_imp      ,ak_unary,[se_readFile]);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'saveImage'      ,@saveImage_imp      ,ak_unary,[se_writeFile]);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'closeImage'     ,@closeImage_imp     ,ak_nullary);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageSize'      ,@imageSize_imp      ,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'resizeImage'    ,@resizeImage_imp    ,ak_variadic_2);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'displayImage'   ,@displayImage_imp   ,ak_nullary);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageJpgRawData',@imageJpgRawData_imp,ak_nullary);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'listManipulations',@listManipulations_imp,ak_nullary);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'calculateThumbnail',@getThumbnail_imp,ak_ternary,[se_readFile]);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'renderPlotToCurrentImage',@renderPlotToCurrentImage,ak_binary);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'randomIfs',@randomIfs_impl,ak_nullary);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'expandImageGeneration',@expandImageGeneration_imp,ak_unary);
 FINALIZATION
   doneCriticalSection(workflowCs);
 end.
