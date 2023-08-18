@@ -458,10 +458,10 @@ INITIALIZATION
   initCriticalSection(localServerCs);
   localServers.create();
   BUILTIN_ASSERTUNIQUEINSTANCE:=
-  builtinFunctionMap.registerRule(IPC_NAMESPACE,'assertUniqueInstance',@assertUniqueInstance_impl,ak_nullary   {$ifdef fullVersion},'assertUniqueInstance;//Returns with an error if there already is an instance of this script running.'{$endif});
-  builtinFunctionMap.registerRule(IPC_NAMESPACE,'startIpcServer'      ,@startIpcServer_impl      ,ak_binary    {$ifdef fullVersion},'startIpcServer(id:String,serve:Expression(1));//Creates an IPC server'{$endif});
-  builtinFunctionMap.registerRule(IPC_NAMESPACE,'sendIpcRequest'      ,@sendIpcRequest_impl      ,ak_binary    {$ifdef fullVersion},'sendIpcRequest(serverId:String,request);//Delegates a given request to an IPC server'{$endif});
-  builtinFunctionMap.registerRule(IPC_NAMESPACE,'isIpcServerRunning'  ,@isIpcServerRunning_impl  ,ak_variadic_1{$ifdef fullVersion},'isIpcServerRunning(serverId:String);//Returns true if the given IPC server is running and false otherwise#isIpcServerRunning;//Returns true if this script is already running and called assertUniqueInstance'{$endif});
+  builtinFunctionMap.registerRule(IPC_NAMESPACE,'assertUniqueInstance',@assertUniqueInstance_impl,ak_nullary   ,[se_alterContextState,se_accessIpc,se_server,se_detaching]);
+  builtinFunctionMap.registerRule(IPC_NAMESPACE,'startIpcServer'      ,@startIpcServer_impl      ,ak_binary    ,[se_alterContextState,se_server,se_detaching]);
+  builtinFunctionMap.registerRule(IPC_NAMESPACE,'sendIpcRequest'      ,@sendIpcRequest_impl      ,ak_binary    ,[se_accessIpc]);
+  builtinFunctionMap.registerRule(IPC_NAMESPACE,'isIpcServerRunning'  ,@isIpcServerRunning_impl  ,ak_variadic_1,[se_accessIpc]);
 FINALIZATION
   doneCriticalSection(localServerCs);
   localServers.destroy;

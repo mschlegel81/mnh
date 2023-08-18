@@ -1503,15 +1503,8 @@ FUNCTION peekFuture_imp intFuncSignature;
 
 INITIALIZATION
   reduceExpressionCallback:=@reduceExpression;
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,ak_variadic_1{$ifdef fullVersion},
-               'async(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
-               'async(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.#//The resulting expression returns void until the task is finished.#//If you want to access local variables, use localAsync instead'{$endif});
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'localAsync',@localAsync_imp,ak_variadic_1{$ifdef fullVersion},
-               'localAsync(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
-               'localAsync(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.#//The resulting expression returns void until the task is finished.#//If you want a task that runs until the end of the script, use async instead'{$endif});
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'future',@future_imp,ak_variadic_1{$ifdef fullVersion},
-               'future(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
-               'future(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Future tasks are killed at the end of (synchonous) evaluation.#//The resulting expression blocks until the task is finished.'{$endif});
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'peekFuture',@peekFuture_imp,ak_unary{$ifdef fullVersion},
-               'peekFuture(F:Future);//peeks (nonblocking) the future F and returns true if its evaluation is finished, false otherwise'{$endif});
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'async',@async_imp,ak_variadic_1);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'localAsync',@localAsync_imp,ak_variadic_1);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'future',@future_imp,ak_variadic_1);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'peekFuture',@peekFuture_imp,ak_unary);
 end.

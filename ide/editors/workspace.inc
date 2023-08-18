@@ -218,8 +218,8 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
 
     scriptMenu.create(scriptMenuRootItem,@miRunCustomUtilScript);
 
-    builtinFunctionMap.registerRule(GUI_NAMESPACE,'editors'       ,@editors_impl      ,ak_nullary,'editors(...);//Lists all editors',[se_readIdeState]);
-    builtinFunctionMap.registerRule(GUI_NAMESPACE,'editorContent' ,@editorContent_impl,ak_unary,'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.',[se_readIdeState]);
+    builtinFunctionMap.registerRule(GUI_NAMESPACE,'editors'       ,@editors_impl      ,ak_nullary,[se_readIdeState]);
+    builtinFunctionMap.registerRule(GUI_NAMESPACE,'editorContent' ,@editorContent_impl,ak_unary,[se_readIdeState]);
     packages.newCodeProvider:=@newFileProxy;
     clearDebugLine;
     changedFilesQueue.create;

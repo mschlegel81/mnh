@@ -15,7 +15,6 @@ USES //my utilities:
        funcs_plot,
        mnh_plotData,
        mnh_settings,
-       mnh_html,
        debuggingVar,
        Forms,ComCtrls,
      {$else}
@@ -148,7 +147,7 @@ TYPE
       {$ifdef fullVersion}
       PROCEDURE runInstallScript(CONST associateFullVersion:boolean);
       PROCEDURE runUninstallScript;
-      PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; CONST recycler:P_recycler; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);
+      PROCEDURE demoCallInterpretation(CONST input:T_arrayOfString; CONST recycler:P_recycler; OUT textOut,usedBuiltinIDs:T_arrayOfString);
       {$endif}
   end;
 
@@ -417,67 +416,65 @@ PROCEDURE T_sandbox.runUninstallScript;
     freeRecycler(recycler);
   end;
 
-PROCEDURE T_sandbox.demoCallToHtml(CONST input:T_arrayOfString; CONST recycler:P_recycler; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString);
+PROCEDURE T_sandbox.demoCallInterpretation(CONST input:T_arrayOfString; CONST recycler:P_recycler; OUT textOut,usedBuiltinIDs:T_arrayOfString);
+  VAR codeInput:T_arrayOfString;
   FUNCTION executeInternally:T_storedMessages;
+    VAR
+      callAndIdInfos: T_callAndIdInfos;
+      meta: P_builtinFunctionMetaData;
     begin
+      callAndIdInfos.create;
       messages.clear;
       messages.setupMessageRedirection(nil,[]);
       package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
       globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}C_allSideEffects,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
       globals.prng.resetSeed(1);
-      package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
+      package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY,@callAndIdInfos);
       globals.afterEvaluation(recycler,packageTokenLocation(@package));
       result:=messages.storedMessages(false);
-    end;
 
-  FUNCTION adHocMessage(CONST messageType: T_messageType; CONST messageText: T_arrayOfString):P_storedMessageWithText;
-    begin
-      new(result,create(messageType,C_nilSearchTokenLocation,messageText));
+      for meta in callAndIdInfos.calledBuiltinFunctions do append(usedBuiltinIDs,meta^.qualifiedId);
+      callAndIdInfos.destroy;
     end;
 
   VAR storedMessages:T_storedMessages;
       i:longint;
       tmp:ansistring;
-      raw:T_rawTokenArray;
-      tok:T_rawToken;
       m:P_storedMessage;
       formatter:T_guiFormatter;
+      message:P_storedMessageWithText;
   begin
-    storedMessages:=executeInternally;
-    formatter.create(true);
-    setLength(textOut,0);
-    setLength(htmlOut,0);
+    setLength(codeInput,0);
     setLength(usedBuiltinIDs,0);
-    //TODO This needs to be fixed!!!
+    setLength(textOut,0);
+    formatter.create(true);
+    formatter.wrapEcho:=true;
+    formatter.preferredLineLength:=80;
+
     for i:=0 to length(input)-1 do begin
       tmp:=trim(input[i]);
-      raw:=rawTokenizeCallback(tmp);
-      for tok in raw do if tok.tokType=tt_intrinsicRule then appendIfNew(usedBuiltinIDs,tok.txt);
-      if startsWith(tmp,COMMENT_PREFIX) then begin
-        append(htmlOut,            StringOfChar(' ',C_echoPrefixLength)+toHtmlCode(raw));
-        append(textOut,ECHO_MARKER+StringOfChar(' ',C_echoPrefixLength)+tmp);
-      end else begin
-        append(htmlOut, escapeHtml(' in> ')+toHtmlCode(raw));
-        m:=adHocMessage(mt_echo_input,tmp);
-        append(textOut,formatter.formatMessage(m));
-        disposeMessage(m);
-      end;
+      if startsWith(tmp,COMMENT_PREFIX)
+      then append(textOut,ECHO_MARKER+StringOfChar(' ',C_echoPrefixLength)+tmp)
+      else if startsWith(tmp,'#S ') or startsWith(tmp,'#C ') or startsWith(tmp,'#H ')
+      then append(textOut,tmp)
+      else if startsWith(tmp,'#I ') then begin end
+      else append(codeInput,input[i]);
     end;
+
+    storedMessages:=executeInternally;
+    new(message,create(mt_echo_input,C_nilSearchTokenLocation,codeInput));
+    append(textOut,formatter.formatMessage(message));
+    disposeMessage(message);
+
     for m in storedMessages do begin
-      case m^.messageType of
-        mt_printline:  for tmp in P_storedMessageWithText(m)^.txt do append(htmlOut,escapeHtml(tmp));
-        mt_echo_input, mt_echo_declaration, mt_el1_note, mt_timing_info: begin end;
-        mt_echo_output: append(htmlOut,escapeHtml('out> ')+toHtmlCode(P_echoOutMessage(m)^.getLiteral^.toString()));
-        else for tmp in P_storedMessageWithText(m)^.txt do append(htmlOut,span(C_messageClassMeta[m^.messageClass].htmlSpan,C_messageClassMeta[m^.messageClass].levelTxt+' '+escapeHtml(tmp)));
-      end;
-      if not(m^.messageType in [mt_echo_input,mt_timing_info]) then append(textOut,formatter.formatMessage(m));
+      if not(m^.messageType in [mt_timing_info,mt_echo_input]) then append(textOut,formatter.formatMessage(m));
     end;
     formatter.destroy;
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
 
-PROCEDURE demoCallToHtml(CONST input:T_arrayOfString; OUT textOut,htmlOut,usedBuiltinIDs:T_arrayOfString; CONST recycler:P_recycler);
-  begin sandbox^.demoCallToHtml(input,recycler,textOut,htmlOut,usedBuiltinIDs); end;
+PROCEDURE demoCallInterpretation(CONST input:T_arrayOfString; OUT textOut,usedBuiltinIDs:T_arrayOfString; CONST recycler:P_recycler);
+  begin sandbox^.demoCallInterpretation(input,recycler,textOut,usedBuiltinIDs); end;
 {$endif}
 
 {$define include_implementation}
@@ -1219,12 +1216,23 @@ FUNCTION T_package.getSecondaryPackageById(CONST id: ansistring): ansistring;
 {$ifdef fullVersion}
 PROCEDURE T_package.complainAboutUnused(CONST messages:P_messages; CONST functionCallInfos:P_callAndIdInfos);
   VAR import:T_packageReference;
+      builtinOverrides:T_arrayOfString;
   begin
     if functionCallInfos=nil then exit;
     ruleMap.complainAboutUnused(messages,functionCallInfos);
-    //TODO: Don't complain, if the import overloads operators.
-    for import in packageUses do if not(import.supressUnusedWarning) and not(functionCallInfos^.isPackageReferenced(import.pack^.getPath)) then
-      messages^.postTextMessage(mt_el2_warning,import.locationOfDeclaration,'Unused import '+import.pack^.getId+' ('+import.pack^.getPath+')');
+    for import in packageUses do begin
+      builtinOverrides:=import.pack^.ruleMap.getBuiltinOverrides;
+      if not(import.supressUnusedWarning) and
+         not(functionCallInfos^.isPackageReferenced(import.pack^.getPath)) and
+         (length(builtinOverrides)=0)
+      then messages^.postTextMessage(mt_el2_warning,
+                                     import.locationOfDeclaration,
+                                     'Unused import '+import.pack^.getId+' ('+import.pack^.getPath+')');
+      if length(builtinOverrides)>0
+      then messages^.postTextMessage(mt_el1_note,
+                                     import.locationOfDeclaration,
+                                     'Package '+import.pack^.getId+' overloads: '+join(builtinOverrides,', '));
+    end;
   end;
 {$endif}
 
@@ -1456,7 +1464,7 @@ INITIALIZATION
   setupSandboxes;
 {$define include_initialization}
   {$ifdef fullVersion}
-  demoCodeToHtmlCallback:=@demoCallToHtml;
+  demoCodeInterpretCallback:=@demoCallInterpretation;
   {$endif}
   {$include funcs_package.inc}
 {$undef include_initialization}

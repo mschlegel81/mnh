@@ -1,0 +1,470 @@
+
+,'validateWorkflow(wf:list);//Validates the workflow returning a boolean flag indicating validity'
+'executeWorkflow(wf:list,xRes>0,yRes>0,target:string);#'+
+                                                                     'executeWorkflow(wf:list,source:string,target:string);#'+
+                                                                     'executeWorkflow(wf:list,xRes>0,yRes>0,sizeLimitInBytes>0,target:string);#'+
+                                                                     'executeWorkflow(wf:list,source:string,sizeLimitInBytes>0,target:string);#//Executes the workflow with the given options. Use "-" as source or target to read/write the current image.'+
+                                                                     '#//Give an additional expression(1) parameter for progress output'
+'executeTodo(filename:String);//Executes the imig-todo defined in the given file and deletes the file after calculation. Returns true if successful.#'+
+                                                                           'executeTodo(filename:String: outputMethod:Expression(1));'
+,'loadImage(filename:string);//Loads image from the given file'                                                                           
+,'saveImage(filename:string);//Saves the current image to the given file. Supported types: JPG, PNG, BMP, VRAW#saveImage(filename:string,sizeLimit:int);//Saves the current image to the given file limiting the output size (limit=0 for automatic limiting). JPG only.'
+,'closeImage;//Closes the current image, freeing associated memory'
+,'imageSize;//Returns the size as [width,height] of the current image.#imageSize(filename:String);//Returns the size of the given file'
+,'resizeImage(xRes>0,yRes>0);//Resizes the current image#resizeImage(xRes>0,yRes>0,style in ["exact","fill","rotFill","fit","fitExpand","rotFit"]);//Resizes the current image with non-default scaling options'
+,'displayImage;//Displays the current image.'
+,'imageJpgRawData;//Returns the image raw data in JPG representation.'
+,'listManipulations;//Returns a list of all possible image manipulation steps.'
+,'calculateThumbnail(file:string,maxXRes:int,maxYRes:int);//Returns a JPG thumbnail data for given input file'
+,'renderPlotToCurrentImage(width,height);//Renders the current plot to the current image'
+,'randomIfs;//returns a random IFS to be fed to executeWorkflow'
+,'expandImageGeneration(s:String);//Returns the generation algorithm with all fields'
+:IMIG
+
+{$ifdef fullVersion},'clearPrint;//Clears the output and returns void.'{$endif}
+{$ifdef fullVersion},'print(...);//Prints out the given parameters and returns void#//if tabs and line breaks are part of the output, a default pretty-printing is used'{$endif}
+{$ifdef fullVersion},'printDirect(...);//Prints out the given string without pretty printing or line breaks'{$endif}
+{$ifdef fullVersion},'log(...);//Logs a message and returns void'{$endif}
+{$ifdef fullVersion},'note(...);//Raises a note of out the given parameters and returns void'{$endif}
+{$ifdef fullVersion},'warn(...);//Raises a warning of out the given parameters and returns void'{$endif}
+{$ifdef fullVersion},'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message'{$endif}
+{$ifdef fullVersion},'assert(condition:Boolean);//Raises an exception if condition is false#assert(condition:Boolean,...);//Raises an exception with the given message if condition is false'{$endif}
+{$ifdef fullVersion},'halt;//Quietly stops the evaluation. No further errors are raised#halt(exitCode:Int);//Convenience method to halt with a defined exit code'{$endif}
+{$ifdef fullVersion},'listBuiltin;//Returns a set of all builtin functions, only qualified IDs'{$endif}
+{$ifdef fullVersion},'sleep(seconds:Numeric);//Sleeps for the given number of seconds before returning void'{$endif},
+{$ifdef fullVersion},'sleepUntil(wallClockSeconds:Numeric);//Sleeps until the wallclock reaches the given value'{$endif}
+{$ifdef fullVersion},'myPath;//returns the path to the current package'{$endif}
+{$ifdef fullVersion},'executor;//returns the path to the currently executing instance of MNH'{$endif}
+{$ifdef fullVersion},'hash(x);//Returns the builtin hash for the given literal'{$endif}
+{$ifdef fullVersion},'listSideEffects;//Returns a list of all side effects, e.g. as parameters for interpret'{$endif}
+{$ifdef fullVersion},'ord(x);//Returns the ordinal value of x'{$endif}
+{$ifdef fullVersion},'mnhInfo;//Returns a key-value list with info on the currently executing instance of MNH'{$endif}
+
+    'plot(list,[options]); //plots flat numeric list or xy-list'+
+    '#plot(xList,yList,[options]); //plots flat numeric list or xy-list'+
+    '#plot(f:expression(1),t0,t1>t0,samples>=2,[options]); //plots f versus t in [t0,t1]'+
+    '#options are optional and given in the form of a string, the individual option items being delimited by spaces'+
+    '#valid options are:'+'#Style/size modifier: any real number'+
+    '#Styles:'+
+    '#  line; l;'+
+    '#  bspline; b;'+
+    '#  cspline; c;'+
+    '#  stepLeft;'+
+    '#  stepRight;'+
+    '#  fill; f;'+
+    '#  fillSolid; fs;'+
+    '#  bar;'+
+    '#  box;'+
+    '#  ellipse; e;'+
+    '#  tube;'+
+    '#  dot; .;'+
+    '#  plus; +;'+
+    '#  cross; x;'+
+    '#  impulse; i;'+
+    '#  polygon; p;'+
+    '#Colors:'+'#  black;'+
+    '#  red;'+'#  blue;'+'#  green;'+'#  purple;'+
+    '#  orange;'+'#  RGB$,$,$; //With three real numbers in range [0,1]'+
+    '#  HSV$,$,$; //With three real numbers in range [0,1]'+
+    '#  HUE$; //With one real number '+
+    '#  GREY$; //With one real number in range [0,1]'+
+    '#Transparency Index:'+'  #  TI$;// with an integer $'
+    
+
+    'addPlot(list,[options]); //adds plot of flat numeric list or xy-list'+
+    '#addPlot(xList,yList,[options]); //adds plot of flat numeric list or xy-list'+
+    '#addPlot(f:expression(1),t0,t1>t0,samples>=2,[options]); //adds plot of f versus t in [t0,t1]'
+    ,
+    'plotRasterImage(colors:List;width>=1);//Plots a raster image given by a 1D-List of colors#'+
+    'plotRasterImage(colors:List;width>=1,scale:Numeric,offsetX:Numeric,offsetY:Numeric);//Plots a raster image with custom scaling'
+    
+    'getOptions;//returns plot options as a key-value-list.',    
+    
+'setOptions(set:keyValueList);//Sets options via a key value list of the same form as returned by plot.getOptions#'+
+    'setOptions(key:string,value);//Sets a single plot option'    
+    
+    'resetOptions;//Sets the default plot options'    
+    
+'renderToFile(filename<>'',width>=1,height>=1);//Renders the current plot to a file.#renderToFile(filename<>'',width>=1,height>=1,background:true);//Renders the current plot to a file in a background thread.'    
+
+    'renderToString(width,height);//Renders the current plot to a string.'
+    
+    'removePlot;//Removes the last row from the plot#removePlot(n>=1);//Removed the last n rows from the plot'    
+    
+    'drawText(x,y,text);//Draws custom text#'+
+    'drawText(x,y,text,size:Numeric,anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"],font:String,textCol:IntList(3),backgroundCol:IntList(3));//Draws text with custom options. Custom parameters are optional'    
+    
+'drawTextAbsolute(x,y,text);//Draws custom text at absolute position#'+
+    'drawTextAbsolute(x,y,text,size:Numeric,anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"],font:String,textCol:IntList(3),backgroundCol:IntList(3));//Draws text with custom options. Custom parameters are optional'    
+    
+{$ifdef fullVersion},'arity(e:expression);//Returns the arity of expression e'{$endif}    
+{$ifdef fullVersion},'parameterNames(e:expression);//Returns the IDs of named parameters of e'{$endif}
+{$ifdef fullVersion},'tokenSplit(S:string);#tokenSplit(S:string,language:string);//Returns a list of strings from S for a given language#//Languages: <code>MNH, Pascal, Java</code>'{$endif}
+{$ifdef fullVersion},'toExpression(S);//Returns an expression parsed from string or list S'{$endif}
+{$ifdef fullVersion},'interpret(E);//Interprets a String, StringList or Expression(0) E#interpret(E,sideEffectWhitelist:StringCollection);//As above, but restricting the allowed side effects.'{$endif}
+
+{$ifdef fullVersion},'assertUniqueInstance;//Returns with an error if there already is an instance of this script running.'{$endif});                                                                                                         
+{$ifdef fullVersion},'startIpcServer(id:String,serve:Expression(1));//Creates an IPC server'{$endif});                                                                                                                                        
+{$ifdef fullVersion},'sendIpcRequest(serverId:String,request);//Delegates a given request to an IPC server'{$endif});                                                                                                                         
+{$ifdef fullVersion},'isIpcServerRunning(serverId:String);//Returns true if the given IPC server is running and false otherwise#isIpcServerRunning;//Returns true if this script is already running and called assertUniqueInstance'{$endif});
+
+{$ifdef fullVersion},
+      operatorName[op]+'(x,y);//Function wrapper for operator '+C_tokenDefaultId[op]{$endif}
+      
+{$ifdef fullVersion},
+      operatorName[op]+'(x,y);//Function wrapper for '+C_tokenDoc[op].helpText{$endif}
+      
+{$ifdef fullVersion},'printf(formatString:String,...);//Prints a formatted version of the given 0..n parameters and returns void, see <a href="formatStrings.html">Format Strings</a>'{$endif}
+{$ifdef fullVersion},'format(formatString:String,...);//Returns a formatted version of the given 0..n parameters, see <a href="formatStrings.html">Format Strings</a>'{$endif}      
+{$ifdef fullVersion},'formatTime(formatString:String,t);//Returns time t (numeric list or scalar) formatted using format string, see <a href="formatStrings.html">Format Strings</a>'{$endif}
+{$ifdef fullVersion},'parseTime(formatString:String,input:String);//Parses time from a given date format and input, see <a href="formatStrings.html">Format Strings</a>'{$endif}
+
+{$ifdef fullVersion},'startHttpServer(ipAndPort:String,requestToResponseFunc:Expression(1),timeoutInSeconds:Numeric);//Starts a new microserver-instance and returns the cleaned up ip and port'{$endif}
+{$ifdef fullVersion},'wrapTextInHttp(s:String);//Wraps s in an http-response (type: "text/html", code: 200)#wrapTextInHttp(s:String,type:String);//Wraps s in an http-response of given type with code 200.#wrapTextInHttp(s:String,code:Int,header:Map);//Wraps s in a custom http-response'{$endif}
+{$ifdef fullVersion},'httpError;//Returns http-representation of error 404.#httpError(code:Int);//Returns http-representation of given error code.'{$endif}
+{$ifdef fullVersion},'extractParameters(request:String);//Returns the parameters of an http request as a keyValueList'{$endif}  
+{$ifdef fullVersion},'extractRawParameters(request:String);//Returns the parameter part of an http request as a string'{$endif}
+{$ifdef fullVersion},'extractPath(request:String);//Returns the path part of an http request as a string'{$endif}
+{$ifdef fullVersion},'encodeRequest(address:String,path:String,parameters:String);#encodeRequest(address:String,path:String,parameters:keyValueList);//Returns an http request from the given components'{$endif}
+{$ifdef fullVersion},'httpGet(URL:String);#httpGet(URL:String,body:String,header:Map);//Retrieves the contents of the given URL and returns them as a map ["body"=>...,"code"=>...,"status"=>...,"header"=>...]'{$endif}
+{$ifdef fullVersion},'httpPut(URL:String);#httpPut(URL:String,body:String,header:Map);//Performs an http-PUT on the given URL and returns the response as a map ["body"=>...,"code"=>...,"status"=>...,"header"=>...]'{$endif}
+{$ifdef fullVersion},'httpPost(URL:String);#httpPost(URL:String,body:String,header:Map);//Performs an http-POST on the given URL and returns the response as a map ["body"=>...,"code"=>...,"status"=>...,"header"=>...]'{$endif}
+{$ifdef fullVersion},'httpDelete(URL:String);#httpDelete(URL:String,body:String,header:Map);//Performs an http-DELETE on the given URL and returns the response ["body"=>...,"code"=>...,"status"=>...,"header"=>...]'{$endif}
+{$ifdef fullVersion},'openUrl(URL:String);//Opens the URL in the default browser'{$endif}
+{$ifdef fullVersion},'isServerRunning(ipAndPort:String);//Returns true if the server is running - only servers in the current instance are checked!'{$endif}
+
+{$ifdef fullVersion},'sandBoxExecute(source,sideEffectWhitelist:StringCollection);//Executes the source (String or StringList) and returns created messages#//Optionally you can specify allowed side effects'{$endif}
+
+{$ifdef fullVersion},
+             'try(E:Expression(0));//Evaluates E and returns the result if successful or void if failed.#'+
+             'try(E:Expression,parameters:List);//Evaluates E with the given parameters - the parameter list length must match the arity of E#'+
+             'try(E:Expression(0),except(1):Expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed with the errors as first paramter ($0).#'+
+             'try(E:Expression(0),except:Expression);//Evaluates E and returns the result if successful. Otherwise <except> is executed without paramters.#'+
+             'try(E:Expression(0),except);//Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.'{$endif}
+             
+{$ifdef fullVersion},'runScript(config:Map);//executes the given script config#'+
+                                                     '//expected keys: "'+RUNSCRIPT_KEY_NAME         +'" (String, mandatory)#'+
+                                                     '//               "'+RUNSCRIPT_KEY_SOURCE       +'" (StringList)#'+
+                                                     '//               "'+RUNSCRIPT_KEY_PARAMETERS   +'" (StringList)#'+
+                                                     '//               "'+RUNSCRIPT_KEY_SIDE_EFFECTS +'" (StringCollection)#'+
+                                                     '//               "'+RUNSCRIPT_KEY_ISOLATION    +'" 0: isolated, 1: print, 2: print and warnings, 3: print, warnings and errors#'+
+                                                     '//               "'+RUNSCRIPT_KEY_DETERMINISTIC+'" (Boolean, true to enforce determinism of PRGNs)'{$endif}
+{$ifdef fullVersion},'inspect;//Returs information on the current package#inspect(idOrPath:String);//Returns information on an imported package or a specified MNH source file#inspect(path:String,source:StringList);//Returns information of a package with given path and source'{$endif}                                                     
+{$ifdef fullVersion},'inspectAll;//Returs information on all currently loaded packages'{$endif}
+{$ifdef fullVersion},'writeAllDataStores;//Writes back all modified datastores (including stores in imported packages) and returns true if any store was updated.#writeAllDatastores(deflate:Boolean,reuse:Boolean);//Write binary datastores in a certain format, priorizing speed or size'{$endif}
+{$ifdef fullVersion},'writeDataStores;//Writes back all modified datastores of the current package (i.e. excluding stores in imported packages) and returns true if any store was updated.#writeDatastores(deflate:Boolean,reuse:Boolean);//Write binary datastores in a certain format, priorizing speed or size'{$endif}
+{$ifdef fullVersion},'helpOnMain;//Returns help text for the current package''s main method.'{$endif}
+
+'anyFormShowing();//returns true if any form is showing',
+'formatHtmlPage(lines:StringList,filename:String);//formats naive html'
+
+{$ifdef fullVersion},'head(L);//Returns the first element of list L or [] if L is empty#head(L,k);//Returns the first min(k,size(L)) elements of L or [] if L is empty'{$endif}
+{$ifdef fullVersion},'tail(L);//Returns list L without the first element#tail(L,k);//Returns L without the first k elements'{$endif}
+{$ifdef fullVersion},'leading(L);//Returns L without the last element or [] if L is empty#leading(L,k);//Returns L without the last k elements or [] if L is empty'{$endif}
+{$ifdef fullVersion},'trailing(L);//Returns the last element of L#trailing(L,k);//Returns the last k elements of L'{$endif}
+{$ifdef fullVersion},
+                                               'sort(L);//Returns list L sorted ascending (using fallbacks for uncomparable types)#'+
+                                               'sort(L,mapExpression:Expression(1));//Returns L sorted using the custom unary expression, behaves as L.get(L.map(mapExpression))#'+
+                                               'sort(L,leqExpression:Expression(2));//Returns L sorted using the custom binary expression, interpreted as "is lesser or equal"#'+
+                                               'sort(L,innerIndex:Int);//Returns L sorted by given inner index'{$endif}
+                                               
+{$ifdef fullVersion},'sortPerm(L);//Returns indexes I so that L%I==sort(L)'{$endif}                                               
+{$ifdef fullVersion},'unique(L:List);//Returns list L without duplicates and enhanced for faster lookup'{$endif}
+{$ifdef fullVersion},'elementFrequency(L);//Returns a list of pairs [count,e] containing distinct elements e of L and their respective frequencies'{$endif}
+{$ifdef fullVersion},'transpose(L,filler);//Returns list L transposed. If sub lists of L have different lengths, filler is used.#transpose(L);//Returns list L transposed. If sub lists of L have different lengths, filler is used.'{$endif}
+{$ifdef fullVersion},'union(A,...);//Returns a union of all given parameters. All parameters must be collections.'{$endif}
+{$ifdef fullVersion},'intersect(A,...);//Returns an intersection of all given parameters. All parameters must be collections.'{$endif}
+{$ifdef fullVersion},'minus(A,B);//Returns the asymmetric set difference of A and B. All parameters must be collections.'{$endif}
+{$ifdef fullVersion},'isSubsetOf(A,B);//Returns true if A is a subset of (or equal to) B'{$endif}
+{$ifdef fullVersion},'mergeMaps(A:Map,B:Map,M:Expression(2));//Returns a map, obtained by merging maps A and B.#//On duplicate keys, the values are merged using M.'{$endif}
+{$ifdef fullVersion},'flatten(L,...);//Returns all parameters as a flat list.'{$endif}
+{$ifdef fullVersion},'size(L);//Returns the number of elements in list L'{$endif}
+{$ifdef fullVersion},'trueCount(B:BooleanList);//Returns the number of true values in B'{$endif}
+{$ifdef fullVersion},'reverseList(L:List);//Returns L reversed'{$endif}
+{$ifdef fullVersion},'get(L,accessor);//Returns elements of list, set or map L by accessor'{$endif}
+{$ifdef fullVersion},'getAll(L,accessors);//Returns elements of list, set or map L by collection of accessors#getAll(L,accessors:List,fallback:List);//Returns elements of list, set or map L by collection of accessors.#//If no such element is found, the respective fallback entry is used.#//fallback must have the same size as accessors'{$endif}
+{$ifdef fullVersion},'getInner(L:List,k:Int);//Returns the k-th elements of each entry in nested list L'{$endif}
+{$ifdef fullVersion},'indexOf(B:BooleanList);//Returns the indexes for which B is true.'{$endif}
+{$ifdef fullVersion},'cross(A,...);//Returns the cross product of the arguments (each of which must be a list, set or map)'{$endif}
+{$ifdef fullVersion},'group(list,grouping);//Re-groups list to a map by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:Expression(2));//Groups by grouping using aggregator on a per group basis'{$endif}
+{$ifdef fullVersion},'groupToList(values:List,indexes:IntList,defaultValue,aggregator:Expression(2));//Groups values by indexes to a list, using defaultValue where no value is given and aggregating using the aggregator#groupToList(values:List,indexes:IntList,defaultValue,aggregator:Expression(2),initialSize>=0);//As above but with a predefined initial result list size'{$endif}
+{$ifdef fullVersion},'toIteratableExpression(e:Expression(0));#Marks the expression as IteratableExpression if possible or throws an error'{$endif}
+{$ifdef fullVersion},'toGenerator(e:Expression(0));#Alias for toIteratableExpression'{$endif}
+{$ifdef fullVersion},'vectorIfThenElse(condition:BooleanList,Then,Else);//Returns the elementwise "if-then-else" result'{$endif}
+
+{$ifdef fullVersion},'sqrt(n);//Returns the square root of numeric or expression parameter n'{$endif}
+{$ifdef fullVersion},'isqrt(n);//Returns [floor(sqrt(n)),isSquare(n)]'{$endif}
+{$ifdef fullVersion},'sin(n);//Returns the sine of numeric or expression parameter n'{$endif}
+{$ifdef fullVersion},'arcsin(n);//Returns the arcsine of numeric or expression parameter n'{$endif}
+{$ifdef fullVersion},'cos(n);//Returns the cosine of numeric or expression parameter n'{$endif}
+{$ifdef fullVersion},'arccos(n);//Returns the arccosine of numeric or expression parameter n'{$endif}
+{$ifdef fullVersion},'tan(n);//Returns the tangent of numeric or expression parameter n'{$endif}
+{$ifdef fullVersion},'arctan(n);//Returns the arctangent of numeric or expression parameter n'{$endif}
+{$ifdef fullVersion},'exp(n);//Returns the exponential of numeric or expression parameter n'{$endif}
+{$ifdef fullVersion},'ln(n);//Returns the natural logarithm of numeric or expression parameter n'{$endif}
+{$ifdef fullVersion},'abs(n);//Returns the absolute value of numeric or expression parameter n'{$endif}
+{$ifdef fullVersion},'sqr(n);//Returns the square of numeric or expression parameter n'{$endif}
+{$ifdef fullVersion},'sign(n);//Returns the sign of numeric or expression parameter n'{$endif}
+{$ifdef fullVersion},'ceil(x);//Returns the smallest integer >=x#ceil(x,k);//Does the same but with k digits precision'{$endif}
+{$ifdef fullVersion},'floor(x);//Returns the largest integer <=x#floor(x,k);//Does the same but with k digits precision'{$endif}
+{$ifdef fullVersion},'round(x);//Returns the value of x, rounded to the nearest integer#round(x,k);//Returns the value of x rounded to k-digits precision'{$endif}
+{$ifdef fullVersion},'pi;//Returns pi'{$endif}
+{$ifdef fullVersion},'max(L);//Returns the greatest element out of list L#max(x,y,...);//Returns the greatest element out of the given parameters'{$endif}
+{$ifdef fullVersion},'argMax(L);//Returns the index of the greatest element out of list L (or the first index if ambiguous)'{$endif}
+{$ifdef fullVersion},'min(L);//Returns the smallest element out of list L#min(x,y,...);//Returns the smallest element out of the given parameters'{$endif}
+{$ifdef fullVersion},'argMin(L);//Returns the index of the smallest element out of list L (or the first index if ambiguous)'{$endif}
+{$ifdef fullVersion},'isNan(n);//Returns true if n is a number representing the value Not-A-Number'{$endif}
+{$ifdef fullVersion},'isInfinite(n);//Returns true if n is a number representing an infinite value'{$endif}
+{$ifdef fullVersion},'subSets(S);//Returns all distinct subsets of S#'+
+                                                                              'subSets(S,k:Int);//Returns all distinct subsets of S having k elements'{$endif}
+{$ifdef fullVersion},'permutations(L:List);//Returns a list of all permutations of S'{$endif}
+{$ifdef fullVersion},'factorize(i:Int);//Returns a list of all prime factors of i'{$endif}
+{$ifdef fullVersion},'isPrime(i:Int);//Returns true if i is a prime, false otherwise#//result is guaranteed to be correct for i<3.317E23'{$endif}
+{$ifdef fullVersion},'primes(pMax:Int);//Returns prime numbers up to pMax'{$endif}
+{$ifdef fullVersion},'digits(i>=0);//Returns the digits of i (base 10)#digits(i>=0,base>1);//Returns the digits of i for a custom base'{$endif}
+{$ifdef fullVersion},'composeDigits(digits:IntList);//Returns a number constructed from digits (base 10)#'+
+                                                                                  'composeDigits(digits:IntList,base:Int);//Returns a number constructed from digits with given base #'+
+                                                                                  'composeDigits(digits:IntList,base:Int,shift:Int);//Returns a number constructed from digits with given base and shift'{$endif}
+{$ifdef fullVersion},'arctan2(x,y);//Calculates arctan(x/y) and returns an angle in the correct quadrant'{$endif}                                                                                  
+{$ifdef fullVersion},'gcd(x:Int,...);//Returns the greatest common divider of all arguments (only integers accepted)'{$endif}
+{$ifdef fullVersion},'hammingWeight(x:Int);//Returns the hamming weight (i.e. number of true bits) in x'{$endif}
+{$ifdef fullVersion},'powMod(x>=0,y>=0,z>=0);//Returns x^y mod z'{$endif}
+{$ifdef fullVersion},'modularInverse(x>0,m>0);//Returns the modular inverse of x with respect to modul m or NaN if no modular inverse exists'{$endif}
+{$ifdef fullVersion},'bitShift(x:Int,bitsToShift:Int);//Shifts integer x right by the given number of bits#//If bitsToShift<0 a shift-left is performed'{$endif}
+{$ifdef fullVersion},'divMod(x:Int,y:Int);//Returns a pair [x div y, x mod y]'{$endif}
+{$ifdef fullVersion},'euklideanNorm(v:NumericList);//returns the Euklidean norm of vector v'{$endif}
+{$ifdef fullVersion},'integrate(f:Expression(1),x0,x1,pointCount>1);//returns the numeric integral of f over interval [x0,x1]'{$endif}
+{$ifdef fullVersion},'bitXor(x:Int,y:Int,relevantBits in [1..32]);//Returns x xor y for the given number of relevant bits'{$endif}
+{$ifdef fullVersion},'DFT(x:List);//Returns the Discrete Fourier Transform of x'{$endif}
+{$ifdef fullVersion},'iDFT(x:List);//Returns the inverse Discrete Fourier Transform of x'{$endif}
+{$ifdef fullVersion},'FFT(x:List);//Returns the Fast Fourier Transform of x'{$endif}
+{$ifdef fullVersion},'iFFT(x:List);//Returns the inverse Fast Fourier Transform of x'{$endif}
+
+{$ifdef fullVersion},'softCast(X);#Returns a simplified version of X, trying to parse integers, real values and booleans'{$endif}
+{$ifdef fullVersion},'toBuiltin(X);#Returns X without custom type info'{$endif}
+{$ifdef fullVersion},TO_STRING_RULE_ID+'(X);#Casts X to string'{$endif}
+{$ifdef fullVersion},'toBoolean(X);#Casts X to boolean or throws an error if not possible'{$endif}
+{$ifdef fullVersion},'toInt(X);#Casts X to int or throws an error if not possible'{$endif}
+{$ifdef fullVersion},'toReal(X);#Casts X to real or throws an error if not possible'{$endif}
+{$ifdef fullVersion},'toList(X);#Casts X to list or wraps a scalar in a list'{$endif}
+{$ifdef fullVersion},'toSet(X);#Casts X to set or wraps a scalar in a set'{$endif}
+{$ifdef fullVersion},'toMap(X:Collection);#Casts X to map or throws an error if not possible'{$endif}
+{$ifdef fullVersion},'typeOf(x); //Returns a description of x''s type'{$endif}
+{$ifdef fullVersion},'isVoid(x); //Returns true if x is void (or no arguments were given)'{$endif}
+{$ifdef fullVersion},'isScalar(x); //Returns true if x is a scalar'{$endif}
+{$ifdef fullVersion},'isList(x); //Returns true if x is a list. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isSet(x); //Returns true if x is a set. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isCollection(x); //Returns true if x is a collection. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isBoolean(x); //Returns true if x is a boolean'{$endif}
+{$ifdef fullVersion},'isBooleanList(x); //Returns true if x is a booleanList. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isBooleanSet(x); //Returns true if x is a booleanSet. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isBooleanCollection(x); //Returns true if x is a booleanCollection. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isInt(x); //Returns true if x is a int'{$endif}
+{$ifdef fullVersion},'isIntList(x); //Returns true if x is a intList. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isIntSet(x); //Returns true if x is a intSet. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isIntCollection(x); //Returns true if x is a intCollection. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isReal(x); //Returns true if x is a real'{$endif}
+{$ifdef fullVersion},'isRealList(x); //Returns true if x is a realList. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isRealSet(x); //Returns true if x is a realSet. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isRealCollection(x); //Returns true if x is a realCollection. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isString(x); //Returns true if x is a string'{$endif}
+{$ifdef fullVersion},'isStringList(x); //Returns true if x is a stringList. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isStringSet(x); //Returns true if x is a stringSet. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isStringCollection(x); //Returns true if x is a stringCollection. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isNumeric(x); //Returns true if x is a numeric'{$endif}
+{$ifdef fullVersion},'isNumericList(x); //Returns true if x is a numericList. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isNumericSet(x); //Returns true if x is a numericSet. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isNumericCollection(x); //Returns true if x is a numericCollection. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isMap(x); //Returns true if x is a map. Specify an additional int parameter to additionally check the size.'{$endif}
+{$ifdef fullVersion},'isExpression(x); //Returns true if x is a expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.'{$endif}
+{$ifdef fullVersion},'isStatelessExpression(x); //Returns true if x is a stateless expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.'{$endif}
+{$ifdef fullVersion},'isStatefulExpression(x); //Returns true if x is a stateful expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.'{$endif}
+{$ifdef fullVersion},'isIteratableExpression(x); //Returns true if x is an iteratable expression.'{$endif}
+{$ifdef fullVersion},'isIteratable(x); //Returns true if x is an iteratable expression, a collection or a map.'{$endif}
+
+{$ifdef fullVersion},
+               'async(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
+               'async(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.#//The resulting expression returns void until the task is finished.#//If you want to access local variables, use localAsync instead'{$endif}
+               {$ifdef fullVersion},
+               'localAsync(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
+               'localAsync(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Asynchronous tasks are killed at the end of (synchonous) evaluation.#//The resulting expression returns void until the task is finished.#//If you want a task that runs until the end of the script, use async instead'{$endif}
+               {$ifdef fullVersion},
+               'future(E:expression);//Calls E asynchronously (without parameters) and returns an expression to access the result.#'+
+               'future(E:expression,par:list);//Calls E@par and asynchronously and returns an expression to access the result.#//Future tasks are killed at the end of (synchonous) evaluation.#//The resulting expression blocks until the task is finished.'{$endif}
+               {$ifdef fullVersion},
+               'peekFuture(F:Future);//peeks (nonblocking) the future F and returns true if its evaluation is finished, false otherwise'{$endif}
+               
+               {$ifdef fullVersion},'files(searchPattern:String);//Returns a list of files matching the given search pattern'{$endif}
+               {$ifdef fullVersion},'allFiles(root);//Returns a list of all files below root (string or stringList)#'+'allFiles(root,pattern);//Returns a list of all files matching pattern(s) (string or stringList)#'+'allFiles(root,pattern,recurse=false);//As above but without recursing subfolders'{$endif}
+               {$ifdef fullVersion},'folders(searchPattern:String);//Returns a list of folders matching the given search pattern'{$endif}
+               {$ifdef fullVersion},'allFolders(rootFolder:String);//Returns a list of all folders below and including a given root directory'{$endif}
+               {$ifdef fullVersion},'fileExists(filename:String);//Returns true if the specified file exists and false otherwise'{$endif}
+               {$ifdef fullVersion},'folderExists(foldername:String);//Returns true if the specified folder exists and false otherwise'{$endif}
+               {$ifdef fullVersion},'fileContents(filename:String);//Returns the contents of the specified file as one string'{$endif}
+               {$ifdef fullVersion},'readDatastore(scriptPath:String,ruleName:String);//Tries to read the specified datastore; returns void if the datastore does not exist#'+
+                                                                                                                'readDatastore(datastorePath:String);//Tries to read the specified datastore - returns a map with keys "id" and "content"'{$endif}
+{$ifdef fullVersion},'serialize(x);//Returns a string representing x.#serialize(x,deflate:Boolean,reuse:Boolean);//Custom serialization.'{$endif}
+{$ifdef fullVersion},'deserialize(s:string);//Returns the literal represented by s which was created using serialize(x)'{$endif}
+{$ifdef fullVersion},'fileLines(filename:String);//Returns the contents of the specified file as a list of strings#//Information on the line breaks is lost'{$endif}
+{$ifdef fullVersion},'writeFile(filename:String, content:String);//Writes the specified content to the specified file and returns true'{$endif}
+{$ifdef fullVersion},'writeFileLines(filename:String, content:StringList);//Writes the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
+                                                                                                           'writeFileLines(filename:String, content:StringList, lineEnding:String);//As above with specified line ending'{$endif}
+{$ifdef fullVersion},'appendFileLines(filename:String, content:StringList);//Appends the specified content to the specified file and returns true. If the file exists, the routine uses the previously used line breaks.#'+
+                                                                              'appendFileLines(filename:String, content:StringList, lineEnding:String);//As above with specified line ending (will be used only if a new file is created)'{$endif}
+{$ifdef fullVersion},
+                                       'exec(programPath:String);//Executes the specified program and returns the text output including stdErr output and the exitcode as a nested list: [[output,...],exitCode]#'+
+                                       'exec(programPath:String,parameters:flatList);//Executes the specified program with given command line parameters#'+
+                                       'exec(programPath:String,includeStdErr:boolean);//Executes the specified program and returns the text output optionally including stdErr output#'+
+                                       'exec(programPath:String,parameters:flatList,parameters:flatList);//Executes the specified program with given command line parameters and returns the text output optionally including stdErr output'{$endif}
+                                       {$ifdef fullVersion},
+                                      'teeExec(...);//Behaves as exec but additionally prints out to stdout#//You can add an additional expression to use instead of printing to stdout'{$endif}
+                                      
+{$ifdef fullVersion},'execAsync(programPath:String,parameters ...);//Starts the specified program and returns the process id'{$endif});                                                              
+{$ifdef fullVersion},'execPipeless(programPath:String,parameters ...);//Executes the specified program, waiting for exit and returns the exit code'{$endif});  
+{$ifdef fullVersion},'deleteFile(filename:String);//Deletes the given file, returning true on success and false otherwise'{$endif});                           
+{$ifdef fullVersion},'deleteDir(directoryname:String);//Deletes the given directory, returning true on success and false otherwise'{$endif});                  
+{$ifdef fullVersion},'copyFile(source:String,dest:String);//Copies a file from source to dest, returning true on success and false otherwise'{$endif});        
+{$ifdef fullVersion},'moveFile(source:String,dest:String);//Moves a file from source to dest, returning true on success and false otherwise'{$endif});         
+{$ifdef fullVersion},'fileInfo(filenameOrPattern:String);//Retuns file info as a key-value-list#fileInfo(filenameOrPattern:StringList);'{$endif});             
+{$ifdef fullVersion},'fileStats(filename:String);//Retuns a triplet [lineCount,wordCount,byteCount,hash].#fileStats(filename:StringList);'{$endif});           
+
+{$ifdef fullVersion},'expandedFileName(F);//Returns the expanded file name of file(s) given by string or stringList F'{$endif});                                   
+{$ifdef fullVersion},'extractFileDirectory(F);//Returns the expanded file directories of file(s) given by string or stringList F'{$endif});                        
+{$ifdef fullVersion},'extractFileName(F);//Returns the expanded file names (without path) of file(s) given by string or stringList F'{$endif});                    
+
+{$ifdef fullVersion},'extractFileNameOnly(F);//Returns the expanded file names (without path and extension) of file(s) given by string or stringList F'{$endif});  
+{$ifdef fullVersion},'extractFileExt(F);//Returns the extension(s) of file(s) given by string or stringList F'{$endif});                                           
+{$ifdef fullVersion},'changeFileExt(filename,newExtension);//Returns the path of file with the new extension'{$endif});                                            
+
+{$ifdef fullVersion},'relativeFileName(reference,file);//Returns the path of file relative to reference#relativeFileName(file);//Returns the path of file relative to the current working directory'{$endif}
+
+{$ifdef fullVersion},'systemSpecificFilename(name:String);//Returns the path with system specific directory separators#systemSpecificFilename(name:StringCollection);'{$endif}
+{$ifdef fullVersion},'setFileDate(filename:String, time:Numeric);//Sets the time of a given file and returns true on success'{$endif}
+
+{$ifdef fullVersion}
+CONST SYNTAX_LINK='#For the syntax of regular expressions see <a href="https://regex.sorokin.engineer/en/latest/regular_expressions.html">the used library''s website.</a>';
+{$endif}   
+{$ifdef fullVersion},'validateRegex(regex:String);//Returns true iff regex is valid, false otherwise#validateRegex(regex:String,feedback:expression(1));//Returns void iff regex is valid, invokes feedback with error message otherwise'{$endif}
+{$ifdef fullVersion},'matches(searchString,regex);//returns true if string/-list searchString matches string/-list regex#//If lists are given they must have equal sizes.'+SYNTAX_LINK{$endif}
+{$ifdef fullVersion},'matchComposite(searchString,regex);//returns a (list of) triplets: [match,position,length] for string/-list regex and searchString//If lists are given they must have equal sizes.'+SYNTAX_LINK{$endif}
+{$ifdef fullVersion},'split(searchString,regex);//splits the string/-list searchString using string/-list regex//If lists are given they must have equal sizes.'+SYNTAX_LINK{$endif}
+{$ifdef fullVersion},'replace(searchString,regex,replaceString);//replaces all matching occurences of string/-list regex in string/-list searchString by string/-list replaceString//If lists are given they must have equal sizes.'+SYNTAX_LINK{$endif}
+
+{$ifdef fullVersion},'length(S:String);//Returns the number of characters in string S'{$endif});                                                                                                                                                                         
+{$ifdef fullVersion},'byteLength(S:String);//Returns the number of bytes in string S'{$endif});                                                                                                                                                                          
+{$ifdef fullVersion},'pos(subString,searchInString);//Returns the index of the first occurence of subString in searchInString or Infinity if there is none'{$endif});                                                                                                    
+{$ifdef fullVersion},'hasPrefix(s,prefix);//Returns true if s starts with prefix'{$endif});                                                                                                                                                                              
+{$ifdef fullVersion},'copy(S,start,length)://Returns the substring of S starting at index start and having specified length'{$endif});                                                                                                                                   
+{$ifdef fullVersion},'chars(S);//Returns the characters in S as a list#chars;//Returns all possible single-byte characters in natural ordering'{$endif});                                                                                                                
+{$ifdef fullVersion},'charSet(S);//Returns the characters in S as a set (ordered list without duplicates)'{$endif});                                                                                                                                                     
+{$ifdef fullVersion},'byteToChar(b in [0..255]);//Returns the corresponding character as a string of one byte length'{$endif});                                                                                                                                          
+{$ifdef fullVersion},'bytes(S);//Returns the bytes in S as a list of strings'{$endif});                                                                                                                                                                                  
+{$ifdef fullVersion},'split(S:String,splitter:String);//Returns a list of strings obtained by splitting S at the specified splitters without the splitters#split(S:String,splitter:String,retainSplitters:boolean);'{$endif});                                           
+{$ifdef fullVersion},'join(L:List);//Returns a string-concatenation of all elements in L#join(L:List,joiner:String);//Returns a string-concatenation of all elements, with joiner between.'{$endif});                                                                    
+{$ifdef fullVersion},'trim(S:String);//Returns string S without leading or trailing spaces'{$endif});                                                                                                                                                                    
+{$ifdef fullVersion},'trimLeft(S:String);//Returns string S without leading spaces'{$endif});                                                                                                                                                                            
+{$ifdef fullVersion},'trimRight(S:String);//Returns string S without trailing spaces'{$endif});                                                                                                                                                                          
+{$ifdef fullVersion},'upper(S:String);//Returns an uppercase representation of S'{$endif});                                                                                                                                                                              
+{$ifdef fullVersion},'lower(S:String);//Returns an lowercase representation of S'{$endif});                                                                                                                                                                              
+{$ifdef fullVersion},'clean(s,whiteList:StringCollection,instead:String);//Replaces all characters in s which are not in whitelist by instead.#clean(s,whiteList:StringCollection,instead:String,joinPlaceholders:boolean);//As above but joining placeholders'{$endif});
+{$ifdef fullVersion},'unbrace(S:String);//Returns an unbraced representation of S'{$endif});                                                                                                                                                                             
+{$ifdef fullVersion},'escape(S:String);//Returns an escaped representation of S'{$endif});                                                                                                                                                                               
+{$ifdef fullVersion},'escapePascal(S:String);//Returns an escaped representation of S for use in Pascal source code'{$endif});                                                                                                                                           
+{$ifdef fullVersion},'escapeJava(S:String);//Returns an escaped representation of S for use in Java source code'{$endif});                                                                                                                                               
+{$ifdef fullVersion},'replaceOne(source:String,lookFor,replaceBy);//Replaces the first occurences of lookFor in source by replaceBy#//lookFor and replaceBy may be of type string or stringList'{$endif});                                                               
+{$ifdef fullVersion},'replace(source:String,lookFor,replaceBy);//Recursively replaces all occurences of lookFor in source by replaceBy#//lookFor and replaceBy may be of type string or stringList'{$endif});                                                            
+{$ifdef fullVersion},'repeat(s:String,k:Int);//Returns a string containing s repeated k times'{$endif});                                                                                                                                                                 
+{$ifdef fullVersion},'reverseString(S:String);//reverseString(S:StringList);//Returns returns S reversed (character wise not bytewise)'{$endif});                                                                                                                        
+{$ifdef fullVersion},'diff(A,B);//Shows diff statistics and edit script for strings A and B or string lists A and B#diff(A,B,convertModifies:boolean);//As above but optionally convert modifies to adds and deletes'{$endif});                                          
+{$ifdef fullVersion},'diffStats(A,B);//Shows diff statistics for strings A and B or string lists A and B'{$endif});                                                                                                                                                      
+{$ifdef fullVersion},'isUtf8(S:String);//Returns true if S is UTF8 encoded and false otherwise'{$endif});                                                                                                                                                                
+{$ifdef fullVersion},'isAscii(S:String);//Returns true if S is ASCII encoded and false otherwise'{$endif});                                                                                                                                                              
+{$ifdef fullVersion},'utf8ToAnsi(S:String);//Converts a UTF8 encoded string to an ANSI encoded string.'{$endif});                                                                                                                                                        
+{$ifdef fullVersion},'ansiToUtf8(S:String);//Converts an ANSI encoded string to a UTF8 encoded string.'{$endif});                                                                                                                                                        
+{$ifdef fullVersion},'base64encode(S:String);//Converts a string to a base64 encoded string.'{$endif});                                                                                                                                                                  
+{$ifdef fullVersion},'base64decode(S:String);//Converts a base64 encoded string to a string.'{$endif});                                                                                                                                                                  
+{$ifdef fullVersion},'base92encode(S:String);//Converts a string to a base92 encoded string.'{$endif});                                                                                                                                                                  
+{$ifdef fullVersion},'base92decode(S:String);//Converts a base92 encoded string to a string.'{$endif});                                                                                                                                                                  
+
+{$ifdef fullVersion},'compress(S:String);#Returns a compressed version of S#compress(S:String,k:Int);#'+'As above but with a specified algorithm:#'+'  1: deflate#'+'  2: huffman with relaxed default model#'+'  3: huffman with strict default model#'+'  4: huffman with numbers model#'+'  5: huffman with Wikipedia.de model#'+'  6: huffman with MNH code model#'+'255: don''''t compress#'+'  other: try out algorithms and return the shortest representation#'+'  The first character of the result indicates the algorithm used'{$endif}
+{$ifdef fullVersion},'decompress(S:String);#Returns an uncompressed version of S'{$endif}
+{$ifdef fullVersion},'formatTabs(S:String);#Applies tab formatting as on print'{$endif}
+{$ifdef fullVersion},'md5(S:String);#Returns the MD5 digest as hexadecimal string for given input S'{$endif}
+{$ifdef fullVersion},'sha256(S:String);#Returns SHA256 digest as hexadecimal string for given input S'{$endif}
+
+{$ifdef fullVersion},'resetRandom(seed:Int);//Resets internal PRNG with the given seed'{$endif},
+{$ifdef fullVersion},'random;//Returns a random value in range [0,1]#random(n);//Returns a list of n random values in range [0,1]'{$endif},
+{$ifdef fullVersion},'intRandom(k>1);//Returns an integer random value in range [0,k-1]#intRandom(k>1,n>0);//Returns a list of n integer random values in range [0,k-1]'{$endif}
+{$ifdef fullVersion},'systime;//Returns the current time as a real number'{$endif}
+{$ifdef fullVersion},'beep;//Makes a beep'{$endif}
+{$ifdef fullVersion},'driveInfo;//Returns info on the computer''''s drives/volumes (Windows only).'{$endif}
+{$ifdef fullVersion},'getEnv;//Returns the current environment variables as a nested list.'{$endif}
+{$ifdef fullVersion},'changeDirectory(folder:String);//Sets the working directory'{$endif}
+{$ifdef fullVersion},'setExitCode(code:Int);//Sets the exit code of the executable.#//Might be overridden by an evaluation error.'{$endif}
+{$ifdef fullVersion},'scriptTime;//Returns an internal time for time difference measurement.'{$endif}
+{$ifdef fullVersion},'time;//DEPRECATED Returns an internal time for time difference measurement.#'+
+               'time(E:expression);//Evaluates E (without parameters) and returns a nested List with evaluation details.#'+
+               'time(E:expression,par:list);//Evaluates E@par and returns a nested List with evaluation details.'{$endif}
+               
+{$ifdef fullVersion},'callMemoryCleaner;//Calls the memory cleaner'{$endif}
+{$ifdef fullVersion},'assertGuiStarted;//Enforces GUI initialization'{$endif}
+{$ifdef fullVersion},'isGuiStarted;//Returns true if the GUI is started'{$endif}
+{$ifdef fullVersion},'showConsole; //shows the console'{$endif}
+{$ifdef fullVersion},'hideConsole; //hides the console'{$endif}
+{$ifdef fullVersion},'Returns the CPU load in percent (Windows only)'{$endif}
+{$ifdef fullVersion},'Returns info on running tasks (Windows only)'{$endif}
+
+{$ifdef fullVersion},'readXmlFile(filename:String);//Reads contents of an XML file and returns the contents as a list'{$endif}
+{$ifdef fullVersion},'readXml(input:String);//Parses input as XML and returns the contents as a list'{$endif}
+
+{$ifdef fullVersion},'parseJson(value:String);//Reads contents of a JSON string and returns an MNH representation.#parseJson(value:String,insteadOfNull);//As above but representing null values with given marker'{$endif}
+{$ifdef fullVersion},'formatJson(x);//Formats x as a JSON (as far as compatible)'{$endif}
+
+{$ifdef fullVersion},'linearInterpolator(L:List);//returns an linear interpolator, which returns values out of L by their index'{$endif}
+{$ifdef fullVersion},'newSplineInterpolator(L:List);//returns an C-Spline interpolator, which returns values out of L by their index'{$endif}
+{$ifdef fullVersion},'newBSpline(L:List);//returns an Bezier approximator'{$endif}
+{$ifdef fullVersion},'newFourierSeries(L:List);//returns an Fourier Series with coefficients L=[[c0,s0],[c1,s1]...]'{$endif}
+{$ifdef fullVersion},'calculateFourierCoefficients(L:List,maxWaveNumber>=0);//Calculates fourier coefficients for nonequidistant points in L given as [[t0,y0],[t1,y1],...]'{$endif}
+{$ifdef fullVersion},'newLocalInterpolator(L:List);//returns an local non-convex smooth interpolator'{$endif}
+
+{$ifdef fullVersion},'rangeGenerator(i0:Int,i1:Int);//returns a generator generating the range [i0..i1]#rangeGenerator(start:Int);//returns an unbounded increasing generator'{$endif}
+{$ifdef fullVersion},'permutationIterator(i:Int);//returns a generator generating the permutations of [1..i]#permutationIterator(c:collection);//returns a generator generating permutationf of c'{$endif}
+{$ifdef fullVersion},'map(L,f:Expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#map(L,f:Expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)'{$endif}
+{$ifdef fullVersion},'flatMap(L,f:Expression(1));//flattens L and applies f#flatMap(L);#//Note that the mapping function (if present) is applied AFTER flattening!#//Always returns an iteratable expression'{$endif}
+{$ifdef fullVersion},'chunkMap(L,chunkSize>0,f:Expression(1));//joins L in chunks of the specified size and applies f#chunkMap(L,chunkSize>0);#//Note that the mapping function (if present) is applied AFTER chunking!#//Always returns an iteratable expression'{$endif}
+{$ifdef fullVersion},'pMap(L,f:Expression(1));//Returns a list with f(x) for each x in L#//L may be a generator#pMap(L,f:Expression(0));//Returns a list by applying f. The input L is ignored (apart from its size)'{$endif}
+{$ifdef fullVersion},'filter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true'{$endif}
+{$ifdef fullVersion},'pFilter(L,acceptor:expression(1));//Returns compound literal or generator L with all elements x for which acceptor(x) returns true#//As filter but processing in parallel'{$endif}
+{$ifdef fullVersion},'fileLineIterator(filename:String);//returns an iterator over all lines in f#fileLineIterator(filename:String,timeoutInSeconds:Numeric);//The iterator "follows" the file until it is unchanged for timeoutInSeconds'{$endif}
+{$ifdef fullVersion},'byteStreamIterator(filename:String,chunkSize>0);//returns an iterator over all lines in f#byteStreamIterator(...,timeoutInSeconds:Numeric);//The iterator "follows" the file until it is unchanged for timeoutInSeconds'{$endif}
+{$ifdef fullVersion},'primeGenerator;//returns a generator generating all prime numbers#//Note that this is an infinite generator!'{$endif}
+{$ifdef fullVersion},'stringIterator(charSet:StringCollection,minLength>=0,maxLength>=minLength);//returns a generator generating all strings using the given chars'{$endif}
+{$ifdef fullVersion},'randomGenerator(seed:Int);//returns a XOS generator for real valued random numbers in range [0,1)'{$endif}
+{$ifdef fullVersion},'intRandomGenerator(seed:Int,range>0);//returns a XOS generator generating pseudo random integers in range [0,range)#//The range of the returned generator can be changed by calling it with an integer argument.'{$endif}
+{$ifdef fullVersion},'isaacRandomGenerator(seed:Int,range>0);//returns an ISAAC generator generating pseudo random integers in range [0,range)#//www.burtleburtle.net/bob/rand/isaacafa.html#//The range of the returned generator can be changed by calling it with an integer argument.'{$endif}
+{$ifdef fullVersion},'vanDerCorputGenerator(base>=2);//returns a Van der Corput generator for the given base'{$endif}
+
+{$ifdef fullVersion},
+               'ask(q:string);//Asks the user question q and returns the user input#'+
+               'ask(q:string,options:stringList);//Asks the user question q, giving the passed options and returns the chosen option#'+
+               'ask(...,visible:Boolean);//Optionally disables question feedback (console ask only)'{$endif}
+               
+               
+'showVarible(L);//Shows L in a tree view.#showVariable(L,caption:string);//Shows L in a tree view with given caption'
+
+'showTable(L:list);//Shows L in a table.#'+
+    'showTable(L:list,caption:string);//Shows L in a table with given caption.#'+
+    'showTable(L:list,caption:string,firstRowIsHeader:boolean);//Shows L in a table with given caption.#'+
+    'showTable(L:list,caption:string,fixedRows:Int,fixedColumns:Int);//Shows L with customized fixed rows and columns'
+    
+'showDialog(title:String,contents);//Shows a custom dialog defined by the given contents (Map or List)#//returns void when the form is closed',    
+
+'editors(...);//Lists all editors',
+'editorContent(name:string);//Returns the content of the given editor as a string or void if no such editor was found.',
+
+'plotClosed;//Returns true if the plot has been closed by user interaction',
+'clearAnimation;//Clears the animated plot#clearAnimation(true);//Clears the animated plot and switches to volatile mode',
+'addAnimationFrame;//Adds the current plot to the animation',
+'display;//Displays the plot as soon as possible and waits for execution',
+'display;//Displays the plot as soon as possible and returns immediately',
+'plotImageSize;//Returns the plot image size or [-1,-1] if not initialized',

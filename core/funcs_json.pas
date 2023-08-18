@@ -119,7 +119,7 @@ FUNCTION formatJson_impl intFuncSignature;
   end;
 
 INITIALIZATION
-  builtinFunctionMap.registerRule(FILES_BUILTIN_NAMESPACE,'parseJson',@parseJson_impl,ak_variadic_1{$ifdef fullVersion},'parseJson(value:String);//Reads contents of a JSON string and returns an MNH representation.#parseJson(value:String,insteadOfNull);//As above but representing null values with given marker'{$endif});
-  builtinFunctionMap.registerRule(FILES_BUILTIN_NAMESPACE,'formatJson',@formatJson_impl,ak_unary{$ifdef fullVersion},'formatJson(x);//Formats x as a JSON (as far as compatible)'{$endif});
+  builtinFunctionMap.registerRule(FILES_BUILTIN_NAMESPACE,'parseJson',@parseJson_impl,ak_variadic_1);
+  builtinFunctionMap.registerRule(FILES_BUILTIN_NAMESPACE,'formatJson',@formatJson_impl,ak_unary);
 
 end.

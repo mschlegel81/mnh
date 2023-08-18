@@ -5,7 +5,7 @@ UNIT ideLayoutUtil;
 INTERFACE
 
 USES
-  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,mnh_settings,serializationUtil,mnh_doc,mnh_constants,debugging,mnh_messages,
+  Classes, sysutils, Forms,Controls,ComCtrls,Graphics,Menus,SynEdit,mnh_settings,serializationUtil,mnh_constants,debugging,mnh_messages,
   SynEditTypes,SynExportHTML,SynEditHighlighter,myGenerics;
 
 TYPE
@@ -202,7 +202,7 @@ PROCEDURE applyWindowPosition(CONST form:TForm; CONST pos:T_windowPosition);
 
 IMPLEMENTATION
 USES math,litVar,recyclers,basicTypes,contexts,funcs,Clipbrd,
-     editorMetaBase,myStringUtil,SynHighlighterMnh,codeAssistance,fileWrappers,strutils;
+     editorMetaBase,myStringUtil,SynHighlighterMnh,codeAssistance,fileWrappers,strutils,mnh_doc;
 VAR activeForms:array of T_mnhComponentForm;
     fontControls:array[T_controlType] of array of TWinControl;
 TYPE T_dockSetup=array[T_ideComponent] of T_componentParent;
@@ -298,6 +298,53 @@ FUNCTION T_htmlExporter.textToHtml(CONST title:string; CONST content:TStrings; C
     outputStream.Seek(0,soFromBeginning);
     setLength(result,size);
     outputStream.ReadBuffer(result[1],size);
+    outputStream.free;
+  end;
+
+VAR mnhOutputSyn:TMnhOutputSyn=nil;
+
+FUNCTION ioTextToHtml(CONST line:string; CONST forceSyntaxHighlighting:boolean):string;
+  VAR SynExporterHTML: TSynExporterHTML;
+      outputStream:TMemoryStream;
+      size:longint;
+      content:TStringList;
+  begin
+    if mnhOutputSyn=nil then mnhOutputSyn:=TMnhOutputSyn.create(nil);
+
+    SynExporterHTML:=TSynExporterHTML.create(nil);
+    SynExporterHTML.highlighter:=mnhOutputSyn;
+    SynExporterHTML.options:=[heoFragmentOnly];
+
+    content:=TStringList.create;
+    if forceSyntaxHighlighting and not(startsWith(line,#226)) then begin
+      if startsWith(trimLeft(line),'out>')
+      then content.add(ECHO_MARKER+' '+trimLeft(line))
+      else if startsWith(trimLeft(line),'in>')
+      then content.add(ECHO_MARKER+'  '+trimLeft(line))
+      else content.add(ECHO_MARKER+line);
+    end else content.add(line);
+    SynExporterHTML.ExportAll(content);
+    FreeAndNil(content);
+
+    outputStream:=TMemoryStream.create();
+    SynExporterHTML.saveToStream(outputStream);
+    SynExporterHTML.free;
+
+    size:=outputStream.size;
+    outputStream.Seek(0,soFromBeginning);
+    if size=0
+    then result:=''
+    else begin
+      setLength(result,size);
+      outputStream.ReadBuffer(result[1],size);
+      result:=StringReplace(result,#$0D#$0A,'',[rfReplaceAll]);
+      result:=StringReplace(result,'</code></pre>','</font></code></pre>',[]);
+      //result:=StringReplace(result,#$0D#$0A'</font>'#$0D#$0A'</code></pre>'           ,'</font></font></code></pre>',[]);
+      //result:=StringReplace(result,#$0D#$0A'</font></font>'#$0D#$0A'</code></pre>'    ,'</font></font></font></code></pre>',[]);
+      //result:=StringReplace(result,#$0D#$0A'</i></font></font>'#$0D#$0A'</code></pre>','</i></font></font></font></code></pre>',[]);
+      //result:=StringReplace(result,#$0D#$0A'</b></font></font>'#$0D#$0A'</code></pre>','</b></font></font></font></code></pre>',[]);
+      result:=StringReplace(result,'<font  size=3 face="Courier New">','<font  size=3 face="Hack, Courier New">',[]);
+    end;
     outputStream.free;
   end;
 
@@ -1083,6 +1130,7 @@ PROCEDURE clearComponentShortcuts;
   end;
 
 INITIALIZATION
+  mnh_doc.lineToHtml:=@ioTextToHtml;
   clearComponentShortcuts;
   ideSettings.create;
   initialize(lastDockLocationFor);
@@ -1090,7 +1138,9 @@ INITIALIZATION
   setLength(fontControls[ctEditor ],0);
   setLength(fontControls[ctTable  ],0);
   setLength(fontControls[ctGeneral],0);
-  builtinFunctionMap.registerRule(GUI_NAMESPACE,'anyFormShowing',@anyFormShowing_imp,ak_nullary,'anyFormShowing();//returns true if any form is showing',[se_readGuiState]);
-  builtinFunctionMap.registerRule(HTTP_NAMESPACE,'formatHtmlPage',@formatHtmlPage_imp,ak_binary,'formatHtmlPage(lines:StringList,filename:String);//formats naive html');
+  builtinFunctionMap.registerRule(GUI_NAMESPACE,'anyFormShowing',@anyFormShowing_imp,ak_nullary,[se_readGuiState]);
+  builtinFunctionMap.registerRule(HTTP_NAMESPACE,'formatHtmlPage',@formatHtmlPage_imp,ak_binary);
+FINALIZATION
+  if mnhOutputSyn<>nil then FreeAndNil(mnhOutputSyn);
 end.
 

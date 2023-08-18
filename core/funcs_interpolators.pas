@@ -740,11 +740,11 @@ FUNCTION calcFourierCoeff_im intFuncSignature;
   end;
 
 INITIALIZATION
-  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newLinearInterpolator',@linearInterpolator_imp ,ak_unary{$ifdef fullVersion},'linearInterpolator(L:List);//returns an linear interpolator, which returns values out of L by their index'{$endif});
-  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newSplineInterpolator',@cSplineInterpolator_imp,ak_unary{$ifdef fullVersion},'newSplineInterpolator(L:List);//returns an C-Spline interpolator, which returns values out of L by their index'{$endif});
-  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newBSpline'           ,@bSplineApproximator_imp,ak_unary{$ifdef fullVersion},'newBSpline(L:List);//returns an Bezier approximator'{$endif});
-  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newFourierSeries'     ,@fourierSeries_imp      ,ak_unary{$ifdef fullVersion},'newFourierSeries(L:List);//returns an Fourier Series with coefficients L=[[c0,s0],[c1,s1]...]'{$endif});
-  builtinFunctionMap.registerRule(MATH_NAMESPACE,'calculateFourierCoefficients',@calcFourierCoeff_im,ak_unary{$ifdef fullVersion},'calculateFourierCoefficients(L:List,maxWaveNumber>=0);//Calculates fourier coefficients for nonequidistant points in L given as [[t0,y0],[t1,y1],...]'{$endif});
-  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newLocalInterpolator' ,@localInterpolator_imp,ak_unary{$ifdef fullVersion},'newLocalInterpolator(L:List);//returns an local non-convex smooth interpolator'{$endif});
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newLinearInterpolator',@linearInterpolator_imp ,ak_unary);
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newSplineInterpolator',@cSplineInterpolator_imp,ak_unary);
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newBSpline'           ,@bSplineApproximator_imp,ak_unary);
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newFourierSeries'     ,@fourierSeries_imp      ,ak_unary);
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'calculateFourierCoefficients',@calcFourierCoeff_im,ak_unary);
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'newLocalInterpolator' ,@localInterpolator_imp,ak_unary);
 
 end.

@@ -52,7 +52,7 @@ TYPE
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
-      FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST aritiyKind:T_arityKind;{$ifdef fullVersion}CONST explanation:ansistring;{$endif}CONST sideEffects:T_sideEffects=[]; CONST fullNameOnly:boolean=false):P_intFuncCallback;
+      FUNCTION registerRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback; CONST aritiyKind:T_arityKind; CONST sideEffects:T_sideEffects=[]; CONST fullNameOnly:boolean=false):P_intFuncCallback;
       FUNCTION reregisterRule(CONST namespace:T_namespace; CONST name:T_idString; CONST ptr:P_intFuncCallback):P_intFuncCallback;
       FUNCTION containsFunctionForId(CONST id:string; OUT ptr:P_intFuncCallback):boolean;
       FUNCTION getFunctionForId(CONST id:string):P_intFuncCallback;
@@ -120,7 +120,7 @@ DESTRUCTOR T_functionMap.destroy;
     doneCriticalSection(functionMapCs);
   end;
 
-FUNCTION T_functionMap.registerRule(CONST namespace: T_namespace; CONST name: T_idString; CONST ptr: P_intFuncCallback; CONST aritiyKind: T_arityKind; {$ifdef fullVersion}CONST explanation:ansistring;{$endif} CONST sideEffects: T_sideEffects; CONST fullNameOnly: boolean): P_intFuncCallback;
+FUNCTION T_functionMap.registerRule(CONST namespace: T_namespace; CONST name: T_idString; CONST ptr: P_intFuncCallback; CONST aritiyKind: T_arityKind; CONST sideEffects: T_sideEffects; CONST fullNameOnly: boolean): P_intFuncCallback;
   VAR meta,prevMeta:P_builtinFunctionMetaData;
       reusingExistingFunction:boolean;
   begin
@@ -135,7 +135,7 @@ FUNCTION T_functionMap.registerRule(CONST namespace: T_namespace; CONST name: T_
     then mapByName  .put(name             ,meta);
     mapByName       .put(meta^.qualifiedId,meta);
     if not(reusingExistingFunction) then mapByFuncPointer.put(ptr,meta);
-    {$ifdef fullVersion}registerDoc(meta^.qualifiedId,explanation,fullNameOnly);{$endif}
+    {$ifdef fullVersion}registerDoc(meta^.qualifiedId,fullNameOnly);{$endif}
     result:=ptr;
   end;
 
@@ -501,17 +501,17 @@ FUNCTION allBuiltinFunctions intFuncSignature;
 
 INITIALIZATION
   builtinFunctionMap.create;
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,ak_nullary {$ifdef fullVersion},'clearPrint;//Clears the output and returns void.'{$endif},[se_output]);
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'print'        ,@print_imp        ,ak_variadic{$ifdef fullVersion},'print(...);//Prints out the given parameters and returns void#//if tabs and line breaks are part of the output, a default pretty-printing is used'{$endif},[se_output]);
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'printDirect'  ,@printDirect_imp  ,ak_variadic{$ifdef fullVersion},'printDirect(...);//Prints out the given string without pretty printing or line breaks'{$endif},[se_output]);
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'log'          ,@log_imp          ,ak_variadic{$ifdef fullVersion},'log(...);//Logs a message and returns void'{$endif},[se_output]);
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'note'         ,@note_imp         ,ak_variadic{$ifdef fullVersion},'note(...);//Raises a note of out the given parameters and returns void'{$endif},[se_output]);
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,ak_variadic{$ifdef fullVersion},'warn(...);//Raises a warning of out the given parameters and returns void'{$endif},[se_output]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,ak_nullary ,[se_output]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'print'        ,@print_imp        ,ak_variadic,[se_output]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'printDirect'  ,@printDirect_imp  ,ak_variadic,[se_output]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'log'          ,@log_imp          ,ak_variadic,[se_output]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'note'         ,@note_imp         ,ak_variadic,[se_output]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'warn'         ,@warn_imp         ,ak_variadic,[se_output]);
   failFunction:=
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,ak_variadic{$ifdef fullVersion},'fail;//Raises an exception without a message#fail(...);//Raises an exception with the given message'{$endif});
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'assert'       ,@assert_impl      ,ak_variadic_1{$ifdef fullVersion},'assert(condition:Boolean);//Raises an exception if condition is false#assert(condition:Boolean,...);//Raises an exception with the given message if condition is false'{$endif});
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'halt'         ,@halt_impl        ,ak_variadic  {$ifdef fullVersion},'halt;//Quietly stops the evaluation. No further errors are raised#halt(exitCode:Int);//Convenience method to halt with a defined exit code'{$endif},[se_alterContextState]);
-  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin'  ,@allBuiltinFunctions,ak_nullary{$ifdef fullVersion},'listBuiltin;//Returns a set of all builtin functions, only qualified IDs'{$endif});
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'fail'         ,@fail_impl        ,ak_variadic);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'assert'       ,@assert_impl      ,ak_variadic_1);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'halt'         ,@halt_impl        ,ak_variadic  ,[se_alterContextState]);
+  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'listBuiltin'  ,@allBuiltinFunctions,ak_nullary);
 FINALIZATION
   builtinFunctionMap.destroy;
 

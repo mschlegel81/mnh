@@ -1,38 +1,73 @@
-arity({3});
+#I halt
+#S halt;
+#C Quietly stops the evaluation. No further errors are raised
+#S halt(exitCode:Int);
+#C Convenience method to halt with a defined exit code
 
-//#mnh.arity
+#I printDirect
+#S printDirect(...);
+#C Prints out the given string without pretty printing or line breaks
+
+#I COMPARATOR_EQ
+#S COMPARATOR_EQ(x,y);
+#C Wrapper function for =
+
+arity({3});
+#S arity(e:Expression);
+#C Returns the arity (i.e. the number of accepted parameters of expression e)
+
+#I mnh.arity
 arity({sin($x)/$x});
 
-//#mnh.runScript
+#I mnh.runScript
 runScript(['name'=>'hello.mnh',
            'source'=>["main->print('Hello world');"],
            'side effects'=>['alter package state','output']].toMap)
 .filter({$message.head=='printline'})
 .map(::trailing);
+#S runScript(config:Map);//executes the given script config
+#I expected keys:
+#I   'name' (String, mandatory)
+#I   'source' (StringList)
+#I   'parameters' (StringList)
+#I   'side effects' (StringCollection, see function listSideEffects for possible values)
+#I   'connection level' 0: isolated, 1: print, 2: print and warnings, 3: print, warnings and errors
+#I   'deterministic' (Boolean, true to enforce determinism of PRGNs)
 
-//#mnh.arity
+#I mnh.arity
 arity({sin($x)/$y});
 
-//#mnh.arity
+#I mnh.arity
 //For variadic functions only the non-optional parameters are counted:
 arity({printf('%s%s',$a,...)});
 
 toExpression("$x-$x^2+$x^3");
+#S toExpression(S);
+#C Returns an expression parsed from string or list S
 
 toExpression("");
 
 parameterNames({3});
+#S parameterNames(e:expression);
+#C Returns the IDs of named parameters of e
 
-//#mnh.parameterNames
+#I mnh.parameterNames
 parameterNames({sin($x)/$x});
 
+#I groupToList
 groupToList([1,2,3,4,5,6],[1,2,3,1,2,3],Nan,::*);
+#S groupToList(values:List,indexes:IntList,defaultValue,aggregator:Expression(2));
+#C Groups values by indexes to a list, using defaultValue where no value is given and aggregating using the aggregator
+#S groupToList(values:List,indexes:IntList,defaultValue,aggregator:Expression(2),initialSize>=0);
+#C As above but with a predefined initial result list size
 
-//#mnh.parameterNames
+#I mnh.parameterNames
 //For variadic functions only the non-optional parameters are counted:
 parameterNames({printf("%s%s", $a, ...)});
 
 ord(3);
+#S ord(x);
+#C Returns the ordinal value of x
 
 ord(true);
 
@@ -45,6 +80,8 @@ ord("abc");
 ord(2.1);
 
 softCast("A");
+#S softCast(X);
+#C Returns a simplified version of X, trying to parse integers, real values and booleans
 
 softCast('"B"');
 
@@ -53,139 +90,236 @@ softCast(3);
 softCast([1, "2", "true", "'TEXT'", "1.5", "2,6"]);
 
 toString('a');
+#S toString(X);
+#C Casts X to string
 
 toString(234);
 
 toString([1, 2.6, "a", true, {$x}]);
 
+#I abs
 abs(-0.92);
 
 abs(3);
 
+#I abs
 abs({1+$x});
 
+#I arccos
+#S arccos(n);
+#C Returns the arccosine of numeric or expression parameter n
 arccos(-0.92);
 
 //Out of function domain
 arccos(3);
 
+#I arccos
 arccos({1+$x});
 
+#I arcsin
+#S arcsin(n);
+#C Returns the arcsine of numeric or expression parameter n
 arcsin(-0.92);
 
 //Out of function domain
 arcsin(3);
 
+#I arcsin
 arcsin({1+$x});
 
+#I tan
+#S tan(n);
+#C Returns the tangent of numeric or expression parameter n
 tan(-0.92);
 
 tan(3);
 
+#I tan
 tan({1+$x});
 
-//#math.tan
+#I pi
+#S pi;
+#C Returns pi
+
+#I math.tan
 tan(pi/2);
 
+#I arctan
+#S arctan(n);
+#C Returns the arctangent of numeric or expression parameter n
 arctan(-0.92);
 
 arctan({$x});
 
-//#argMax
+#I argMax
+#S argMax(L);
+#C Returns the index of the greatest element out of list L (or the first index if ambiguous)
 argMax(sin([0..10]));
 
 argMax([1, 3, 3, 0, 2]);
 
-//#argMin
+#I argMin
+#S argMin(L);
+#C Returns the index of the smallest element out of list L (or the first index if ambiguous)
 argMin(sin([0..10]));
 
 argMin([1, 3, 3, 0, 2]);
 
+#I ceil
+#S ceil(x);
+#C Returns the smallest integer >=x
+#S ceil(x,k);
+#C Does the same but with k digits precision
 ceil(20/3);
 
+#I ceil
 ceil([0..3]/3);
 
+#I ceil
 ceil([0..3]/3, 2);
 
+#I floor
+#S floor(x);
+#C Returns the largest integer <=x
+#S floor(x, k);
+#C Does the same but with k digits precision
 floor(20/3);
 
+#I floor
 floor([0..3]/3);
 
+#I floor
 floor([0..3]/3, 2);
 
+#I round
+#S round(x);
+#C Returns the value of x, rounded to the nearest integer
+#S round(x, k);
+#C Returns the value of x rounded to k-digits precision
 round(20/3);
 
 //Numbers with ambiguous rounding result are rounded towards even numbers
 round([0.5, 1.5, 2.5, 3.5]);
 
+#I round
 round([0..3]/3, 2);
 
 isInfinite(Nan);
 
+#I isInfinite
+#S isInfinite(n);
+#C Returns true if n is a number representing an infinite value
 isInfinite(+Inf);
 
+#I isInfinite
 isInfinite(-Inf);
 
+#I isInfinite
 isInfinite([-3.4344, Nan, +Inf]);
 
 isNan(Nan);
 
+#I isNan
+#S isNan(n);
+#C Returns true if n is a number representing the value Not-A-Number
 isNan(+Inf);
 
+#I isNan
 isNan(-Inf);
 
+#I isNan
 isNan([-3.4344, Nan, +Inf]);
 
+#I cos
+#S cos(n);
+#C Returns the cosine of numeric or expression parameter n
 cos(-0.92);
 
 cos(3);
 
+#I cos
 cos({1+$x});
 
+#I exp
+#S exp(n);
+#C Returns the exponential of numeric or expression parameter n
 exp(-0.92);
 
 exp(3);
 
+#I exp
 exp({1+$x});
 
+#I ln
+#S ln(n);
+#C Returns the natural logarithm of numeric or expression parameter n
 ln(-0.92);
 
+#I ln
 ln({1+$x});
 
+#I sin
+#S sin(n);
+#C Returns the sine of numeric or expression parameter n
 sin(3);
 
+#I sin
 sin({1+$x});
 
+#I sqr
+#S sqr(n);
+#C Returns the square of numeric or expression parameter n
 sqr(-0.92);
 
 sqr(3);
 
+#I sqr
 sqr({1+$x});
 
+#I sqrt
+#S sqrt(n);
+#C Returns the square root of numeric or expression parameter n
 sqrt(-0.92);
 
 sqrt(3);
 
+#I sqrt
 sqrt({1+$x});
 
+#S isqrt(n);
+#C Returns [floor(sqrt(n)),isSquare(n)]
 isqrt(121);
 
 isqrt(255);
 
+#I sign
+#S sign(n);
+#C Returns the sign of numeric or expression parameter n
 sign(-0.92);
 
 sign(3);
 
+#I sign
 sign({1+$x});
 
 max(["a".."z"]);
 
+#I max
+#S max(L);
+#C Returns the greatest element out of list L
+#S max(x, y, ...);
+#C Returns the greatest element out of the given parameters
 max([0..9]/2);
 
 max(true, false);
 
 min(["a".."z"]);
 
+#I min
+#S min(L);
+#C Returns the smallest element out of list L
+#S min(x, y, ...);
+#C Returns the smallest element out of the given parameters
 min([0..9]/2);
 
 min(true, false);
@@ -198,34 +332,48 @@ escape("a");
 
 escape("\t");
 
+#I group
+#S group(list, grouping);
+#C Re-groups list to a map by grouping (which is a sub-index or a list)
+#S group(list, grouping, aggregator:Expression(2));
+#C Groups by grouping using aggregator on a per group basis
 //Group a list of numbers by divisibility by 3
 group([1..10],[1..10] mod 3=0);
 
 fail;
+#S fail;
+#C Raises an exception without a message
+#S fail(...);
+#C Raises an exception with the given message
 
 fail("Told you this wouldn't work!");
 
 hash(1);
+#S hash(x);
+#C Returns the builtin hash for the given literal
 
 hash([1..3]);
 
 hash("a");
 
-//#listBuiltin
+#I listBuiltin
 listBuiltin.filter({$s.matches('^mnh\.')}).sort.trailing(10);
+#S listBuiltin;
+#C Returns a set of all builtin functions, only qualified IDs
 
-//Group to join element frequencies
-group([[1,'a'],[2,'a'],[1,'b'],[4,'c'],[2,'a'],[2,'b']],1,aggregator({[$x[0]+$y[0],$x[1]]}));
-
+#S abs(n);
+#C Returns the absolute value of numeric or expression parameter n
 abs(3);
 
+#I abs
 abs(-3);
 
+#I abs
 abs([-2..2]/2); 
 
 chars('This is a test.');
 
-//#chars
+#I chars
 chars.get(100);
 
 clean('+21/232/2116-11',['0'..'9'],' ');
@@ -248,18 +396,12 @@ upper('Test');
 
 upper(['Text','AbC']);
 
-//#plot
+#I plot
 t:=[0..1000]*2*pi/1000;
 plot(t,sin(t));
 plot.renderToFile('plotDemo1.png',600,300);
     
 abs({$x});
-
-abs(3);
-
-abs(-5/7);
-
-abs([-2..2]);
 
 chars('Test');
 
@@ -288,6 +430,10 @@ split('1,2,3;4,5,6',';');
 split('1,2,3;4,5,6',[';',',']);
 
 tokenSplit('f(x)->x+1; //Stupid, but just an example...','mnh');
+#S tokenSplit(S:string);
+#S tokenSplit(S:string,language:string);
+#C Returns a list of strings from S for a given language
+#C Languages: <code>MNH, Pascal, Java</code>
 
 trim(" \tA B C\t ");
 
@@ -303,103 +449,164 @@ unbrace('(3]');
 
 unbrace('"3"');
 
-//#elementFrequency
+#I elementFrequency
+#S elementFrequency(L);
+#C Returns a map e=>count containing distinct elements e of L and their respective counts.
+#C The result can be interpreted as a multiset.
 chars('Testtext').elementFrequency;
 
-//#elementFrequency
+#I elementFrequency
 //elementFrequency can be used for aggregating
 chars('Testtext').agg(elementFrequency);
 
+#S flatten(L,...);
+#C Returns all parameters as a flat list.
 flatten([1,[2,[3,4],[5]],6]);
 
+#S head(L);
+#C Returns the first element of list L or [] if L is empty
 head(['A'..'Z']);
 
+#S head(L,k);
+#C Returns the first min(k,size(L)) elements of L or [] if L is empty
 head(['A'..'Z'],3);
 
-//#head
+#I head
 ['A'..'Z'].toSet.head(3);
 
+#S tail(L);
+#C Returns list L without the first element
 tail(['A'..'Z']);
 
+#S tail(L,k);
+#C Returns L without the first k elements
 tail(['A'..'Z'],3);
 
-//#tail
+#I tail
 rangeGenerator(1,10).tail(3);
 
+#S leading(L);
+#C Returns L without the last element or [] if L is empty
 leading(['A'..'Z']);
 
+#S leading(L,k);
+#C Returns L without the last k elements or [] if L is empty
 leading(['A'..'Z'],3);
 
-//#leading
+#I leading
 rangeGenerator(1,10).leading(3);
 
+#S trailing(L);
+#C Returns the last element of L
 trailing(['A'..'Z']);
 
+#S trailing(L,k);
+#C Returns the last k elements of L
 trailing(['A'..'Z'],3);
 
-//#trailing
+#I trailing
 ['A'..'Z'].toSet.trailing(3);
 
-//#trailing
+#I trailing
 rangeGenerator(1,10).trailing(3);
 
+#I minus
+#S minus(A,B);
+#C Returns the asymmetric set difference of A and B. All parameters must be collections.
 //Odd squares
 minus([1..10]²,2*[0..50])
 
-//#chunkMap
+#I chunkMap
 rangeGenerator(1,20).chunkMap(5,(x)->format('%2s',x)).toList;
 
-//flatMap
+#I flatMap
 [1,[2,3],[4,5,6]].flatMap((x)->x³).toList;
 
-//#sort
+#I sort
+#S sort(L);
+#C Returns list L sorted ascending (using fallbacks for uncomparable types)
+#S sort(L,innerIndex:Int);
+#C Returns L sorted by given inner index
 sort(intRandom(10,5));
 
-//#sort
+#I sort
+#S sort(L,leqExpression:Expression(2));
+#C Returns L sorted using the custom binary expression, interpreted as "is lesser or equal"#
 sort(['01','10','100','1','010'],(x,y)->softCast(x)<=softCast(y));
 
-//#sort
+#I sort
+#S sort(L,mapExpression:Expression(1));
+#C Returns L sorted using the custom unary expression, behaves as L.get(L.map(mapExpression))#
 sort(['01','10','100','1','010'],::length);
 
-//#sortPerm
+#I sortPerm
+#S sortPerm(L);
+#C Returns indexes I so that L[I]==sort(L)
 //A random permutation:
 sortPerm(random(10));
 
 sortPerm(['a'..'c'..'a']);
 
+#I intersect
+#S intersect(A,...);
+#C Returns an intersection of all given parameters. All parameters must be collections.
 intersect([0..1000]^2,[0..1000]^3);
 
+#I union
+#S union(A, ...);
+#C Returns a union of all given parameters. All parameters must be collections.
 union(1/[1..5],2/[2..6]);
 
 deleteFile('plotDemo1.png');
 
-//See <a href="types.html#lists">List types</a> for further information
 get(['a'..'f'],3);
+#H See <a href="types.html#lists">List types</a> for further information
 
 get(['a'..'f'],[3,1,2]);
 
-get([0..4],[2..6] mod 3 =0);
+#I get
+get([0..4],[2..6] mod 3 = 0);
+#S get(L,accessor);
+#C Returns elements of list, set or map L by accessor
+#C This is the functional way of writing L[accessor]
+
 
 get([['A',1],['B',2],['C',0]],'B');
 
-//See <a href="types.html#lists">List types</a> for further information
+#S getInner(L:List, k:Int);
+#C Returns the k-th elements of each entry in nested list L
+#H See <a href="types.html#lists">List types</a> for further information
 getInner([[1,2,3],[4,5,6],[7,8,9]],1);
 
 getInner([[1,2,3],[4,5,6],[7,8,9]],[1,0]);
 
 getInner([[1,2,3],[4,5,6],[7,8,9]],[true,false,true]);
 
+#I indexOf
+#S indexOf(B:BooleanList);
+#C Returns the indexes for which B is true.
 indexOf([1..6]^2 mod 3=0);
 
+#S reverseList(L:List);
+#C Returns L reversed
 reverseList([1..5]);
 
+#S size(L);
+#C Returns the number of elements in set, list or map L
 size([0.5,0.1,0.2]);
 
-toMap([['A',1],['B',2],['C',0],['B',4]]);
+toMap([['A',1], ['B',2], ['C',0], ['B',4]]);
+#S toMap(X:Collection);
+#C Casts X to map or throws an error if not possible
 
+#I trueCount
+#S trueCount(B:BooleanList);
+#C Returns the number of true values in B
 trueCount(10<[0..10]^2<50);
 
 unique([3,1,2,1,4,1,5]);
+#S unique(L:List);
+#C Returns list L without duplicates.
 
 //compress/decompress uses a hybridization of different compression algorithms
 //It is possible that the compressed string equals the original string.
@@ -412,8 +619,15 @@ compress('Testtext').decompress;
 relativeFileName('~/folder/','~/other/example.txt');
 
 primes(20);
+#S primes(pMax:Int);
+#C Returns prime numbers up to pMax
+
 
 subSets([1,2,1]);
+#S subSets(S);
+#C Returns all distinct subsets of S
+#S subSets(S, k:Int);
+#C Returns all distinct subsets of S having k elements
 
 diff('encode','decode');
 
@@ -433,41 +647,52 @@ format('%6.3g',3);
 
 //Hexadecimal: %x (parameters are optional)
 format('%6.6x',1234);
+#S format(formatString:String,...);
+#C Returns a formatted version of the given 0..n parameters
+#H See <a href="formatStrings.html">Format Strings</a>
 
 formatTime('mm.dd.yyyy',43210);
 formatTime(12424.245);
+#S formatTime(formatString:String, t);
+#C Returns time t (numeric list or scalar) formatted using format string
+#H <a href="formatStrings.html">Format Strings</a>
 
 isAscii('xyz');
 
-//#isAscii
+#I isAscii
 isAscii('xyz'&chars[180]);
 
 isAscii('Läuft');
 
 isUtf8('xyz');
 
-//#isUtf8
+#I isUtf8
 isUtf8('xyz'&chars[180]);
 
 isUtf8('Schräg');
 
 parseTime('yyyy-mm-dd hh:nn','2000-01-01 03:43');
+#S parseTime(formatString:String,input:String);
+#C Parses time from a given date format and input
+#H See <a href="formatStrings.html">Format Strings</a>
 
 reverseString('Test');
 
-//#regex.matches
+#I regex.matches
 regex.matches('This is a test','[T|t]est');
 
-//#regex.matchComposite
+#I regex.matchComposite
 regex.matchComposite('This is a test','[T|t]est');
 
-//#regex.replace
+#I regex.replace
 regex.replace('A Test is a test','[T|t]est','rose');
 
-//#regex.split
+#I regex.split
 regex.split('A Test is a test','[e| ]');
 
 toBoolean(0);
+#S toBoolean(X);
+#C Casts X to boolean or throws an error if not possible
 
 toBoolean(1.0);
 
@@ -476,6 +701,8 @@ toBoolean('true');
 toBoolean(3);
 
 toInt('32');
+#S toInt(X);
+#C Casts X to int or throws an error if not possible
 
 toInt(3.0);
 
@@ -484,6 +711,8 @@ toInt(3.1);
 toInt(false);
 
 toReal('3.212');
+#S toReal(X);
+#C Casts X to real or throws an error if not possible
 
 toReal(true);
 
@@ -492,9 +721,18 @@ toReal(3);
 getOptions;
 
 executor;
+#S executor;
+#C returns the path to the currently executing instance of MNH
+
+#I clearPrint
+#S clearPrint;
+#C Clears the output and returns void.
 
 //Print with line breaks but without pretty printing
 print("1\n2.0\n03.45");
+#S print(...);
+#C Prints out the given parameters and returns void
+#C if tabs and line breaks are part of the output, a default pretty-printing is used
 
 //Tab triggers pretty printing - numbers are aligned at decimal dot or comma
 print("1\n2.0\n03,45\t");
@@ -513,12 +751,17 @@ printf("%{$0}x is %{$0}d in hexadecimal form",123);
 
 //Placeholders can be complex expressions
 printf("sin(%{$0}s)=%{sin($0)}4.4g",1);
+#S printf(formatString:String,...);
+#C Prints a formatted version of the given 0..n parameters and returns void
+#H See <a href="formatStrings.html">Format Strings</a>
 
 permutations([1,1,2]);
+#S permutations(L:List);
+#C Returns a list of all permutations of S
 
 permutations([1..3]);
 
-//#serialize deserialize
+#I serialize deserialize
 //Test serialization
 input:=[[1..10],random,'test',random(9)];
 serialized:=input.serialize;
@@ -526,15 +769,25 @@ print(input.toString.byteLength,' > ',serialized.byteLength);
 input==serialized.deserialize;
 
 factorize(18447422338071909869);
+#S factorize(i:Int);
+#C Returns a list of all prime factors of i
+
 
 formatTabs("\v-2\n3\t4.3");
 
 typeOf(3);
+#S typeOf(x); 
+#C Returns a description of x''s type
 
 typeOf([1..5,7.5]);
 
+#I typeOf
 typeOf({$x^2+$y});
 
+#S transpose(L,filler);
+#C Returns list L transposed. If sub lists of L have different lengths, filler is used.
+#S transpose(L);
+#C Returns list L transposed. If sub lists of L have different lengths, it fails.
 x:=transpose([1,[1,2,3],[1,2]],0);
 x;
 x.transpose(0);
@@ -552,19 +805,33 @@ random;
 
 random(3);
 
+log('This should be logged...');
+#S log(...);
+#C Logs a message and returns void
+
 note('Note that this is a note');
+#S note(...);
+#C Raises a note of out the given parameters and returns void
 
 warn('Warning: I intend to say something important here');
+#S warn(...);
+#C Raises a warning of out the given parameters and returns void
 
 isScalar(1);
+#S isScalar(x); 
+#C Returns true if x is a scalar
 
 isBoolean(false);
+#S isBoolean(x); 
+#C Returns true if x is a boolean
 
 isBoolean(1);
 
 isInt(false);
 
 isInt(1);
+#S isInt(x); 
+#C Returns true if x is a int
 
 isInt(1.0);
 
@@ -573,14 +840,21 @@ isReal(false);
 isReal(1);
 
 isReal(1.0);
+#S isReal(x); 
+#C Returns true if x is a real
+
 
 isNumeric(false);
+#S isNumeric(x); 
+#C Returns true if x is a numeric
 
 isNumeric(1);
 
 isNumeric(1.0);
 
 isList([]);
+#S isList(x); 
+#C Returns true if x is a list. Specify an additional int parameter to additionally check the size.
 
 isList([],0);
 
@@ -589,28 +863,38 @@ isList([],1);
 isList(['x'],1);
 
 isString('Test');
+#S isString(x); 
+#C Returns true if x is a string
 
 isString(true);
 
-//#isExpression
+#I isExpression
+#S isExpression(x); 
+#C Returns true if x is a expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.
 isExpression(::sin);
 
-//#isExpression
+#I isExpression
 isExpression(::sin,1);
 
-//#isExpression
+#I isExpression
 isExpression(::sin,2);
 
 digits(123);
+#S digits(i>=0);
+#C Returns the digits of i (base 10)
+#S digits(i>=0, base>1);
+#C Returns the digits of i for a custom base
 
 //Digits to base 3
 digits(123,3);
 
 arctan2(1,1);
+#S arctan2(x, y);
+#C Calculates arctan(x/y) and returns an angle in the correct quadrant
 
 charSet('abcba');
 
-//#bytes
+#I bytes
 bytes('ö').ord;
 
 base64encode('Test');
@@ -622,32 +906,55 @@ base92encode('bla bla bla '); //Encode 4 chars to 5 chars
 base92decode('PgsC.?d@t^' );
 
 listSideEffects;
+#S listSideEffects;
+#C Returns a list of all side effects, e.g. as parameters for interpret
 
 changeFileExt('file.extension','.newExtension');
 
 changeFileExt('file.2.extension','.newExtension');
 
 httpError;
+#S httpError;
+#C Returns http-representation of error 404.
+#S httpError(code:Int);
+#C Returns http-representation of given error code.
+
+#I startHttpServer
+#S startHttpServer(ipAndPort:String, requestToResponseFunc:Expression(1), timeoutInSeconds:Numeric);
+#C Starts a new microserver-instance and returns the cleaned up ip and port.
+#C The server is shut down automatically if no requests were recieved within timeoutInSeconds.
 
 isBooleanList([true,false]);
+#S isBooleanList(x); 
+#C Returns true if x is a booleanList. Specify an additional int parameter to additionally check the size.
 
 isBooleanList(true);
 
 isIntList([1..3]);
+#S isIntList(x); 
+#C Returns true if x is a intList. Specify an additional int parameter to additionally check the size.
 
 isIntList([1, 2.0]);
 
 isRealList([1,2,3]);
-
+#S isRealList(x); 
+#C Returns true if x is a realList. Specify an additional int parameter to additionally check the size.
+    
 isRealList([1.0,2.0,3.0,Nan]);
 
 isStringList(['a'..'z']);
+#S isStringList(x); 
+#C Returns true if x is a stringList. Specify an additional int parameter to additionally check the size.
 
 isNumericList([1,2,3]);
+#S isNumericList(x); 
+#C Returns true if x is a numericList. Specify an additional int parameter to additionally check the size.
 
 isNumericList([1.0,2,3,Inf]);
 
 isVoid();
+#S isVoid(x); 
+#C Returns true if x is void (or no arguments were given)
 
 isVoid(void);
 
@@ -666,21 +973,62 @@ extractFileName('/home/user/file.ext');
 extractFileExt('/home/user/file.ext');
 
 extractPath('/index.html?x=0&y=3%2Ax');
+#S extractPath(request:String);
+#C Returns the path part of an http request as a string
 
 extractParameters('/index.html?x=0&y=3%2Ax');
+#S extractParameters(request:String);
+#C Returns the parameters of an http request as a keyValueList
 
 extractRawParameters('/index.html?x=0&y=3%2Ax');
+#S extractRawParameters(request:String);
+#C Returns the parameter part of an http request as a string
 
-//#encodeRequest
+#I encodeRequest
 encodeRequest('127.0.0.1:3126','rest',[['user','anonymous'],['request','3*&7']].toMap);
+#S encodeRequest(address:String,path:String,parameters:String);
+#S encodeRequest(address:String,path:String,parameters:keyValueList);
+#C Returns an http request from the given components
 
+#I httpGet
+#S httpGet(URL:String);
+#S httpGet(URL:String,body:String,header:Map);
+#C Retrieves the contents of the given URL and returns them as a map ["body"=>...,"code"=>...,"status"=>...,"header"=>...]
+
+#I httpPut
+#S httpPut(URL:String);
+#S httpPut(URL:String,body:String,header:Map);
+#C Performs an http-PUT on the given URL and returns the response as a map ["body"=>...,"code"=>...,"status"=>...,"header"=>...]
+
+#I httpPost
+#S httpPost(URL:String);
+#S httpPost(URL:String,body:String,header:Map);
+#C Performs an http-POST on the given URL and returns the response as a map ["body"=>...,"code"=>...,"status"=>...,"header"=>...]
+
+#I httpDelete
+#S httpDelete(URL:String);
+#S httpDelete(URL:String,body:String,header:Map);
+#C Performs an http-DELETE on the given URL and returns the response ["body"=>...,"code"=>...,"status"=>...,"header"=>...]
+
+#I openUrl
+#S openUrl(URL:String);
+#C Opens the URL in the default browser
+
+#I isServerRunning
+#S isServerRunning(ipAndPort:String);
+#C Returns true if the server is running - only servers in the current instance are checked!
+
+#S cross(A,...);
+#C Returns the cross product of the arguments (each of which must be a list, set or map)
 cross(['1'..'3'],['A'..'C']);
 
 [1,2,1].toSet;
 
 [1.2,3.0].isRealCollection;
+#S isRealCollection(x); 
+#C Returns true if x is a realCollection. Specify an additional int parameter to additionally check the size.
 
-//#typecast.isRealCollection
+#I typecast.isRealCollection
 [1.2,3.0].toSet.isRealCollection;
 
 [1.2,3].isRealCollection;
@@ -690,141 +1038,208 @@ cross(['1'..'3'],['A'..'C']);
 [1.2,3.0].isRealCollection(3);
 
 [true].isBooleanCollection;
+#S isBooleanCollection(x); 
+#C Returns true if x is a booleanCollection. Specify an additional int parameter to additionally check the size.
 
-//#typecast.isBooleanCollection
+#I typecast.isBooleanCollection
 [true,false,true].toSet.isBooleanCollection(2);
 
-//#typecast.isBooleanSet
+#I typecast.isBooleanSet
+#S isBooleanSet(x); 
+#C Returns true if x is a booleanSet. Specify an additional int parameter to additionally check the size.
 [true,false,true].toSet.isBooleanSet;
 
 [1,2,3].isIntCollection;
+#S isIntCollection(x); 
+#C Returns true if x is a intCollection. Specify an additional int parameter to additionally check the size.
 
 [].isIntCollection;
 
 [1.2,3].isNumericCollection;
+#S isNumericCollection(x); 
+#C Returns true if x is a numericCollection. Specify an additional int parameter to additionally check the size.
 
-//#typecast.isStringSet
+#I typecast.isStringSet
+#S isStringSet(x); 
+#C Returns true if x is a stringSet. Specify an additional int parameter to additionally check the size.
 ['a','b'].toSet.isStringSet;
 
 ['a','b'].isStringCollection;
+#S isStringCollection(x); 
+#C Returns true if x is a stringCollection. Specify an additional int parameter to additionally check the size.
 
 [1,2,3].isIntSet;
+#S isIntSet(x); 
+#C Returns true if x is a intSet. Specify an additional int parameter to additionally check the size.
 
-//#typecast.isIntSet
+#I typecast.isIntSet
 [1,2,3].toSet.isIntSet;
 
-//#typecast.isMap
+#I typecast.isMap
+#S isMap(x); 
+#C Returns true if x is a map. Specify an additional int parameter to additionally check the size.
 [[1,'1'],[2,'2'],[1,'3']].toMap.isMap;
 
-//#typecast.isMap
+#I typecast.isMap
 [[1,'1'],[2,'2'],[1,'3']].toMap.isMap(2);
 
-//#typecast.isMap
+#I typecast.isMap
 [[1,'1'],[2,'2'],[1,'3']].toMap.isMap(3);
 
 [1,'a',false].isSet;
+#S isSet(x); 
+#C Returns true if x is a set. Specify an additional int parameter to additionally check the size.
 
 [1,'a',false].isCollection;
+#S isCollection(x); 
+#C Returns true if x is a collection. Specify an additional int parameter to additionally check the size.
 
-//#strings.utf8ToAnsi
+#I strings.utf8ToAnsi
 utf8ToAnsi('öµ').bytes.ord;
 
-//#strings.ansiToUtf8
+#I strings.ansiToUtf8
 chars[214].ansiToUtf8;
 
-//#typecast.isRealSet
+#I typecast.isRealSet
+#S isRealSet(x); 
+#C Returns true if x is a realSet. Specify an additional int parameter to additionally check the size.
 [1.2,3.4].toSet.isRealSet;
 
 toList(3);
 
-//#typecast.toList
+#I typecast.toList
+#S toList(X);
+#C Casts X to list or wraps a scalar in a list
 toList([2,3,6].toSet);
 
-//#typecast.isNumericSet
+#I typecast.isNumericSet
+#S isNumericSet(x); 
+#C Returns true if x is a numericSet. Specify an additional int parameter to additionally check the size.
 [1.2,3.4].toSet.isNumericSet;
 
-//#lists.getAll
+#I lists.getAll
+#S getAll(L,accessors);
+#C Returns elements of list, set or map L by collection of accessors
+#S getAll(L,accessors:List,fallback:List);
+#C Returns elements of list, set or map L by collection of accessors.
+#C If no such element is found, the respective fallback entry is used.
+#C fallback must have the same size as accessors
 //Mainly intended for bulk map access
 [[1,'one'],[3,'three'],[5,'five']].toMap.getAll([1,5,6],['-','-','-']);
 
-//#lists.getAll
+#I lists.getAll
+HEX:=[0..15].map((i)->format('%x',i)=>i).toMap;
+parseHex(s:String)->HEX.getAll(s.chars.upper).composeDigits(16);
+parseHex('DeadBeef');
+
+#I lists.getAll
 [1,3,5].getAll([0,2])==[1,3,5].get([0,2]);
 
+#I filter
 [1..20].filter({$x mod 2<>0<>$x mod 3});
 
-//#filter
+#I filter
 //Filtering a generator/iterator results in a new generator/iterator
 rangeGenerator(1,20).filter({$x mod 2<>0<>$x mod 3});
 
-//#lists.map
+#I lists.map
 ['a'..'f'].map(::upper);
 
-//#lists.pMap
+#I lists.pMap
 ['a'..'f'].pMap(::upper);
 
-//#head
+#I head
 //head can be used to access the first elements of a generator/iterator
 primeGenerator.head(10);
 
+#I head
 //head is a valid aggregator marker
 [-1,1,-1,1,-2,2].agg(head);
 
+#I trailing
 //trailing is a valid aggregator marker
 [-1,1,-1,1,-2,2].agg(trailing);
 
+#I toSet
+#S toSet(X);
+#C Casts X to set or wraps a scalar in a set
 //toSet is a valid aggregator marker
 [-1,1,-1,1,-2,2].agg(toSet);
 
+#I max
 //max is a valid aggregator marker
 [-1,1,-1,1,-2,2].agg(max);
 
+#I min
 //min is a valid aggregator marker
 [-1,1,-1,1,-2,2].agg(min);
 
-//#OPERATOR_STRCONCAT
+#I OPERATOR_STRCONCAT
 [-1,1,-1,1,-2,2].agg(&); //& is a valid aggregator marker
 
-//#OPERATOR_MULT
+#I OPERATOR_MULT
 [-1,1,-1,1,-2,2].agg(*); //multiplication can be used within agg
 
-//#OPERATOR_PLUS
+#I OPERATOR_PLUS
 [-1,1,-1,1,-2,2].agg(+); //+ is a valid aggregator marker
 
-//#permutationIterator
+#I permutationIterator
 permutationIterator([3,1,2]).map(::print).toList;
 
-//#lists.map
+#I lists.map
 //The result of <generator>.map(<f>) is a new generator
 rangeGenerator(1,100).map({$x^2});
 
-//#lists.mergeMaps
+#I lists.mergeMaps
+#S mergeMaps(A:Map, B:Map, M:Expression(2));
+#C Returns a map, obtained by merging maps A and B.
+#C On duplicate keys, the values are merged using M.
 //Merge maps; resolve conflicts via ::+
-mergeMaps([['A',1],['B',2]].toMap,
-          [['A',7],['C',3]].toMap,::+);
+mergeMaps([['A',1], ['B',2]].toMap,
+          [['A',7], ['C',3]].toMap,::+);
             
-//#system.try
+#I system.try
+#S try(E:Expression(0));
+#C Evaluates E and returns the result if successful or void if failed.
 //Try without fallback (returns void)
 try({deserialize('x')});
-
-//#system.try
+#S try(E:Expression, parameters:List);
+#C Evaluates E with the given parameters - the parameter list length must match the arity of E
+#S try(E:Expression(0), except(1):Expression);
+#C Evaluates E and returns the result if successful. Otherwise <except> is executed with the errors as first paramter ($0).
+#S try(E:Expression(0), except:Expression(0));
+#C Evaluates E and returns the result if successful. Otherwise <except> is executed without paramters.
+#S try(E:Expression(0),except);
+#C Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.
+#I system.try
 //Try with fallback: print error messages, if any
 try({deserialize('x')},::print);
 
-//#system.try
+#I system.try
 //Try with fallback: return default value
 try({deserialize('x')},0);
 
-//#system.try
+#I system.try
 //Try with fallback: convert error to warning
 try({deserialize('x')},{warn($x.head.trailing)});
 
 interpret("3+4");
+#S interpret(E);
+#C Interprets a String, StringList or Expression(0) E, forbidding any side effects
+#S interpret(E, sideEffectWhitelist:StringCollection);
+#C As above, but restricting the allowed side effects.
 
 shiftRight(7,1);
 
+#I shiftRight
+#S shiftRight(x:Int,bitsToShift:Int);
+#C Shifts integer x right by the given number of bits 
+#C If bitsToShift<0 a shift-left is performed
 shiftRight(5,-2);
 
-//#typecast.toBuiltin
+#I typecast.toBuiltin
+#S toBuiltin(X);
+#C Returns X without custom type info
 type FiniteRealList(L:List)->L.each(x,!x.isNan,!x.isInfinite,AND);
 x:=[1,5,0.4,1/7].toFiniteRealList;
 x;
@@ -832,11 +1247,17 @@ x.typeOf;
 x.toBuiltin;
 x.toBuiltin.typeOf;
 
-//#interpret
+#I interpret
 interpret({print("Hello world")},[]); //interpret with no side effects allowed
 
 //Compose binary digits
 composeDigits([1,0,1],2);
+#S composeDigits(digits:IntList);
+#C Returns a number constructed from digits (base 10)
+#S composeDigits(digits:IntList, base:Int);
+#C Returns a number constructed from digits with given base
+#S composeDigits(digits:IntList, base:Int, shift:Int);
+#C Returns a number constructed from digits with given base and shift
 
 //Compose in decimal
 composeDigits([1,0,2]);
@@ -845,8 +1266,18 @@ composeDigits([1,0,2]);
 composeDigits([1,0,2],10,2);
 
 sandBoxExecute("f(x)->3*x+1; f(f(f(1)))",['alter package state']);
+#S sandBoxExecute(source, sideEffectWhitelist:StringCollection);
+#C Executes the source (String or StringList) and returns created messages.
+#C Optionally you can specify allowed side effects.
 
-//#system.async
+#I system.async
+#S async(E:expression);
+#C Calls E asynchronously (without parameters) and returns an expression to access the result.
+#S async(E:expression,par:list);
+#C Calls E@par and asynchronously and returns an expression to access the result.
+#C Asynchronous tasks are killed at the end of (synchonous) evaluation.
+#C The resulting expression returns void until the task is finished.
+#C If you want to access local variables, use localAsync instead
 begin
   local x:=async({print('start') orElse sleep(0.1) orElse 'end'});
   print('1: ',x().isVoid); //still running, x() should display void
@@ -854,7 +1285,22 @@ begin
   print('2: ',x());
 end;
 
-//#system.future
+#I localAsync
+#S localAsync(E:expression);
+#C Calls E asynchronously (without parameters) and returns an expression to access the result.
+#S localAsync(E:expression,par:list);
+#C Calls E@par and asynchronously and returns an expression to access the result.
+#C Asynchronous tasks are killed at the end of (synchonous) evaluation.
+#C The resulting expression returns void until the task is finished.
+#C If you want a task that runs until the end of the script, use async instead
+
+#I system.future
+#S future(E:expression);
+#C Calls E asynchronously (without parameters) and returns an expression to access the result.
+#S future(E:expression,par:list);
+#C Calls E@par and asynchronously and returns an expression to access the result.
+#C Future tasks are killed at the end of (synchonous) evaluation.
+#C The resulting expression blocks until the task is finished.
 begin
   local x:=future({print('start') orElse sleep(0.1) orElse 'end'});
   print('1: ',x().isVoid); //x() should block until finished
@@ -862,43 +1308,55 @@ begin
   print('2: ',x());
 end;
 
+#I peekFuture
+#S peekFuture(F:Future);
+#C peeks (nonblocking) the future F and returns true if its evaluation is finished, false otherwise
+
 validateRegex('(3+.*');
 
 validateRegex('\(3+.*');
 
-
+#I pFilter
 [1..100].pFilter({$x mod 2=$x mod 3=$x mod 5});
 
 pi;
 
-//#isStatefulExpression
+#I isStatefulExpression
+#S isStatefulExpression(x); 
+#C Returns true if x is a stateful expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.
 isStatefulExpression(::sin);
 
-//#isStatefulExpression
+#I isStatefulExpression
 isStatefulExpression(future(::sin,[3]));
 
-//#isStatelessExpression
+#I isStatelessExpression
+#S isStatelessExpression(x); 
+#C Returns true if x is a stateless expression. Specify an additional int parameter k to additionally check if the expression can be applied to k parameters.
 isStatelessExpression(::sin);
 
-//#isStatelessExpression
+#I isStatelessExpression
 isStatelessExpression(future(::sin,[3]));
 
-//#isIteratable
+#I isIteratable
 isIteratable(future(::sin,[3]));
 
-//#isIteratable
+#I isIteratable
 isIteratable(primeGenerator);
 
-//#isIteratable
+#I isIteratable
+#S isIteratable(x); 
+#C Returns true if x is an iteratable expression, a collection or a map.
 isIteratable([1..10]);
 
-//#isIteratableExpression
+#I isIteratableExpression
+#S isIteratableExpression(x); 
+#C Returns true if x is an iteratable expression.
 isIteratableExpression(primeGenerator);
 
-//#isIteratableExpression
+#I isIteratableExpression
 isIteratableExpression([1..10]);
 
-//#isIteratable
+#I isIteratable
 begin
   resetRandom;
   local gen:={begin local last:=0; save; last+=random; end};
@@ -907,17 +1365,30 @@ begin
   print('gen.isIteratable= ',gen.isIteratable,'; ',gen.head(3));
 end;
 
-//#toIteratableExpression
+#I toGenerator
+#S toGenerator(e:Expression(0));
+#C Alias for toIteratableExpression
+
+#I toIteratableExpression
+#S toIteratableExpression(e:Expression(0));
+#C Marks the expression as IteratableExpression if possible or throws an error
 toIteratableExpression(::sqr);
 
-//#toIteratableExpression
+#I toIteratableExpression
 toIteratableExpression({begin local i:=1; save; i+=i-1; end});
 
 euklideanNorm([1,2]);
+#S euklideanNorm(v:NumericList);
+#C returns the Euklidean norm of vector v
 
+#I assert
 assert(1=1.0);
 
-//#assert
+#I assert
+#S assert(condition:Boolean);
+#C Raises an exception if condition is false
+#S assert(condition:Boolean,...);
+#C Raises an exception with the given message if condition is false
 assert('bla'.isInt,'Invalid integer given');
 
 md5('Test input. Could be anything really.');
@@ -925,22 +1396,31 @@ md5('Test input. Could be anything really.');
 sha256('Test input. Could be anything really.');
 
 hammingWeight(17213);
+#S hammingWeight(x:Int);
+#C Returns the hamming weight (i.e. number of true bits) in x
 
 gcd(1231512,143543);
+#S gcd(x:Int, ...);
+#C Returns the greatest common divider of all arguments (only integers accepted)
 
+#I powMod
+#S powMod(x>=0, y>=0, z>=0);
+#C Returns x^y mod z
 //Example given by rosettacode.org
 powMod(2988348162058574136915891421498819466320163312926952423791023078876139,2351399303373464486466122544523690094744975233415544072992656881240319,10^40);
 
-//#randomGenerator
+#I randomGenerator
 randomGenerator(123).head(10);
 
-//#intRandomGenerator
+#I intRandomGenerator
 intRandomGenerator(123,5).head(10);
 
-//#isaacRandomGenerator
+#I isaacRandomGenerator
 isaacRandomGenerator(123,5).head(10);
 
 modularInverse(3,32);
+#S modularInverse(x>0, m>0);
+#C Returns the modular inverse of x with respect to modul m or NaN if no modular inverse exists
 
 byteToChar(100);
 
@@ -948,204 +1428,211 @@ byteToChar([10,12,97,45]);
 
 systemSpecificFilename('..\test/filename.txt');
 
-//#stringIterator
+#I stringIterator
 stringIterator(['a','b','c'],1,3).head(10);
 
-//#vanDerCorputGenerator
+#I vanDerCorputGenerator
 vanDerCorputGenerator(2).head(10);
 
-//#primeGenerator
+#I primeGenerator
 primeGenerator.head(1000).trailing(5);
 
-//#rangeGenerator
+#I rangeGenerator
 rangeGenerator(0,5).head(10);
 
-//#rangeGenerator
+#I rangeGenerator
 rangeGenerator(100,-100).head(10);
 
 divMod(10,7);
+#S divMod(x:Int,y:Int);
+#C Returns a pair [x div y, x mod y]
 
 'abba'.hasPrefix('ab');
 
 isPrime(47531677974672740279381824573269878221106369761817);
+#S isPrime(i:Int);
+#C Returns true if i is a prime, false otherwise.
+#C result is guaranteed to be correct for i<3.317E23
 
-//#mnh.COMPARATOR_LISTEQ
+#I mnh.COMPARATOR_LISTEQ
 3==3.0; //not equal, because types differ
 
-//#mnh.COMPARATOR_LISTEQ
+#I mnh.COMPARATOR_LISTEQ
 [1,2,3]==[3,1,3]; //== always returns a scalar boolean
 
-//#COMPARATOR_EQ
+#I COMPARATOR_EQ
 3=3.0;
 
-//#COMPARATOR_EQ
+#I COMPARATOR_EQ
 {$x}=3; //Used with expressions the result will be a new expression
 
-//#COMPARATOR_EQ
+#I COMPARATOR_EQ
 [1,2,3]=[3,1,3]; //= compares element by element
 
-//#COMPARATOR_LEQ
+#I COMPARATOR_LEQ
 3<=3.0;
 
-//#COMPARATOR_LEQ
+#I COMPARATOR_LEQ
 [1,2,3]<=[3,1,3];
 
-//#COMPARATOR_GEQ
+#I COMPARATOR_GEQ
 3>=3.0;
 
-//#COMPARATOR_GEQ
+#I COMPARATOR_GEQ
 [1,2,3]>=[3,1,3];
 
-//#COMPARATOR_LSS
+#I COMPARATOR_LSS
 3<3.0;
 
-//#COMPARATOR_LSS
+#I COMPARATOR_LSS
 [1,2,3]<[3,1,3];
 
-//#COMPARATOR_GRT
+#I COMPARATOR_GRT
 3>3.0;
 
-//#COMPARATOR_GRT
+#I COMPARATOR_GRT
 [1,2,3]>[3,1,3];
 
-//#COMPARATOR_NEQ
+#I COMPARATOR_NEQ
 3!=3.0;
 
-//#COMPARATOR_NEQ
+#I COMPARATOR_NEQ
 [1,2,3]!=[3,1,3];
 
-//#OPERATOR_LAZYAND
+#I OPERATOR_LAZYAND
 true AND false;
 
-//#OPERATOR_LAZYAND
+#I OPERATOR_LAZYAND
 true AND 3; //Lazy boolean operators only examine the left hand side
 
-//#OPERATOR_LAZYAND
+#I OPERATOR_LAZYAND
 false AND 3;  //Lazy boolean operators only examine the left hand side
 
-//#OPERATOR_AND
+#I OPERATOR_AND
 true and false;
 
-//#OPERATOR_AND
+#I OPERATOR_AND
 [true,false,true,false] and [true,true,false,false];
 
-//#OPERATOR_AND
+#I OPERATOR_AND
 7 and 252; //and can be applied on integers
 
-//#OPERATOR_LAZYOR
+#I OPERATOR_LAZYOR
 true OR false;
 
-//#OPERATOR_LAZYOR
+#I OPERATOR_LAZYOR
 true OR 3; //Lazy boolean operators only examine the left hand side
 
-//#OPERATOR_LAZYOR
+#I OPERATOR_LAZYOR
 false OR 3;  //Lazy boolean operators only examine the left hand side
 
-//#OPERATOR_OR
+#I OPERATOR_OR
 true or false;
 
-//#OPERATOR_OR
+#I OPERATOR_OR
 [true,false,true,false] or [true,true,false,false];
 
-//#OPERATOR_OR
+#I OPERATOR_OR
 7 or 252; //or can be applied on integers
 
-//#OPERATOR_XOR
+#I OPERATOR_XOR
 true xor false;
 
-//#OPERATOR_XOR
+#I OPERATOR_XOR
 [true,false,true,false] xor [true,true,false,false];
 
-//#OPERATOR_XOR
+#I OPERATOR_XOR
 7 xor 252; //xor can be applied on integers
 
-//#OPERATOR_UNARY_PLUS
+#I OPERATOR_UNARY_PLUS
 +'a'; //the unary plus is a dummy and will be dropped
 
-//#OPERATOR_NEGATE_ARITHMETIC
+#I OPERATOR_NEGATE_ARITHMETIC
 -3;
 
-//#OPERATOR_NEGATE_ARITHMETIC
+#I OPERATOR_NEGATE_ARITHMETIC
 -[1,2.0,Inf,Nan];
 
-//#OPERATOR_NEGATE_LOGICAL
+#I OPERATOR_NEGATE_LOGICAL
 !true;
 
-//#OPERATOR_IN
+#I OPERATOR_IN
 3 in [1..5];
 
-//#OPERATOR_IN
+#I OPERATOR_IN
 3.0 in [1..5]; //3.0 is not contained in [1..5], because the types of 3 (contained in list) and 3.0 differ
 
-//#OPERATOR_NOT_IN
+#I OPERATOR_NOT_IN
 3 not in [1..5];
 
-//#OPERATOR_NOT_IN
+#I OPERATOR_NOT_IN
 3.0 not in [1..5]; //3.0 is not contained in [1..5], because the types of 3 (contained in list) and 3.0 differ
 
-//#OPERATOR_CONCAT
+#I OPERATOR_CONCAT
 1|2;
 
-//#OPERATOR_CONCAT
+#I OPERATOR_CONCAT
 [1]|[2];
 
-//#OPERATOR_CONCAT
+#I OPERATOR_CONCAT
 [1]|2;
 
-//#OPERATOR_CONCAT
+#I OPERATOR_CONCAT
 [1]|[[2]];
 
-//#OPERATOR_CONCATALT
+#I OPERATOR_CONCATALT
 [1]||2;
 
-//#OPERATOR_CONCATALT
+#I OPERATOR_CONCATALT
 [1]||[2];
 
-//#OPERATOR_DIVINT
+#I OPERATOR_DIVINT
 10 div 3;
 
-//#OPERATOR_DIVREAL
+#I OPERATOR_DIVREAL
 10 / 3;
 
-//#OPERATOR_DIVREAL
+#I OPERATOR_DIVREAL
 10 / 5; //The result of a division of two integers may be an integer
 
-//#OPERATOR_DIVREAL
+#I OPERATOR_DIVREAL
 10.0 / 5; //If either operand is a real number, the quotient will be a real number
 
-//#OPERATOR_ORELSE
+#I OPERATOR_ORELSE
 void orElse 42; //orElse returns the right-hand-side if the left-hand-side is void
 
-//#OPERATOR_ORELSE
+#I OPERATOR_ORELSE
 3 orElse fail; //The right-hand side will never be evaluated for a given (non-void) left-hand-side
 
-//#OPERATOR_MINUS
+#I OPERATOR_MINUS
 3-pi;
 
-//#OPERATOR_MOD
+#I OPERATOR_MOD
 32459378562983 mod 2342832;
 
-//#OPERATOR_MULT
+#I OPERATOR_MULT
 2*3;
 
-//#OPERATOR_MULT
+#I OPERATOR_MULT
 2.0*3; //If either factor is a real number the product will be a real number
 
-//#OPERATOR_PLUS
+#I OPERATOR_PLUS
 4+5;
 
-//#OPERATOR_PLUS
+#I OPERATOR_PLUS
 'a'+'b'; //You can "add" strings
 
-//#OPERATOR_POT
+#I OPERATOR_POT
 5^7;
 
-//#OPERATOR_POT
+#I OPERATOR_POT
 -3.5^3; //Potentiation with a negative base is defined for integer exponents
 
-//#OPERATOR_STRCONCAT
+#I OPERATOR_STRCONCAT
 3 & 4; //You can concatenate operands of any type
 
+#S isSubsetOf(A,B);
+#C Returns true if A is a subset of (or equal to) B
 isSubsetOf([1,2,3],[1,2,3]);
 
 isSubsetOf(1,[1,2,3]);
@@ -1154,7 +1641,9 @@ isSubsetOf([1],[1,2,3]);
 
 isSubsetOf([1,4],[1,2,3]);
 
-//#vectorIfThenElse
+#I vectorIfThenElse
+#S vectorIfThenElse(condition:BooleanList, Then, Else);
+#C Returns the elementwise "if-then-else" result
 x:=1/[0..3];
 vectorIfThenElse(x.isInfinite,0,x);
 
@@ -1164,42 +1653,100 @@ driveInfo;
 
 getCPULoadPercentage;
 
-//#getTaskInfo
+#I getTaskInfo
 getTaskInfo.filter((task)->task['PID']=mnhInfo['PID']);
 
 wrapTextInHttp('Test');
+#S wrapTextInHttp(s:String);
+#C Wraps s in an http-response (type: "text/html", code: 200)
+#S wrapTextInHttp(s:String,type:String);
+#C Wraps s in an http-response of given type with code 200.
+#S wrapTextInHttp(s:String,code:Int,header:Map);
+#C Wraps s in a custom http-response
 
-//#sleep
+#I sleep
+#S sleep(seconds:Numeric);
+#C Sleeps for the given number of seconds before returning void
 t0:=scriptTime;
 sleep(0.1);
 scriptTime-t0;
 
-//#scriptTime
+#I sleepUntil
+#S sleepUntil(wallClockSeconds:Numeric);
+#C Sleeps until the wallclock reaches the given value
+
+#I scriptTime
 t0:=scriptTime;
 sleep(0.01);
 scriptTime-t0;
 
-//#time
+#I time
 time({sin(random(1000)).agg(+)});
 
-//#systime
+#I systime
 formatTime('hh:nn dd.mm.yyyy',systime);
 
 getOptions;
+#S getOptions;
+#C returns plot options as a key-value-list.
 
-//#fileInfo
+#I setOptions
+#S setOptions(set:keyValueList);
+#C Sets options via a key value list of the same form as returned by plot.getOptions
+#S setOptions(key:string,value);
+#C Sets a single plot option
+
+#I resetOptions
+#S resetOptions;
+#C Sets the default plot options
+
+#I renderToFile
+#S renderToFile(filename<>'',width>=1,height>=1);
+#C Renders the current plot to a file.
+#S renderToFile(filename<>'',width>=1,height>=1,background:true);
+#C Renders the current plot to a file in a background thread.
+
+#I renderToString
+#S renderToString(width,height);
+#C Renders the current plot to a string.
+
+#I removePlot
+#S removePlot;
+#C Removes the last row from the plot
+#S removePlot(n>=1);
+#C Removed the last n rows from the plot
+
+#I drawText
+#S drawText(x,y,text);
+#C Draws custom text
+#S drawText(x, y, text, size:Numeric, anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"], font:String, textCol:IntList(3), backgroundCol:IntList(3));
+#C Draws text with custom options. Custom parameters are optional
+
+#I drawTextAbsolute
+#S drawTextAbsolute(x,y,text);
+#C Draws custom text at absolute position
+#S drawTextAbsolute(x,y,text,size:Numeric,anchor in ["TL","T","TR","CL","C","CR","BL","B","BR"],font:String,textCol:IntList(3),backgroundCol:IntList(3));
+#C Draws text with custom options. Custom parameters are optional
+
+#I fileInfo
 fileInfo(executor);
 
-//#getEnv
+#I getEnv
 getEnv.toList.head;
 
-//#fileStats
+#I fileStats
 fileStats(executor);
 
-//#exec
+#I exec
 executor.exec(['-h']).head(5).join("\n").print;
 
-//#inspect
+#I inspect
+#S inspect;
+#C Returs information on the current package
+#S inspect(idOrPath:String);
+#C Returns information on an imported package or a specified MNH source file
+#S inspect(path:String,source:StringList);
+#C Returns information of a package with given path and source
 inspect('sudoku').{
   print('Package ID is: ',$L['id']) |
   print('Path         : ',$L['path']) |
@@ -1208,31 +1755,266 @@ inspect('sudoku').{
   .each(rule,rule[1,'type']&" rule:\t"&rule[0]&"\t"&rule[1,'location'])
   .join("\n")
   .print};
-  
+
+#I inspectAll
+#S inspectAll;
+#C Returs information on all currently loaded packages
+
+#I writeAllDataStores
+#S writeAllDataStores;
+#C Writes back all modified datastores (including stores in imported packages) and returns true if any store was updated.
+#S writeAllDatastores(deflate:Boolean,reuse:Boolean);
+#C Write binary datastores in a certain format, priorizing speed or size
+
+#I writeDataStores
+#S writeDataStores;
+#C Writes back all modified datastores of the current package (i.e. excluding stores in imported packages) and returns true if any store was updated.
+#S writeDatastores(deflate:Boolean,reuse:Boolean);
+#C Write binary datastores in a certain format, priorizing speed or size
+
+#I helpOnMain
+#S helpOnMain;
+#C Returns help text for the current package''s main method.
+
+#I anyFormShowing
+#S anyFormShowing();
+#C returns true if any form is showing
+
+#I formatHtmlPage
+#S formatHtmlPage(lines:StringList,filename:String);
+#C formats naive html
+
 files('*.mnh')
+#S files(searchPattern:String);
+#C Returns a list of files matching the given search pattern
+
+#I allFiles
+#S allFiles(root);
+#C Returns a list of all files below root (string or stringList)
+#S allFiles(root,pattern);
+#C Returns a list of all files matching pattern(s) (string or stringList)
+#S allFiles(root,pattern,recurse=false);
+#C As above but without recursing subfolders
 
 folders('*');
+#S folders(searchPattern:String);
+#C Returns a list of folders matching the given search pattern
 
 allFolders('.');
+#S allFolders(rootFolder:String);
+#C Returns a list of all folders below and including a given root directory
 
 fileExists('testLog.mnh');
+#S fileExists(filename:String);
+#C Returns true if the specified file exists and false otherwise
 
 folderExists('folderName');
+#S folderExists(foldername:String);
+#C Returns true if the specified folder exists and false otherwise
+
+#I fileContents
+#S fileContents(filename:String);
+#C Returns the contents of the specified file as one string
 
 mnhInfo;
+#S mnhInfo;
+#C Returns a key-value list with info on the currently executing instance of MNH
 
 myPath;
+#S myPath;
+#C returns the path to the current package
 
 expandedFileName('/home/user/file.ext');
 
 ln(3);
 
-//#math.calculateFourierCoefficients
+#I plot
+#S plot(list,options);
+#C plots flat numeric list or xy-list
+#S plot(xList,yList,options);
+#C plots flat numeric list or xy-list
+#S plot(f:expression(1),t0,t1>t0,samples>=2,options);
+#C plots f versus t in [t0,t1]
+#C options are optional and given in the form of a string, the individual option items being delimited by spaces
+#C valid options are:
+#C Style/size modifier: any real number
+#C Styles:
+#C   line; l;
+#C   bspline; b;
+#C   cspline; c;
+#C   stepLeft;
+#C   stepRight;
+#C   fill; f;
+#C   fillSolid; fs;
+#C   bar;
+#C   box;
+#C   ellipse; e;
+#C   tube;
+#C   dot; .;
+#C   plus; +;
+#C   cross; x;
+#C   impulse; i;
+#C   polygon; p;
+#C Colors:
+#C   black;
+#C   red;
+#C   blue;
+#C   green;
+#C   purple;
+#C   orange;
+#C   RGB$,$,$; //With three real numbers in range [0,1]
+#C   HSV$,$,$; //With three real numbers in range [0,1]
+#C   HUE$; //With one real number
+#C   GREY$; //With one real number in range [0,1]
+#C Transparency Index:
+#C   TI$;// with an integer $
+
+#I addPlot
+#S addPlot(list, options);
+#C adds plot of flat numeric list or xy-list
+#S addPlot(xList, yList, options);
+#C adds plot of flat numeric list or xy-list
+#S addPlot(f:expression(1), t0, t1>t0, samples>=2, options);
+#C adds plot of f versus t in [t0,t1]
+
+#I plotRasterImage
+#S plotRasterImage(colors:List;width>=1);
+#C Plots a raster image given by a 1D-List of colors
+#S plotRasterImage(colors:List;width>=1,scale:Numeric,offsetX:Numeric,offsetY:Numeric);
+#C Plots a raster image with custom scaling
+
+DFT([1..10..1]);
+#S DFT(x:List);
+#C Returns the Discrete Fourier Transform of x
+
+iDFT([[10..0],[0..10]].transpose);
+#S iDFT(x:List);
+#C Returns the inverse Discrete Fourier Transform of x
+
+FFT([1..10..1]);
+#S FFT(x:List);
+#C Returns the Fast Fourier Transform of x
+
+iFFT([[10..0],[0..10]].transpose);
+#S iFFT(x:List);
+#C Returns the inverse Fast Fourier Transform of x
+
+
+#I math.calculateFourierCoefficients
 ([0..99]/100*2*pi).map((x)->sin(x)+cos(2*x)).calculateFourierCoefficients(8); //Straight forward DFT
 
-//#math.calculateFourierCoefficients
+#I math.calculateFourierCoefficients
 (random(100).sort*2*pi).map((t)->[t,sin(t)+cos(2*t)]).calculateFourierCoefficients(8); //Nonequidistant Fourier transform
 //Use the function's output to feed math.newFourierSeries
 
-//#math.integrate
+#I math.integrate
+#S integrate(f:Expression(1),x0,x1,pointCount>1);
+#C returns the numeric integral of f over interval [x0,x1]
 integrate((x)->sin(x)²,0,2,1000);
+
+bitXor(5,213,10);
+#S bitXor(x:Int,y:Int,relevantBits in [1..32]);
+#C Returns x xor y for the given number of relevant bits         
+
+#I assertUniqueInstance
+#S assertUniqueInstance;
+#C Returns with an error if there already is an instance of this script running.
+
+#I startIpcServer
+#S startIpcServer(id:String, serve:Expression(1));
+#C Creates an IPC server
+#C An IPC server can receive [I]nter [P]rocess [C]ommunication from other processes.
+#C While the server is running, it will receive requests sent via sendIpcRequest, pass the parameters to serve and respond with the result returned by serve.
+
+#I sendIpcRequest
+#S sendIpcRequest(serverId:String,request);
+#C Delegates a given request to an IPC server
+
+#I isIpcServerRunning
+#S isIpcServerRunning(serverId:String);
+#C Returns true if the given IPC server is running and false otherwise
+#S isIpcServerRunning;
+#C Returns true if this script is already running and called assertUniqueInstance
+
+#I validateWorkflow
+#S validateWorkflow(wf:list);
+#C Validates the workflow returning a boolean flag indicating validity
+
+#I executeWorkflow
+#C Executes the workflow with the given options. Use "-" as source or target to read/write the current image.
+#S executeWorkflow(wf:list,xRes>0,yRes>0,target:string);
+#S executeWorkflow(wf:list,source:string,target:string);
+#S executeWorkflow(wf:list,xRes>0,yRes>0,sizeLimitInBytes>0,target:string);
+#S executeWorkflow(wf:list,source:string,sizeLimitInBytes>0,target:string);
+#C Give an additional expression(1) parameter for progress output
+
+#I executeTodo
+#S executeTodo(filename:String);
+#C Executes the imig-todo defined in the given file and deletes the file after calculation. Returns true if successful.
+#S executeTodo(filename:String: outputMethod:Expression(1));
+
+#I loadImage
+#S loadImage(filename:string);
+#C Loads image from the given file
+
+#I saveImage
+#S saveImage(filename:string);
+#C Saves the current image to the given file. Supported types: JPG, PNG, BMP, VRAW
+#S saveImage(filename:string,sizeLimit:int);
+#C Saves the current image to the given file limiting the output size (limit=0 for automatic limiting). JPG only.
+
+#I closeImage
+#S closeImage;
+#C Closes the current image, freeing associated memory
+
+#I getScreenSize
+#S getScreenSize;
+#C Returns the current screen size
+
+#I imageDisplaySize
+#S imageDisplaySize;
+#C Returns the current image display size
+
+#I imageDisplayClosedByUser
+#S imageDisplayClosedByUser;
+#C Returns true if the image display was closed by the user
+
+#I imageSize
+#S imageSize;
+#C Returns the size as [width,height] of the current image.
+#S imageSize(filename:String);
+#C Returns the size of the given file
+
+#I resizeImage
+#S resizeImage(xRes>0,yRes>0);
+#C Resizes the current image
+#S resizeImage(xRes>0,yRes>0,style in ["exact","fill","rotFill","fit","fitExpand","rotFit"]);
+#C Resizes the current image with non-default scaling options
+
+#I displayImage
+#S displayImage;
+#C Displays the current image.
+
+#I imageJpgRawData
+#S imageJpgRawData;
+#C Returns the image raw data in JPG representation.
+
+#I listManipulations
+#S listManipulations;
+#C Returns a list of all possible image manipulation steps.
+
+#I calculateThumbnail
+#S calculateThumbnail(file:string,maxXRes:int,maxYRes:int);
+#C Returns a JPG thumbnail data for given input file
+
+#I renderPlotToCurrentImage
+#S renderPlotToCurrentImage(width,height);
+#C Renders the current plot to the current image
+
+#I randomIfs
+#S randomIfs;
+#C returns a random IFS to be fed to executeWorkflow
+
+#I expandImageGeneration
+#S expandImageGeneration(s:String);
+#C Returns the generation algorithm with all fields

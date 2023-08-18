@@ -12,9 +12,6 @@ VAR rawTokenizeCallback:T_rawTokenizeCallback;
 
 FUNCTION span(CONST sc,txt:ansistring):ansistring;
 //FUNCTION imageTag(CONST fileName:ansistring):ansistring;
-//TODO: Use SynEdit for conversion to highlighted html
-FUNCTION toHtmlCode(raw:T_rawTokenArray):ansistring;
-FUNCTION toHtmlCode(line:ansistring):ansistring;
 FUNCTION escapeHtml(CONST line:ansistring):ansistring;
 
 IMPLEMENTATION
@@ -44,28 +41,6 @@ FUNCTION escapeHtml(CONST line:ansistring):ansistring;
       end;
     end;
     result:=result+copy(line,i0,i1-i0+1);
-  end;
-
-FUNCTION toHtmlCode(raw:T_rawTokenArray):ansistring;
-  VAR i:longint;
-  begin
-    result:='';
-    for i:=0 to length(raw)-1 do with raw[i] do begin
-      case tokType of
-        tt_blank: if startsWith(trim(txt),COMMENT_PREFIX)
-                  then result:=result+span('comment',txt)
-                  else result:=result+txt;
-        tt_literal: if (length(txt)>0) and (txt[1] in ['''','"','#'])
-                    then result:=result+span('stringLiteral',txt)
-                    else result:=result+span('literal'      ,txt);
-        else result:=result+span(C_tokenDoc[tokType].defaultHtmlSpan,txt);
-      end;
-    end;
-  end;
-
-FUNCTION toHtmlCode(line:ansistring):ansistring;
-  begin
-    result:=toHtmlCode(rawTokenizeCallback(line));
   end;
 
 end.

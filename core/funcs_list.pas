@@ -699,44 +699,37 @@ FUNCTION vectorIfThenElse_imp intFuncSignature;
 INITIALIZATION
   //Functions on lists:
   BUILTIN_HEAD:=
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'head'    ,@head_imp    ,ak_variadic_1{$ifdef fullVersion},'head(L);//Returns the first element of list L or [] if L is empty#head(L,k);//Returns the first min(k,size(L)) elements of L or [] if L is empty'{$endif});
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'head'    ,@head_imp    ,ak_variadic_1);
   BUILTIN_TAIL:=
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'tail'    ,@tail_imp    ,ak_variadic_1{$ifdef fullVersion},'tail(L);//Returns list L without the first element#tail(L,k);//Returns L without the first k elements'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'leading' ,@leading_imp ,ak_variadic_1{$ifdef fullVersion},'leading(L);//Returns L without the last element or [] if L is empty#leading(L,k);//Returns L without the last k elements or [] if L is empty'{$endif});
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'tail'    ,@tail_imp    ,ak_variadic_1);
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'leading' ,@leading_imp ,ak_variadic_1);
   BUILTIN_TRAILING:=
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'trailing',@trailing_imp,ak_variadic_1{$ifdef fullVersion},'trailing(L);//Returns the last element of L#trailing(L,k);//Returns the last k elements of L'{$endif});
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'trailing',@trailing_imp,ak_variadic_1);
   {$ifdef fullVersion}sortLoc:={$endif}
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'sort'    ,@sort_imp    ,ak_variadic_1{$ifdef fullVersion},
-                                               'sort(L);//Returns list L sorted ascending (using fallbacks for uncomparable types)#'+
-                                               'sort(L,mapExpression:Expression(1));//Returns L sorted using the custom unary expression, behaves as L.get(L.map(mapExpression))#'+
-                                               'sort(L,leqExpression:Expression(2));//Returns L sorted using the custom binary expression, interpreted as "is lesser or equal"#'+
-                                               'sort(L,innerIndex:Int);//Returns L sorted by given inner index'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'sortPerm'        ,@sortPerm_imp      ,ak_unary     {$ifdef fullVersion},'sortPerm(L);//Returns indexes I so that L%I==sort(L)'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'unique'          ,@unique_imp        ,ak_unary     {$ifdef fullVersion},'unique(L:List);//Returns list L without duplicates and enhanced for faster lookup'{$endif});
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'sort'    ,@sort_imp    ,ak_variadic_1);
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'sortPerm'        ,@sortPerm_imp      ,ak_unary     );
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'unique'          ,@unique_imp        ,ak_unary     );
   BUILTIN_ELEMENT_FREQUENCY:=
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'elementFrequency',@getElementFreqency,ak_unary     {$ifdef fullVersion},'elementFrequency(L);//Returns a list of pairs [count,e] containing distinct elements e of L and their respective frequencies'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'transpose'       ,@transpose_imp     ,ak_unary     {$ifdef fullVersion},'transpose(L,filler);//Returns list L transposed. If sub lists of L have different lengths, filler is used.#transpose(L);//Returns list L transposed. If sub lists of L have different lengths, filler is used.'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'union'           ,@setUnion_imp      ,ak_variadic_1{$ifdef fullVersion},'union(A,...);//Returns a union of all given parameters. All parameters must be collections.'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'intersect'       ,@setIntersect_imp  ,ak_variadic_1{$ifdef fullVersion},'intersect(A,...);//Returns an intersection of all given parameters. All parameters must be collections.'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'minus'           ,@setMinus_imp      ,ak_binary    {$ifdef fullVersion},'minus(A,B);//Returns the asymmetric set difference of A and B. All parameters must be collections.'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'isSubsetOf'      ,@isSubsetOf_imp    ,ak_binary    {$ifdef fullVersion},'isSubsetOf(A,B);//Returns true if A is a subset of (or equal to) B'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'mergeMaps'       ,@mergeMaps_imp     ,ak_ternary   {$ifdef fullVersion},'mergeMaps(A:Map,B:Map,M:Expression(2));//Returns a map, obtained by merging maps A and B.#//On duplicate keys, the values are merged using M.'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'flatten'         ,@flatten_imp       ,ak_variadic  {$ifdef fullVersion},'flatten(L,...);//Returns all parameters as a flat list.'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'size'            ,@size_imp          ,ak_unary     {$ifdef fullVersion},'size(L);//Returns the number of elements in list L'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'trueCount'       ,@trueCount_impl    ,ak_unary     {$ifdef fullVersion},'trueCount(B:BooleanList);//Returns the number of true values in B'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'reverseList'     ,@reverseList_impl  ,ak_unary     {$ifdef fullVersion},'reverseList(L:List);//Returns L reversed'{$endif});
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'elementFrequency',@getElementFreqency,ak_unary     );
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'transpose'       ,@transpose_imp     ,ak_unary     );
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'union'           ,@setUnion_imp      ,ak_variadic_1);
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'intersect'       ,@setIntersect_imp  ,ak_variadic_1);
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'minus'           ,@setMinus_imp      ,ak_binary    );
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'isSubsetOf'      ,@isSubsetOf_imp    ,ak_binary    );
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'mergeMaps'       ,@mergeMaps_imp     ,ak_ternary   );
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'flatten'         ,@flatten_imp       ,ak_variadic  );
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'size'            ,@size_imp          ,ak_unary     );
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'trueCount'       ,@trueCount_impl    ,ak_unary     );
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'reverseList'     ,@reverseList_impl  ,ak_unary     );
   BUILTIN_GET:=
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'get'     ,@get_imp     ,ak_variadic_2{$ifdef fullVersion},'get(L,accessor);//Returns elements of list, set or map L by accessor'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'getAll'  ,@getAll_imp  ,ak_binary    {$ifdef fullVersion},'getAll(L,accessors);//Returns elements of list, set or map L by collection of accessors#getAll(L,accessors:List,fallback:List);//Returns elements of list, set or map L by collection of accessors.#//If no such element is found, the respective fallback entry is used.#//fallback must have the same size as accessors'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,ak_variadic_2{$ifdef fullVersion},'getInner(L:List,k:Int);//Returns the k-th elements of each entry in nested list L'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'indexOf' ,@indexOf_impl,ak_unary     {$ifdef fullVersion},'indexOf(B:BooleanList);//Returns the indexes for which B is true.'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'cross'   ,@cross_impl  ,ak_variadic_2{$ifdef fullVersion},'cross(A,...);//Returns the cross product of the arguments (each of which must be a list, set or map)'{$endif});
-  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,
-                              'group',  @group_imp ,ak_variadic_2{$ifdef fullVersion},'group(list,grouping);//Re-groups list to a map by grouping (which is a sub-index or a list)#group(list,grouping,aggregator:Expression(2));//Groups by grouping using aggregator on a per group basis'{$endif});
-  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,
-                              'groupToList',  @groupToList_imp ,ak_variadic_4{$ifdef fullVersion},'groupToList(values:List,indexes:IntList,defaultValue,aggregator:Expression(2));//Groups values by indexes to a list, using defaultValue where no value is given and aggregating using the aggregator#groupToList(values:List,indexes:IntList,defaultValue,aggregator:Expression(2),initialSize>=0);//As above but with a predefined initial result list size'{$endif});
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'get'     ,@get_imp     ,ak_variadic_2);
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'getAll'  ,@getAll_imp  ,ak_binary    );
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'getInner',@getInner_imp,ak_variadic_2);
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'indexOf' ,@indexOf_impl,ak_unary     );
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'cross'   ,@cross_impl  ,ak_variadic_2);
+  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'group',  @group_imp ,ak_variadic_2);
+  builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'groupToList',  @groupToList_imp ,ak_variadic_4);
   builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'toGenerator'   ,
-  builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'toIteratableExpression',@toGenerator_imp,ak_unary{$ifdef fullVersion},'toIteratableExpression(e:Expression(0));#Marks the expression as IteratableExpression if possible or throws an error'{$endif}),
-                                                                            ak_unary{$ifdef fullVersion},'toGenerator(e:Expression(0));#Alias for toIteratableExpression'{$endif});
-  builtinFunctionMap.registerRule(LIST_NAMESPACE,'vectorIfThenElse',@vectorIfThenElse_imp,ak_ternary{$ifdef fullVersion},'vectorIfThenElse(condition:BooleanList,Then,Else);//Returns the elementwise "if-then-else" result'{$endif});
+  builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'toIteratableExpression',@toGenerator_imp,ak_unary),ak_unary);
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'vectorIfThenElse',@vectorIfThenElse_imp,ak_ternary);
 end.

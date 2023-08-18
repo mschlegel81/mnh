@@ -135,10 +135,7 @@ FUNCTION ask_impl intFuncSignature;
 INITIALIZATION
   {$WARN 5058 OFF}
   system.initCriticalSection(cs);
-  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE, 'ask', @ask_impl,ak_variadic_1{$ifdef fullVersion},
-               'ask(q:string);//Asks the user question q and returns the user input#'+
-               'ask(q:string,options:stringList);//Asks the user question q, giving the passed options and returns the chosen option#'+
-               'ask(...,visible:Boolean);//Optionally disables question feedback (console ask only)'{$endif},[se_input]);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE, 'ask', @ask_impl,ak_variadic_1,[se_input]);
 FINALIZATION;
   system.doneCriticalSection(cs);
 end.

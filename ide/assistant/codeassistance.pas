@@ -65,8 +65,6 @@ TYPE
       //Shebang related
       FUNCTION  getBuiltinSideEffects:T_sideEffects;
       FUNCTION  isExecutablePackage:boolean;
-      //Documentation-related
-      PROCEDURE doCreateHtmlData;
   end;
 
 PROCEDURE finalizeCodeAssistance;
@@ -573,55 +571,6 @@ FUNCTION getAssistanceResponseSync(CONST editorMeta:P_codeProvider):P_codeAssist
     dispose(request,destroy);
   end;
 
-PROCEDURE T_codeAssistanceResponse.doCreateHtmlData;
-  FUNCTION getHtmlText: string;
-    VAR highlighter:TMnhInputSyn;
-        SynExporterHTML: TSynExporterHTML;
-        outputStream:TMemoryStream;
-        size:longint;
-        content:TStringList;
-        s:string;
-    begin
-      highlighter:=TMnhInputSyn.create(nil);
-      updateHighlightingData(highlighter.highlightingData);
-      SynExporterHTML:=TSynExporterHTML.create(nil);
-      SynExporterHTML.title:=extractFileName(package^.getPath);
-      SynExporterHTML.highlighter:=highlighter;
-      content:=TStringList.create;
-      for s in package^.getCodeProvider^.getLines do content.add(s);
-      SynExporterHTML.ExportAll(content);
-      outputStream:=TMemoryStream.create();
-      SynExporterHTML.saveToStream(outputStream);
-      SynExporterHTML.free;
-      size:=outputStream.size;
-      outputStream.Seek(0,soFromBeginning);
-      initialize(result);
-      setLength(result,size);
-      outputStream.ReadBuffer(result[1],size);
-      outputStream.free;
-      highlighter.free;
-      content.free;
-    end;
-
-  FUNCTION relatedBuiltinFunctionNames: T_arrayOfString;
-    VAR b:P_builtinFunctionMetaData;
-    begin
-      result:=C_EMPTY_STRING_ARRAY;
-      for b in callAndIdInfos^.calledBuiltinFunctions do append(result,b^.qualifiedId);
-    end;
-
-  VAR demoIndex:longint;
-      id:string;
-  begin
-    enterCriticalSection(messageCs);
-    try
-      demoIndex:=addDemoFile(extractFileName(package^.getPath),getHtmlText);
-      for id in relatedBuiltinFunctionNames do linkDemoToDoc(demoIndex,id);
-    finally
-      leaveCriticalSection(messageCs);
-    end;
-  end;
-
 PROCEDURE ensureDefaultFiles(Application: Tapplication; bar: TProgressBar; CONST overwriteExisting: boolean; CONST createHtmlDat: boolean);
   {$i res_defaultFiles.inc}
   VAR baseDir:string;
@@ -636,14 +585,6 @@ PROCEDURE ensureDefaultFiles(Application: Tapplication; bar: TProgressBar; CONST
       end;
     end;
 
-  PROCEDURE createHtmlData(CONST index:longint);
-    VAR response:P_codeAssistanceResponse;
-    begin
-      response:=getAssistanceResponseSync(newFileCodeProvider(baseDir+DEFAULT_FILES[index,0]));
-      response^.doCreateHtmlData;
-      disposeMessage(response);
-    end;
-
   VAR i:longint;
   begin
     baseDir:=configDir;
@@ -655,10 +596,6 @@ PROCEDURE ensureDefaultFiles(Application: Tapplication; bar: TProgressBar; CONST
       ensureFile(i);
       if bar<>nil then begin bar.position:=bar.position+1; Application.ProcessMessages; end;
     end;
-    if createHtmlDat then for i:=0 to length(DEFAULT_FILES)-1 do begin
-      createHtmlData(i);
-      if bar<>nil then begin bar.position:=bar.position+1; Application.ProcessMessages; end;
-    end else if bar<>nil then bar.position:=bar.position+length(DEFAULT_FILES);
   end;
 
 CONSTRUCTOR T_codeAssistanceRequest.createWithProvider(CONST editorMeta:P_codeProvider);

@@ -549,10 +549,7 @@ PROCEDURE TtableForm.fillTable(CONST firstFill:boolean; CONST suppressMarker:boo
   end;
 
 INITIALIZATION
-  builtinFunctionMap.registerRule(GUI_NAMESPACE,'showTable',@showTable_impl,ak_variadic_1,'showTable(L:list);//Shows L in a table.#'+
-    'showTable(L:list,caption:string);//Shows L in a table with given caption.#'+
-    'showTable(L:list,caption:string,firstRowIsHeader:boolean);//Shows L in a table with given caption.#'+
-    'showTable(L:list,caption:string,fixedRows:Int,fixedColumns:Int);//Shows L with customized fixed rows and columns',[se_alterGuiState]);
+  builtinFunctionMap.registerRule(GUI_NAMESPACE,'showTable',@showTable_impl,ak_variadic_1,[se_alterGuiState]);
 
 end.
 

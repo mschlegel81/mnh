@@ -98,7 +98,7 @@ FUNCTION readXml_impl intFuncSignature;
   end;
 
 INITIALIZATION
-  builtinFunctionMap.registerRule(FILES_BUILTIN_NAMESPACE,'readXmlFile',@readXmlFile_impl,ak_unary{$ifdef fullVersion},'readXmlFile(filename:String);//Reads contents of an XML file and returns the contents as a list'{$endif},[se_readFile]);
-  builtinFunctionMap.registerRule(FILES_BUILTIN_NAMESPACE,'readXml'    ,@readXml_impl    ,ak_unary{$ifdef fullVersion},'readXml(input:String);//Parses input as XML and returns the contents as a list'{$endif});
+  builtinFunctionMap.registerRule(FILES_BUILTIN_NAMESPACE,'readXmlFile',@readXmlFile_impl,ak_unary,[se_readFile]);
+  builtinFunctionMap.registerRule(FILES_BUILTIN_NAMESPACE,'readXml'    ,@readXml_impl    ,ak_unary);
 
 end.

@@ -58,15 +58,15 @@ MNH5 comes in 2 flavours (for each compilation target):<ul>
 
 Most of the inputs will result in understandable outputs (the exception being infinite loops, fork bombs and other "pathologic" examples).<br>
 <br>
-The input can consist of several statements, separated by <code>;</code>. An input can be an expression, like:<code>
+The input can consist of several statements, separated by <code>;</code>. An input can be an expression, like:
 <!--mnh-->
 1+2;
 <!--end-->
-</code> Or an assignment<code>
+Or an assignment
 <!--mnh-->
 x:=1;
 <!--end-->
-</code> Or a declaration<code>
+Or a declaration
 <!--mnh-->
 f(x)->sin(x);
 <!--end-->
@@ -116,36 +116,32 @@ a script from the command line.<br>
 For instance a script that automatically creates a log with the same name as the script (placeholder "?") but with extension <code>.log</code> can start with 
 the shebang <code>#!/usr/bin/mnh +out ?.log(1)</code>.<br><br>
 If the first line (after skipping the optional shebang) is <code>plain script</code> the script is executed as is, without the need to define a main function.
-Plain scripts can not be used or included in other scripts however. The following script would print out "Hello world" as well as all verbose output.<code>
+Plain scripts can not be used or included in other scripts however. The following script would print out "Hello world" as well as all verbose output.
 <!--mnh-->
   #!/usr/bin/mnh -v
   plain script;
   print('Hello world');
 <!--end-->
-</code>
 
 <h4><a name="importing">Importing a package</a></h4>
-To import a package, employ the <i>use clause</i>, e.g.:<code>
+To import a package, employ the <i>use clause</i>, e.g.:
 <!--mnh-->
   USE basic;
 <!--end-->
-</code>
 This will import the first package with a filename <code>basic.mnh</code> in the following folders:<ul>
   <li> The same folder as the importing package, or its subfolders </li>
   <li> The current executable's folders, or its subfolders </li>
   <li> The current working directory, or its subfolders </li>
 </ul>
-Instead of using an identifier to specify a package, you may use a string literal denoting it's path - either absolute or relative to the importing package, e.g.:<code>
+Instead of using an identifier to specify a package, you may use a string literal denoting it's path - either absolute or relative to the importing package, e.g.:
 <!--mnh-->
   USE 'util/basic.mnh';
 <!--end-->
-</code>
 <br>
-Having imported a package, you might run into naming conflicts. All rules can be accessed using either their name or qualified access via package.name, e.g.<code>
+Having imported a package, you might run into naming conflicts. All rules can be accessed using either their name or qualified access via package.name, e.g.
 <!--mnh-->
    basic.sum([1,2,6]);
 <!--end-->
-</code>
 <h4><br><a name="including">Including a package</a></h4>
 Including another package with the <i>include clause</i> means that the contents of the existing package are (more or less) inlined in the existing package.
 <br>
@@ -157,11 +153,10 @@ There are some key differences to importing via <code><span class="modifier">USE
 <li>As any other function, the main routine may be defined in the included package</li>
 </ul>
 <br>
-To include a package, use e.g.:<code>
+To include a package, use e.g.:
 <!--mnh-->
   INCLUDE basic;
 <!--end-->
-</code>
 The rules for finding the package to include are the same as for the use clause.
 
 <h4><br><a name="executables">Executable packages</a></h4>
@@ -187,12 +182,11 @@ Additionally, comments of the main rule are shown as help on the package on the 
 <br>
 <h4><br><a name="attributes">Attributes</a></h4>
 An attribute is a comment starting with <code>@</code>. Attributes are always associated with the (sub-)rule following the comment and can be accessed via <a href="builtin.html#mnh.inspect">inspection</a>.<br>
-Attributes are key-value pairs where the value can be omitted. They generally take the form:<code>
+Attributes are key-value pairs where the value can be omitted. They generally take the form:
 <!--mnh-->
   @key=value
   @keyWithoutValue 
 <!--end-->
-</code>
 <br>
 Some attributes currently used are:
  <ul>
@@ -200,7 +194,7 @@ Some attributes currently used are:
  <li><code>@insertScript                  </code>: used to configure insert scripts (see <a href="gui.html#utilityScripts">GUI features</a>)</li>
  <li><code>@utility                       </code>: used to configure utiliy scripts (see <a href="gui.html#utilityScripts">GUI features</a>)</li>
  <li><code>@after                         </code>: marks a nullary subrule for execution after the script is finished without raising an error.<br>
- The idea behind this is that you might want to define startup/shutdown hooks. A startup hook can be defined using a little hack (which starts with another annotation considered only by the code assistant):<code>
+ The idea behind this is that you might want to define startup/shutdown hooks. A startup hook can be defined using a little hack (which starts with another annotation considered only by the code assistant):
 <!--mnh-->
   //@SuppressUnusedWarning
   initHook:=begin
@@ -208,7 +202,6 @@ Some attributes currently used are:
     void;
   end;
 <!--end-->
-</code>
 </li>
  <li><code>@SuppressUnusedWarning         </code>: suppresses warnings about unused rules</li>
  <li><code>@SuppressUnusedParameterWarning</code>: suppresses warnings about unused parameters</li>
@@ -304,19 +297,17 @@ All of those operators apart from <code>==</code>, <code><span class="operator">
 </code>List operators will work only if both operands have the same number of list elements.<br>
 While this is handy in most situations, there are some counter intutive consequences:<ul>
   <li> Lazy boolean operators behave differently from non-lazy operators (see <a href="#logOps"> Logical operators </a>)</li>
-  <li> Equals behaves strangely<br>Comparisons of lists with the <code>=</code>-comparator will return lists of booleans, e.g. <code>
+  <li> Equals behaves strangely<br>Comparisons of lists with the <code>=</code>-comparator will return lists of booleans, e.g.
 <!--mnh-->
   [1,2]=[1,2] -> [true,true]
 <!--end-->
-</code>
 As a fallback solution, the <code>==</code>-comparator can be used, which will return a scalar <code>true</code> if the operands have the same size and all list elements are <i>technically</i> equal.
-Alternatively the resulting list of booleans could be <code>and</code>-aggregated: <code>
+Alternatively the resulting list of booleans could be <code>and</code>-aggregated:
 <!--mnh-->
    [1,2]==[1,2  ]           -> true
    [1,2]==[1,2.0]           -> false
   ([1,2]= [1,2.0]).agg(and) -> true
 <!--end-->
-</code>
   </li>
   </ul>
 For expression-literals, all operators will be used to expand the expression to a new expression-literal:<code>
@@ -330,7 +321,7 @@ This is the common addition operator, which also doubles as an unary "neutral" o
 In contrast to languages as C or Java, it does not allow for concatenation of non-strings and strings.<br>
 If both operands are integers, the result will be an integer. <br>
 If both operands are numeric and at least one of them is real, the result will be a real number.<br>
-Examples:<code>
+Examples:
 <!--mnh-->
  in> 1+5
 out> 6
@@ -350,7 +341,7 @@ out> "ab"
  in> [1,2,3]+[5,6]
 <!--end-->
 <span class="error">Error @<new 7>:1,8 Operator + cannot be applied to operands of type intList(3) and intList(2)</span>
-</code>
+
 See also: <a href="builtin.html#mnh.OPERATOR_PLUS"><code><span class="builtin">mnh.OPERATOR_PLUS</span></code></a>
 </td></tr>
 <tr><td><code>-</code></td><td><h5>Subtraction</h5></td></tr><tr><td></td><td>
@@ -372,40 +363,40 @@ See also: <a href="builtin.html#mnh.OPERATOR_DIVREAL"><code><span class="builtin
 <tr><td><code>**</code>, <code>^</code></td><td><h5>Potentiation</h5></td></tr><tr><td></td><td>
 This is the potentiation operator.<br>
 The result type will be the simplest possible type possible for representing the analytic result.<br>
-Examples: <code>
+Examples:
 <!--mnh-->
  in> 2^2
 out> 4 //The result is an integer
  in> 2^-2
 out> 0.25 //The result is a real number
 <!--end-->
-</code>
+
 In addition you can use <code><span class="operator">²</span></code> as a shorthand for <code><span class="operator">^</span><span class="literal">2</span></code> and <code><span class="operator">³</span></code> as a shorthand for <code><span class="operator">^</span><span class="literal">3</span></code>.<br>
 See also: <a href="builtin.html#mnh.OPERATOR_POT"><code><span class="builtin">mnh.OPERATOR_POT</span></code></a>
 </td></tr>
 <tr><td><code>div</code></td><td><h5>Integer division</h5></td></tr><tr><td></td><td>
 Inspired by Pascal.
-Examples: <code>
+Examples: 
 <!--mnh-->
  in> 30 div 12;
 out> 2
  in> -15 div 12;
 out> -1
 <!--end-->
-</code>
+
 See also: <a href="builtin.html#mnh.OPERATOR_DIVINT"><code><span class="builtin">mnh.OPERATOR_DIVINT</span></code></a>
 </td></tr>
 <tr><td><code>mod</code></td><td><h5>Integer modulo</h5></td></tr><tr><td></td><td>
 Inspired by Pascal.<br>
 This is the "symmetric" modulo operator, i.e. <code><span class="identifier">x</span> <span class="operator">mod</span> <span class="identifier">y</span> = <span class="operator">-</span>(<span class="operator">-</span><span class="identifier">x</span> <span class="operator">mod</span> <span class="identifier">y</span>) = <span class="operator">-</span><span class="identifier">x</span> <span class="operator">mod</span> <span class="operator">-</span><span class="identifier">y</span></code>
-<br>Examples: <code>
+<br>Examples:
 <!--mnh-->
  in> 30 mod 12;
 out> 6
  in> -15 mod 12;
 out> -3
 <!--end-->
-</code>
+
 See also: <a href="builtin.html#mnh.OPERATOR_MOD"><code><span class="builtin">mnh.OPERATOR_MOD</span></code></a>
 </td></tr>
 </table>
@@ -413,20 +404,20 @@ See also: <a href="builtin.html#mnh.OPERATOR_MOD"><code><span class="builtin">mn
 <h4><br><a name="compOps"> Comparators</a></h4>
 Most comparators (the exception being <code>==</code>) are implemented, so that they return a boolean or a collection of booleans for <i>comparable</i> types.
 Collections are comparable if they contain comparable types. For lists an additional requirement is equal length.<br>
-Comparators can be used as in mathematical notation, e.g. <code>
+Comparators can be used as in mathematical notation, e.g.
 <!--mnh-->
 x < y < z
 <!--end-->
-</code> behaves identical to <code>
+behaves identical to
 <!--mnh-->
 x < y and y < z
 <!--end-->
-</code>
+
 For comparators in function definitions see <a href="functions.html">MNH5 - Function definitions</a>.
 <br>
 <table border="0">
 <tr><td><code>= </code></td><td><h5>Scalar equals</h5></td></tr><tr><td></td><td>
-Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and equal. <br> Examples: <code>
+Returns a boolean or a list of booleans.<br>Returns true if the comparands are comparable and equal. <br> Examples:
 <!--mnh-->
  in> 1=1
 out> true
@@ -441,13 +432,12 @@ out> [true,true,true]
  in> "a"=3
 <!--end-->
 <span class="error">Error: Incompatible comparands string and int</span>
-</code>
+
 See also: <a href="builtin.html#mnh.COMPARATOR_EQ"><code><span class="builtin">mnh.COMPARATOR_EQ</span></code></a>
 </td></tr>
 <tr><td><code>==</code></td><td><h5>List equals or techical equals</h5></td></tr><tr><td></td><td>
 Returns a scalar boolean.<br>Returns true if the comparands are technically equal, which means that they have the same type and identical value. <br>
 For compound types:
-<code>
 <!--mnh-->
   listX==listY -> listX.typeOf == listY.typeOf 
               AND listX.size   == listY.size
@@ -460,9 +450,8 @@ For compound types:
   mapX==mapY -> mapX.size == mapY.size
             AND mapX.each(entry,mapY.get(entry[0])==entry[1],AND);   
 <!--end-->
-</code>
 
-For scalars the behavior is mostly the same as the scalar equals', the exception being comparisons with Not-a-number and mixed integer-real comparisons<br>Examples: <code>
+For scalars the behavior is mostly the same as the scalar equals', the exception being comparisons with Not-a-number and mixed integer-real comparisons<br>Examples:
 <!--mnh-->
    in> Nan= Nan;
   out> false
@@ -473,15 +462,15 @@ For scalars the behavior is mostly the same as the scalar equals', the exception
    in> 3==3.0;
   out> false
 <!--end-->
-</code>
-Additionally <code>==</code> will not result in an error, even for incomparable types:<code>
+
+Additionally <code>==</code> will not result in an error, even for incomparable types:
 <!--mnh-->
    in> 'a'==1;
   out> false
    in> 'a'= 1;
 <!--end-->
   <span class="error">Error: Incompatible comparands string and int</span>
-</code>
+
 See also: <a href="builtin.html#mnh.COMPARATOR_LISTEQ"><code><span class="builtin">mnh.COMPARATOR_LISTEQ</span></code></a>
 </td></tr>
 <tr><td><code><></code>, <code>!=</code></td><td><h5>Not equals</h5></td></tr><tr><td></td><td>
@@ -505,7 +494,7 @@ Returns a boolean or a list of booleans.<br>Returns true if the comparands are t
 <h4><br><a name="logOps">Logical operators</a></h4>
 <table border="0">
 <tr><td><code>and</code></td><td><h5>Logical or bitwise and</h5></td></tr><tr><td></td><td>
-Examples: <code>
+Examples: 
 <!--mnh-->
    in> true and false
   out> false
@@ -516,11 +505,11 @@ Examples: <code>
    in> false and 3
 <!--end-->
   <span class="error">Error: Operator and is not supported for types boolean and int</span>
-</code>
+
 See also: <a href="builtin.html#mnh.OPERATOR_AND"><code><span class="builtin">mnh.OPERATOR_AND</span></code></a>
 </td></tr>
 <tr><td><code>or</code></td><td><h5>Logical or bitwise or</h5></td></tr><tr><td></td><td>
-Examples: <code>
+Examples: 
 <!--mnh-->
    in> true or false
   out> true
@@ -531,11 +520,11 @@ Examples: <code>
    in> false or 3
 <!--end-->
   <span class="error">Error: Operator or is not supported for types boolean and int</span>
-</code>
+
 See also: <a href="builtin.html#mnh.OPERATOR_OR"><code><span class="builtin">mnh.OPERATOR_OR</span></code></a>
 </td></tr>
 <tr><td><code>xor</code></td><td><h5>Logical or bitwise exclusive-or</h5></td></tr><tr><td></td><td>
-Examples: <code>
+Examples: 
 <!--mnh-->
    in> true xor false
   out> true
@@ -546,38 +535,38 @@ Examples: <code>
    in> false xor 3
 <!--end-->
   <span class="error">Error: Operator xor is not supported for types boolean and int</span>
-</code>
+
 See also: <a href="builtin.html#mnh.OPERATOR_XOR"><code><span class="builtin">mnh.OPERATOR_XOR</span></code></a>
 </td></tr>
 <tr><td><code>AND</code></td><td><h5>Logical lazy and</h5></td></tr><tr><td></td><td>
 Lazy operators are executed <i>extremely</i> lazy. The left-hand-side operand must be a scalar boolean.
-For any right-hand-side expression <code>RHS</code> the behavior is as follows:<code>
+For any right-hand-side expression <code>RHS</code> the behavior is as follows:
 <!--mnh-->
   true  AND RHS -> RHS
   false AND RHS -> false
 <!--end-->
-</code>
-Or generally:<code>
+
+Or generally:
 <!--mnh-->
   x AND y -> x ? y : x;
 <!--end-->
-</code>
+
 Used as aggregator in an <code>each</code>, <code>pEach</code> or <code>agg</code> construct, the loop over all elements is cancelled as soon as the first <code>false</code> is encountered.
 <br>See also: <a href="builtin.html#mnh.OPERATOR_LAZYAND"><code><span class="builtin">mnh.OPERATOR_LAZYAND</span></code></a>
 </td></tr>
 <tr><td><code>OR</code></td><td><h5>Logical lazy or</h5></td></tr><tr><td></td><td>
 Lazy operators are executed <i>extremely</i> lazy. The left-hand-side operand must be a scalar boolean.
-For any right-hand-side expression <code>RHS</code> the behavior is as follows:<code>
+For any right-hand-side expression <code>RHS</code> the behavior is as follows:
 <!--mnh-->
   true  OR RHS -> true
   false OR RHS -> RHS
 <!--end-->
-</code>
-Or generally:<code>
+
+Or generally:
 <!--mnh-->
   x OR y -> x ? x : y;
 <!--end-->
-</code>
+
 Used as aggregator in an <code>each</code>, <code>pEach</code> or <code>agg</code> construct, the loop over all elements is cancelled as soon as the first <code>true</code> is encountered.
 <br>See also: <a href="builtin.html#mnh.OPERATOR_LAZYOR"><code><span class="builtin">mnh.OPERATOR_LAZYOR</span></code></a>
 </td></tr>
@@ -586,18 +575,18 @@ Used as aggregator in an <code>each</code>, <code>pEach</code> or <code>agg</cod
 <h4><br><a name="stringOps">String concatenation</a></h4>
 The <code>&</code>-operator for string concatenation (inspired from Excel) was introduced as the preferred method to concatenate strings.<br>
 In contrast to the <code>+</code> operator it allows for concatenation of any literals to a string.<br>
-Examples:<code>
+Examples:
 <!--mnh-->
    in> 1&2+4;
   out> '16'
    in> 1&2=4;
   out> false
 <!--end-->
-</code>
+
 See also: <a href="builtin.html#mnh.OPERATOR_STRCONCAT"><code><span class="builtin">mnh.OPERATOR_STRCONCAT</span></code></a>
 
 <h4><br><a name="orElseOp">orElse</a></h4>
-The <code>orElse</code>-operator is intended for cases where the left-hand-side operand may be <code>void</code>, e.g. <code>
+The <code>orElse</code>-operator is intended for cases where the left-hand-side operand may be <code>void</code>, e.g. 
 <!--mnh-->
    in> sum(L:NumericList)->L.agg(+) orElse 0;
    in> sum([1, 2, 3]);
@@ -615,7 +604,6 @@ The <code>orElse</code>-operator is intended for cases where the left-hand-side 
    in> false OR true orElse 2;
   out> true
 <!--end-->
-</code>
 
 This is a lazy operator, i.e. the right-hand-side is evaluated only if necessary.<br>
 Used as aggregator in an <code>each</code>, <code>pEach</code> or <code>agg</code> construct, the loop over all elements is cancelled as soon as the first non-<code>void</code> element is encountered.
@@ -623,44 +611,40 @@ Used as aggregator in an <code>each</code>, <code>pEach</code> or <code>agg</cod
 <h3><br><a name="listOps">List operators</a></h3>
 <table border="0">
 <tr><td><code>|</code></td><td><h5>List concatenation</h5></td></tr><tr><td></td><td>
-The list concatenation operator can be used to construct lists. The general behavior is as follows<code>
+The list concatenation operator can be used to construct lists. The general behavior is as follows
 <!--mnh-->
    x | y -> [x,y];
    x |[y]-> [x,y];
   [x]| y -> [x,y];
   [x]|[y]-> [x,y];
 <!--end-->
-</code>
-However the result does not have to be a flat list; e.g.<code>
+
+However the result does not have to be a flat list; e.g.
 <!--mnh-->
   x |[[y]] -> [x,[y]];
 <!--end-->
-</code>
 </td></tr>
 
 <tr><td><code>in</code></td><td><h5>in-operator</h5></td></tr><tr><td></td><td>
 The in-operator (inspired by SQL) tests, if the left hand side operand is contained in the right hand side operand.<br>
 For obvious reasons the right hand side operands must be a compound type.<br>
-<code>
 <!--mnh-->
   x in [y0,y1,...] -> x==y0 or x==y1 or ...;
 <!--end-->
-</code> or, if you are already famliar with the <a href="specials.html#each">each-construct</a>:<code>
+or, if you are already famliar with the <a href="specials.html#each">each-construct</a>:
 <!--mnh-->
   x in Y -> Y.each(y,x==y,OR);
 <!--end-->
-</code>
 See also: <a href="builtin.html#mnh.OPERATOR_IN"><code><span class="builtin">mnh.OPERATOR_IN</span></code></a>
 </td></tr>
 <tr><td><code>@<code></td><td><h5>List-to-parameter operator</h5></td></tr><tr><td></td><td>
 The list-to-parameter operator can be used for alternative parameter passing. It converts the list (expression or literal) following the operator to a parameter list for the function preceding the operator.<br>
-The following calls are equivalent:<code>
+The following calls are equivalent:
 <!--mnh-->
   f(1,2,3,4,5);
   f@[1,2,3,4,5];
   f@[1..5];
 <!--end-->
-</code>
 This can also be applied to implement recursive variadic functions. The following functions <code>sum1</code> and <code>sum2</code> will show the same behaviour, returning the sum of all given parameters:<code>
 <!--mnh-->
   sum1->0;
@@ -669,7 +653,6 @@ This can also be applied to implement recursive variadic functions. The followin
   sum2->0;
   sum2(...)->... .agg(+);
 <!--end-->
-</code>
 </td></tr>
 </table>
 
@@ -687,14 +670,14 @@ For sake of completeness we also list the assignment operator and declaration op
 Declares a function, returning nothing.</td></tr>
 <tr><td><code>:=</code></td><td><h5>Assignment operator</h5></td></tr><tr><td></td><td>
 Declares a function and resolves the right-hand-side immediately, returning nothing.<br>
-It can also be used to assign a value to a mutable rule or a block-local variable, returning the value after assigning:<code>
+It can also be used to assign a value to a mutable rule or a block-local variable, returning the value after assigning:
 <!--mnh-->
   mutable last_x_in_f:=void;
   f(x)->print('Last x was: ',last_x_in_f) and
         print('This x is : ',last_x_in_f:=x);
 <!--end-->
-</code><br>
-This operator can also be employed to perform in-place modification of (potentially nested) lists and maps:<code>
+<br>
+This operator can also be employed to perform in-place modification of (potentially nested) lists and maps:
 <!--mnh-->
    begin
      local x:=['a'..'f']; //returns x
@@ -707,7 +690,6 @@ This operator can also be employed to perform in-place modification of (potentia
      print(x);    //returns ['a','b','c','-','f','NEW']
    end;
 <!--end-->
-</code>
 </td></tr>
 </table>
 
@@ -728,7 +710,7 @@ As the assignment operator, the C-style operators can be employed for in-place m
 
 <h3><br><a name="funcToExp"> Function-to-Expression</a></h3>
 The <i>Function-to-Expression</i> operator "<code>::</code>" can be used to conveniently wrap a rule in an expression.<br>
-If the rule has only non-variadic subrules with the same number of parameters, the resulting expression will have the same number of parameters:<code>
+If the rule has only non-variadic subrules with the same number of parameters, the resulting expression will have the same number of parameters:
 <!--mnh-->
    in> f0->0;
    in> ::f0;
@@ -741,16 +723,14 @@ If the rule has only non-variadic subrules with the same number of parameters, t
    in> ::f2;
   out> {f2($0,$1)}
 <!--end-->
-</code>
-If the subrules accept different numbers of parameters, the expression will be variadic:<code>
+If the subrules accept different numbers of parameters, the expression will be variadic:
 <!--mnh-->
    in> g(x)->x;
    in> g(x, y)->x+y;
    in> ::g;
   out> {g($0)@...}
 <!--end-->
-</code>
-The same holds if the rule contains a variadic subrule:<code>
+The same holds if the rule contains a variadic subrule:
 <!--mnh-->
   in> h(x,...)->x*(...).agg(+);
    in> ::h;
@@ -759,19 +739,16 @@ The same holds if the rule contains a variadic subrule:<code>
    in> ::i;
   out> {i()@$params}
 <!--end-->
-</code>
-For built-in rules:<code>
+For built-in rules:
 <!--mnh-->
    in> ::sin;
   out> {sin($0)}
 <!--end-->
-</code>
-For local variables:<code>
+For local variables:
 <!--mnh-->
    in> begin local x:=0; ::x; end;
   out> 'x'
 <!--end-->
-</code>
 
 <h3><br><a name="opOverloading"> Operator overloading</a></h3>
 
@@ -823,13 +800,12 @@ All variables are immutable or when they are not, they behave as immutable varia
 <br>
 Every function <code>f</code> can be called with any number of parameters; matching parameters will lead to evaluation of some kind, mismatching parameters
 will lead to an error output.</li>
-<li><b>Omitting parameters</b><br>A nullary function can be called with or without parameters, so the following statements will behave the same:<code>
+<li><b>Omitting parameters</b><br>A nullary function can be called with or without parameters, so the following statements will behave the same:
 <!--mnh-->
   someFunction;
   someFunction();
 <!--end-->
-</code>
-If <code>someFunction</code> returns an expression, consider the following:<code>
+If <code>someFunction</code> returns an expression, consider the following:
 <!--mnh-->
    in> someFunction :={1+2*3};
    in> someFunction;
@@ -840,7 +816,7 @@ If <code>someFunction</code> returns an expression, consider the following:<code
    in> someFunction()();
   out> 7
 <!--end-->
-</code>
+
 </li><li><b>Visibility</b><br>
 Visibility is handled as in Pascal, i.e. a local function definition takes precedence over all imported functions with the same name, including builtin functions. <br>
 If a function of the same name is defined in more than one used package, the definition in the last imported package hides previous definitions.<br>
@@ -1311,11 +1287,11 @@ To define a parameter to an expression literal, use $-Variables.<br>
 Example 1: <code>{sin(x)}  </code> This is a nullary (!) function, returning sin(x) if x is defined, or failing otherwise.<br>
 Example 2: <code>{sin($x)} </code>  This is an unary function equivalent to the built-in function <code>sin(x)</code>.<br>
 If an expression literal accepts more than one parameter, the parameters have to be given <i>in order of appearance</i>, i.e.<code>{$i*arctan($x/$i)}</code> would be called with parameters (i,x).<br>
-Expression literals returned by a function are constructed on the fly. Consequently you can pass arguments to them, e.g. <code>
+Expression literals returned by a function are constructed on the fly. Consequently you can pass arguments to them, e.g. 
 <!--mnh-->
   f(a,b)->{a+b*$x}
 <!--end-->
-</code> will return a linear scalar function.<br>
+will return a linear scalar function.<br>
 Instead of using parameters like <code>$x</code> you can also refer to parameters by their (zero based) index. For example the following functions are equivalent:<code>
 <!--mnh-->
   f1:={$x**$y};
@@ -1323,7 +1299,7 @@ Instead of using parameters like <code>$x</code> you can also refer to parameter
 <!--end-->
 </code>
 Adressing parameters by their index is recommended for expressions in <a href="formatStrings.html">format strings</a>.<br>
-Note the special behavior of operations on expressions:<code>
+Note the special behavior of operations on expressions:
 <!--mnh-->
    in> {$x}+1;
   out> {$x+1}
@@ -1340,21 +1316,20 @@ Note the special behavior of operations on expressions:<code>
    in> {$0}+{$0}; //as above but more intuitive
   out> {$0+$0}
 <!--end-->
-</code>
 
 <br><b>Lambda notation:</b><br>
 To define a parameter to an expression literal, use a pattern as for <a href="functions.html#restrictions">functions</a>.<br>
 Example 1: <code>()->sin(x)  </code> This is a nullary (!) function, returning sin(x) if x is defined, or failing otherwise.<br>
 Example 2: <code>(x)->sin(x) </code>  This is an unary function equivalent to the built-in function <code>sin(x)</code>.<br>
-Expression literals returned by a function are constructed on the fly. Consequently you can pass arguments to them, e.g. <code>
+Expression literals returned by a function are constructed on the fly. Consequently you can pass arguments to them, e.g. 
 <!--mnh-->
   f(a,b)->((x)->a+b*x)
 <!--end-->
-</code> will return a linear scalar function.<br>
+will return a linear scalar function.<br>
 <b><i>Note that the brackets around <code>(x)->a+b*x</code> cannot be omitted, because the closing bracket marks the end of the expression!</i></b>
 Instead of using named parameters you can also refer to parameters by their (zero based) index. This is however strongly discouraged for expresions in lambda notation.
 
-Note the special behavior of operations on expressions:<code>
+Note the special behavior of operations on expressions:
 <!--mnh-->
    in> ((x)->x)+1;
   out> (x)->x+1
@@ -1371,11 +1346,10 @@ Note the special behavior of operations on expressions:<code>
    in> ((x)->x)+((x)->x); //as above but more intuitive
   out> (x)->x+x
 <!--end-->
-</code>
 
 
 <h4><br><a name="void">void</a></h4>
-The <code>void</code>-Literal is a special literal intended mainly for the use in <a href="specials.html#each">each-Clauses</a>. It represents an element <i>which is not there</i>, e.g. to construct a list of primes from 2 through 47 consider<code>
+The <code>void</code>-Literal is a special literal intended mainly for the use in <a href="specials.html#each">each-Clauses</a>. It represents an element <i>which is not there</i>, e.g. to construct a list of primes from 2 through 47 consider
 <!--mnh-->
  in> [2..7*7].each(i,(i>2 and i mod 2=0) or
                      (i>3 and i mod 3=0) or
@@ -1383,7 +1357,6 @@ The <code>void</code>-Literal is a special literal intended mainly for the use i
                      (i>7 and i mod 7=0) ? void : i);
 out> [2,3,5,7,11,13,17,19,23,29,31,37,41,43,47]
 <!--end-->
-</code>
 For usual operators, <code>void</code> behaves as neutral element. <br>
 It cannot be passed as a function argument.
 <h4><br><a name="errors">Errors</a></h4>
@@ -1392,14 +1365,13 @@ You should see them rarely and when you see them they should have a correspondin
 There is no way to directly write an error-literal.
 
 <h3><br><a name="lists">List</a></h3>
-Lists contain zero or more elements of any type. They are represented as an enumeration of their elements, surrounded by square brackets, e.g.<code>
+Lists contain zero or more elements of any type. They are represented as an enumeration of their elements, surrounded by square brackets, e.g.
 <!--mnh-->
   ["a",true,4.6,['another','list']]
 <!--end-->
-</code>
 This example also shows, that types within a list can be mixed. You can use the same notation to construct lists.<br>In addition there is the <code>..</code>-separator, which is only allowed in list constructors.
 It enumerates values, e.g. <code>[1..5]</code> gives <code>[1,2,3,4,5]</code>. Enumeration is possible independent from the ordering and is supported for integers within 64bit range and one-character-strings.<br>
-List elements can be extracted from Lists via the <code>get</code> function or the associated shorthand <code>[?]</code>. The most straightforward way is access by a single index:<code>
+List elements can be extracted from Lists via the <code>get</code> function or the associated shorthand <code>[?]</code>. The most straightforward way is access by a single index:
 <!--mnh-->
    in> simpleList :=['A'..'F'];
    in> simpleList.get(4);
@@ -1407,21 +1379,18 @@ List elements can be extracted from Lists via the <code>get</code> function or t
    in> simpleList[4];
   out> 'E'
 <!--end-->
-</code>
-Alternative accesses include access by a list of indexes...<code>
+Alternative accesses include access by a list of indexes...
 <!--mnh-->
    in> simpleList.get([1, 5, 3]);
   out> ['B','F','D']
 <!--end-->
-</code>
-...or by a list of booleans, which must have the same length as the accessed list. <code>
+...or by a list of booleans, which must have the same length as the accessed list.
 <!--mnh-->
    in> simpleList.get(simpleList<='C');
   out> ['A','B','C']
 <!--end-->
-</code>
 <br>
-Elements of general nested lists/maps can also be accessed conveniently (or inconveniently as you can see in the following equivalent examples):<code>
+Elements of general nested lists/maps can also be accessed conveniently (or inconveniently as you can see in the following equivalent examples):
 <!--mnh-->
    in> nested :=[[1, 2, 3],[4, 5, 6],[7, 8, 9]];
    in> nested.get(1).get(2);
@@ -1433,29 +1402,26 @@ Elements of general nested lists/maps can also be accessed conveniently (or inco
    in> nested[1,2];
   out> 6
 <!--end-->
-</code>
-And finally there is the function <code>getInner</code> which allows access by index <i>k</i>, returning the <i>k</i>-th element of each sublist:<code>
+And finally there is the function <code>getInner</code> which allows access by index <i>k</i>, returning the <i>k</i>-th element of each sublist:
 <!--mnh-->
  in> nested.getInner(1);
 out> [2,5,8]
 <!--end-->
-</code>
 
 <h3><br><a name="sets">Sets</a></h3>
 Sets are internally represented as hash maps. Like lists they can be iterated e.g. using the <a href="specials.html#each">each</a> construct.<br>
-Maps are constructed as lists (where each element is a key-value-pair) and then converted to a map:<code>
+Maps are constructed as lists (where each element is a key-value-pair) and then converted to a map:
 <!--mnh-->
    in> [1..5, 11..15].toSet;
   out> [1,2,3,4,5,11,12,13,14,15].toSet
 <!--end-->
-</code>
 Unlike lists, access via index or boolean mask is not possible.<br>
 If a set is cast to a list the list will be sorted. If a list is cast to a set, naturally, duplicates will be lost.
 
 <h3><br><a name="maps">Maps</a></h3>
 Maps are internally represented as hash maps. Their entry-sets can be iterated e.g. using the <a href="specials.html#each">each</a> construct.<br>
 Maps are constructed as lists (where each element is a key-value-pair) and then converted to a map. For convenience, there is the <code>=&gt;</code> operator 
-which constructs a key-value-pair (or generally speaking a list of two elements):<code>
+which constructs a key-value-pair (or generally speaking a list of two elements):
 <!--mnh-->
    in> 1 => 2;
   out> [1,2]
@@ -1464,21 +1430,18 @@ which constructs a key-value-pair (or generally speaking a list of two elements)
    ..>  'B'=>2,
    ..>  'C'=>3].toMap
 <!--end-->
-</code>
 
-Element access by key is possible (and encouraged for performance reasons). For maps, the following statements will return the same result:<code>
+Element access by key is possible (and encouraged for performance reasons). For maps, the following statements will return the same result:
 <!--mnh-->
   map.get(key);
   map[key];
   map.each(entry,entry[0]==key ? entry[1] : void,head);
 <!--end-->
-</code>
-For compound accesses there also is the getAll method, whose behavior is like the following each statement:<code>
+For compound accesses there also is the getAll method, whose behavior is like the following each statement:
 <!--mnh-->
   map.getAll(keySet);
   map.each(entry,entry[0] in keySet ? entry[1] : void);
 <!--end-->
-</code>
 
 </div>
 <!--commonFoot-->
@@ -1514,13 +1477,12 @@ For compound accesses there also is the getAll method, whose behavior is like th
 <div class="docContent">
 <h3><a name="each">each and pEach</a></h3>
 <h4><a name="syntax">Syntax</a></h4>
-The general syntax is: <code>
+The general syntax is:
 <!--mnh-->
   list.each(id,body,aggregator)
   list.pEach(id,body,aggregator)
   list.agg(aggregator)
 <!--end-->
-</code>
 Where <code>id</code> is an identifier,<br>
 <code>list</code> is a list or an expression returning a list,<br>
 <code>aggregator</code> (optional for <code>each</code> and <code>pEach</code>) is a full aggregator expression or a binary operator and<br>
@@ -1532,44 +1494,40 @@ but can be converted to an aggregator via the <a href="#aggregator">aggregator c
 
 <h4><br><a name="construction">List construction</a></h4>
 To construct a list, ommit the aggregator. The body part is mandatory.<br>
-Simple example: return the input list<code>
+Simple example: return the input list
 <!--mnh-->
    in> [0..3].each(i,i);
   out> [0,1,2,3]
 <!--end-->
-</code>
-You can also use multiple body parts. These are then interlaced in the resulting list:<code>
+You can also use multiple body parts. These are then interlaced in the resulting list:
 <!--mnh-->
    in> ['a'..'c'].each(c,c,upper(c));
   out> ['a','A','b','B','c','C']
 <!--end-->
-</code>
-Reasonable example: return <code>f(i)</code> for every element <code>i</code> in the input list:<code>
+Reasonable example: return <code>f(i)</code> for every element <code>i</code> in the input list:
 <!--mnh-->
    in> f(i)->-2*i;
    in> [0..3].each(i,f(i));
   out> [0,-2,-4,-6]
 <!--end-->
-</code>
-More complex: a function returning the intersection of sets A and B<code>
+
+More complex: a function returning the intersection of sets A and B
 <!--mnh-->
    in> intersect(A,B)->A.get(A.each(a,a in B));
    in> intersect(2*[0..10],3*[0..10]);
   out> [0,6,12,18]
 <!--end-->
-</code>
 
 <h4><br><a name="aggregation">List aggregation</a></h4>
 To aggregate a list, use an aggregator but no body.<br>
 If the list is empty, <code>void</code> is returned.<br>
-Simple example: a function returing the sum of the argument:<code>
+Simple example: a function returing the sum of the argument:
 <!--mnh-->
    in> sum([]):=0;
    in> sum(L<>[])->L.agg(+);
    in> sum([1,5,-2,7]);
   out> 11
 <!--end-->
-</code>
 Generally an aggregator is an expression expecting two parameters. Given an aggregator <code>a</code>, aggregation will be performed as follows:<code>
 <!--mnh-->
    in> [x0,x1,x2,x3,...].agg(a);
