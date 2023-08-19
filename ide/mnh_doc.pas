@@ -94,8 +94,8 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
       for i:=0 to length(txt)-1 do writeln('    ',txt[i]);
       {$endif}
 
-      if length(exampleSource)<=0 then exit;
-      if copy(exampleSource[0],1,3)='#I '
+      if (length(exampleSource)=0) and (length(idList)=0) then exit;
+      if (length(exampleSource)>0) and (copy(exampleSource[0],1,3)='#I ')
       then ids:=split(trim(copy(exampleSource[0],4,length(exampleSource[0])-3)),' ')
       else ids:=idList;
       sortUnique(ids);
