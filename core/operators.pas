@@ -1054,8 +1054,12 @@ FUNCTION perform_pot(CONST LHS,RHS:P_literal; CONST tokenLocation:T_tokenLocatio
     VAR tx, rx: T_myFloat;
         x:T_bigInt;
     begin
-      if exponent>=0
-      then begin
+      if      smallX= 1 then exit(recycler^.newIntLiteral(1))
+      else if smallX=-1 then begin
+        if odd(exponent)
+        then exit(recycler^.newIntLiteral(-1))
+        else exit(recycler^.newIntLiteral( 1));
+      end else if exponent>=0 then begin
         x.fromInt(smallX);
         result:=recycler^.newIntLiteral(x.pow(exponent));
         x.clear;
