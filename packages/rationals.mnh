@@ -117,6 +117,15 @@ OPERATOR_POT(a:Rational,p<0)->(a.reverseList^-p).toRational;
 @SuppressWarning
 OPERATOR_POT(L:GeneralNumberList,p>=0)->L.map((x)->x^p);
 
+OPERATOR_NEGATE_ARITHMETIC(a:Rational)->[-a[0],a[1]].toRational;
+
+sqr(x:Rational)->sqr(x.toBuiltin).shortenRational;
+sqrt(x:Rational)->begin
+  local a:=isqrt(x[0]);
+  local b:=isqrt(x[1]);
+  a[1] AND b[1] ? [a[0],b[0]].shortenRational : sqrt(x.toReal);
+end;
+
 @Override
 toRegularContinuedFraction(r:Real)->r.toRational.toRegularContinuedFraction;
 

@@ -1559,7 +1559,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
         result^.txt:=leadingId;
         result^.tokType:=tt_parameterIdentifier;
       end;
-      'a'..'z','A'..'Z':
+      'a'..'z','A'..'Z','_':
       if copy(line,inputLocation.column,length(C_tokenDefaultId[tt_operatorNotIn]))=C_tokenDefaultId[tt_operatorNotIn]
       then apply(tt_operatorNotIn)
       else begin

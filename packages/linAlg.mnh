@@ -8,7 +8,7 @@ ducktype Vector(V:NumericList)->true;
 private subMatrix(M:List,skipRow,skipCol)->
   M.each(row,index=skipRow
              ? void
-             : row.each(cell,index=skipCol ? void : cell));
+             : row.each(cell,index=skipCol ? void : cell)).toMatrix;
 
 private matrixDimensions(M:Matrix)->[M.size,M[0].size];
 
@@ -63,7 +63,7 @@ printMatrix(M:Matrix)->M.each(row,row.join("\t")).join("\n").print;
 toString(M:Matrix)->M.each(row,"\v|\t"&row.map(::toString).join("\t")&"\t|").join("\n");
 
 
-private sortByValueInRowDescending(L:List,rowIndex:Int)->L[sortPerm(-L.getInner(rowIndex).abs)];
+private sortByValueInRowDescending(L:List,rowIndex:Int)->L[sortPerm(-L.getInner(rowIndex).map(::toReal).abs)];
 
 cramerInvert(M:SquareMatrix)->begin
 (abs(local determinant:=M[0,0]*M[1,1]-M[1,0]*M[0,1])>1E-30
