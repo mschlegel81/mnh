@@ -30,3 +30,4 @@ versions/*.zip
 /core/res_version.inc
 /*/wpoData*
 *.lps
+/demos/inputs/unixdict2.txt
