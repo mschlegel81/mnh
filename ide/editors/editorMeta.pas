@@ -470,7 +470,7 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
     result:=false;
     if (language<>LANG_MNH) then exit(false);
     if renameInOtherEditors then begin
-      if not(isPseudoFile) then for fileName in findRelatedScriptsTransitive(fileInfo.filePath) do begin
+      if not(isPseudoFile) then for fileName in findScriptsUsing(ref.fileName) do begin
         editorWasThereBefore:=workspace.hasEditorForFile(fileName);
         meta:=workspace.addOrGetEditorMetaForFiles(fileName,false,false);
         if (meta<>nil) and not(meta^.doRename(ref,oldId,newId,false)) and not(editorWasThereBefore) then workspace.closeQuietly(meta);
