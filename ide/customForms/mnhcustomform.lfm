@@ -12,7 +12,7 @@ object scriptedForm: TscriptedForm
   OnDestroy = FormDestroy
   PopupMenu = PopupMenu1
   Position = poScreenCenter
-  LCLVersion = '2.0.10.0'
+  LCLVersion = '2.2.2.0'
   object closeButtonPanel: TPanel
     Left = 0
     Height = 25
@@ -27,11 +27,15 @@ object scriptedForm: TscriptedForm
     PopupMenu = PopupMenu1
     TabOrder = 0
     object closeButton: TButton
+      AnchorSideTop.Control = closeButtonPanel
+      AnchorSideRight.Control = closeButtonPanel
+      AnchorSideRight.Side = asrBottom
       Left = 287
       Height = 25
       Top = 0
       Width = 33
-      Align = alRight
+      Align = alCustom
+      Anchors = [akTop, akRight]
       AutoSize = True
       Caption = 'X'
       OnClick = closeButtonClick

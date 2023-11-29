@@ -801,13 +801,14 @@ FUNCTION clearPlotAnim_impl intFuncSignature;
 FUNCTION addAnimFrame_impl intFuncSignature;
   VAR request:P_plotAddAnimationFrameRequest;
       sleepInSeconds:double;
+      framesQueued: longint;
   begin
     if not(context^.checkSideEffects('clearAnimation',tokenLocation,[se_alterGuiState])) then exit(nil);
     if (params=nil) or (params^.size=0) then begin
       if (gui_started=NO) then context^.messages^.logGuiNeeded;
       new(request,create());
       context^.messages^.postCustomMessage(request);
-      sleepInSeconds:=request^.getProposedSleepTime(context^.messages);
+      sleepInSeconds:=request^.getProposedSleepTime(context^.messages,framesQueued);
       disposeMessage(request);
       if sleepInSeconds>0 then begin
         {$ifdef debugMode}
@@ -815,7 +816,7 @@ FUNCTION addAnimFrame_impl intFuncSignature;
         {$endif}
         sleep(round(1000*sleepInSeconds));
       end;
-      result:=newVoidLiteral;
+      result:=newMapLiteral(2)^.put(recycler,'sleep',sleepInSeconds)^.put(recycler,'frameCount',framesQueued);
     end else result:=nil;
   end;
 

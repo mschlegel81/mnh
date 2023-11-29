@@ -2083,7 +2083,7 @@ formatTime('hh:nn dd.mm.yyyy',systime);
 
 #I addAnimationFrame
 #S addAnimationFrame;
-#C Adds the current plot to the animation
+#C Adds the current plot to the animation and returns ['sleep'=>...,'frameCount'=>...].toMap
 
 #I display
 #S display;
