@@ -113,6 +113,7 @@ PROCEDURE T_fileOutputStream.cleanup(CONST literalRecycler: P_literalRecycler);
     enterCriticalSection(streamCs);
     try
       flushBuffer;
+      freeMem(buffer,FILE_BUFFER_SIZE);
       fileStream.destroy;
     except end;
     fileStream:=nil;
@@ -121,8 +122,6 @@ PROCEDURE T_fileOutputStream.cleanup(CONST literalRecycler: P_literalRecycler);
 
 DESTRUCTOR T_fileOutputStream.destroy;
   begin
-    cleanup(nil);
-    freeMem(buffer,FILE_BUFFER_SIZE);
     doneCriticalSection(streamCs);
   end;
 
