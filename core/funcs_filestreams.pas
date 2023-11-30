@@ -6,6 +6,7 @@ INTERFACE
 
 IMPLEMENTATION
 USES subrules,basicTypes,contexts,litVar,out_adapters, Classes, fileWrappers, sysutils, mnh_constants, recyclers, funcs;
+CONST FILE_BUFFER_SIZE = 1 shl 20;
 TYPE
 
 P_fileOutputStream=^T_fileOutputStream;
@@ -22,7 +23,7 @@ T_fileOutputStream=object(T_expression)
     streamCs    :TRTLCriticalSection;
     fileStream  : TFileStream;
     separator_: string;
-    buffer:array[0..4095] of byte;
+    buffer:PByte;
     bufferFill:longint;
 
     PROCEDURE writeBytes(CONST Buf; CONST byteCount:longint);
@@ -70,8 +71,8 @@ FUNCTION T_fileOutputStream.writeToStream(VAR serializer: T_literalSerializer): 
 PROCEDURE T_fileOutputStream.writeBytes(CONST Buf; CONST byteCount: longint);
   begin
     if byteCount<=0 then exit;
-    if bufferFill+byteCount>length(buffer) then flushBuffer;
-    if byteCount>=length(buffer) then begin
+    if bufferFill+byteCount>FILE_BUFFER_SIZE then flushBuffer;
+    if byteCount>=FILE_BUFFER_SIZE then begin
       fileStream.write(Buf,byteCount);
     end else begin
       move(Buf,buffer[bufferFill],byteCount);
@@ -102,6 +103,7 @@ CONSTRUCTOR T_fileOutputStream.create(CONST location: T_tokenLocation; CONST doA
       fileStream:=TFileStream.create(fileName,fmOpenReadWrite or fmShareDenyWrite);
       fileStream.Seek(0, soEnd);
     end else fileStream:=TFileStream.create(fileName,fmCreate);
+    getMem(buffer,FILE_BUFFER_SIZE);
     bufferFill:=0;
    end;
 
@@ -120,6 +122,7 @@ PROCEDURE T_fileOutputStream.cleanup(CONST literalRecycler: P_literalRecycler);
 DESTRUCTOR T_fileOutputStream.destroy;
   begin
     cleanup(nil);
+    freeMem(buffer,FILE_BUFFER_SIZE);
     doneCriticalSection(streamCs);
   end;
 
