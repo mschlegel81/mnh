@@ -2420,3 +2420,15 @@ bitXor(5,213,10);
 #I expandImageGeneration
 #S expandImageGeneration(s:String);
 #C Returns the generation algorithm with all fields
+
+#I newQueue
+#S newQueue;
+#C Returns a new queue; The queue can be filled with "put" and otherwise behaves as an iteratable.
+
+#I put
+#S put(Q:Queue, valueToAdd, ...);
+#C Adds one one or more values to the queue
+
+#I closeQueue
+#S closeQueue(Q:Queue);
+#C Closes the queue

@@ -126,7 +126,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="105">
+    <Units Count="106">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -663,6 +663,10 @@
         <Filename Value="../common/heaps.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit104>
+      <Unit105>
+        <Filename Value="../core/func_queues.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit105>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
