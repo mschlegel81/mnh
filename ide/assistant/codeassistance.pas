@@ -78,7 +78,7 @@ FUNCTION findRelatedScriptsTransitive(CONST scriptName:string):T_arrayOfString;
 
 VAR preparedResponses:specialize G_threadsafeQueue<P_codeAssistanceResponse>;
 IMPLEMENTATION
-USES FileUtil,sysutils,myStringUtil,commandLineParameters,SynHighlighterMnh,SynExportHTML,mnh_doc,messageFormatting,mySys;
+USES FileUtil,sysutils,myStringUtil,commandLineParameters,SynHighlighterMnh,mnh_doc,messageFormatting,mySys;
 TYPE T_usagePair=record usedScript,usingScript:string; end;
 VAR scriptUsage:record
       dat:array of T_usagePair;

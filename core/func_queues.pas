@@ -4,14 +4,12 @@ UNIT func_queues;
 
 INTERFACE
 USES sysutils,Classes,
-     mySys,myCrypto,bigint,myGenerics,
-     myStringUtil,
+     myGenerics,
      mnh_constants,
      basicTypes,
      out_adapters,
      litVar,
      funcs,contexts,
-     listProcessing,
      recyclers,
      subrules;
 

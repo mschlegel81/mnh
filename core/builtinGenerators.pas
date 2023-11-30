@@ -30,6 +30,7 @@ TYPE
     PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
     DESTRUCTOR destroy; virtual;
     FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
+    FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_listIterator.create(CONST literalRecycler:P_literalRecycler; CONST v: P_compoundLiteral; CONST location:T_tokenLocation);
@@ -77,6 +78,7 @@ TYPE
     PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
     DESTRUCTOR destroy; virtual;
     FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
+    FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_singleValueIterator.create(CONST v: P_literal; CONST location:T_tokenLocation);
@@ -132,6 +134,7 @@ TYPE
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
       FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
+      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_rangeGenerator.create(CONST first,last: P_abstractIntLiteral; CONST loc: T_tokenLocation);
@@ -242,6 +245,7 @@ TYPE
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
       FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
+      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_permutationIterator.create(CONST literalRecycler:P_literalRecycler;CONST i: int64; CONST loc: T_tokenLocation);
@@ -349,6 +353,7 @@ TYPE
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
       FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
+      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_filterGenerator.create(CONST source,filter: P_expressionLiteral; CONST loc:T_tokenLocation);
@@ -409,6 +414,7 @@ TYPE
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
       FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
+      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_mapGenerator.create(CONST source,mapEx: P_expressionLiteral; CONST loc: T_tokenLocation);
@@ -477,6 +483,7 @@ TYPE
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
       FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
+      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_flatMapGenerator.create(CONST source, mapEx: P_expressionLiteral;CONST loc: T_tokenLocation);
@@ -638,6 +645,7 @@ TYPE
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
       FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
+      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_chunkIterator.create(CONST source:P_expressionLiteral; CONST elementsPerChunk:longint; CONST mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
@@ -752,6 +760,7 @@ TYPE
       PROCEDURE collectResults(CONST container:P_collectionLiteral; CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
       FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
       FUNCTION mustBeDroppedBeforePop:boolean; virtual;
+      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
   P_parallelFilterGenerator=^T_parallelFilterGenerator;
@@ -762,6 +771,7 @@ TYPE
       CONSTRUCTOR create(CONST source,filterEx:P_expressionLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
+      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_parallelMapGenerator.create(CONST source, mapEx: P_expressionLiteral; CONST loc: T_tokenLocation);
@@ -1088,6 +1098,7 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
+      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 FUNCTION T_fileLineIterator.fillQueue:boolean;
@@ -1224,6 +1235,7 @@ TYPE
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
       PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
+      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 FUNCTION T_byteStreamIterator.fillQueue(CONST recycler: P_literalRecycler): boolean;
@@ -1374,6 +1386,7 @@ TYPE
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
       FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
+      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_primeGenerator.create(CONST loc: T_tokenLocation);
@@ -1459,6 +1472,7 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
+      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_stringIterator.create(CONST loc:T_tokenLocation; CONST chars:T_charSet; CONST minLength,maxLength:longint);
@@ -1571,6 +1585,7 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
+      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
   T_abstractRandomGenerator=object(T_builtinGeneratorExpression)
@@ -1592,6 +1607,7 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
+      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
   P_isaacRandomGenerator=^T_isaacRandomGenerator;
@@ -1603,6 +1619,7 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
+      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_abstractRandomGenerator.create(CONST maxValExclusive: P_abstractIntLiteral; CONST loc: T_tokenLocation);
@@ -1756,6 +1773,7 @@ T_vanDerCorputGenerator=object(T_builtinGeneratorExpression)
     FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
     FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
     FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
+    FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
 end;
 
 CONSTRUCTOR T_vanDerCorputGenerator.create(CONST base_: longint; CONST loc: T_tokenLocation);
@@ -1799,6 +1817,9 @@ FUNCTION vanDerCorputGenerator_impl intFuncSignature;
       new(P_vanDerCorputGenerator(result),create(int0^.intValue,tokenLocation));
   end;
 
+FUNCTION T_listIterator.getBultinGeneratorType:T_builtinGeneratorType;
+  begin result:=bgt_listIterator; end;
+
 FUNCTION T_listIterator.writeToStream(VAR serializer:T_literalSerializer):boolean;
   begin
     serializer.wrappedRaw^.writeByte(byte(typ));
@@ -1807,6 +1828,9 @@ FUNCTION T_listIterator.writeToStream(VAR serializer:T_literalSerializer):boolea
     result:=serializer.wrappedRaw^.allOkay;
   end;
 
+FUNCTION T_singleValueIterator.getBultinGeneratorType:T_builtinGeneratorType;
+  begin result:=bgt_singleValueIterator; end;
+
 FUNCTION T_singleValueIterator.writeToStream(VAR serializer:T_literalSerializer):boolean;
   begin
     serializer.wrappedRaw^.writeByte(byte(typ));
@@ -1814,6 +1838,9 @@ FUNCTION T_singleValueIterator.writeToStream(VAR serializer:T_literalSerializer)
     serializer.writeLiteral(value);
     result:=serializer.wrappedRaw^.allOkay;
   end;
+
+FUNCTION T_rangeGenerator.getBultinGeneratorType:T_builtinGeneratorType;
+  begin result:=bgt_rangeGenerator; end;
 
 FUNCTION T_rangeGenerator.writeToStream(VAR serializer:T_literalSerializer):boolean;
   VAR tmp:T_bigInt;
@@ -1837,6 +1864,9 @@ FUNCTION T_rangeGenerator.writeToStream(VAR serializer:T_literalSerializer):bool
     result:=serializer.wrappedRaw^.allOkay;
   end;
 
+FUNCTION T_permutationIterator.getBultinGeneratorType:T_builtinGeneratorType;
+  begin result:=bgt_permutationIterator; end;
+
 FUNCTION T_permutationIterator.writeToStream(VAR serializer:T_literalSerializer):boolean;
   begin
     serializer.wrappedRaw^.writeByte(byte(typ));
@@ -1844,6 +1874,9 @@ FUNCTION T_permutationIterator.writeToStream(VAR serializer:T_literalSerializer)
     serializer.writeLiteral(underlying);
     result:=true;
   end;
+
+FUNCTION T_filterGenerator.getBultinGeneratorType:T_builtinGeneratorType;
+  begin result:=bgt_filterGenerator; end;
 
 FUNCTION T_filterGenerator.writeToStream(VAR serializer:T_literalSerializer):boolean;
   begin
@@ -1854,6 +1887,9 @@ FUNCTION T_filterGenerator.writeToStream(VAR serializer:T_literalSerializer):boo
     result:=true;
   end;
 
+FUNCTION T_mapGenerator.getBultinGeneratorType:T_builtinGeneratorType;
+  begin result:=bgt_mapGenerator; end;
+
 FUNCTION T_mapGenerator.writeToStream(VAR serializer:T_literalSerializer):boolean;
   begin
     serializer.wrappedRaw^.writeByte(byte(typ));
@@ -1862,6 +1898,9 @@ FUNCTION T_mapGenerator.writeToStream(VAR serializer:T_literalSerializer):boolea
     serializer.writeLiteral(mapExpression);
     result:=true;
   end;
+
+FUNCTION T_flatMapGenerator.getBultinGeneratorType:T_builtinGeneratorType;
+  begin result:=bgt_flatMapGenerator; end;
 
 FUNCTION T_flatMapGenerator.writeToStream(VAR serializer:T_literalSerializer):boolean;
   begin
@@ -1873,6 +1912,9 @@ FUNCTION T_flatMapGenerator.writeToStream(VAR serializer:T_literalSerializer):bo
     then serializer.writeLiteral(mapExpression);
     result:=true;
   end;
+
+FUNCTION T_chunkIterator.getBultinGeneratorType:T_builtinGeneratorType;
+  begin result:=bgt_chunkMapGenerator; end;
 
 FUNCTION T_chunkIterator.writeToStream(VAR serializer:T_literalSerializer):boolean;
   begin
@@ -1886,6 +1928,9 @@ FUNCTION T_chunkIterator.writeToStream(VAR serializer:T_literalSerializer):boole
     result:=true;
   end;
 
+FUNCTION T_parallelMapGenerator.getBultinGeneratorType:T_builtinGeneratorType;
+  begin result:=bgt_parallelMapGenerator; end;
+
 FUNCTION T_parallelMapGenerator.writeToStream(VAR serializer:T_literalSerializer):boolean;
   begin
     serializer.wrappedRaw^.writeByte(byte(typ));
@@ -1894,6 +1939,9 @@ FUNCTION T_parallelMapGenerator.writeToStream(VAR serializer:T_literalSerializer
     serializer.writeLiteral(mapExpression);
     result:=true;
   end;
+
+FUNCTION T_parallelFilterGenerator.getBultinGeneratorType:T_builtinGeneratorType;
+  begin result:=bgt_parallelFilterGenerator; end;
 
 FUNCTION T_parallelFilterGenerator.writeToStream(VAR serializer:T_literalSerializer):boolean;
   begin
@@ -1904,12 +1952,18 @@ FUNCTION T_parallelFilterGenerator.writeToStream(VAR serializer:T_literalSeriali
     result:=true;
   end;
 
+FUNCTION T_primeGenerator.getBultinGeneratorType:T_builtinGeneratorType;
+  begin result:=bgt_primeGenerator; end;
+
 FUNCTION T_primeGenerator.writeToStream(VAR serializer:T_literalSerializer):boolean;
   begin
     serializer.wrappedRaw^.writeByte(byte(typ));
     serializer.wrappedRaw^.writeByte(byte(bgt_primeGenerator));
     result:=true;
   end;
+
+FUNCTION T_vanDerCorputGenerator.getBultinGeneratorType:T_builtinGeneratorType;
+  begin result:=bgt_vanDerCorputGenerator; end;
 
 FUNCTION T_vanDerCorputGenerator.writeToStream(VAR serializer:T_literalSerializer):boolean;
   begin
@@ -1918,6 +1972,13 @@ FUNCTION T_vanDerCorputGenerator.writeToStream(VAR serializer:T_literalSerialize
     serializer.wrappedRaw^.writeNaturalNumber(base);
     result:=true;
   end;
+
+FUNCTION T_fileLineIterator    .getBultinGeneratorType:T_builtinGeneratorType; begin result:=bgt_fileLineIterator;       end;
+FUNCTION T_byteStreamIterator  .getBultinGeneratorType:T_builtinGeneratorType; begin result:=bgt_byteStreamIterator;     end;
+FUNCTION T_stringIterator      .getBultinGeneratorType:T_builtinGeneratorType; begin result:=bgt_stringIterator;         end;
+FUNCTION T_realRandomGenerator .getBultinGeneratorType:T_builtinGeneratorType; begin result:=bgt_realRandomGenerator;    end;
+FUNCTION T_intRandomGenerator  .getBultinGeneratorType:T_builtinGeneratorType; begin result:=bgt_xorIntRandomGenerator;  end;
+FUNCTION T_isaacRandomGenerator.getBultinGeneratorType:T_builtinGeneratorType; begin result:=bgt_isaacIntRandomGenerator end;
 
 FUNCTION newGeneratorFromStream(VAR deserializer:T_literalDeserializer):P_builtinGeneratorExpression;
   VAR generatorType:T_builtinGeneratorType;

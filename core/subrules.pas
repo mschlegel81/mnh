@@ -211,7 +211,8 @@ TYPE
                           bgt_parallelFilterGenerator,
                           bgt_flatMapGenerator,
                           bgt_chunkMapGenerator,
-                          bgt_queue);
+                          bgt_queue,
+                          bgt_byteStreamIterator);
 
   P_builtinGeneratorExpression=^T_builtinGeneratorExpression;
   T_builtinGeneratorExpression=object(T_expression)
