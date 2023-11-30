@@ -126,7 +126,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="106">
+    <Units Count="107">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -667,6 +667,11 @@
         <Filename Value="../core/func_queues.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit105>
+      <Unit106>
+        <Filename Value="../core/funcs_filestreams.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="funcs_fileStreams"/>
+      </Unit106>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

@@ -2432,3 +2432,9 @@ bitXor(5,213,10);
 #I closeQueue
 #S closeQueue(Q:Queue);
 #C Closes the queue
+
+#I newFileOutputStream
+#S newFileOutputStream(filename:String, append:Boolean, separator:String);
+#C Creates a new file output stream which can be called with bytes, strings, booleans and reals to be written to the file.
+#C Parameter append can be omitted. It defaults to false.
+#C Parameter separator can be omitted. It defaults to an empty string.
