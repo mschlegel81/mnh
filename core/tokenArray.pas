@@ -762,11 +762,16 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
 PROCEDURE T_idStack.popRemaining;
   VAR topIdx:longint;
       i:longint;
+      lastLocation: T_tokenLocation;
   begin
+    if prevToken=nil then exit;
+    lastLocation:=prevToken^.location;
+    lastLocation.line:=maxLongint;
+    lastLocation.column:=maxLongint;
     topIdx:=length(scope)-1;
     while topIdx>=0 do begin
       with scope[topIdx] do for i:=0 to length(ids)-1 do begin
-        if localIdInfos<>nil then localIdInfos^.addLocalIdInfo(ids[i].name,ids[i].location,prevToken^.location,ids[i].idType);
+        if localIdInfos<>nil then localIdInfos^.addLocalIdInfo(ids[i].name,ids[i].location,lastLocation,ids[i].idType);
       end;
       setLength(scope[topIdx].ids,0);
       topIdx-=1;

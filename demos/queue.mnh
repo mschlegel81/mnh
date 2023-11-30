@@ -1,30 +1,8 @@
-//Marker type
-@SuppressUnusedParameterWarning
-type Queue(x:StatefulExpression(1))->true;
-newQueue->{
-  begin
-    local q:=[];
-    local op:=[['empty',{q.size=0}],
-               ['push' ,{q|=$x}],
-               ['pop'  ,{begin local result:=q[0]; q.size>0 ? q[0]:=void : void; result; end}]].toMap;
-  save;
-    op[$p[0]]($p[1]);
-  end}.toQueue;
-
-pop  (queue:Queue      )->queue(['pop']);
-push (queue:Queue,value)->queue(['push',value]);
-@SuppressUnusedWarning
-empty(queue:Queue      )->queue(['empty']);
-
-dequeueIterator(queue:Queue)->{begin local q:=queue; save; q.pop; end}.toIteratableExpression;
-enqueueConsumer(queue:Queue)->{begin local q:=queue; save; q.push($0); end};
-
 @demo_for=expressions/stateful, custom types
 main->begin
   local Q:=newQueue;
-  local deq:=dequeueIterator(Q);
-  local enq:=enqueueConsumer(Q);
-  [1..100].each(i,enq(i),(i and 1)=1 ? deq() : void);
-  print('The next element is ',Q.pop);
-  deq.map(::print).agg(|);
+  [1..100].each(i,Q.put(i),(i and 1)=1 ? Q() : void);
+  print('The next element is ',Q());
+  Q.closeQueue;
+  Q.map(::print).agg(|);
 end;

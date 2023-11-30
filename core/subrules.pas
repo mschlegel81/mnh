@@ -210,7 +210,9 @@ TYPE
                           bgt_vanDerCorputGenerator,
                           bgt_parallelFilterGenerator,
                           bgt_flatMapGenerator,
-                          bgt_chunkMapGenerator);
+                          bgt_chunkMapGenerator,
+                          bgt_queue,
+                          bgt_byteStreamIterator);
 
   P_builtinGeneratorExpression=^T_builtinGeneratorExpression;
   T_builtinGeneratorExpression=object(T_expression)
@@ -226,6 +228,7 @@ TYPE
       FUNCTION getId:T_idString; virtual;
       FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
       FUNCTION referencesAnyUserPackage:boolean; virtual;
+      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual; abstract;
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST messages:P_messages);

@@ -112,11 +112,12 @@ TYPE
   T_plotAddAnimationFrameRequest=object(T_payloadMessage)
     private
       propSleep:double;
+      framesInQueue:longint;
     public
       FUNCTION internalType:shortstring; virtual;
       CONSTRUCTOR create();
-      FUNCTION getProposedSleepTime(CONST errorFlagProvider:P_messages):double;
-      PROCEDURE markExecuted(CONST proposedSleepTime:double);
+      FUNCTION getProposedSleepTime(CONST errorFlagProvider:P_messages; OUT framesQueued:longint):double;
+      PROCEDURE markExecuted(CONST proposedSleepTime:double; CONST framesQueued:longint);
   end;
 
   T_frameCacheMode=(fcm_none,fcm_retainImage,fcm_inMemoryPng,fcm_tempFile);
@@ -305,7 +306,7 @@ CONSTRUCTOR T_plotAddAnimationFrameRequest.create();
     propSleep:=-1;
   end;
 
-FUNCTION T_plotAddAnimationFrameRequest.getProposedSleepTime(CONST errorFlagProvider:P_messages):double;
+FUNCTION T_plotAddAnimationFrameRequest.getProposedSleepTime(CONST errorFlagProvider:P_messages; OUT framesQueued:longint):double;
   begin
     enterCriticalSection(messageCs);
     while (propSleep<0) and (errorFlagProvider^.continueEvaluation) do begin
@@ -313,16 +314,18 @@ FUNCTION T_plotAddAnimationFrameRequest.getProposedSleepTime(CONST errorFlagProv
       sleep(1); ThreadSwitch;
       enterCriticalSection(messageCs);
     end;
+    framesQueued:=framesInQueue;
     result:=propSleep;
     leaveCriticalSection(messageCs);
   end;
 
-PROCEDURE T_plotAddAnimationFrameRequest.markExecuted(CONST proposedSleepTime:double);
+PROCEDURE T_plotAddAnimationFrameRequest.markExecuted(CONST proposedSleepTime:double; CONST framesQueued:longint);
   begin
     enterCriticalSection(messageCs);
     if (proposedSleepTime<0) or (isNan(proposedSleepTime)) or (isInfinite(proposedSleepTime))
     then propSleep:=0
     else propSleep:=proposedSleepTime;
+    framesInQueue:=framesQueued;
     leaveCriticalSection(messageCs);
   end;
 
@@ -1658,8 +1661,8 @@ FUNCTION T_plotSystem.append(CONST message: P_storedMessage): boolean;
         end;
         mt_plot_addAnimationFrame: begin
           if animation.volatile
-          then P_plotAddAnimationFrameRequest(message)^.markExecuted((animation.frameCount-VOLATILE_FRAMES_MAX)/25)
-          else P_plotAddAnimationFrameRequest(message)^.markExecuted(0);
+          then P_plotAddAnimationFrameRequest(message)^.markExecuted((animation.frameCount-VOLATILE_FRAMES_MAX)/25,animation.frameCount)
+          else P_plotAddAnimationFrameRequest(message)^.markExecuted(0,animation.frameCount);
           result:=true;
           //if there are pending tasks then store else process
           if sandboxed

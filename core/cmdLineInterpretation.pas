@@ -34,6 +34,8 @@ USES evaluation,
      funcs_xml,
      funcs_json,
      funcs_interpolators,
+     func_queues,
+     funcs_fileStreams,
      builtinGenerators,
      consoleAsk,
      basicTypes;

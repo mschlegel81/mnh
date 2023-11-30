@@ -2,7 +2,6 @@ UNIT mnh_html;
 INTERFACE
 USES sysutils,
      FileUtil,
-     myStringUtil,
      mnh_constants,
      tokens;
 TYPE
