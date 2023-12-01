@@ -7,6 +7,8 @@ USES funcs,
      recyclers,
      operators;
 TYPE
+  F_addToAggregationCall=PROCEDURE (er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler) of object;
+
   T_aggregator=object
   private
     resultLiteral:P_literal;

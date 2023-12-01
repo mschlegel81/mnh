@@ -22,7 +22,7 @@ timedExecute(exe:String,params)->begin
 end;
 
 findExecutables->allFiles('.','mnh*.exe').pFilter((executable)->begin
-  local output:=executable.exec(['-info']);
+  local output:=executable.exec(['-info'],false);
   output[1]!=0
   ? false
   : begin
