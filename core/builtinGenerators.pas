@@ -406,6 +406,7 @@ TYPE
     private
       sourceGenerator:P_expressionLiteral;
       mapExpression:P_expressionLiteral;
+      getCall,mapCall:F_evaluateToLiteralCall;
       isNullary:boolean;
     public
       CONSTRUCTOR create(CONST source,mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
@@ -422,8 +423,10 @@ CONSTRUCTOR T_mapGenerator.create(CONST source,mapEx: P_expressionLiteral; CONST
     inherited create(loc);
     sourceGenerator:=source;
     sourceGenerator^.rereference;
+    getCall:=@sourceGenerator^.evaluateToLiteral;
     mapExpression:=mapEx;
     mapExpression^.rereference;
+    mapCall:=@mapExpression^.evaluateToLiteral;
     isNullary:=not(mapEx^.canApplyToNumberOfParameters(1));
   end;
 
@@ -438,13 +441,17 @@ FUNCTION T_mapGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST 
   begin
     result:=NIL_EVAL_RESULT;
     repeat
-      nextUnmapped:=sourceGenerator^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
+      nextUnmapped:=getCall(location,context,recycler,nil,nil).literal;
       if (nextUnmapped<>nil) and (nextUnmapped^.literalType<>lt_void) then begin
-        if isNullary then result:=mapExpression^.evaluateToLiteral(location,context,recycler,nil         ,nil)
-                     else result:=mapExpression^.evaluateToLiteral(location,context,recycler,nextUnmapped,nil);
+        if isNullary then result:=mapCall(location,context,recycler,nil         ,nil)
+                     else result:=mapCall(location,context,recycler,nextUnmapped,nil);
         P_recycler(recycler)^.disposeLiteral(nextUnmapped);
         //error handling
-        if result.literal=nil then begin result.literal:=newVoidLiteral; result.reasonForStop:=rr_ok; exit(result); end;
+        if result.literal=nil then begin
+          result.literal:=newVoidLiteral;
+          result.reasonForStop:=rr_ok;
+          exit(result);
+        end;
         if result.literal^.literalType=lt_void then P_recycler(recycler)^.disposeLiteral(result.literal);
       end else begin
         if nextUnmapped=nil
@@ -832,7 +839,7 @@ FUNCTION T_parallelMapGenerator.nextTask(VAR nextUnmapped:P_literal; CONST loc: 
       dec(fill);
       task:=P_mapTask(dat[fill]);
       task^.reattach(recycler);
-    end else new(task,createMapTask(context^.getFutureEnvironment(recycler),mapExpression));
+    end else new(task,createMapTask(context^.getFutureEnvironment(recycler),@mapExpression^.evaluateToLiteral));
     inc(myQueuedTasks);
     if firstToAggregate=nil then begin
       firstToAggregate:=task;
@@ -851,7 +858,7 @@ FUNCTION T_parallelFilterGenerator.nextTask(VAR nextUnmapped:P_literal; CONST lo
       dec(fill);
       task:=P_filterTask(dat[fill]);
       task^.reattach(recycler);
-    end else new(task,createFilterTask(context^.getFutureEnvironment(recycler),mapExpression));
+    end else new(task,createFilterTask(context^.getFutureEnvironment(recycler),@mapExpression^.evaluateToBoolean));
     inc(myQueuedTasks);
     if firstToAggregate=nil then begin
       firstToAggregate:=task;
