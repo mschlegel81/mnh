@@ -45,15 +45,15 @@ FUNCTION head_imp intFuncSignature;
 {$define SCALAR_FALLBACK:=result:=arg0^.rereferenced}
   VAR i:longint;
       valueToAppend:P_literal;
-      iterator:P_expressionLiteral;
+      getNext:F_evaluateToLiteralCall;
       tempList:P_listLiteral;
   begin
     if IS_GENERATOR_CASE then begin
        if int1^.intValue=0 then exit(recycler^.newListLiteral());
-       iterator:=P_expressionLiteral(arg0);
+       getNext:=@P_expressionLiteral(arg0)^.evaluateToLiteral;
        result:=recycler^.newListLiteral(int1^.intValue);
        for i:=1 to int1^.intValue do begin
-         valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,context,recycler,nil,nil).literal;
+         valueToAppend:=getNext(tokenLocation,context,recycler,nil,nil).literal;
          if (valueToAppend=nil) or (valueToAppend^.literalType=lt_void)
          then break
          else listResult^.append(recycler,valueToAppend,false);
@@ -67,19 +67,20 @@ FUNCTION trailing_imp intFuncSignature;
 {$define CALL_MACRO:=trailing}
   VAR i:longint;
       valueToAppend:P_literal;
-      iterator:P_expressionLiteral;
+      getNext:F_evaluateToLiteralCall;
       buffer:T_arrayOfLiteral;
       tempList:P_listLiteral;
   begin
     if IS_GENERATOR_CASE then begin
        if int1^.intValue=0 then exit(recycler^.newListLiteral());
-       iterator:=P_expressionLiteral(arg0);
+       getNext:=@P_expressionLiteral(arg0)^.evaluateToLiteral;
        setLength(buffer,int1^.intValue);
        for i:=0 to length(buffer)-1 do buffer[i]:=nil;
        repeat
-         valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,context,recycler,nil,nil).literal;
+         valueToAppend:=getNext(tokenLocation,context,recycler,nil,nil).literal;
          if (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) then begin
            if buffer[0]<>nil then recycler^.disposeLiteral(buffer[0]);
+           //TODO MSC: This could be optimized by using a rolling buffer.
            for i:=1 to length(buffer)-1 do buffer[i-1]:=buffer[i];
            buffer[length(buffer)-1]:=valueToAppend;
          end;
@@ -94,18 +95,19 @@ FUNCTION trailing_imp intFuncSignature;
 FUNCTION tail_imp intFuncSignature;
 {$define CALL_MACRO:=tail}
 {$define SCALAR_FALLBACK:=result:=recycler^.newListLiteral}
-  VAR valueToAppend:P_literal;
+  VAR L:P_literal;
+      getNext:F_evaluateToLiteralCall;
+      i:longint;
       tempList:P_listLiteral;
   begin
     if IS_GENERATOR_CASE then begin
-       tempList:=recycler^.newListLiteral();
-       repeat
-         valueToAppend:=P_expressionLiteral(arg0)^.evaluateToLiteral(tokenLocation,context,recycler,nil,nil).literal;
-         if (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) then tempList^.append(recycler,valueToAppend,false);
-       until (valueToAppend=nil) or (valueToAppend^.literalType=lt_void);
-       result:=tempList^.tail(recycler,int1^.intValue);
-       recycler^.disposeLiteral(tempList);
-       exit(result);
+       //"tail" of a generator is obtained by calling it n times
+       getNext:=@P_expressionLiteral(arg0)^.evaluateToLiteral;
+       for i:=1 to int1^.intValue do begin
+         L:=getNext(tokenLocation,context,recycler,nil,nil).literal;
+         if L<>nil then recycler^.disposeLiteral(L);
+       end;
+       exit(arg0^.rereferenced);
     end;
     SUB_LIST_IMPL;
   end;
@@ -502,7 +504,7 @@ FUNCTION cross_impl intFuncSignature;
 FUNCTION group_imp intFuncSignature;
   VAR listToGroup:P_listLiteral;
       keyList:T_arrayOfLiteral;
-      aggregator:P_expressionLiteral=nil;
+      callAggregator: F_evaluateToLiteralCall=nil;
       groupMap:P_literalKeyLiteralValueMap;
 
   PROCEDURE makeKeysByIndex(CONST index:longint);
@@ -531,7 +533,7 @@ FUNCTION group_imp intFuncSignature;
         resultLiteral:P_literal;
     begin
       resultLiteral:=groupMap^.get(groupKey,nil);
-      if aggregator=nil then begin
+      if callAggregator=nil then begin
         if resultLiteral=nil then begin
           resultLiteral:=recycler^.newListLiteral;
           groupMap^.put(groupKey^.rereferenced,resultLiteral);
@@ -542,12 +544,12 @@ FUNCTION group_imp intFuncSignature;
           groupKey^.rereference;
           resultLiteral:=L; L^.rereference;
         end else begin
-          newLit:=P_expressionLiteral(aggregator)^.evaluateToLiteral(tokenLocation,context,recycler,resultLiteral,L).literal;
+          newLit:=callAggregator(tokenLocation,context,recycler,resultLiteral,L).literal;
           if newLit<>nil then begin
             recycler^.disposeLiteral(resultLiteral);
             resultLiteral:=newLit;
           end else begin
-            context^.raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,tokenLocation);
+            context^.raiseError('Error performing aggregation in group-construct with aggregator '+arg2^.toString,tokenLocation);
             exit;
           end;
         end;
@@ -556,6 +558,9 @@ FUNCTION group_imp intFuncSignature;
     end;
 
   VAR inputIndex:longint;
+      newLit:P_literal;
+      resultLiteral:P_literal;
+
   begin
     result:=nil;
     if (params<>nil) and (params^.size>=2) and (params^.size<=3) and
@@ -564,8 +569,8 @@ FUNCTION group_imp intFuncSignature;
       ((params^.size=2) or (arg2^.literalType=lt_expression))
     then begin
       listToGroup:=P_listLiteral(arg0);
-      if (params^.size=3) then aggregator:=P_expressionLiteral(arg2)
-                          else aggregator:=nil;
+      if (params^.size=3) then callAggregator:=@P_expressionLiteral(arg2)^.evaluateToLiteral
+                          else callAggregator:=nil;
       if arg1^.literalType in [lt_smallint,lt_bigint]
       then begin
         initialize(keyList);
@@ -574,8 +579,37 @@ FUNCTION group_imp intFuncSignature;
 
       result:=newMapLiteral(0);
       groupMap:=P_mapLiteral(result)^.underlyingMap;
-      for inputIndex:=0 to length(keyList)-1 do if context^.continueEvaluation then
-        addToAggregation(keyList[inputIndex],listToGroup^.value[inputIndex]);
+
+      if callAggregator=nil then begin
+        for inputIndex:=0 to length(keyList)-1 do if context^.continueEvaluation then begin
+          resultLiteral:=groupMap^.get(keyList[inputIndex],nil);
+          if resultLiteral=nil then begin
+            resultLiteral:=recycler^.newListLiteral;
+            groupMap^.put(keyList[inputIndex]^.rereferenced,resultLiteral);
+          end;
+          P_listLiteral(resultLiteral)^.append(recycler,listToGroup^.value[inputIndex],true);
+
+        end;
+      end else begin
+        for inputIndex:=0 to length(keyList)-1 do if context^.continueEvaluation then begin
+          resultLiteral:=groupMap^.get(keyList[inputIndex],nil);
+          if resultLiteral=nil then begin
+            keyList[inputIndex]^.rereference;
+            resultLiteral:=listToGroup^.value[inputIndex]; listToGroup^.value[inputIndex]^.rereference;
+          end else begin
+            newLit:=callAggregator(tokenLocation,context,recycler,resultLiteral,listToGroup^.value[inputIndex]).literal;
+            if newLit<>nil then begin
+              recycler^.disposeLiteral(resultLiteral);
+              resultLiteral:=newLit;
+            end else begin
+              context^.raiseError('Error performing aggregation in group-construct with aggregator '+arg2^.toString,tokenLocation);
+              exit;
+            end;
+          end;
+          groupMap^.put(keyList[inputIndex],resultLiteral);
+        end;
+
+      end;
       recycler^.disposeLiterals(keyList);
       P_mapLiteral(result)^.ensureType;
     end;
@@ -584,7 +618,7 @@ FUNCTION group_imp intFuncSignature;
 FUNCTION groupToList_imp intFuncSignature;
   VAR keyList     :array of longint;
       defaultValue:P_literal;
-      aggregator  :P_expressionLiteral;
+      callAggregator: F_evaluateToLiteralCall=nil;
 
       temp        :P_literal;
       resultValues:T_arrayOfLiteral;
@@ -601,7 +635,7 @@ FUNCTION groupToList_imp intFuncSignature;
        ((params^.size=4) or (params^.value[4]^.literalType=lt_smallint) and (P_smallIntLiteral(params^.value[4])^.value>=0))
     then begin
       defaultValue:=arg2;
-      aggregator  :=P_expressionLiteral(arg3);
+      callAggregator  :=@P_expressionLiteral(arg3)^.evaluateToLiteral;
       if params^.size<=4
       then resultValueCount:=0
       else resultValueCount:=P_smallIntLiteral(params^.value[4])^.value;
@@ -635,12 +669,12 @@ FUNCTION groupToList_imp intFuncSignature;
         if resultValues[key]=nil
         then resultValues[key]:=list0^.value[i]^.rereferenced
         else begin
-          temp:=aggregator^.evaluateToLiteral(tokenLocation,context,recycler,resultValues[key],list0^.value[i]).literal;
+          temp:=callAggregator(tokenLocation,context,recycler,resultValues[key],list0^.value[i]).literal;
           if temp<>nil then begin
             recycler^.disposeLiteral(resultValues[key]);
             resultValues[key]:=temp;
           end else begin
-            context^.raiseError('Error performing aggregation in group-construct with aggregator '+aggregator^.toString,tokenLocation);
+            context^.raiseError('Error performing aggregation in group-construct with aggregator '+arg3^.toString,tokenLocation);
             allOkay:=false;
           end;
         end;

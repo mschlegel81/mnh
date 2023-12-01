@@ -1720,12 +1720,18 @@ FUNCTION T_realRandomGenerator.toString(CONST lengthLimit: longint): string;
 
 FUNCTION T_intRandomGenerator.toString(CONST lengthLimit: longint): string;
   begin
-    result:='intRandomGenerator('+range.toString+')';
+    result:='intRandomGenerator(';
+    if isRangeSmall
+    then result+=intToStr(smallRange)+')'
+    else result+=range.toString      +')';
   end;
 
 FUNCTION T_isaacRandomGenerator.toString(CONST lengthLimit: longint): string;
   begin
-    result:='isaacRandomGenerator('+range.toString+')';
+    result:='isaacRandomGenerator(';
+    if isRangeSmall
+    then result+=intToStr(smallRange)+')'
+    else result+=range.toString      +')';
   end;
 
 FUNCTION T_realRandomGenerator.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult;

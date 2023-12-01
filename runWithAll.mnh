@@ -1,5 +1,4 @@
 #!/usr/bin/mnh_light -headless
-USE make_config;
 barPlot(captions:List,samples:NumericList,targetWidth>0)->
 barPlot(captions     ,samples            ,targetWidth,'%s');
 
@@ -22,11 +21,20 @@ timedExecute(exe:String,params)->begin
   scriptTime-t0;
 end;
 
+findExecutables->allFiles('.','mnh*.exe').pFilter((executable)->begin
+  local output:=executable.exec(['-info']);
+  output[1]!=0
+  ? false
+  : begin
+      output:=try(::interpret,[output[0]],false);
+      output.isMap AND !isVoid(output['codeVersion']);
+    end;
+end).map((exe)->relativeFileName('.',exe)).sort;
+
+//*Lists all available executables
+main('-list')->findExecutables.map(::print);
+
 main(...)->begin
-  local timedExes:=BUILDS.map({$B['canBuild'] ? $B['targetDest'] : void})
-                         .filter({$t.fileExists})
-                         .|(files('target\Win64\*'))
-                         .unique
-                         .each(target,[target,timedExecute(target,...)]);
+  local timedExes:=findExecutables.each(target,[target,timedExecute(target,...)]);
   barPlot(timedExes.getInner(0),timedExes.getInner(1),100).print;
 end;
