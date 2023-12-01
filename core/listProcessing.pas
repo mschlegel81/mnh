@@ -109,9 +109,9 @@ PROCEDURE processListSerial(CONST input:P_literal; CONST rulesList: T_expression
 {$MACRO ON}
 {$define processX:=begin
   indexLiteral:=recycler^.newIntLiteral(eachIndex);
-  for rule in rulesList do if proceed then begin
-    aggregator^.addToAggregation(
-      rule^.evaluateToLiteral(eachLocation,context,recycler,x,indexLiteral),
+  for ruleCall in ruleCalls do if proceed then begin
+    addToAggregator(
+      ruleCall(eachLocation,context,recycler,x,indexLiteral),
       true,
       eachLocation,
       context,recycler);
@@ -121,22 +121,33 @@ PROCEDURE processListSerial(CONST input:P_literal; CONST rulesList: T_expression
   recycler^.disposeLiteral(indexLiteral);
 end}
 
-  VAR rule:P_expressionLiteral;
+  VAR ruleCalls:array of F_evaluateToLiteralCall;
+      ruleCall ,
+      getNextInput: F_evaluateToLiteralCall;
+      addToAggregator: PROCEDURE (er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler) of object;
       eachIndex:longint=0;
       indexLiteral:P_abstractIntLiteral;
       iter:T_arrayOfLiteral;
       x:P_literal;
       proceed:boolean=true;
+      i: integer;
   begin
     {$ifdef fullVersion}
     if tco_stackTrace in context^.threadOptions then context^.callStackPush(eachLocation,'each',stepForward(eachLocation,5),nil);
     {$endif}
+
+    setLength(ruleCalls,length(rulesList));
+    for i:=0 to length(rulesList)-1 do ruleCalls[i]:=@rulesList[i]^.evaluateToLiteral;
+
+    addToAggregator:=@aggregator^.addToAggregation;
     if (input^.literalType=lt_expression) and (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then begin
-      x:=P_expressionLiteral(input)^.evaluateToLiteral(eachLocation,context,recycler,nil,nil).literal;
+      getNextInput:=@P_expressionLiteral(input)^.evaluateToLiteral;
+
+      x:=getNextInput(eachLocation,context,recycler,nil,nil).literal;
       while (x<>nil) and (x^.literalType<>lt_void) and proceed do begin
         processX;
         recycler^.disposeLiteral(x);
-        x:=P_expressionLiteral(input)^.evaluateToLiteral(eachLocation,context,recycler,nil,nil).literal;
+        x:=getNextInput(eachLocation,context,recycler,nil,nil).literal;
       end;
       if x<>nil then recycler^.disposeLiteral(x);
     end else if input^.literalType in C_compoundTypes then begin
@@ -157,6 +168,7 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
   VAR taskChain:T_taskChain;
       firstToAggregate:P_chainTask=nil;
       lastToAggregate:P_chainTask=nil;
+      addToAggregator: PROCEDURE (er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler) of object;
       myQueuedTasks:longint=0;
       recycling:record
         dat:array[0..FUTURE_RECYCLER_MAX_SIZE-1] of P_chainTask;
@@ -174,7 +186,7 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
         toAggregate:=firstToAggregate;
         firstToAggregate:=firstToAggregate^.nextToAggregate;
         dec(myQueuedTasks);
-        aggregator^.addToAggregation(P_eachTask(toAggregate)^.evaluationResult,true,eachLocation,context,recycler);
+        addToAggregator(P_eachTask(toAggregate)^.evaluationResult,true,eachLocation,context,recycler);
         with recycling do if fill<length(dat) then begin
           toAggregate^.nextToAggregate:=nil;
           dat[fill]:=toAggregate;
@@ -218,6 +230,8 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
       x:P_literal;
       iter:T_arrayOfLiteral;
       proceed:boolean=true;
+      getNextInput: F_evaluateToLiteralCall;
+
 {$define processX:=
   begin
   for rule in rulesList do if proceed then begin
@@ -232,17 +246,19 @@ end}
     {$ifdef fullVersion}
     if tco_stackTrace in context^.threadOptions then context^.callStackPush(eachLocation,'pEach',stepForward(eachLocation,6),nil);
     {$endif}
+    addToAggregator:=@aggregator^.addToAggregation;
     recycling.fill:=0;
     toQueueLimit:=TASKS_TO_QUEUE_PER_CPU*settings.cpuCount;
     if toQueueLimit<4 then toQueueLimit:=4;
     taskChain.create(toQueueLimit,context^);
     processed:=0;
     if (input^.literalType=lt_expression) and (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then begin
-      x:=P_expressionLiteral(input)^.evaluateToLiteral(eachLocation,context,recycler,nil,nil).literal;
+      getNextInput:=@P_expressionLiteral(input)^.evaluateToLiteral;
+      x:=getNextInput(eachLocation,context,recycler,nil,nil).literal;
       while (x<>nil) and (x^.literalType<>lt_void) and proceed do begin
         processX;
         recycler^.disposeLiteral(x);
-        x:=P_expressionLiteral(input)^.evaluateToLiteral(eachLocation,context,recycler,nil,nil).literal;
+        x:=getNextInput(eachLocation,context,recycler,nil,nil).literal;
       end;
       if x<>nil then recycler^.disposeLiteral(x);
     end else if input^.literalType in C_compoundTypes then begin

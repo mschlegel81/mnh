@@ -294,6 +294,8 @@ TYPE
       FUNCTION mustBeDroppedBeforePop:boolean; virtual;
   end;
 
+  F_evaluateToLiteralCall=FUNCTION (CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal; CONST b:P_literal):T_evaluationResult of object;
+
   T_typedef=object(T_objectWithIdAndLocation)
     private
       name:T_idString;
