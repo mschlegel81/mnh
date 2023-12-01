@@ -665,9 +665,9 @@ PROCEDURE displayHelp(CONST adapters:P_messages);
     append(linesToPrint,C_tabChar+MARK_LOCLEN+' <length>'+C_tabChar+'location length for log output. Applies to all logs defined afterwards');
     append(linesToPrint,C_tabChar+C_tabChar+'A length of zero is interpreted as "full location"');
     append(linesToPrint,C_tabChar+MARK_RESTRICT+' <profileName>'+C_tabChar+'Restricts the allowed side effects. Available restriction profiles:');
-    append(linesToPrint,C_tabChar+'-cpu[n]'+C_tabChar+'Sets the number of (logical) CPUs to use');
     for i:=0 to length(C_sideEffectProfile)-1 do if C_sideEffectProfile[i].name<>'' then
     append(linesToPrint,C_tabChar+C_tabChar+'  '+C_sideEffectProfile[i].name);
+    append(linesToPrint,C_tabChar+'-cpu[n]'+C_tabChar+'Sets the number of (logical) CPUs to use');
     linesToPrint:=formatTabs(linesToPrint);
     printOut;
   end;
