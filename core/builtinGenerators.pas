@@ -68,6 +68,112 @@ DESTRUCTOR T_listIterator.destroy;
   end;
 
 TYPE
+  P_zipIterator=^T_zipIterator;
+  T_zipIterator=object(T_builtinGeneratorExpression)
+    underlying:array of P_expression;
+    underlyingCall:array of F_evaluateToLiteralCall;
+    CONSTRUCTOR create(CONST location:T_tokenLocation);
+    PROCEDURE addUnderlying(CONST ex:P_expression);
+    FUNCTION addGenerator(CONST literal: P_literal; CONST literalRecycler: P_literalRecycler; CONST location: T_tokenLocation): boolean;
+    FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
+    FUNCTION evaluateToLiteral({$WARN 5024 OFF}CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
+    PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
+    DESTRUCTOR destroy; virtual;
+    FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
+    FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
+  end;
+
+CONSTRUCTOR T_zipIterator.create(CONST location: T_tokenLocation);
+  begin
+    inherited create(location);
+    setLength(underlying,0);
+  end;
+
+PROCEDURE T_zipIterator.addUnderlying(CONST ex: P_expression);
+  begin
+    setLength(underlying,length(underlying)+1);
+    underlying[length(underlying)-1]:=ex;
+    setLength(underlyingCall,length(underlying));
+    underlyingCall[length(underlying)-1]:=@ex^.evaluateToLiteral;
+  end;
+
+FUNCTION T_zipIterator.addGenerator(CONST literal: P_literal;CONST literalRecycler: P_literalRecycler; CONST location: T_tokenLocation): boolean;
+  VAR gen:P_listIterator;
+  begin
+    case literal^.literalType of
+      lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList, lt_emptyList,
+      lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet,  lt_emptySet,
+      lt_map,                                                                      lt_emptyMap:
+      begin
+        new(gen,create(literalRecycler,P_compoundLiteral(literal),location));
+        addUnderlying(gen);
+        result:=true;
+      end;
+      lt_expression: if P_expression(literal)^.typ in C_iteratableExpressionTypes
+      then begin
+        addUnderlying(P_expression(literal^.rereferenced));
+        result:=true;
+      end else result:=false;
+      else result:=false;
+    end;
+  end;
+
+FUNCTION T_zipIterator.toString(CONST lengthLimit: longint): string;
+  VAR ex:P_expression;
+      nextPart:string;
+      first:boolean=true;
+  begin
+    result:='transposeGenerator(';
+    for ex in underlying do begin
+      nextPart:=ex^.toString(lengthLimit-length(result)-3);
+      if length(result+nextPart)<lengthLimit
+      then result+=BoolToStr(first,'',', ')+nextPart
+      else begin
+        exit(result+', ...)');
+      end;
+      first:=false;
+    end;
+    result+=')';
+  end;
+
+FUNCTION T_zipIterator.evaluateToLiteral(CONST location: T_tokenLocation;
+  CONST context: P_abstractContext; CONST recycler: pointer;
+  CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
+  VAR listOutput:P_listLiteral;
+      call:F_evaluateToLiteralCall;
+      element:T_evaluationResult;
+  begin
+    listOutput:=P_literalRecycler(recycler)^.newListLiteral(length(underlying));
+    for call in underlyingCall do begin
+      element:=call(location,context,recycler,nil,nil);
+      if (element.reasonForStop = rr_ok) and (element.literal<>nil) and (element.literal^.literalType<>lt_void)
+      then listOutput^.append(recycler,element.literal,false)
+      else begin
+        P_literalRecycler(recycler)^.disposeLiteral(listOutput);
+        result.literal:=newVoidLiteral;
+        result.reasonForStop:=rr_ok;
+        exit(result);
+      end;
+    end;
+    result.reasonForStop:=rr_ok;
+    result.literal:=listOutput;
+  end;
+
+PROCEDURE T_zipIterator.cleanup(CONST literalRecycler: P_literalRecycler);
+  VAR i:longint;
+  begin
+    for i:=0 to length(underlying)-1 do literalRecycler^.disposeLiteral(underlying[i]);
+    setLength(underlying,0);
+    setLength(underlyingCall,0);
+  end;
+
+DESTRUCTOR T_zipIterator.destroy;
+  begin
+    assert(length(underlying)=0);
+    inherited;
+  end;
+
+TYPE
   P_singleValueIterator=^T_singleValueIterator;
   T_singleValueIterator=object(T_builtinGeneratorExpression)
     didDeliver:boolean;
@@ -1856,6 +1962,24 @@ FUNCTION T_listIterator.writeToStream(VAR serializer:T_literalSerializer):boolea
     result:=serializer.wrappedRaw^.allOkay;
   end;
 
+FUNCTION T_zipIterator.writeToStream(VAR serializer: T_literalSerializer
+  ): boolean;
+  VAR i:longint;
+  begin
+    serializer.wrappedRaw^.writeByte(byte(typ));
+    serializer.wrappedRaw^.writeByte(byte(bgt_zipIterator));
+    serializer.wrappedRaw^.writeNaturalNumber(length(underlying));
+    result:=true;
+    for i:=0 to length(underlying)-1 do
+      result:=result and underlying[i]^.writeToStream(serializer);
+    result:=result and serializer.wrappedRaw^.allOkay;
+  end;
+
+FUNCTION T_zipIterator.getBultinGeneratorType: T_builtinGeneratorType;
+  begin
+    result:=bgt_zipIterator;
+  end;
+
 FUNCTION T_singleValueIterator.getBultinGeneratorType:T_builtinGeneratorType;
   begin result:=bgt_singleValueIterator; end;
 
@@ -2109,9 +2233,39 @@ FUNCTION newGeneratorFromStream(VAR deserializer:T_literalDeserializer):P_builti
       end;
       bgt_primeGenerator: new(P_primeGenerator(result),create(deserializer.getLocation));
       bgt_vanDerCorputGenerator: new(P_vanDerCorputGenerator(result),create(deserializer.wrappedRaw^.readNaturalNumber,deserializer.getLocation));
+      bgt_zipIterator: begin
+        new(P_zipIterator(result),create(deserializer.getLocation));
+        intParameter:=deserializer.wrappedRaw^.readNaturalNumber;
+        while intParameter>0 do begin
+          lit:=deserializer.getLiteral;
+          P_zipIterator(result)^.addUnderlying(P_expression(lit));
+        end;
+      end;
     end;
     if result=nil then begin
       deserializer.raiseError('Cannot deserialize generator/iterator expression of type: '+getEnumName(TypeInfo(generatorType),ord(generatorType)));
+    end;
+  end;
+
+FUNCTION zip_imp intFuncSignature;
+  VAR anyExpression:boolean=false;
+      i:longint;
+      zip:P_zipIterator;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then result:=recycler^.newListLiteral(0)
+    else begin
+      for i:=0 to params^.size-1 do anyExpression:=anyExpression or (params^.value[i]^.literalType=lt_expression);
+      if anyExpression then begin
+        new(zip,create(tokenLocation));
+        for i:=0 to params^.size-1 do if not(zip^.addGenerator(params^.value[i],recycler,tokenLocation)) then begin
+          recycler^.disposeLiteral(zip);
+          exit(nil);
+        end;
+        result:=zip;
+      end else begin
+        result:=params^.transpose(recycler,nil);
+      end;
     end;
   end;
 
@@ -2135,5 +2289,6 @@ INITIALIZATION
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'intRandomGenerator',@intRandomGenerator_impl,ak_binary);
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'isaacRandomGenerator',@isaacRandomGenerator_impl,ak_binary);
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'vanDerCorputGenerator',@vanDerCorputGenerator_impl,ak_unary);
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'zip',@zip_imp,ak_variadic);
   listProcessing.newIterator:=@newIterator;
 end.

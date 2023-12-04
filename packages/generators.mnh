@@ -95,23 +95,6 @@ save;
   : next;
 end}.toIteratableExpression;
 
-//*Creates a co-iterator from multiple iterators/iteratables
-//*Requires at least two arguments as input
-coIterator(...)->
-assert(size(...)>1,'coIterator requires at least two iteratables as input') orElse
-{begin
-  local iterators:=(...).each(i,i.isIteratableExpression
-                                ? i
-                                : i.isIteratable
-                                  ? i.toIteratableExpression
-                                  : fail('Non iteratable argument: ',i));
-save;
-  iterators.each(iterator,begin
-    local fromIterator:=iterator();
-    fromIterator.isVoid ? return void : fromIterator;
-  end);
-end}.toIteratableExpression;
-
 //*Performs a dovetailing iteration over g1 and g2
 //*E.g. to iterate over all rational numbers r with 0<r<1 use:
 //*  dovetail(rangeGenerator(1),rangeGenerator(1))
