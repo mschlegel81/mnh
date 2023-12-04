@@ -2302,7 +2302,6 @@ expandedFileName('/home/user/file.ext');
 #S expandedFileName(F);
 #C Returns the expanded file name of file(s) given by string or stringList F
 
-
 ln(3);
 
 #I plot
@@ -2413,14 +2412,6 @@ bitXor(5,213,10);
 #S isIpcServerRunning;
 #C Returns true if this script is already running and called assertUniqueInstance
 
-#I randomIfs
-#S randomIfs;
-#C returns a random IFS to be fed to executeWorkflow
-
-#I expandImageGeneration
-#S expandImageGeneration(s:String);
-#C Returns the generation algorithm with all fields
-
 #I newQueue
 #S newQueue;
 #C Returns a new queue; The queue can be filled with "put" and otherwise behaves as an iteratable.
@@ -2442,3 +2433,4 @@ bitXor(5,213,10);
 #I zip
 #S zip(a,b,...);
 #C Returns an iterator over [a,b,...].transposed if any parameter is an iteratable expression or [a,b,...].transposed if all parameters are compound literals.
+zip(rangeGenerator(0),primeGenerator);
