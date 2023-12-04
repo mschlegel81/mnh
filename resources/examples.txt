@@ -2438,3 +2438,7 @@ bitXor(5,213,10);
 #C Creates a new file output stream which can be called with bytes, strings, booleans and reals to be written to the file.
 #C Parameter append can be omitted. It defaults to false.
 #C Parameter separator can be omitted. It defaults to an empty string.
+
+#I zip
+#S zip(a,b,...);
+#C Returns an iterator over [a,b,...].transposed if any parameter is an iteratable expression or [a,b,...].transposed if all parameters are compound literals.

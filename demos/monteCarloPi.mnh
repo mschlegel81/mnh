@@ -7,8 +7,6 @@ private vanDerCorputPi(sampleSize>0)->
   trueCount(vanDerCorputGenerator(2).head(sampleSize)²+
             vanDerCorputGenerator(3).head(sampleSize)²<1)/sampleSize*4;
 
-vanDerCorputPi(10^6);
-
 @demo_for=math/monte carlo
 //*Solves the "Monte carlo methods" task from http://rosettacode.org/wiki/Monte_Carlo_methods
 main->begin
