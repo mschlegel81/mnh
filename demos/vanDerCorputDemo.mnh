@@ -21,7 +21,7 @@ main->begin
   print('Index        | Van-der-Corput (2)');
   print('   | binary  | dec.   | binary');
   print('---+---------+--------+-----------');
-  coIterator([0..12],vanDerCorputGenerator(2))
+  zip([0..12],vanDerCorputGenerator(2))
   .map((x)->[x[0],x[0].binary,x[1],'0.'&round(32*x[1]).binary ])
   .printTable;
 
@@ -29,7 +29,7 @@ main->begin
   print('Index        | Van-der-Corput (3)');
   print('   | ternary | decimal  | ternary');
   print('---+---------+----------+-----------');
-  coIterator([0..12],vanDerCorputGenerator(3))
+  zip([0..12],vanDerCorputGenerator(3))
   .map((x)->[x[0],x[0].ternary,format('%0.8d',x[1]),'0.'&round(3^5*x[1]).ternary ])
   .printTable;
 end;

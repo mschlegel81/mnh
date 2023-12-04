@@ -152,6 +152,7 @@ FUNCTION T_zipIterator.evaluateToLiteral(CONST location: T_tokenLocation;
         P_literalRecycler(recycler)^.disposeLiteral(listOutput);
         result.literal:=newVoidLiteral;
         result.reasonForStop:=rr_ok;
+        exit(result);
       end;
     end;
     result.reasonForStop:=rr_ok;
