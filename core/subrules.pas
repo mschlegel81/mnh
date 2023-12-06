@@ -332,7 +332,7 @@ PROCEDURE T_inlineExpression.stripExpression;
       for i:=0 to length(preparedBody)-3 do preparedBody[i]:=preparedBody[i+1];
       dec(indexOfSave);
       setLength(preparedBody,length(preparedBody)-3);
-    end;
+    end else beginEndStripped:=false;
   end;
 
 PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; CONST context:P_context; CONST recycler:P_recycler; CONST eachLocation:T_tokenLocation);
@@ -342,6 +342,7 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; CONST contex
       subExpressionLevel:longint=0;
   begin
     setLength(preparedBody,rep^.getCount);
+    indexOfSave:=-1;
     t:=rep;
     i:=0;
     while t<>nil do begin
@@ -353,6 +354,7 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; CONST contex
         case token.tokType of
           tt_beginBlock   : begin inc(scopeLevel        ); parIdx:=-1; end;
           tt_endBlock     : begin dec(scopeLevel        ); parIdx:=-1; end;
+          tt_functionPattern,
           tt_expBraceOpen : begin inc(subExpressionLevel); parIdx:=-1; end;
           tt_expBraceClose: begin dec(subExpressionLevel); parIdx:=-1; end;
           tt_save: begin
