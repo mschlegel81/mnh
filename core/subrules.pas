@@ -25,11 +25,6 @@ TYPE
     key,value:string;
   end;
 
-  T_preparedToken=record
-    parIdx:longint;
-    token:T_token;
-  end;
-
   P_expression=^T_expression;
   T_expression=object(T_expressionLiteral)
     protected
@@ -76,15 +71,17 @@ TYPE
       subruleCallCs:TRTLCriticalSection;
       functionIdsReady:(NOT_READY,IDS_RESOLVED,IDS_RESOLVED_AND_INLINED);
       pattern:T_pattern;
-      preparedBody:array of T_preparedToken;
+      preparedBody:T_preparedTokenArray;
       customId:T_idString;
       meta:T_ruleMetaData;
 
       //save related:
+      beginEndStripped:boolean;
       indexOfSave:longint;
       saveValueStore:P_valueScope;
       currentlyEvaluating:boolean;
 
+      PROCEDURE stripExpression;
       PROCEDURE updatePatternForInline(CONST literalRecycler:P_literalRecycler);
       PROCEDURE constructExpression(CONST rep:P_token; CONST context:P_context; CONST recycler:P_recycler; CONST eachLocation:T_tokenLocation);
       CONSTRUCTOR init(CONST srt: T_expressionType; CONST location: T_tokenLocation);
@@ -321,17 +318,33 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; CONST context:P_context; CONST
     end;
   end;
 
+PROCEDURE T_inlineExpression.stripExpression;
+  VAR i:longint;
+  begin
+    if (preparedBody[                     0].token.tokType=tt_beginBlock) and
+       (preparedBody[length(preparedBody)-1].token.tokType=tt_endBlock  ) and
+       (preparedBody[length(preparedBody)-2].token.tokType=tt_semicolon )
+    then begin
+      beginEndStripped:=true;
+      preparedBody[                     0].token.destroy;
+      preparedBody[length(preparedBody)-1].token.destroy;
+      preparedBody[length(preparedBody)-2].token.destroy;
+      for i:=0 to length(preparedBody)-3 do preparedBody[i]:=preparedBody[i+1];
+      dec(indexOfSave);
+      setLength(preparedBody,length(preparedBody)-3);
+    end else beginEndStripped:=false;
+  end;
+
 PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; CONST context:P_context; CONST recycler:P_recycler; CONST eachLocation:T_tokenLocation);
   VAR t:P_token;
       i:longint;
       scopeLevel:longint=0;
       subExpressionLevel:longint=0;
-
   begin
     setLength(preparedBody,rep^.getCount);
+    indexOfSave:=-1;
     t:=rep;
     i:=0;
-    indexOfSave:=-1;
     while t<>nil do begin
       if (i>=length(preparedBody)) then setLength(preparedBody,length(preparedBody)+1);
       with preparedBody[i] do begin
@@ -341,6 +354,7 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; CONST contex
         case token.tokType of
           tt_beginBlock   : begin inc(scopeLevel        ); parIdx:=-1; end;
           tt_endBlock     : begin dec(scopeLevel        ); parIdx:=-1; end;
+          tt_functionPattern,
           tt_expBraceOpen : begin inc(subExpressionLevel); parIdx:=-1; end;
           tt_expBraceClose: begin dec(subExpressionLevel); parIdx:=-1; end;
           tt_save: begin
@@ -383,6 +397,7 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; CONST contex
       inc(i);
     end;
     setLength(preparedBody,i);
+    stripExpression;
   end;
 
 CONSTRUCTOR T_inlineExpression.init(CONST srt: T_expressionType; CONST location: T_tokenLocation);
@@ -396,6 +411,7 @@ CONSTRUCTOR T_inlineExpression.init(CONST srt: T_expressionType; CONST location:
     indexOfSave:=-1;
     saveValueStore:=nil;
     currentlyEvaluating:=false;
+    beginEndStripped:=false;
   end;
 
 CONSTRUCTOR T_inlineExpression.createForWhile(CONST rep: P_token; CONST declAt: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
@@ -541,6 +557,7 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; CONST contex
       inc(i);
     end;
     setLength(preparedBody,i);
+    stripExpression;
     updatePatternForInline(recycler);
   end;
 
@@ -607,12 +624,16 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
       VAR i:longint;
           level:longint=1;
       begin
-        for i:=indexOfSave+2 to length(preparedBody)-1 do with preparedBody[i] do
-        case token.tokType of
-          tt_assignNewBlockLocal: if level=1 then token.tokType:=tt_assignExistingBlockLocal;
-          tt_beginBlock: inc(level);
-          tt_endBlock:   dec(level);
+        for i:=0 to indexOfSave+1 do preparedBody[i].token.undefine(recycler);
+        for i:=0 to length(preparedBody)-(indexOfSave+2)-1 do begin
+          preparedBody[i]:=preparedBody[i+indexOfSave+2];
+          with preparedBody[i] do case token.tokType of
+            tt_assignNewBlockLocal: if level=1 then token.tokType:=tt_assignExistingBlockLocal;
+            tt_beginBlock: inc(level);
+            tt_endBlock:   dec(level);
+          end;
         end;
+        setLength(preparedBody,length(preparedBody)-(indexOfSave+2));
       end;
 
     VAR firstCallOfResumable:boolean=false;
@@ -670,7 +691,6 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
     CONST beginToken:array[false..true] of T_tokenType=(tt_beginExpression,tt_beginRule);
           endToken  :array[false..true] of T_tokenType=(tt_endExpression  ,tt_endRule);
     VAR i:longint;
-        firstRelevantToken,lastRelevantToken:longint;
         blocking:boolean;
         L:P_literal;
         allParams:P_listLiteral=nil;
@@ -688,27 +708,13 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
       output.first:=recycler^.newToken(getLocation,'',beginToken[blocking]);
       output.last:=output.first;
 
-      //TODO Additional embracing tokens are not always necessary.
-      //Some cases of tt_beginBlock/tt_endBlock could be omitted, some be simplified to brackets
-      if (preparedBody[                     0].token.tokType=tt_beginBlock) and
-         (preparedBody[length(preparedBody)-1].token.tokType=tt_endBlock  ) and
-         (preparedBody[length(preparedBody)-2].token.tokType=tt_semicolon )
-      then begin
-        firstRelevantToken:=1;
-        lastRelevantToken:=length(preparedBody)-3;
-        if (indexOfSave>=0) and (saveValueStore<>nil) then firstRelevantToken:=indexOfSave+2;
-      end else begin
-        firstRelevantToken:=0;
-        lastRelevantToken:=length(preparedBody)-1;
-      end;
-
       {$ifdef fullVersion}
-      if parametersNode<>nil then begin
-        for i:=0 to pattern.arity-1 do parametersNode^.addEntry(pattern.idForIndexInline(i),param^.value[i],true);
-      end;
+      if parametersNode<>nil
+      then for i:=0 to pattern.arity-1
+           do parametersNode^.addEntry(pattern.idForIndexInline(i),param^.value[i],true);
       {$endif}
 
-      for i:=firstRelevantToken to lastRelevantToken do with preparedBody[i] do begin
+      for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
         if parIdx>=0 then begin
           if parIdx=ALL_PARAMETERS_PAR_IDX then begin
             if allParams=nil then begin
@@ -738,7 +744,6 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
         end else output.last^.next:=recycler^.newToken(token);
         output.last:=output.last^.next;
       end;
-
       {$ifdef fullVersion}
       context^.callStackPush(callLocation,@self,parametersNode);
       {$endif}
@@ -1117,8 +1122,8 @@ FUNCTION T_inlineExpression.toDocString(CONST includePattern: boolean; CONST len
     end;
     if not(includePattern) then exit(result);
     if      (typ in C_inlineExpressionTypes) and (pattern.isNaiveInlinePattern)
-                            then result:=                 '{'+result+'}'
-    else if typ=et_eachBody then result:=pattern.toString+'{'+result+'}'
+                            then result:=                 '{'+BoolToStr(beginEndStripped,'begin ','')+result+BoolToStr(beginEndStripped,'; end','')+'}'
+    else if typ=et_eachBody then result:=pattern.toString+'{'+BoolToStr(beginEndStripped,'begin ','')+result+BoolToStr(beginEndStripped,'; end','')+'}'
     else                         result:=pattern.toString+C_tokenDefaultId[tt_declare]+result;
   end;
 

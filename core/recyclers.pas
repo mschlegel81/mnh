@@ -11,6 +11,13 @@ USES sysutils,
      {$endif}
      tokens;
 TYPE
+  T_preparedToken=record
+    parIdx:longint;
+    token:T_token;
+  end;
+
+  T_preparedTokenArray = array of T_preparedToken;
+
   P_recycler=^T_recycler;
   T_recycler=object(T_localLiteralRecycler)
     private
