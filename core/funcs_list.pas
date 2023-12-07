@@ -16,6 +16,7 @@ VAR BUILTIN_HEAD,BUILTIN_GET,BUILTIN_TAIL,BUILTIN_TRAILING,BUILTIN_ELEMENT_FREQU
 
 IMPLEMENTATION
 {$i func_defines.inc}
+USES func_queues;
 {$define SUB_LIST_IMPL:=
 begin
   result:=nil;
@@ -291,6 +292,8 @@ FUNCTION size_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) then begin
       if arg0^.literalType in C_compoundTypes
       then result:=recycler^.newIntLiteral(compound0^.size)
+      else if (arg0^.literalType=lt_expression)  and (P_expressionLiteral(arg0)^.typ=et_builtinIteratable) and (P_builtinGeneratorExpression(arg0)^.getBultinGeneratorType=bgt_queue)
+      then recycler^.newIntLiteral(P_queue(Arg0)^.getQueuedCount)
       else result:=recycler^.newIntLiteral(1);
     end;
   end;
