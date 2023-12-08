@@ -13,8 +13,7 @@ P_fileOutputStream=^T_fileOutputStream;
 
 { T_fileOutputStream }
 
-T_fileOutputStream=object(T_expression)
-    FUNCTION applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext: P_abstractContext; CONST recycler: pointer): P_expressionLiteral; virtual;
+T_fileOutputStream=object(T_expressionLiteral)
     FUNCTION arity: T_arityInfo; virtual;
     FUNCTION canApplyToNumberOfParameters(CONST parCount: longint): boolean; virtual;
     FUNCTION referencesAnyUserPackage: boolean; virtual;
@@ -28,23 +27,13 @@ T_fileOutputStream=object(T_expression)
 
     PROCEDURE writeBytes(CONST Buf; CONST byteCount:longint);
     PROCEDURE flushBuffer;
-  protected
-    FUNCTION getParameterNames(CONST literalRecycler: P_literalRecycler): P_listLiteral; virtual;
   public
     CONSTRUCTOR create(CONST location:T_tokenLocation; CONST doAppend:boolean; CONST fileName,Separator:string);
     PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
     DESTRUCTOR destroy; virtual;
 
-    FUNCTION evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer;  CONST parameters: P_listLiteral): T_evaluationResult; virtual;
-
-  end;
-
-{ T_fileOutputStream }
-
-FUNCTION T_fileOutputStream.applyBuiltinFunction(CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST threadContext: P_abstractContext; CONST recycler: pointer): P_expressionLiteral;
-  begin
-    threadContext^.raiseError('Cannot apply builtin function to file output stream.',funcLocation);
-    result:=nil;
+    FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
+    FUNCTION getParameterNames(CONST literalRecycler: P_literalRecycler): P_listLiteral; virtual;
   end;
 
 FUNCTION T_fileOutputStream.arity: T_arityInfo;
@@ -125,7 +114,7 @@ DESTRUCTOR T_fileOutputStream.destroy;
     doneCriticalSection(streamCs);
   end;
 
-FUNCTION T_fileOutputStream.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer; CONST parameters: P_listLiteral): T_evaluationResult;
+FUNCTION T_fileOutputStream.evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult;
   VAR i, k:longint;
       dbl:double;
       L: P_literal;

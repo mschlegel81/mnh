@@ -147,10 +147,10 @@ FUNCTION toList_imp intFuncSignature;
       if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
         iterator:=P_expressionLiteral(arg0);
         result:=recycler^.newListLiteral();
-        valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,context,recycler,nil,nil).literal;
+        valueToAppend:=iterator^.evaluate(tokenLocation,context,recycler).literal;
         while (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) do begin
           listResult^.append(recycler,valueToAppend,false);
-          valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,context,recycler,nil,nil).literal;
+          valueToAppend:=iterator^.evaluate(tokenLocation,context,recycler).literal;
         end;
       end else if arg0^.literalType in C_scalarTypes
       then result:=recycler^.newListLiteral(1)^.append(recycler,arg0,true)
@@ -167,10 +167,10 @@ FUNCTION toSet_imp intFuncSignature;
       if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
         iterator:=P_expressionLiteral(arg0);
         result:=recycler^.newSetLiteral(1);
-        valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,context,recycler,nil,nil).literal;
+        valueToAppend:=iterator^.evaluate(tokenLocation,context,recycler).literal;
         while (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) do begin
           setResult^.append(recycler,valueToAppend,false);
-          valueToAppend:=iterator^.evaluateToLiteral(tokenLocation,context,recycler,nil,nil).literal;
+          valueToAppend:=iterator^.evaluate(tokenLocation,context,recycler).literal;
         end;
       end else
       if arg0^.literalType in C_scalarTypes

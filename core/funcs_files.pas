@@ -295,7 +295,7 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
         if teeRoutine=nil then writeln(teebuffer)
         else begin
           wrappedTeeBuffer:=recycler^.newStringLiteral(teebuffer);
-          teeCallResult:=teeRoutine^.evaluateToLiteral(tokenLocation,context,recycler,wrappedTeeBuffer,nil);
+          teeCallResult:=evaluteExpression(teeRoutine,tokenLocation,context,recycler,wrappedTeeBuffer);
           if teeCallResult.literal<>nil then recycler^.disposeLiteral(teeCallResult.literal);
           recycler^.disposeLiteral(wrappedTeeBuffer);
         end;

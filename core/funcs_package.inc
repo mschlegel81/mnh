@@ -49,12 +49,12 @@ FUNCTION try_imp intFuncSignature;
             messagesLiteral:=messagesToLiteralForSandbox(recycler,tryMessages.storedMessages(false),C_errorMessageTypes[4]+C_errorMessageTypes[3],SUPPRESS_EXIT_CODE);
             tryMessages.clear;
             context^.messages:=oldMessages;
-            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,context,recycler,messagesLiteral,nil).literal;
+            result:=evaluteExpression(P_expressionLiteral(inCaseOfFailure),tokenLocation,context,recycler,messagesLiteral).literal;
             recycler^.disposeLiteral(messagesLiteral);
           end else begin
             tryMessages.clear;
             context^.messages:=oldMessages;
-            result:=P_expressionLiteral(inCaseOfFailure)^.evaluateToLiteral(tokenLocation,context,recycler,nil,nil).literal;
+            result:=evaluteExpression(P_expressionLiteral(inCaseOfFailure),tokenLocation,context,recycler).literal;
           end;
         end else begin
           tryMessages.clear;

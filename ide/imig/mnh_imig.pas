@@ -189,7 +189,7 @@ PROCEDURE doOutput(CONST s:string; CONST warning:boolean; CONST location:T_token
   begin
     if outputMethod<>nil then begin
       sLit:=recycler^.newStringLiteral(s);
-      outputLit:=outputMethod^.evaluateToLiteral(location,context,recycler,sLit,nil).literal;
+      outputLit:=evaluteExpression(outputMethod,location,context,recycler,sLit).literal;
       recycler^.disposeLiteral(sLit);
       if outputLit<>nil then recycler^.disposeLiteral(outputLit);
     end else begin

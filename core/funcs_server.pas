@@ -167,7 +167,7 @@ PROCEDURE T_microserverRequest.execute;
   begin
     fillRequestLiteral;
     executionTime:=context^.wallclockTime;
-    response:=servingExpression^.evaluateToLiteral(feedbackLocation,context,recycler,requestMap,nil).literal;
+    response:=evaluteExpression(servingExpression,feedbackLocation,context,recycler,requestMap).literal;
     executionTime:=context^.wallclockTime-executionTime;
     recycler^.disposeLiteral(requestMap);
     if (response<>nil) then begin

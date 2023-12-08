@@ -73,7 +73,7 @@ FUNCTION utilityScriptFileName:string;
     if APP_STYLE=APP_STYLE_BLANK then exit('');
     {$endif}
     result:=configDir+'packages'+DirectorySeparator+'guiScripts.mnh';
-    if not(fileExists(result)) then ensureDefaultFiles(nil,nil);
+    if not(fileExists(result)) then ensureDefaultFiles(nil);
   end;
 
 CONSTRUCTOR T_scriptMeta.create(CONST rule: P_subruleExpression; OUT isValid:boolean; CONST messages:P_messages);
@@ -158,7 +158,7 @@ DESTRUCTOR T_editScriptTask.destroy;
 
 PROCEDURE T_editScriptTask.execute(VAR globals:T_evaluationGlobals; CONST recycler:P_recycler);
   begin
-    output:=script^.editRule^.evaluateToLiteral(script^.editRule^.getLocation,@globals.primaryContext,recycler,input,nil).literal;
+    output:=evaluteExpression(script^.editRule,script^.editRule^.getLocation,@globals.primaryContext,recycler,input).literal;
     recycler^.disposeLiteral(input);
     if (output<>nil) and not(output^.literalType in C_scriptTypeMeta[script^.scriptType].validResultType) then begin
       globals.primaryContext.messages^.raiseSimpleError('Script failed due to invalid result type '+output^.typeString,script^.editRule^.getLocation);

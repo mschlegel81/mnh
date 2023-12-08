@@ -207,7 +207,7 @@ PROCEDURE T_myIpcServer.execute;
       enterCriticalSection(serverCs);
       try
         if (localRequest<>nil) and (localResponse=nil) then begin
-          localResponse:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,recycler,localRequest,nil).literal;
+          localResponse:=evaluteExpression(servingExpressionOrNil,feedbackLocation,servingContextOrNil,recycler,localRequest).literal;
           result:=true;
         end;
       finally
@@ -221,7 +221,7 @@ PROCEDURE T_myIpcServer.execute;
         //execute:-----------------------------------------------
         response.senderId:=server.serverId;
         if request.statusOk then begin
-          response.payload:=servingExpressionOrNil^.evaluateToLiteral(feedbackLocation,servingContextOrNil,recycler,request.payload,nil).literal;
+          response.payload:=evaluteExpression(servingExpressionOrNil,feedbackLocation,servingContextOrNil,recycler,request.payload,nil).literal;
           response.statusOk:=servingContextOrNil^.messages^.continueEvaluation;
         end else begin
           servingContextOrNil^.messages^.postTextMessage(mt_el2_warning,feedbackLocation,'IPC server received request with error status - answering with error status');

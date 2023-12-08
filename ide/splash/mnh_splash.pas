@@ -15,6 +15,9 @@ USES
   mnh_doc;
 
 TYPE
+
+  { TSplashForm }
+
   TSplashForm = class(TForm)
     buttonInitNormal: TButton;
     buttonInitPortable: TButton;
@@ -33,6 +36,7 @@ TYPE
   private
     startupCall:boolean;
     PROCEDURE prepareDoc;
+    PROCEDURE stepProgress;
   public
     PROCEDURE showAbout;
   end;
@@ -116,9 +120,23 @@ PROCEDURE TSplashForm.prepareDoc;
     {$endif}
     ProgressBar.visible:=true;
     ProgressBar.caption:='Initializing';
-    ensureDefaultFiles(Application,ProgressBar,CODE_HASH<>htmlDocGeneratedForCodeHash,CODE_HASH<>htmlDocGeneratedForCodeHash);
-    makeHtmlFromTemplate(Application,ProgressBar);
+    ensureDefaultFiles(@stepProgress,CODE_HASH<>htmlDocGeneratedForCodeHash,CODE_HASH<>htmlDocGeneratedForCodeHash);
+    makeHtmlFromTemplate(@stepProgress);
     ProgressBar.visible:=false;
+  end;
+
+{$ifdef debugMode}
+VAR progressCounted:longint=0;
+{$endif}
+PROCEDURE TSplashForm.stepProgress;
+  begin
+    ProgressBar.position:=ProgressBar.position+1;
+    {$ifdef debugMode}
+    inc(progressCounted);
+    writeln('PROGRESS: ',ProgressBar.position,' / ',ProgressBar.max, ' (',progressCounted,')');
+    {$endif}
+    Application.ProcessMessages;
+
   end;
 
 PROCEDURE TSplashForm.showAbout;

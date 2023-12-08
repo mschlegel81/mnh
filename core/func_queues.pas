@@ -13,8 +13,6 @@ USES sysutils,Classes,
      recyclers,
      subrules;
 
-IMPLEMENTATION
-{$i func_defines.inc}
 TYPE
   P_queueEntry=^T_queueEntry;
   T_queueEntry=record
@@ -27,17 +25,24 @@ TYPE
   { T_queue }
 
   T_queue=object(T_builtinGeneratorExpression)
-    first,last:P_queueEntry;
-    closed:boolean;
-    queueCs:TRTLCriticalSection;
-    CONSTRUCTOR create(CONST location: T_tokenLocation);
-    FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-    FUNCTION evaluateToLiteral({$WARN 5024 OFF}CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil):T_evaluationResult; virtual;
-    PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
-    DESTRUCTOR destroy; virtual;
-    FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
-    FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
+    private
+      first,last:P_queueEntry;
+      closed:boolean;
+      queueCs:TRTLCriticalSection;
+      queuedCount:longint;
+    public
+      CONSTRUCTOR create(CONST location: T_tokenLocation);
+      FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
+      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
+      PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
+      DESTRUCTOR destroy; virtual;
+      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
+      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
+      PROPERTY getQueuedCount:longint read queuedCount;
   end;
+
+IMPLEMENTATION
+{$i func_defines.inc}
 
 CONSTRUCTOR T_queue.create(CONST location: T_tokenLocation);
   begin
@@ -45,6 +50,7 @@ CONSTRUCTOR T_queue.create(CONST location: T_tokenLocation);
     first:=nil;
     last:=nil;
     closed:=false;
+    queuedCount:=0;
     initCriticalSection(queueCs);
   end;
 
@@ -53,14 +59,14 @@ FUNCTION T_queue.toString(CONST lengthLimit: longint): string;
     result:='queue';
   end;
 
-FUNCTION T_queue.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
+FUNCTION T_queue.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: P_literalRecycler; CONST parameters: P_listLiteral): T_evaluationResult;
   VAR entry:P_queueEntry;
   begin
     //dequeue...
     enterCriticalSection(queueCs);
     while (first=nil) and not(closed) and (context^.continueEvaluation) do begin
       leaveCriticalSection(queueCs);
-      sleep(10);
+      sleep(2);
       enterCriticalSection(queueCs);
     end;
     if first=nil then begin
@@ -69,6 +75,7 @@ FUNCTION T_queue.evaluateToLiteral(CONST location: T_tokenLocation; CONST contex
     end else begin
       result.literal:=first^.value;
       result.reasonForStop:=rr_ok;
+      dec(queuedCount);
       entry:=first^.next;
       freeMem(first,sizeOf(T_queueEntry));
       first:=entry;
@@ -102,6 +109,7 @@ FUNCTION queue_put intFuncSignature;
             then first     :=entry
             else last^.next:=entry;
             last:=entry;
+            inc(queuedCount);
           end;
           result:=newVoidLiteral;
         end;
