@@ -25,11 +25,7 @@ TYPE
     public
       CONSTRUCTOR createInterpolator(CONST id_:string; CONST values:P_listLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST allowUnordered:boolean=false);
       DESTRUCTOR destroy; virtual;
-
-      FUNCTION evaluateToDouble (CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal; CONST b:P_literal):double;  virtual;
-      FUNCTION evaluateToBoolean(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal; CONST b:P_literal):boolean; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal; CONST b:P_literal):T_evaluationResult; virtual;
-      FUNCTION evaluate         (CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST parameters:P_listLiteral):T_evaluationResult; virtual;
+      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       FUNCTION arity:T_arityInfo; virtual;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
       FUNCTION toString(CONST lengthLimit: longint=maxLongint): ansistring; virtual;
@@ -115,48 +111,24 @@ DESTRUCTOR T_interpolator.destroy;
     inherited;
   end;
 
-FUNCTION T_interpolator.evaluateToDouble (CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST allowRaiseError:boolean; CONST a:P_literal; CONST b:P_literal):double;
-  VAR param:P_listLiteral;
-  begin
-    if a^.literalType in [lt_bigint,lt_smallint,lt_real]
-    then result:=getSingleInterpolatedValue(P_numericLiteral(a)^.floatValue)
-    else begin
-      param:=P_recycler(recycler)^.listLiteralOf(a,b);
-      P_context(context)^.raiseCannotApplyError('interpolator '+getId,param,location);
-      P_recycler(recycler)^.disposeLiteral(param);
-      result:=Nan;
-    end;
-  end;
-
-FUNCTION T_interpolator.evaluateToBoolean(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer; CONST allowRaiseError: boolean; CONST a: P_literal; CONST b: P_literal): boolean;
-  begin
-    if allowRaiseError then context^.raiseError('Interpolators always return numeric values!',location);
-    result:=false;
-  end;
-
-FUNCTION T_interpolator.evaluateToLiteral(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer; CONST a: P_literal; CONST b: P_literal): T_evaluationResult;
-  VAR aSub:P_literal;
+FUNCTION T_interpolator.evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult;
+  VAR aSub: P_literal;
   begin
     result.reasonForStop:=rr_ok;
-    result.literal:=nil;
-    case a^.literalType of
+    if (parameters<>nil) and (parameters^.size=1) then case (parameters^.value[0]^.literalType) of
       lt_bigint,lt_smallint,lt_real:
-        result.literal:=P_literalRecycler(recycler)^.newRealLiteral(getSingleInterpolatedValue(P_numericLiteral(a)^.floatValue));
+        result.literal:=P_literalRecycler(recycler)^.newRealLiteral(getSingleInterpolatedValue(P_numericLiteral(parameters^.value[0])^.floatValue));
       lt_emptyList,lt_intList,lt_numList,lt_realList:
         begin
-          result.literal:=P_literalRecycler(recycler)^.newListLiteral(P_listLiteral(a)^.size);
-          for aSub in P_listLiteral(a)^.tempIteratableList do
+          result.literal:=P_literalRecycler(recycler)^.newListLiteral(P_listLiteral(parameters^.value[0])^.size);
+          for aSub in P_listLiteral(parameters^.value[0])^.tempIteratableList do
             P_listLiteral(result.literal)^.appendReal(P_literalRecycler(recycler),getSingleInterpolatedValue(P_numericLiteral(aSub)^.floatValue));
         end;
-      else result.reasonForStop:=rr_fail;
-    end;
-  end;
-
-FUNCTION T_interpolator.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: pointer; CONST parameters: P_listLiteral): T_evaluationResult;
-  begin
-    if (parameters^.size=1)
-    then result:=evaluateToLiteral(location,context,recycler,parameters^.value[0],nil)
-    else begin
+      else begin P_context(context)^.raiseCannotApplyError('interpolator '+getId,parameters,location);
+        result.reasonForStop:=rr_patternMismatch;
+        result.literal:=nil;
+      end;
+    end else begin
       P_context(context)^.raiseCannotApplyError('interpolator '+getId,parameters,location);
       result.reasonForStop:=rr_patternMismatch;
       result.literal:=nil;

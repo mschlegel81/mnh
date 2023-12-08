@@ -21,6 +21,9 @@ TYPE
   end;
 
   P_queue=^T_queue;
+
+  { T_queue }
+
   T_queue=object(T_builtinGeneratorExpression)
     private
       first,last:P_queueEntry;
@@ -30,7 +33,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST location: T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil; CONST timeout:QWord=18446744073709551615):T_evaluationResult; virtual;
+      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
       FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
@@ -56,18 +59,13 @@ FUNCTION T_queue.toString(CONST lengthLimit: longint): string;
     result:='queue';
   end;
 
-FUNCTION T_queue.evaluateToLiteral(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer; CONST a:P_literal=nil; CONST b:P_literal=nil; CONST timeout:QWord=18446744073709551615):T_evaluationResult;
+FUNCTION T_queue.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: P_literalRecycler; CONST parameters: P_listLiteral): T_evaluationResult;
   VAR entry:P_queueEntry;
   begin
     //dequeue...
     enterCriticalSection(queueCs);
     while (first=nil) and not(closed) and (context^.continueEvaluation) do begin
       leaveCriticalSection(queueCs);
-      if GetTickCount64>timeout then begin
-        result.literal:=nil;
-        result.reasonForStop:=rr_timeout;
-        exit(result);
-      end;
       sleep(2);
       enterCriticalSection(queueCs);
     end;

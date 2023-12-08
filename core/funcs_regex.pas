@@ -135,7 +135,7 @@ FUNCTION regexValidate_imp intFuncSignature;
     if feedbackMethod=nil then exit(newBoolLiteral(message=''));
     if message<>'' then begin
       feedbackInput:=recycler^.newStringLiteral(message);
-      result:=feedbackMethod^.evaluateToLiteral(tokenLocation,context,recycler,feedbackInput,nil).literal;
+      result:=evaluteExpression(feedbackMethod,tokenLocation,context,recycler,feedbackInput).literal;
       recycler^.disposeLiteral(feedbackInput);
       exit(result);
     end;

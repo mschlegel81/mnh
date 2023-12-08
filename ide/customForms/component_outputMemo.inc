@@ -76,7 +76,7 @@ FUNCTION T_outputMemoMeta.evaluate(CONST location: T_tokenLocation; CONST contex
     try
       result:=inherited evaluate(location,context,recycler);
       if config_hlLang<>nil then begin
-        tmp:=config_hlLang^.evaluateToLiteral(location,context,recycler,nil,nil).literal;
+        tmp:=config_hlLang^.evaluate(location,context,recycler).literal;
         if tmp<>nil then begin
           if tmp^.literalType=lt_string then begin
             oldLang:=state_hlLang;

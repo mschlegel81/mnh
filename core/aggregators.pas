@@ -89,7 +89,7 @@ TYPE
       op:T_tokenType;
       opPointer:P_intFuncCallback;
     public
-      CONSTRUCTOR create(CONST operatorToken:T_tokenType);
+      CONSTRUCTOR create(CONST operatorToken:T_tokenType; CONST initialValue:P_literal);
       PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler); virtual;
   end;
 
@@ -166,7 +166,9 @@ FUNCTION newAggregator(CONST op:T_tokenType; CONST literalRecycler:P_literalRecy
       tt_operatorLazyAnd  : new(P_andAggregator         (result),create);
       tt_operatorLazyOr   : new(P_orAggregator          (result),create);
       tt_operatorOrElse   : new(P_headAggregator        (result),create);
-      else                  new(P_opAggregator          (result),create(op));
+//      tt_operatorPlus     : new(P_opAggregator          (result),create(op,literalRecycler^.newIntLiteral(0)));
+//      tt_operatorMult     : new(P_opAggregator          (result),create(op,literalRecycler^.newIntLiteral(1)));
+      else                  new(P_opAggregator          (result),create(op,newVoidLiteral));
     end;
   end;
 
@@ -211,9 +213,9 @@ CONSTRUCTOR T_trailingAggregator .create; begin inherited create(newVoidLiteral)
 CONSTRUCTOR T_stringConcatAggregator.create(CONST literalRecycler:P_literalRecycler); begin inherited create(literalRecycler^.newStringLiteral('',true)); end;
 CONSTRUCTOR T_andAggregator         .create; begin inherited create(nil); boolResult:=true;  end;
 CONSTRUCTOR T_orAggregator          .create; begin inherited create(nil); boolResult:=false; end;
-CONSTRUCTOR T_opAggregator.create(CONST operatorToken: T_tokenType);
+CONSTRUCTOR T_opAggregator.create(CONST operatorToken: T_tokenType; CONST initialValue:P_literal);
   begin
-    inherited create(newVoidLiteral);
+    inherited create(initialValue);
     op:=operatorToken;
     opPointer:=intFuncForOperator[op];
   end;
@@ -447,7 +449,7 @@ PROCEDURE T_binaryExpressionAggregator.addToAggregation(er:T_evaluationResult; C
       resultLiteral:=er.literal^.rereferenced;
     end else if er.literal^.literalType<>lt_void then begin
       inc(context^.callDepth,8); //higher priorization of aggregation : enter
-      newValue:=aggregator^.evaluateToLiteral(location,context,recycler,resultLiteral,er.literal).literal;
+      newValue:=evaluteExpression(aggregator,location,context,recycler,resultLiteral,er.literal).literal;
       dec(context^.callDepth,8); //higher priorization of aggregation : exit
       recycler^.disposeLiteral(resultLiteral);
       resultLiteral:=newValue;
@@ -465,7 +467,7 @@ PROCEDURE T_unaryExpressionAggregator.addToAggregation(er:T_evaluationResult; CO
     aggregationDefaultHandling;
     if er.literal^.literalType<>lt_void then begin
       inc(context^.callDepth,8); //higher priorization of aggregation : enter
-      newValue:=aggregator^.evaluateToLiteral(location,context,recycler,er.literal,nil).literal;
+      newValue:=evaluteExpression(aggregator,location,context,recycler,er.literal).literal;
       dec(context^.callDepth,8); //higher priorization of aggregation : exit
       if newValue=nil then context^.raiseError('Aggregation failed for element '+er.literal^.toString(50),location)
                       else recycler^.disposeLiteral(newValue);
