@@ -23,8 +23,9 @@ TYPE
     PROCEDURE addExample(CONST txt:T_arrayOfString);
     FUNCTION getHtmlLink:string;
   end;
+  F_simpleCallback = PROCEDURE of object;
 
-PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
+PROCEDURE makeHtmlFromTemplate(CONST progressCallback:F_simpleCallback);
 PROCEDURE registerDoc(CONST qualifiedId:ansistring; CONST qualifiedOnly:boolean);
 FUNCTION getDocIndexLinkForBrowser(CONST suffix:string=''):ansistring;
 FUNCTION getHtmlRoot:ansistring;
@@ -73,7 +74,7 @@ PROCEDURE registerDoc(CONST qualifiedId:ansistring; CONST qualifiedOnly:boolean)
     if replaceQualified and replaceUnqualified then dispose(outdatedDoc,destroy);
   end;
 
-PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
+PROCEDURE ensureBuiltinDocExamples(CONST progressCallback:F_simpleCallback);
   {$include res_examples.inc}
   VAR code:T_arrayOfString=();
       i:longint;
@@ -202,10 +203,6 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
   begin
     if functionDocExamplesReady then exit;
     decompressed_examples:=split(decompressString(examples_txt),C_lineBreakChar);
-    if bar<>nil then begin
-      bar.caption:='Executing example code for help/doc';
-      Application.ProcessMessages;
-    end;
     recycler:=newRecycler;
     keys:=functionDocMap.keySet;
     for i:=0 to length(keys)-1 do if isQualified(keys[i]) then begin
@@ -220,16 +217,15 @@ PROCEDURE ensureBuiltinDocExamples(Application:Tapplication; bar:TProgressBar);
       for i:=0 to length(decompressed_examples)-1 do begin
         if trim(decompressed_examples[i])='' then processExample
                                              else append(code,decompressed_examples[i]);
-        if bar<>nil then begin
-          bar.position:=bar.position+1;
-          Application.ProcessMessages;
-        end;
+        if progressCallback<>nil then progressCallback();
       end;
       processExample;
       //---------------------------------------------------------------------:Read examples
       storeExamples;
       setLength(examplesToStore,0);
-    end else bar.position:=bar.position+length(decompressed_examples);
+    end else begin
+      if progressCallback<>nil then for i:=0 to length(decompressed_examples)-1 do progressCallback();
+    end;
     functionDocExamplesReady:=true;
     freeRecycler(recycler);
   end;
@@ -312,7 +308,7 @@ PROCEDURE T_intrinsicFunctionDocumentation.addExample(CONST txt:T_arrayOfString)
     append(docTxt ,txt);
   end;
 
-PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
+PROCEDURE makeHtmlFromTemplate(CONST progressCallback:F_simpleCallback);
   VAR builtInDoc: array[T_namespace] of array of P_intrinsicFunctionDocumentation;
 
   PROCEDURE prepareBuiltInDocs;
@@ -331,7 +327,7 @@ PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
         swapTmp: P_intrinsicFunctionDocumentation;
     begin
       if not(DirectoryExists(getHtmlRoot)) then CreateDir(getHtmlRoot);
-      ensureBuiltinDocExamples(Application,bar);
+      ensureBuiltinDocExamples(progressCallback);
       //Prepare and sort data:-------------------------------------------------------------
       for n:=low(T_namespace) to high(T_namespace) do setLength(builtInDoc[n],0);
       ids:=functionDocMap.keySet;
@@ -475,11 +471,7 @@ PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
     setLength(includes,0);
     context.mode:=none;
     decompressedTemplate:=split(decompressString(html_template_txt),C_lineBreakChar);
-    if bar<>nil then begin
-      bar.caption:='Creating html documentation';
-      bar.position:=bar.position+1;
-      Application.ProcessMessages;
-    end;
+    if progressCallback<>nil then progressCallback();
     for templateLine in decompressedTemplate do begin
       case context.mode of
         none:            if not(handleCommand(templateLine)) and outFile.isOpen then writeln(outFile.handle,templateLine);
@@ -490,11 +482,7 @@ PROCEDURE makeHtmlFromTemplate(Application:Tapplication; bar:TProgressBar);
     end;
     htmlDocGeneratedForCodeHash:=CODE_HASH;
     with outFile do if isOpen then close(handle);
-    if bar<>nil then begin
-      bar.caption:='Creating html documentation';
-      bar.position:=bar.position+1;
-      Application.ProcessMessages;
-    end;
+    if progressCallback<>nil then progressCallback();
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: documentation is ready; ',templateLineCount,' lines processed');{$endif}
     setLength(demoFiles,0);
   end;

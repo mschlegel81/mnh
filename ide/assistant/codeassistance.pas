@@ -66,9 +66,10 @@ TYPE
       FUNCTION  getBuiltinSideEffects:T_sideEffects;
       FUNCTION  isExecutablePackage:boolean;
   end;
+  F_simpleCallback=PROCEDURE of object;
 
 PROCEDURE finalizeCodeAssistance;
-PROCEDURE ensureDefaultFiles(Application:Tapplication; bar:TProgressBar; CONST overwriteExisting:boolean=false; CONST createHtmlDat:boolean=false);
+PROCEDURE ensureDefaultFiles(CONST progressCallback:F_simpleCallback; CONST overwriteExisting:boolean=false; CONST createHtmlDat:boolean=false);
 PROCEDURE postAssistanceRequest    (CONST scriptPath:string);
 FUNCTION  getAssistanceResponseSync(CONST editorMeta:P_codeProvider):P_codeAssistanceResponse;
 
@@ -571,7 +572,7 @@ FUNCTION getAssistanceResponseSync(CONST editorMeta:P_codeProvider):P_codeAssist
     dispose(request,destroy);
   end;
 
-PROCEDURE ensureDefaultFiles(Application: Tapplication; bar: TProgressBar; CONST overwriteExisting: boolean; CONST createHtmlDat: boolean);
+PROCEDURE ensureDefaultFiles(CONST progressCallback:F_simpleCallback; CONST overwriteExisting: boolean; CONST createHtmlDat: boolean);
   {$i res_defaultFiles.inc}
   VAR baseDir:string;
   PROCEDURE ensureFile(CONST index:longint);
@@ -588,13 +589,9 @@ PROCEDURE ensureDefaultFiles(Application: Tapplication; bar: TProgressBar; CONST
   VAR i:longint;
   begin
     baseDir:=configDir;
-    if bar<>nil then begin
-      bar.caption:='Creating packages and demos';
-      Application.ProcessMessages;
-    end;
     for i:=0 to length(DEFAULT_FILES)-1 do begin
       ensureFile(i);
-      if bar<>nil then begin bar.position:=bar.position+1; Application.ProcessMessages; end;
+      if progressCallback<>nil then progressCallback();
     end;
   end;
 

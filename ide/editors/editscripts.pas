@@ -73,7 +73,7 @@ FUNCTION utilityScriptFileName:string;
     if APP_STYLE=APP_STYLE_BLANK then exit('');
     {$endif}
     result:=configDir+'packages'+DirectorySeparator+'guiScripts.mnh';
-    if not(fileExists(result)) then ensureDefaultFiles(nil,nil);
+    if not(fileExists(result)) then ensureDefaultFiles(nil);
   end;
 
 CONSTRUCTOR T_scriptMeta.create(CONST rule: P_subruleExpression; OUT isValid:boolean; CONST messages:P_messages);
