@@ -86,10 +86,20 @@ main('files')->begin
            allFiles('core','*.inc')).minus(['core/res_version.inc','ide/res_toDeleteOnUninstall.inc'])
     .sort;
 
-  group(newList.escape,newList.extractFileDirectory).sort.getInner(1).each(chunk,chunk.sort.each(s,s,index mod 4=3 ? ",\n\v" : ",\t").leading.join).join(",\n\v")
-  .{print("hashFiles:=[\v",$s,'];')};
   newList==hashFiles
-  ? print('List is up to date')
+  ? return print('List is up to date')
   : print('To be added  : ',newList.minus(hashFiles).toList,
         "\nTo be removed: ",hashFiles.minus(newList).toList);
+
+  local make_config_path:=inspect['uses','make_config'];
+  local markerRead:=false;
+  local newFileLines:=
+  fileLines(make_config_path).each(line,markerRead ? void :
+    line.hasPrefix('hashFiles:=[')
+    ? begin markerRead:=true; void; end
+    : line);
+  newFileLines|=
+  join(["hashFiles:=[\v",newList.map(::escape).join(",\n\v"),'];']).formatTabs;
+  writeFileLines(make_config_path,newFileLines);
 end;
+
