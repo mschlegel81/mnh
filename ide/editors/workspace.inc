@@ -480,7 +480,9 @@ FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string
           updateMarkers(result);
           //Update history:
           fileHistory.logFolder(ExtractFileDir(fileName));
-        end else if not(openEvenIfNonexistent) then begin
+        end else if openEvenIfNonexistent
+        then result^.fileInfo.ignoreDeleted:=true
+        else begin
           closeQuietly(result);
           result:=nil;
         end;
