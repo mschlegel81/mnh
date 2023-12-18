@@ -2188,7 +2188,8 @@ getEnv.toList.head;
 
 #I fileStats
 #S fileStats(filename:String);
-#C Retuns a triplet [lineCount,wordCount,byteCount,hash].#fileStats(filename:StringList);
+#C Retuns a triplet [lineCount,wordCount,byteCount,hash].
+#S fileStats(filename:StringList);
 fileStats(executor);
 
 #I exec
