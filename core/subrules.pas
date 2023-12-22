@@ -639,9 +639,6 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
           //WARNING: At this point we have (temporary) cyclic referencing (@self -> saveValueStore -> context.valueScope -> ... -> @self)
           previousValueScope:=context^.valueScope;
           context^.valueScope:=saveValueStore;
-
-          output.first:=recycler^.disposeToken(output.first);
-
           context^.reduceExpression(output.first,recycler);
           if output.first=nil
           then output.last:=nil
@@ -668,10 +665,7 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
     end;
 
   PROCEDURE prepareResult;
-    CONST beginToken:array[false..true] of T_tokenType=(tt_beginExpression,tt_beginRule);
-          endToken  :array[false..true] of T_tokenType=(tt_endExpression  ,tt_endRule);
     VAR i:longint;
-        blocking:boolean;
         allParams:P_listLiteral=nil;
         remaining:P_listLiteral=nil;
 
@@ -683,8 +677,7 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
       if tco_stackTrace in context^.threadOptions then parametersNode:=newCallParametersNode(nil);
       {$endif}
 
-      blocking:=typ in C_subruleExpressionTypes;
-      output.first:=recycler^.newToken(getLocation,'',beginToken[blocking]);
+      output.first:=recycler^.newToken(getLocation,'',tt_beginRule);
       output.last:=output.first;
 
       {$ifdef fullVersion}
@@ -728,11 +721,11 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
       context^.callStackPush(callLocation,@self,parametersNode);
       {$endif}
       if indexOfSave>=0
-      then evaluateExpressionWithSave
+      then output.first:=recycler^.disposeToken(output.first)
       else begin
         output.last^.next:=recycler^.newToken(getLocation,'',tt_semicolon);
         output.last:=output.last^.next;
-        output.last^.next:=recycler^.newToken(getLocation,'',endToken[blocking]);
+        output.last^.next:=recycler^.newToken(getLocation,'',tt_endRule);
         output.last:=output.last^.next;
       end;
     end;
@@ -743,6 +736,7 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
        (param<>nil) and pattern.matches(param^,callLocation,context,recycler) then begin
       if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then resolveIds(context^.messages,ON_EVALUATION);
       prepareResult;
+      if indexOfSave>=0 then evaluateExpressionWithSave;
       result:=output.last<>nil;
     end else begin
       result:=false;

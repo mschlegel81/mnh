@@ -44,7 +44,7 @@ TYPE
       FUNCTION newToken(CONST tokenLocation:T_tokenLocation; CONST tokenText:ansistring; CONST tokenType:T_tokenType; CONST ptr:pointer=nil):P_token; inline;
       FUNCTION newToken(CONST original:T_token):P_token; inline;
       FUNCTION newToken(CONST original:P_token):P_token; inline;
-      FUNCTION getRawTokenRange(CONST templateLength:longint; CONST add3:boolean):T_tokenRange; inline;
+      FUNCTION getRawTokenRange(CONST templateLength:longint; CONST add3:boolean):T_tokenRange;
 
       PROCEDURE disposeScope(VAR scope:P_valueScope); inline;
       FUNCTION  newValueScopeAsChildOf(CONST scope:P_valueScope):P_valueScope; inline;
@@ -285,10 +285,12 @@ FUNCTION T_recycler.newToken(CONST original: P_token): P_token;
     result^.next:=nil;
   end;
 
-FUNCTION T_recycler.getRawTokenRange(CONST templateLength:longint; CONST add3:boolean):T_tokenRange; inline;
+FUNCTION T_recycler.getRawTokenRange(CONST templateLength:longint; CONST add3:boolean):T_tokenRange;
   VAR i:longint;
   begin
-    if add3 then i:=templateLength+3 else i:=templateLength;
+    if add3
+    then i:=templateLength+3
+    else i:=templateLength;
     with tokens do begin
       if (fill>0) then begin dec(fill); result.first:=dat[fill]; end else new(result.first,create);
       dec(i);
@@ -299,12 +301,13 @@ FUNCTION T_recycler.getRawTokenRange(CONST templateLength:longint; CONST add3:bo
         result.last:=result.last^.next;
         dec(i);
       end;
-      while (i>0) do begin
-        new(result.last^.next,create);
-        result.last:=result.last^.next;
-        dec(i);
-      end;
     end;
+    while (i>0) do begin
+      new(result.last^.next,create);
+      result.last:=result.last^.next;
+      dec(i);
+    end;
+    result.last^.next:=nil;
   end;
 
 PROCEDURE noRecycler_disposeScope(VAR scope: P_valueScope);

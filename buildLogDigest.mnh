@@ -101,4 +101,3 @@ main('files')->begin
   join(["hashFiles:=[\v",newList.map(::escape).join(",\n\v"),'];']).formatTabs;
   writeFileLines(make_config_path,newFileLines);
 end;
-
