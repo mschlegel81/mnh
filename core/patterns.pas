@@ -69,9 +69,9 @@ TYPE
       CONSTRUCTOR combineForInline(CONST LHSPattern,RHSPattern:T_pattern; CONST fallbackLocation:T_tokenLocation);
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler);
       DESTRUCTOR destroy;
-      FUNCTION appendFreeId(CONST parId:T_idString; CONST location:T_tokenLocation):longint;
-      FUNCTION indexOfId(CONST id:T_idString):longint;
-      FUNCTION indexOfIdForInline(CONST id:T_idString; CONST location:T_tokenLocation):longint;
+      FUNCTION appendFreeId(CONST parId:T_idString; CONST location:T_tokenLocation):byte;
+      FUNCTION indexOfId(CONST id:T_idString):byte;
+      FUNCTION indexOfIdForInline(CONST id:T_idString; CONST location:T_tokenLocation):byte;
       PROCEDURE appendOptional;
       FUNCTION arity:longint;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean;
@@ -443,7 +443,7 @@ PROCEDURE T_pattern.cleanup(CONST literalRecycler:P_literalRecycler);
 DESTRUCTOR T_pattern.destroy;
   begin assert(length(sig)=0); end;
 
-FUNCTION T_pattern.appendFreeId(CONST parId: T_idString; CONST location:T_tokenLocation): longint;
+FUNCTION T_pattern.appendFreeId(CONST parId: T_idString; CONST location:T_tokenLocation): byte;
   begin
     result:=length(sig);
     setLength(sig,result+1);
@@ -471,20 +471,20 @@ FUNCTION T_pattern.canApplyToNumberOfParameters(CONST parCount:longint):boolean;
     result:=(length(sig)<=parCount) and hasOptionals or (length(sig)=parCount);
   end;
 
-FUNCTION T_pattern.indexOfId(CONST id: T_idString): longint;
+FUNCTION T_pattern.indexOfId(CONST id: T_idString): byte;
   VAR i:longint;
   begin
     if id=ALL_PARAMETERS_TOKEN_TEXT then exit(ALL_PARAMETERS_PAR_IDX);
     for i:=0 to length(sig)-1 do if sig[i].id=id then exit(i);
-    result:=-1;
+    result:=NO_PARAMETERS_IDX;
   end;
 
-FUNCTION T_pattern.indexOfIdForInline(CONST id: T_idString; CONST location:T_tokenLocation): longint;
+FUNCTION T_pattern.indexOfIdForInline(CONST id: T_idString; CONST location:T_tokenLocation): byte;
   VAR i:longint;
   begin
     if id=ALL_PARAMETERS_TOKEN_TEXT then begin hasOptionals:=true; exit(ALL_PARAMETERS_PAR_IDX); end;
-    result:=strToIntDef(copy(id,2,length(id)-1),-1);
-    if (copy(id,1,1)='$') and (result>=0) then begin
+    result:=strToIntDef(copy(id,2,length(id)-1),NO_PARAMETERS_IDX);
+    if (copy(id,1,1)='$') and (result<>NO_PARAMETERS_IDX) then begin
       while length(sig)<result+1 do appendFreeId('',location);
       exit(result);
     end;
@@ -632,7 +632,7 @@ PROCEDURE T_pattern.toParameterIds(CONST tok: P_token);
     t:=tok;
     while t<>nil do begin
       if (t^.tokType in [tt_identifier, tt_userRule, tt_parameterIdentifier, tt_intrinsicRule])
-      and (indexOfId(t^.txt)>=0) then t^.tokType:=tt_parameterIdentifier;
+      and (indexOfId(t^.txt)<>NO_PARAMETERS_IDX) then t^.tokType:=tt_parameterIdentifier;
       t:=t^.next;
     end;
   end;
