@@ -71,9 +71,8 @@ TYPE
       PROCEDURE constructExpression(CONST rep:P_token; CONST context:P_context; CONST recycler:P_recycler; CONST eachLocation:T_tokenLocation);
       CONSTRUCTOR init(CONST srt: T_expressionType; CONST location: T_tokenLocation);
       FUNCTION needEmbrace(CONST outerOperator:T_tokenType; CONST appliedFromLeft:boolean):boolean;
-    protected
-      FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
     public
+      FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
       {Calling with intrinsicTuleId='' means the original is cloned}
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_inlineExpression; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST recycler:P_recycler);
       PROCEDURE resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
@@ -163,11 +162,11 @@ TYPE
       func:P_intFuncCallback;
       CONSTRUCTOR createSecondaryInstance(CONST meta_:P_builtinFunctionMetaData; CONST internalId:longint);
     protected
-      FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
       FUNCTION getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression; virtual;
     public
       CONSTRUCTOR create(CONST meta_:P_builtinFunctionMetaData);
       DESTRUCTOR destroy; virtual;
+      FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       FUNCTION arity:T_arityInfo; virtual;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
@@ -200,9 +199,8 @@ TYPE
 
   P_builtinGeneratorExpression=^T_builtinGeneratorExpression;
   T_builtinGeneratorExpression=object(T_expressionLiteral)
-    protected
-      FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
     public
+      FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
       CONSTRUCTOR create(CONST location:T_tokenLocation; CONST et:T_expressionType=et_builtinIteratable);
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:P_literalRecycler):P_expressionLiteral; virtual;
       FUNCTION arity:T_arityInfo; virtual;
@@ -336,11 +334,11 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; CONST contex
         t^.tokType:=tt_EOL; t:=recycler^.disposeToken(t);
         token.next:=nil;
         case token.tokType of
-          tt_beginBlock   : begin inc(scopeLevel        ); parIdx:=-1; end;
-          tt_endBlock     : begin dec(scopeLevel        ); parIdx:=-1; end;
+          tt_beginBlock   : begin inc(scopeLevel        ); parIdx:=NO_PARAMETERS_IDX; end;
+          tt_endBlock     : begin dec(scopeLevel        ); parIdx:=NO_PARAMETERS_IDX; end;
           tt_functionPattern,
-          tt_expBraceOpen : begin inc(subExpressionLevel); parIdx:=-1; end;
-          tt_expBraceClose: begin dec(subExpressionLevel); parIdx:=-1; end;
+          tt_expBraceOpen : begin inc(subExpressionLevel); parIdx:=NO_PARAMETERS_IDX; end;
+          tt_expBraceClose: begin dec(subExpressionLevel); parIdx:=NO_PARAMETERS_IDX; end;
           tt_save: begin
             if subExpressionLevel=0 then begin
               if indexOfSave>=0     then context^.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location)
@@ -350,16 +348,16 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; CONST contex
                 makeStateful(context,token.location);
               end;
             end;
-            parIdx:=-1;
+            parIdx:=NO_PARAMETERS_IDX;
           end;
           tt_optionalParameters: parIdx:=REMAINING_PARAMETERS_IDX;
           tt_identifier, tt_eachParameter, tt_userRule, tt_globalVariable, tt_customType, tt_parameterIdentifier, tt_intrinsicRule: begin
             parIdx:=pattern.indexOfId(token.txt);
-            if parIdx>=0 then begin
+            if parIdx<>NO_PARAMETERS_IDX then begin
               if parIdx>=REMAINING_PARAMETERS_IDX
               then begin
                 if (parIdx=ALL_PARAMETERS_PAR_IDX) and (subExpressionLevel>0)
-                then parIdx:=-1
+                then parIdx:=NO_PARAMETERS_IDX
                 else token.tokType:=tt_parameterIdentifier;
               end
               else if token.tokType<>tt_eachParameter then token.tokType:=tt_identifier;
@@ -369,9 +367,9 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; CONST contex
           tt_eachIndex: begin
             if (token.location=eachLocation)
             then parIdx:=pattern.indexOfId(token.txt)
-            else parIdx:=-1;
+            else parIdx:=NO_PARAMETERS_IDX;
           end
-          else parIdx:=-1;
+          else parIdx:=NO_PARAMETERS_IDX;
         end;
       end;
       inc(i);
@@ -532,7 +530,7 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; CONST contex
             indexOfSave:=i;
           end;
         end;
-        parIdx:=-1;
+        parIdx:=NO_PARAMETERS_IDX;
       end;
       inc(i);
     end;
@@ -639,9 +637,6 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
           //WARNING: At this point we have (temporary) cyclic referencing (@self -> saveValueStore -> context.valueScope -> ... -> @self)
           previousValueScope:=context^.valueScope;
           context^.valueScope:=saveValueStore;
-
-          output.first:=recycler^.disposeToken(output.first);
-
           context^.reduceExpression(output.first,recycler);
           if output.first=nil
           then output.last:=nil
@@ -668,11 +663,7 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
     end;
 
   PROCEDURE prepareResult;
-    CONST beginToken:array[false..true] of T_tokenType=(tt_beginExpression,tt_beginRule);
-          endToken  :array[false..true] of T_tokenType=(tt_endExpression  ,tt_endRule);
     VAR i:longint;
-        blocking:boolean;
-        L:P_literal;
         allParams:P_listLiteral=nil;
         remaining:P_listLiteral=nil;
 
@@ -684,8 +675,7 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
       if tco_stackTrace in context^.threadOptions then parametersNode:=newCallParametersNode(nil);
       {$endif}
 
-      blocking:=typ in C_subruleExpressionTypes;
-      output.first:=recycler^.newToken(getLocation,'',beginToken[blocking]);
+      output.first:=recycler^.newToken(getLocation,'',tt_beginRule);
       output.last:=output.first;
 
       {$ifdef fullVersion}
@@ -694,9 +684,10 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
            do parametersNode^.addEntry(pattern.idForIndexInline(i),param^.value[i],true);
       {$endif}
 
-      for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
-        if parIdx>=0 then begin
-          if parIdx=ALL_PARAMETERS_PAR_IDX then begin
+      for i:=0 to length(preparedBody)-1 do begin
+        with preparedBody[i] do case parIdx of
+          NO_PARAMETERS_IDX     : output.last^.next:=recycler^.newToken(token);
+          ALL_PARAMETERS_PAR_IDX: begin
             if allParams=nil then begin
               allParams:=recycler^.newListLiteral;
               if param<>nil then allParams^.appendAll(recycler,param);
@@ -705,8 +696,9 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
               {$endif}
               allParams^.unreference;
             end;
-            L:=allParams;
-          end else if parIdx=REMAINING_PARAMETERS_IDX then begin
+            output.last^.next:=recycler^.newToken(token.location,'',tt_literal,allParams^.rereferenced);
+          end;
+          REMAINING_PARAMETERS_IDX: begin
             if remaining=nil then begin
               if param=nil
               then remaining:=recycler^.newListLiteral
@@ -716,23 +708,22 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
               {$endif}
               remaining^.unreference;
             end;
-            L:=remaining;
-          end else begin
-            L:=param^.value[parIdx];
+            output.last^.next:=recycler^.newToken(token.location,'',tt_literal,remaining^.rereferenced);
           end;
-          output.last^.next:=recycler^.newToken(token.location,'',tt_literal,L^.rereferenced);
-        end else output.last^.next:=recycler^.newToken(token);
+          else output.last^.next:=recycler^.newToken(token.location,'',tt_literal,param^.value[parIdx]^.rereferenced);
+        end;
         output.last:=output.last^.next;
       end;
+
       {$ifdef fullVersion}
       context^.callStackPush(callLocation,@self,parametersNode);
       {$endif}
       if indexOfSave>=0
-      then evaluateExpressionWithSave
+      then output.first:=recycler^.disposeToken(output.first)
       else begin
         output.last^.next:=recycler^.newToken(getLocation,'',tt_semicolon);
         output.last:=output.last^.next;
-        output.last^.next:=recycler^.newToken(getLocation,'',endToken[blocking]);
+        output.last^.next:=recycler^.newToken(getLocation,'',tt_endRule);
         output.last:=output.last^.next;
       end;
     end;
@@ -743,6 +734,7 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
        (param<>nil) and pattern.matches(param^,callLocation,context,recycler) then begin
       if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then resolveIds(context^.messages,ON_EVALUATION);
       prepareResult;
+      if indexOfSave>=0 then evaluateExpressionWithSave;
       result:=output.last<>nil;
     end else begin
       result:=false;
@@ -764,7 +756,7 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST literalRecycler:P_literalRecyc
         token.create;
         token.define(T.token,literalRecycler);
         parIdx:=T.parIdx;
-        if parIdx>=0 then token.txt:=pattern.idForIndexInline(parIdx);
+        if parIdx<>NO_PARAMETERS_IDX then token.txt:=pattern.idForIndexInline(parIdx);
       end;
       inc(preparedBodyLength);
     end;
@@ -775,7 +767,7 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST literalRecycler:P_literalRecyc
       with preparedBody[preparedBodyLength] do begin
         token.create;
         token.define(opLocation,'',tt_literal,L);
-        parIdx:=-1;
+        parIdx:=NO_PARAMETERS_IDX;
       end;
       inc(preparedBodyLength);
     end;
@@ -785,7 +777,7 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST literalRecycler:P_literalRecyc
       with preparedBody[preparedBodyLength] do begin
         token.create;
         token.define(opLocation,'',op);
-        parIdx:=-1;
+        parIdx:=NO_PARAMETERS_IDX;
       end;
       inc(preparedBodyLength);
     end;
@@ -931,7 +923,7 @@ PROCEDURE T_inlineExpression.validateSerializability(CONST messages:P_messages);
 
 CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(CONST original: P_inlineExpression; CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST recycler:P_recycler);
   VAR i:longint;
-  PROCEDURE appendToExpression(VAR T:T_token; CONST parameterIndex:longint);
+  PROCEDURE appendToExpression(VAR T:T_token; CONST parameterIndex:byte);
     begin
       setLength(preparedBody,length(preparedBody)+1);
       with preparedBody[length(preparedBody)-1] do begin
@@ -947,7 +939,7 @@ CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(CONST original: P_inlineEx
       with preparedBody[length(preparedBody)-1] do begin
         token.create;
         token.define(funcLocation,'',op);
-        parIdx:=-1;
+        parIdx:=NO_PARAMETERS_IDX;
       end;
     end;
 
@@ -956,7 +948,7 @@ CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(CONST original: P_inlineEx
     pattern.clone(original^.pattern);
     if intrinsicRuleId<>'' then begin
       setLength(preparedBody,1);
-      with preparedBody[0] do begin token.create; token.define(getLocation,intrinsicRuleId,tt_intrinsicRule,builtinFunctionMap.getFunctionForId(intrinsicRuleId)); parIdx:=-1; end;
+      with preparedBody[0] do begin token.create; token.define(getLocation,intrinsicRuleId,tt_intrinsicRule,builtinFunctionMap.getFunctionForId(intrinsicRuleId)); parIdx:=NO_PARAMETERS_IDX; end;
       appendToExpression(tt_braceOpen);
     end else setLength(preparedBody,0);
     for i:=0 to length(original^.preparedBody)-1 do appendToExpression(original^.preparedBody[i].token,original^.preparedBody[i].parIdx);
@@ -1278,7 +1270,7 @@ FUNCTION T_inlineExpression.writeToStream(VAR serializer:T_literalSerializer):bo
     serializer.wrappedRaw^.writeNaturalNumber(length(preparedBody));
     for i:=0 to length(preparedBody)-1 do begin
       result:=result and preparedBody[i].token.serializeSingleToken(serializer);
-      serializer.wrappedRaw^.writeInteger(preparedBody[i].parIdx);
+      serializer.wrappedRaw^.writeByte(preparedBody[i].parIdx);
     end;
     if (customType=nil)
     then serializer.wrappedRaw^.writeAnsiString('')
@@ -1302,7 +1294,7 @@ FUNCTION T_inlineExpression.loadFromStream(VAR deserializer:T_literalDeserialize
       preparedBody[i].token.create;
       if deserializer.wrappedRaw^.allOkay then begin
         preparedBody[i].token.deserializeSingleToken(deserializer);
-        preparedBody[i].parIdx:=deserializer.wrappedRaw^.readInteger;
+        preparedBody[i].parIdx:=deserializer.wrappedRaw^.readByte;
       end;
     end;
     customType:=deserializer.getTypeCheck(dummy);
@@ -1422,7 +1414,7 @@ FUNCTION T_subruleExpression.getUsedParameters: T_arrayOfLongint;
   VAR t:T_preparedToken;
   begin
     result:=C_EMPTY_LONGINT_ARRAY;
-    for t in preparedBody do with t do if (parIdx>=0) then append(result,parIdx);
+    for t in preparedBody do with t do if (parIdx<>NO_PARAMETERS_IDX) then append(result,parIdx);
   end;
 
 PROCEDURE T_subruleExpression.checkParameters(CONST distinction:T_arrayOfLongint; CONST context:P_context);
@@ -1432,7 +1424,7 @@ PROCEDURE T_subruleExpression.checkParameters(CONST distinction:T_arrayOfLongint
     if meta.hasAttribute(SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE) then exit;
     setLength(used,0);
     append(used,distinction);
-    for t in preparedBody do with t do if (parIdx>=0) then append(used,parIdx);
+    for t in preparedBody do with t do if (parIdx<>NO_PARAMETERS_IDX) then append(used,parIdx);
     pattern.complainAboutUnusedParameters(used,context,getLocation);
   end;
 
@@ -1493,7 +1485,7 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
         meta.sideEffects:=[];
         for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
           case token.tokType of
-            tt_identifier: if (parIdx<0) then begin
+            tt_identifier: if (parIdx=NO_PARAMETERS_IDX) then begin
               P_abstractPackage(token.location.package)^.resolveId(token,messages);
               idsReady:=idsReady and (token.tokType<>tt_identifier);
             end;
@@ -1942,7 +1934,14 @@ FUNCTION readExpressionFromStream(VAR deserializer:T_literalDeserializer):P_expr
         begin
           new(inlineEx,init(expressionType,deserializer.getLocation));
           if not(inlineEx^.loadFromStream(deserializer))
-          then dispose(inlineEx,destroy)
+          then begin
+            try
+              dispose(inlineEx,destroy);
+            except
+              //Note: The assertion of an empty body will fail.
+            end;
+            deserializer.raiseError('Cannot deserialize expression of type: '+getEnumName(TypeInfo(expressionType),ord(expressionType)));
+          end
           else result:=inlineEx;
         end;
       else begin

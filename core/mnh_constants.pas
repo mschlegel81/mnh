@@ -69,7 +69,8 @@ CONST
   ALL_PARAMETERS_TOKEN_TEXT     ='$params';
   PUBLIC_TEXT                   ='public';
   PRIVATE_TEXT                  ='private';
-  ALL_PARAMETERS_PAR_IDX        =maxLongint;
+  NO_PARAMETERS_IDX             =255;
+  ALL_PARAMETERS_PAR_IDX        =254;
   REMAINING_PARAMETERS_IDX      =ALL_PARAMETERS_PAR_IDX-1;
   COMMENT_PREFIX                ='//';
   BLOCK_COMMENT_DELIMITER       ='#';
