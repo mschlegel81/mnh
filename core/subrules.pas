@@ -71,9 +71,8 @@ TYPE
       PROCEDURE constructExpression(CONST rep:P_token; CONST context:P_context; CONST recycler:P_recycler; CONST eachLocation:T_tokenLocation);
       CONSTRUCTOR init(CONST srt: T_expressionType; CONST location: T_tokenLocation);
       FUNCTION needEmbrace(CONST outerOperator:T_tokenType; CONST appliedFromLeft:boolean):boolean;
-    protected
-      FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
     public
+      FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
       {Calling with intrinsicTuleId='' means the original is cloned}
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_inlineExpression; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST recycler:P_recycler);
       PROCEDURE resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
@@ -163,11 +162,11 @@ TYPE
       func:P_intFuncCallback;
       CONSTRUCTOR createSecondaryInstance(CONST meta_:P_builtinFunctionMetaData; CONST internalId:longint);
     protected
-      FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
       FUNCTION getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression; virtual;
     public
       CONSTRUCTOR create(CONST meta_:P_builtinFunctionMetaData);
       DESTRUCTOR destroy; virtual;
+      FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       FUNCTION arity:T_arityInfo; virtual;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
@@ -200,9 +199,8 @@ TYPE
 
   P_builtinGeneratorExpression=^T_builtinGeneratorExpression;
   T_builtinGeneratorExpression=object(T_expressionLiteral)
-    protected
-      FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
     public
+      FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
       CONSTRUCTOR create(CONST location:T_tokenLocation; CONST et:T_expressionType=et_builtinIteratable);
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:P_literalRecycler):P_expressionLiteral; virtual;
       FUNCTION arity:T_arityInfo; virtual;
@@ -1936,7 +1934,14 @@ FUNCTION readExpressionFromStream(VAR deserializer:T_literalDeserializer):P_expr
         begin
           new(inlineEx,init(expressionType,deserializer.getLocation));
           if not(inlineEx^.loadFromStream(deserializer))
-          then dispose(inlineEx,destroy)
+          then begin
+            try
+              dispose(inlineEx,destroy);
+            except
+              //Note: The assertion of an empty body will fail.
+            end;
+            deserializer.raiseError('Cannot deserialize expression of type: '+getEnumName(TypeInfo(expressionType),ord(expressionType)));
+          end
           else result:=inlineEx;
         end;
       else begin

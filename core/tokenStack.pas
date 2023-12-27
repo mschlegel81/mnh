@@ -14,21 +14,17 @@ USES sysutils,
      profiling,
      debuggingVar
      {$endif};
+CONST
+  STACK_SEPARATOR =' ╟┤ ';
+
 TYPE
   P_tokenStack=^T_TokenStack;
   T_TokenStack=object
-    alloc,
-    topIndex:longint;
-    dat:PP_token;
+    top:P_token;
     CONSTRUCTOR create;
     DESTRUCTOR destroy;
-    PROCEDURE popDestroy(CONST recycler:P_recycler);
-    PROCEDURE popLink(VAR first:P_token);
-    PROCEDURE push(VAR first:P_token);
-    PROCEDURE quietPush(CONST first:P_token);
-    PROCEDURE quietPop;
-    FUNCTION topType:T_tokenType;
-    FUNCTION hasTokenTypeAnywhere(CONST t:T_tokenType):boolean;
+    PROCEDURE popLink(VAR first:P_token); inline;
+    PROCEDURE push(VAR first:P_token); inline;
     FUNCTION toString(CONST first:P_token; CONST lengthLimit:longint=maxLongint):ansistring;
     {$ifdef fullVersion}
     FUNCTION toDebuggerString(CONST first:P_token; CONST lengthLimit:longint;
@@ -157,85 +153,54 @@ FUNCTION T_callStack.getEntry(CONST index:longint):T_callStackEntry;
 
 CONSTRUCTOR T_TokenStack.create;
   begin
-    alloc:=8;
-    getMem(dat,alloc*sizeOf(P_token));
-    topIndex:=-1;
+    top:=nil;
   end;
 
 DESTRUCTOR T_TokenStack.destroy;
   begin
-    freeMem(dat,alloc*sizeOf(P_token));
-  end;
-
-PROCEDURE T_TokenStack.popDestroy(CONST recycler:P_recycler);
-  begin
-    recycler^.disposeToken(dat[topIndex]);
-    dec(topIndex);
+    assert(top=nil);
   end;
 
 PROCEDURE T_TokenStack.popLink(VAR first: P_token);
+  VAR newTop:P_token;
   begin
-    dat[topIndex]^.next:=first;
-    first:=dat[topIndex];
-    dec(topIndex);
+    newTop:=top^.next;
+            top^.next:=first;
+                       first:=top;
+                              top:=newTop;
   end;
 
 PROCEDURE T_TokenStack.push(VAR first: P_token);
+  VAR toPush:P_token;
   begin
-    inc(topIndex);
-    if topIndex>=alloc then begin
-      inc(alloc,alloc);
-      ReAllocMem(dat,alloc*sizeOf(P_token));
-    end;
-    dat[topIndex]:=first;
+    toPush:=first;
     first:=first^.next;
-  end;
-
-PROCEDURE T_TokenStack.quietPush(CONST first:P_token);
-  begin
-    inc(topIndex);
-    if topIndex>=alloc then begin
-      inc(alloc,alloc);
-      ReAllocMem(dat,alloc*sizeOf(P_token));
-    end;
-    dat[topIndex]:=first;
-  end;
-
-PROCEDURE T_TokenStack.quietPop;
-  begin
-    if topIndex>=0 then dec(topIndex);
-  end;
-
-FUNCTION T_TokenStack.topType:T_tokenType;
-  begin
-    if topIndex>=0 then result:=dat[topIndex]^.tokType
-                   else result:=tt_EOL;
-  end;
-
-FUNCTION T_TokenStack.hasTokenTypeAnywhere(CONST t:T_tokenType):boolean;
-  VAR i:longint;
-  begin
-    result:=false;
-    for i:=topIndex downto 0 do if dat[i]^.tokType=t then exit(true);
+    toPush^.next:=top;
+    top:=toPush;
   end;
 
 FUNCTION T_TokenStack.toString(CONST first: P_token; CONST lengthLimit: longint): ansistring;
-  VAR i0,i:longint;
+  VAR i:longint;
       prevWasIdLike:boolean=false;
+      fullStack:array of P_token;
+      token: P_token;
   begin
-    if topIndex>=0 then begin
-      i0:=topIndex;
+    if top<>nil then begin
+      setLength(fullStack,0);
+      token:=top;
       result:='';
-      while (i0>0) and (length(result)<lengthLimit) do begin
-        result:=dat[i0]^.toString(prevWasIdLike,prevWasIdLike,lengthLimit-length(result))+result;
-        dec(i0);
+      while (token<>nil) and (length(result)<lengthLimit) do begin
+        result:=token^.toString(prevWasIdLike,prevWasIdLike,lengthLimit-length(result))+result;
+        setLength(fullStack,length(fullStack)+1); fullStack[length(fullStack)-1]:=token; token:=token^.next;
       end;
-      if i0>0 then result:='... '
-              else result:='';
+      if token<>nil
+      then result:='... '
+      else result:='';
       prevWasIdLike:=false;
-      for i:=i0 to topIndex do result:=result+dat[i]^.toString(prevWasIdLike,prevWasIdLike);
+      for i:=length(fullStack)-1 downto 0 do result:=result+fullStack[i]^.toString(prevWasIdLike,prevWasIdLike);
+      setLength(fullStack,0);
     end else result:='';
-    result:=result+' § '+tokensToString(first,lengthLimit);
+    result:=result+STACK_SEPARATOR+tokensToString(first,lengthLimit);
   end;
 
 {$ifdef fullVersion}
@@ -264,36 +229,38 @@ FUNCTION T_TokenStack.toDebuggerString(CONST first:P_token; CONST lengthLimit:lo
       end;
     end;
 
-  VAR i0,i:longint;
+  VAR i:longint;
       remainingLength:longint;
       part:string;
-      pt:P_token;
+      token:P_token;
+      fullStack:array of P_token;
   begin
     result:=C_EMPTY_STRING_ARRAY;
     inlineVar^.clear;
-    if topIndex>=0 then begin
-      i0:=topIndex;
+    if top<>nil then begin
+      setLength(fullStack,0);
+      token:=top;
       remainingLength:=lengthLimit div 2;
-      while (i0>0) and (remainingLength>0) do begin
-        dec(remainingLength,length(toShorterString(dat[i0])));
-        dec(i0);
+      while (token<>nil) and (remainingLength>0) do begin
+        dec(remainingLength,length(toShorterString(token)));
+        setLength(fullStack,length(fullStack)+1); fullStack[length(fullStack)-1]:=token; token:=token^.next;
       end;
-      remainingLength:=lengthLimit-3;
-      inlineVar^.clear;
-      if i0>0 then result:='... ';
+      if token<>nil
+      then result:='... ';
       prevWasIdLike:=false;
-      for i:=i0 to topIndex do append(result,toShorterString(dat[i]));
+      for i:=length(fullStack)-1 downto 0 do append(result,toShorterString(fullStack[i]));
+      setLength(fullStack,0);
     end else remainingLength:=lengthLimit-3;
-    append(result,' § ');
-    pt:=first;
+    append(result,STACK_SEPARATOR);
+    token:=first;
     i:=length(result);
-    while (pt<>nil) and (remainingLength>0) do begin
-      part:=toShorterString(pt);
+    while (token<>nil) and (remainingLength>0) do begin
+      part:=toShorterString(token);
       dec(remainingLength,length(part));
       append(result,part);
-      pt:=pt^.next;
+      token:=token^.next;
     end;
-    if pt<>nil then append(result,' ...');
+    if token<>nil then append(result,' ...');
   end;
 {$endif}
 
