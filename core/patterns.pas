@@ -806,7 +806,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
     if replaceOpeningBracketByPatternToken then begin
       first^.tokType:=tt_functionPattern;
       first^.data:=@self;
-      first^.next:=recycler^.disposeToken(closingBracket);;
+      first^.next:=recycler^.disposeToken(closingBracket);
     end else begin
       recycler^.disposeToken(first);
       first:=closingBracket;

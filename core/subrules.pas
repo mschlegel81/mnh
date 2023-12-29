@@ -336,7 +336,6 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; CONST contex
         case token.tokType of
           tt_beginBlock   : begin inc(scopeLevel        ); parIdx:=NO_PARAMETERS_IDX; end;
           tt_endBlock     : begin dec(scopeLevel        ); parIdx:=NO_PARAMETERS_IDX; end;
-          tt_functionPattern,
           tt_expBraceOpen : begin inc(subExpressionLevel); parIdx:=NO_PARAMETERS_IDX; end;
           tt_expBraceClose: begin dec(subExpressionLevel); parIdx:=NO_PARAMETERS_IDX; end;
           tt_save: begin
