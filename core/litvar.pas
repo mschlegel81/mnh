@@ -507,9 +507,9 @@ FUNCTION mutateVariable(CONST literalRecycler:P_literalRecycler; VAR toMutate:P_
 FUNCTION divideInts(CONST literalRecycler:P_literalRecycler; CONST LHS,RHS:P_abstractIntLiteral):P_numericLiteral;
 FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; CONST modifier:longint=-1):boolean; inline;
 
-FUNCTION evaluateToBoolean_strict  (CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST arg0:P_literal=nil; CONST arg1:P_literal=nil):boolean; inline;
-FUNCTION evaluateToBoolean_tolerant(CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST arg0:P_literal=nil; CONST arg1:P_literal=nil):boolean; inline;
-FUNCTION evaluteExpression(CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST arg0:P_literal=nil; CONST arg1:P_literal=nil):T_evaluationResult; inline;
+FUNCTION evaluateToBoolean_strict  (CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST arg0:P_literal=nil; CONST arg1:P_literal=nil):boolean; {$ifndef debugMode} inline; {$endif}
+FUNCTION evaluateToBoolean_tolerant(CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST arg0:P_literal=nil; CONST arg1:P_literal=nil):boolean; {$ifndef debugMode} inline; {$endif}
+FUNCTION evaluteExpression(CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST arg0:P_literal=nil; CONST arg1:P_literal=nil):T_evaluationResult; {$ifndef debugMode} inline; {$endif}
 IMPLEMENTATION
 USES sysutils, math,
      zstream,

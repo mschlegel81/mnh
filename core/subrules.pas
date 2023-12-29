@@ -217,7 +217,8 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
 FUNCTION getParametersForPseudoFuncPtr(CONST minPatternLength:longint; CONST variadic:boolean; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_token;
 FUNCTION getParametersForUncurrying   (CONST givenParameters:P_listLiteral; CONST expectedArity:longint; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_token;
 FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS:P_literal; CONST tokenLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:P_recycler):P_literal;
-
+FUNCTION evaluteExpressionMap   (CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_literalRecycler; CONST arg0:P_literal):T_evaluationResult;
+FUNCTION evaluteExpressionFilter(CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_literalRecycler; CONST arg0:P_literal):boolean;
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
     newGeneratorFromStreamCallback: FUNCTION(VAR deserializer:T_literalDeserializer):P_builtinGeneratorExpression;
     BUILTIN_PMAP:P_intFuncCallback;
@@ -226,6 +227,74 @@ IMPLEMENTATION
 USES sysutils,strutils,funcs_mnh,typinfo
      {$ifdef fullVersion},plotstyles{$endif}
      ;
+
+FUNCTION evaluteExpressionMap(CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_literalRecycler; CONST arg0:P_literal):T_evaluationResult;
+  VAR parameterList:T_listLiteral;
+      arity: T_arityInfo;
+      tryMessages:T_messagesErrorHolder;
+      oldMessages: P_messages;
+  begin
+    arity:=e^.arity;
+    if not(e^.typ in C_builtinExpressionTypes) and (arity.maxPatternLength=arity.minPatternLength) and (arg0^.literalType in C_listTypes) and (P_listLiteral(arg0)^.size=arity.minPatternLength) and (P_listLiteral(arg0)^.customType=nil)
+    then begin
+      oldMessages:=context^.messages;
+      tryMessages.createErrorHolder(oldMessages,[mt_el3_evalError..mt_el3_userDefined]);
+      context^.messages:=@tryMessages;
+
+      result:=e^.evaluate(location,context,recycler,P_listLiteral(arg0));
+
+      tryMessages.destroy;
+      context^.messages:=oldMessages;
+      if result.reasonForStop in [rr_ok,rr_okWithReturn] then exit(result);
+    end;
+    parameterList.create(1);
+    parameterList.append(recycler,arg0,true);
+    result:=e^.evaluate(location,context,recycler,@parameterList);
+    parameterList.cleanup(recycler);
+    parameterList.destroy;
+  end;
+
+FUNCTION evaluteExpressionFilter(CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_literalRecycler; CONST arg0:P_literal):boolean;
+  VAR parameterList:T_listLiteral;
+      arity: T_arityInfo;
+      tryMessages:T_messagesErrorHolder;
+      oldMessages: P_messages;
+      evResult: T_evaluationResult;
+  begin
+    arity:=e^.arity;
+    if not(e^.typ in C_builtinExpressionTypes) and (arity.maxPatternLength=arity.minPatternLength) and (arg0^.literalType in C_listTypes) and (P_listLiteral(arg0)^.size=arity.minPatternLength) and (P_listLiteral(arg0)^.customType=nil)
+    then begin
+      oldMessages:=context^.messages;
+      tryMessages.createErrorHolder(oldMessages,[mt_el3_evalError..mt_el3_userDefined]);
+      context^.messages:=@tryMessages;
+
+      evResult:=e^.evaluate(location,context,recycler,P_listLiteral(arg0));
+
+      tryMessages.destroy;
+      context^.messages:=oldMessages;
+      if (evResult.reasonForStop in [rr_ok,rr_okWithReturn]) and (evResult.literal<>nil) and (evResult.literal^.literalType=lt_boolean) then begin
+        exit(P_boolLiteral(evResult.literal)^.value);
+      end else begin
+        result:=false;
+        if evResult.reasonForStop=rr_patternMismatch then context^.raiseError('Cannot apply expression '+e^.toString(50)+' to parameter list '+toParameterListString(@parameterList,true,50),location)
+        else if (evResult.literal<>nil) then context^.raiseError('Expression does not return a boolean but a '+evResult.literal^.typeString,location);
+      end;
+      if evResult.literal<>nil then recycler^.disposeLiteral(evResult.literal);
+    end;
+    parameterList.create(1);
+    parameterList.append(recycler,arg0,true);
+    evResult:=e^.evaluate(location,context,recycler,@parameterList);
+    parameterList.cleanup(recycler);
+    parameterList.destroy;
+    if (evResult.reasonForStop in [rr_ok,rr_okWithReturn]) and (evResult.literal<>nil) and (evResult.literal^.literalType=lt_boolean) then begin
+      result:=P_boolLiteral(evResult.literal)^.value;
+    end else begin
+      result:=false;
+      if evResult.reasonForStop=rr_patternMismatch then context^.raiseError('Cannot apply expression '+e^.toString(50)+' to parameter list '+toParameterListString(@parameterList,true,50),location)
+      else if (evResult.literal<>nil) then context^.raiseError('Expression does not return a boolean but a '+evResult.literal^.typeString,location);
+    end;
+    if evResult.literal<>nil then recycler^.disposeLiteral(evResult.literal);
+  end;
 
 PROCEDURE digestInlineExpression(VAR rep:P_token; CONST context:P_context; CONST recycler:P_recycler);
   VAR t,prev,inlineRuleTokens:P_token;
