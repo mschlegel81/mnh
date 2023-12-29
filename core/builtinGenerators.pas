@@ -524,7 +524,7 @@ CONSTRUCTOR T_mapGenerator.create(CONST source,mapEx: P_expressionLiteral; CONST
     sourceGenerator^.rereference;
     mapExpression:=mapEx;
     mapExpression^.rereference;
-    isNullary:=not(mapEx^.canApplyToNumberOfParameters(1));
+    isNullary:=mapEx^.arity.maxPatternLength=0;
   end;
 
 FUNCTION T_mapGenerator.toString(CONST lengthLimit:longint=maxLongint):string;
@@ -541,7 +541,7 @@ FUNCTION T_mapGenerator.evaluate(CONST location:T_tokenLocation; CONST context:P
       nextUnmapped:=sourceGenerator^.evaluate(location,context,recycler).literal;
       if (nextUnmapped<>nil) and (nextUnmapped^.literalType<>lt_void) then begin
         if isNullary then result:=mapExpression^.evaluate(        location,context,recycler)
-                     else result:=evaluteExpression(mapExpression,location,context,recycler,nextUnmapped);
+                     else result:=evaluteExpressionMap(mapExpression,location,P_context(context),recycler,nextUnmapped);
         P_recycler(recycler)^.disposeLiteral(nextUnmapped);
         //error handling
         if result.literal=nil then begin
@@ -597,7 +597,7 @@ CONSTRUCTOR T_flatMapGenerator.create(CONST source, mapEx: P_expressionLiteral;C
     mapExpression:=mapEx;
     if mapExpression<>nil then mapExpression^.rereference;
     queue.create;
-    isNullary:=(mapEx<>nil) and not(mapEx^.canApplyToNumberOfParameters(1));
+    isNullary:=(mapEx<>nil) and (mapEx^.arity.maxPatternLength=0);
     currentUnmapped:=nil;
   end;
 
@@ -623,7 +623,7 @@ FUNCTION T_flatMapGenerator.evaluate(CONST location:T_tokenLocation; CONST conte
           end else begin
             if isNullary
             then valueToAppend:=mapExpression^.evaluate(        location,context,recycler).literal
-            else valueToAppend:=evaluteExpression(mapExpression,location,context,recycler,unmapped).literal;
+            else valueToAppend:=evaluteExpressionMap(mapExpression,location,P_context(context),recycler,unmapped).literal;
             P_recycler(recycler)^.disposeLiteral(unmapped);
             if (valueToAppend<>nil) then begin
               if valueToAppend^.literalType=lt_void
@@ -759,7 +759,7 @@ CONSTRUCTOR T_chunkIterator.create(CONST source:P_expressionLiteral; CONST eleme
     chunkSize:=elementsPerChunk;
     mapExpression:=mapEx;
     if mapExpression<>nil then mapExpression^.rereference;
-    isNullary:=(mapEx<>nil) and not(mapEx^.canApplyToNumberOfParameters(1));
+    isNullary:=(mapEx<>nil) and (mapEx^.arity.maxPatternLength=0);
   end;
 
 FUNCTION T_chunkIterator.toString(CONST lengthLimit: longint): string;
@@ -795,7 +795,7 @@ FUNCTION T_chunkIterator.evaluate(CONST location:T_tokenLocation; CONST context:
         else begin
           if isNullary
           then result:=mapExpression^.evaluate(        location,context,recycler)
-          else result:=evaluteExpression(mapExpression,location,context,recycler,unmappedList);
+          else result:=evaluteExpressionMap(mapExpression,location,P_context(context),recycler,unmappedList);
           P_recycler(recycler)^.disposeLiteral(unmappedList);
           if (result.literal<>nil) then begin
             if result.literal^.literalType=lt_void
@@ -884,7 +884,7 @@ CONSTRUCTOR T_parallelMapGenerator.create(CONST source, mapEx: P_expressionLiter
     sourceGenerator:=source;
     mapExpression:=mapEx;
     mapExpression^.rereference;
-    isExpressionNullary:=not(mapEx^.canApplyToNumberOfParameters(1));
+    isExpressionNullary:=mapEx^.arity.maxPatternLength=0;
     recycling.fill:=0;
     doneFetching:=false;
     outputQueue.create;
@@ -1112,15 +1112,12 @@ DESTRUCTOR T_parallelMapGenerator.destroy;
 FUNCTION map_imp intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
-       (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or
-        P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) then
       case arg0^.literalType of
-        lt_list..lt_emptyMap: result:=processMapSerial(arg0,P_expressionLiteral(arg1),tokenLocation,context,recycler);
+        lt_list..lt_emptyMap: result:=processMapSerial(P_compoundLiteral(arg0),P_expressionLiteral(arg1),tokenLocation,context,recycler);
         lt_expression: if (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then
           new(P_mapGenerator(result),create(P_expressionLiteral(arg0),P_expressionLiteral(arg1),tokenLocation));
       end;
-    end;
   end;
 
 FUNCTION filter_imp intFuncSignature;
@@ -2238,24 +2235,19 @@ FUNCTION newGeneratorFromStream(VAR deserializer:T_literalDeserializer):P_builti
   end;
 
 FUNCTION zip_imp intFuncSignature;
-  VAR anyExpression:boolean=false;
-      i:longint;
+  VAR i:longint;
       zip:P_zipIterator;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then result:=recycler^.newListLiteral(0)
     else begin
-      for i:=0 to params^.size-1 do anyExpression:=anyExpression or (params^.value[i]^.literalType=lt_expression);
-      if anyExpression then begin
-        new(zip,create(tokenLocation));
-        for i:=0 to params^.size-1 do if not(zip^.addGenerator(params^.value[i],recycler,tokenLocation)) then begin
-          recycler^.disposeLiteral(zip);
-          exit(nil);
-        end;
-        result:=zip;
-      end else begin
-        result:=params^.transpose(recycler,nil);
+      new(zip,create(tokenLocation));
+      for i:=0 to params^.size-1 do if not(zip^.addGenerator(params^.value[i],recycler,tokenLocation)) then begin
+        recycler^.disposeLiteral(zip);
+        exit(nil);
       end;
+      result:=zip;
+
     end;
   end;
 
