@@ -57,8 +57,7 @@ DESTRUCTOR T_fileHistory.destroy;
 
 FUNCTION T_fileHistory.getSerialVersion: dword; begin result:=176494; end;
 
-FUNCTION T_fileHistory.loadFromStream(VAR stream: T_bufferedInputStreamWrapper
-  ): boolean;
+FUNCTION T_fileHistory.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
   FUNCTION readArray(OUT items:T_arrayOfString):boolean;
     VAR i,count:longint;
     begin
