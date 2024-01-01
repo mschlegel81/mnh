@@ -317,8 +317,7 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; CONST context:P_context; CONST
             digestInlineExpression(t,context,recycler);
             if t^.tokType=tt_expBraceOpen then inc(bracketLevel);
           end;
-          tt_separatorComma,tt_semicolon:
-            if bracketLevel=0 then dec(bracketLevel);
+          tt_separatorComma,tt_semicolon: if bracketLevel=0 then dec(bracketLevel);
           else if t^.tokType in C_openingBrackets then inc(bracketLevel)
           else if t^.tokType in C_closingBrackets then dec(bracketLevel);
         end;
@@ -391,52 +390,88 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; CONST contex
       i:longint;
       scopeLevel:longint=0;
       subExpressionLevel:longint=0;
+      bracketLevel:longint;
   begin
     setLength(preparedBody,rep^.getCount);
     indexOfSave:=-1;
     t:=rep;
     i:=0;
+    //writeln('****************************************************************************************');
     while t<>nil do begin
+      //writeln('*  PROCESSING TOKEN: ',safeTokenToString(t),' (',t^.tokType,') ',i,'/',length(preparedBody),' - ',scopeLevel);
       if (i>=length(preparedBody)) then setLength(preparedBody,length(preparedBody)+1);
-      with preparedBody[i] do begin
-        token:=t^;
-        t^.tokType:=tt_EOL; t:=recycler^.disposeToken(t);
-        token.next:=nil;
-        case token.tokType of
-          tt_beginBlock   : begin inc(scopeLevel        ); parIdx:=NO_PARAMETERS_IDX; end;
-          tt_endBlock     : begin dec(scopeLevel        ); parIdx:=NO_PARAMETERS_IDX; end;
-          tt_expBraceOpen : begin inc(subExpressionLevel); parIdx:=NO_PARAMETERS_IDX; end;
-          tt_expBraceClose: begin dec(subExpressionLevel); parIdx:=NO_PARAMETERS_IDX; end;
-          tt_save: begin
-            if subExpressionLevel=0 then begin
-              if indexOfSave>=0     then context^.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location)
-              else if scopeLevel<>1 then context^.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location)
-              else begin
-                indexOfSave:=i;
-                makeStateful(context,token.location);
+      preparedBody[i].token:=t^;
+      preparedBody[i].parIdx:=NO_PARAMETERS_IDX;
+      t^.tokType:=tt_EOL; t:=recycler^.disposeToken(t);
+      preparedBody[i].token.next:=nil;
+      case preparedBody[i].token.tokType of
+        tt_beginBlock   : inc(scopeLevel        );
+        tt_endBlock     : dec(scopeLevel        );
+        tt_expBraceOpen : inc(subExpressionLevel);
+        tt_expBraceClose: dec(subExpressionLevel);
+        tt_functionPattern: begin
+          bracketLevel:=0;
+          while (t<>nil) and (bracketLevel>=0) do begin
+            //writeln('** PROCESSING TOKEN: ',safeTokenToString(t));
+            inc(i);
+            preparedBody[i].token:=t^;
+            preparedBody[i].parIdx:=NO_PARAMETERS_IDX;
+            t^.tokType:=tt_EOL; t:=recycler^.disposeToken(t);
+            preparedBody[i].token.next:=nil;
+            case preparedBody[i].token.tokType of
+              tt_optionalParameters: preparedBody[i].parIdx:=REMAINING_PARAMETERS_IDX;
+              tt_identifier, tt_eachParameter, tt_userRule, tt_globalVariable, tt_customType, tt_parameterIdentifier, tt_intrinsicRule: with preparedBody[i] do begin
+                parIdx:=pattern.indexOfId(token.txt);
+                if parIdx<>NO_PARAMETERS_IDX then begin
+                  if parIdx>=REMAINING_PARAMETERS_IDX
+                  then begin
+                    if (parIdx=ALL_PARAMETERS_PAR_IDX) and (subExpressionLevel>0)
+                    then parIdx:=NO_PARAMETERS_IDX
+                    else token.tokType:=tt_parameterIdentifier;
+                  end
+                  else if token.tokType<>tt_eachParameter then token.tokType:=tt_identifier;
+                end
+                else if not(token.tokType in [tt_parameterIdentifier,tt_eachParameter]) then token.tokType:=tt_identifier;
               end;
+              tt_eachIndex: with preparedBody[i] do begin
+                if (token.location=eachLocation)
+                then parIdx:=pattern.indexOfId(token.txt)
+                else parIdx:=NO_PARAMETERS_IDX;
+              end;
+
+              tt_separatorComma,tt_semicolon: if bracketLevel=0 then dec(bracketLevel);
+              else if preparedBody[i].token.tokType in C_openingBrackets then inc(bracketLevel)
+              else if preparedBody[i].token.tokType in C_closingBrackets then dec(bracketLevel);
             end;
-            parIdx:=NO_PARAMETERS_IDX;
           end;
-          tt_optionalParameters: parIdx:=REMAINING_PARAMETERS_IDX;
-          tt_identifier, tt_eachParameter, tt_userRule, tt_globalVariable, tt_customType, tt_parameterIdentifier, tt_intrinsicRule: begin
-            parIdx:=pattern.indexOfId(token.txt);
-            if parIdx<>NO_PARAMETERS_IDX then begin
-              if parIdx>=REMAINING_PARAMETERS_IDX
-              then begin
-                if (parIdx=ALL_PARAMETERS_PAR_IDX) and (subExpressionLevel>0)
-                then parIdx:=NO_PARAMETERS_IDX
-                else token.tokType:=tt_parameterIdentifier;
-              end
-              else if token.tokType<>tt_eachParameter then token.tokType:=tt_identifier;
+        end;
+        tt_save: begin
+          if subExpressionLevel=0 then begin
+            if indexOfSave>=0     then context^.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',preparedBody[i].token.location)
+            else if scopeLevel<>1 then context^.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',preparedBody[i].token.location)
+            else begin
+              indexOfSave:=i;
+              makeStateful(context,preparedBody[i].token.location);
+            end;
+          end;
+        end;
+        tt_optionalParameters: preparedBody[i].parIdx:=REMAINING_PARAMETERS_IDX;
+        tt_identifier, tt_eachParameter, tt_userRule, tt_globalVariable, tt_customType, tt_parameterIdentifier, tt_intrinsicRule: with preparedBody[i] do begin
+          parIdx:=pattern.indexOfId(token.txt);
+          if parIdx<>NO_PARAMETERS_IDX then begin
+            if parIdx>=REMAINING_PARAMETERS_IDX
+            then begin
+              if (parIdx=ALL_PARAMETERS_PAR_IDX) and (subExpressionLevel>0)
+              then parIdx:=NO_PARAMETERS_IDX
+              else token.tokType:=tt_parameterIdentifier;
             end
-            else if not(token.tokType in [tt_parameterIdentifier,tt_eachParameter]) then token.tokType:=tt_identifier;
-          end;
-          tt_eachIndex: begin
-            if (token.location=eachLocation)
-            then parIdx:=pattern.indexOfId(token.txt)
-            else parIdx:=NO_PARAMETERS_IDX;
+            else if token.tokType<>tt_eachParameter then token.tokType:=tt_identifier;
           end
+          else if not(token.tokType in [tt_parameterIdentifier,tt_eachParameter]) then token.tokType:=tt_identifier;
+        end;
+        tt_eachIndex: with preparedBody[i] do begin
+          if (token.location=eachLocation)
+          then parIdx:=pattern.indexOfId(token.txt)
           else parIdx:=NO_PARAMETERS_IDX;
         end;
       end;
@@ -576,34 +611,37 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; CONST contex
       exit;
     end;
     pattern.create;
-    t:=rep;
-    i:=0;
-    setLength(preparedBody,rep^.getCount);
-    while (t<>nil) do begin
-      if (i>=length(preparedBody)) then setLength(preparedBody,length(preparedBody)+1);
-      with preparedBody[i] do begin
-        token:=t^;
-        t^.tokType:=tt_EOL;
-        t:=recycler^.disposeToken(t);
-        token.next:=nil;
-        case token.tokType of
-          tt_beginBlock   : inc(scopeLevel        );
-          tt_endBlock     : dec(scopeLevel        );
-          tt_expBraceOpen : inc(subExpressionLevel);
-          tt_expBraceClose: dec(subExpressionLevel);
-          tt_save: if subExpressionLevel=0 then begin
-            if indexOfSave>=0 then context^.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location);
-            if scopeLevel<>1 then context^.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location);
-            makeStateful(context,token.location);
-            indexOfSave:=i;
-          end;
-        end;
-        parIdx:=NO_PARAMETERS_IDX;
-      end;
-      inc(i);
-    end;
-    setLength(preparedBody,i);
-    stripExpression;
+    constructExpression(rep,context,recycler,rep^.location);
+//
+//    t:=rep;
+//    i:=0;
+//    setLength(preparedBody,rep^.getCount);
+//
+//    while (t<>nil) do begin
+//      if (i>=length(preparedBody)) then setLength(preparedBody,length(preparedBody)+1);
+//      with preparedBody[i] do begin
+//        token:=t^;
+//        t^.tokType:=tt_EOL;
+//        t:=recycler^.disposeToken(t);
+//        token.next:=nil;
+//        case token.tokType of
+//          tt_beginBlock   : inc(scopeLevel        );
+//          tt_endBlock     : dec(scopeLevel        );
+//          tt_expBraceOpen : inc(subExpressionLevel);
+//          tt_expBraceClose: dec(subExpressionLevel);
+//          tt_save: if subExpressionLevel=0 then begin
+//            if indexOfSave>=0 then context^.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location);
+//            if scopeLevel<>1 then context^.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location);
+//            makeStateful(context,token.location);
+//            indexOfSave:=i;
+//          end;
+//        end;
+//        parIdx:=NO_PARAMETERS_IDX;
+//      end;
+//      inc(i);
+//    end;
+//    setLength(preparedBody,i);
+//    stripExpression;
     updatePatternForInline(recycler);
   end;
 
