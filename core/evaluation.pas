@@ -29,6 +29,7 @@ USES sysutils,
      funcs_math,
      funcs_list,
      funcs_types,
+     funcs_format,
      subrules,
      rules,
      aggregators,
@@ -965,6 +966,20 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       didSubstitution:=true;
     end;
 
+  PROCEDURE resolveFormatString;
+    VAR r:P_token;
+        par:P_listLiteral;
+    begin
+      r:=recycler^.newToken(first^.location,'format',tt_intrinsicRule,FORMAT_FUNCTION);
+      par:=recycler^.newListLiteral(1);
+      par^.append(recycler,P_stringLiteral(first^.data),false);
+      first^.tokType:=tt_parList;
+      first^.data:=par;
+      r^.next:=first;
+      first:=r;
+      didSubstitution:=true;
+    end;
+
 {$MACRO ON}
 {$define COMMON_CASES:=
 tt_pow2,tt_pow3: process_pow2_pow3;
@@ -1044,6 +1059,7 @@ end}
       debugRun:=debugRun and context^.stepping(first,@stack);
       {$endif}
       case cTokType[0] of
+        tt_formatString: resolveFormatString;
 {cT[0]=}tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
  {cT[-1]=}tt_separatorMapItem: case cTokType[1] of
             tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_EOL,tt_semicolon,tt_expBraceClose,tt_listBraceClose: processEntryConstructor;

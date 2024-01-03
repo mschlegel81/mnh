@@ -196,6 +196,7 @@ TYPE
     tt_endOfPatternDeclare,//lexer interal
     tt_endOfPatternAssign, //lexer interal
     tt_functionPattern,
+    tt_formatString,
     tt_blank);
 
   T_tokenTypeSet  =set of T_tokenType;
@@ -388,6 +389,7 @@ CONST
   {tt_endOfPatternDeclare}        ')->',
   {tt_endOfPatternAssign}         '):=',
   {tt_functionPattern}            '',
+  {tt_formatString}               '',
   {tt_blank}                      '');
 {$ifdef fullVersion}
   C_tokenDoc:array[T_tokenType] of record
@@ -503,6 +505,7 @@ CONST
 {tt_endOfPatternDeclare}        (reservedWordClass:rwc_not_reserved;     helpText:'End-of-pattern/declare'; helpLink:''),
 {tt_endOfPatternAssign}         (reservedWordClass:rwc_not_reserved;     helpText:'End-of-pattern/assign'; helpLink:''),
 {tt_functionPattern}            (reservedWordClass:rwc_not_reserved;     helpText:'Function pattern'; helpLink:''),
+{tt_formatString}               (reservedWordClass:rwc_not_reserved;     helpText:'Format string'; helpLink:''),
 {tt_blank}                      (reservedWordClass:rwc_not_reserved;     helpText:'Blank#Helper token; May indicate a comment or whitespace'; helpLink:''));
 {$endif}
 TYPE
