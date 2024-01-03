@@ -15,15 +15,10 @@ TYPE
 
   THelpForm = class(T_mnhComponentForm)
     openHtmlButton: TButton;
-    Panel1: TPanel;
-    ScrollBox1: TScrollBox;
     MainMenu1: TMainMenu;
     PopupMenu1: TPopupMenu;
     helpHighlighter:TMnhOutputSyn;
-    shortInfoGroupBox: TGroupBox;
-    shortInfoLabel: TLabel;
     SynEdit1: TSynEdit;
-    tokenLabel: TLabel;
     UpdateToggleBox: TToggleBox;
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -202,7 +197,7 @@ PROCEDURE THelpForm.performFastUpdate;
       writeSectionHeader('Examples:');
       for line in info.exampleText do appendLAL(line,noLocation);
     end;
-
+  VAR s:string;
   begin
     if not(isActiveInTabSheet and UpdateToggleBox.checked) or SynEdit1.Focused then exit;
     meta:=workspace.currentEditor;
@@ -214,10 +209,13 @@ PROCEDURE THelpForm.performFastUpdate;
       setLength(lineLocations,0);
       info :=getCurrentTokenInfo;
       currentLink:=info.linkToHelp;
-      tokenLabel.caption:='Token: '+info.tokenText;
-      shortInfoGroupBox.visible:=info.shortInfo<>'';
-      shortInfoLabel.caption:=info.shortInfo;
-
+      if info.shortInfo.contains(C_lineBreakChar)
+      then begin
+        appendLAL(ECHO_MARKER+info.tokenText                      ,noLocation);
+        for s in split(info.shortInfo,C_lineBreakChar) do appendLAL(s,noLocation);
+      end else if info.shortInfo<>''
+      then appendLAL(ECHO_MARKER+info.tokenText+' //'+info.shortInfo,noLocation)
+      else appendLAL(ECHO_MARKER+info.tokenText                     ,noLocation);
       addSubrulesSection;
       addBuiltinSection;
       addReferencedSection;
