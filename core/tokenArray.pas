@@ -1576,6 +1576,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
       if copy(line,inputLocation.column,length(C_tokenDefaultId[tt_operatorNotIn]))=C_tokenDefaultId[tt_operatorNotIn] then apply(tt_operatorNotIn)
       else if isFormatString then begin
         stringValue:=unescapeString(line,inputLocation.column+1,parsedLength);
+        inc(parsedLength); //...because we added one more character before the string
         result^.tokType:=tt_formatString;
         result^.data:=recycler^.newStringLiteral(stringValue);
       end else begin
