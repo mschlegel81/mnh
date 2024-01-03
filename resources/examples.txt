@@ -571,6 +571,11 @@ minus([1..10]²,2*[0..50])
 rangeGenerator(1,20).chunkMap(5,(x)->format('%2s',x)).toList;
 
 #I flatMap
+#S flatMap(L,f:Expression(1));
+#C flattens L and applies f
+#S flatMap(L);
+#C Note that the mapping function (if present) is applied AFTER flattening!
+#C Always returns an iteratable expression
 [1,[2,3],[4,5,6]].flatMap((x)->x³).toList;
 
 #I sort
@@ -1967,11 +1972,6 @@ formatTime('hh:nn dd.mm.yyyy',systime);
 #C L may be a generator
 #S map(L,f:Expression(0));
 #C Returns a list by applying f. The input L is ignored (apart from its size)
-#S flatMap(L,f:Expression(1));
-#C flattens L and applies f
-#S flatMap(L);
-#C Note that the mapping function (if present) is applied AFTER flattening!
-#C Always returns an iteratable expression
 
 #I chunkMap
 #S chunkMap(L,chunkSize>0,f:Expression(1));
