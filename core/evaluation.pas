@@ -387,7 +387,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
           {$endif}
         end;
         tt_rulePutCacheValue: begin
-          newLiteral:=P_memoizedRule(first^.data)^.doPutCache(parameterListLiteral);
+          newLiteral:=P_memoizedRule(first^.data)^.doPutCache(parameterListLiteral,recycler);
           replace.first:=recycler^.newToken(first^.location,'',tt_literal,newLiteral);
           replace.last:=replace.first;
         end;

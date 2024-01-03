@@ -13,6 +13,7 @@ TYPE
     keyHash: T_hashInt;
     value: P_literal;
     lastUse: longint;
+    goodUntil: double;
   end;
 
   P_cache = ^T_cache;
@@ -26,9 +27,10 @@ TYPE
     end;
     PROCEDURE polish;
   public
+    timeout:double;
     CONSTRUCTOR create(ruleCS:TRTLCriticalSection);
     DESTRUCTOR destroy;
-    PROCEDURE put(CONST key: P_listLiteral; CONST value: P_literal); inline;
+    PROCEDURE put(CONST key: P_listLiteral; CONST value: P_literal; CONST recycler:P_literalRecycler); inline;
     FUNCTION get(CONST key: P_listLiteral): P_literal;
     FUNCTION getIfNotLocked(CONST key: P_listLiteral): P_literal;
     PROCEDURE clear;
@@ -39,6 +41,7 @@ USES recyclers;
 CONSTRUCTOR T_cache.create(ruleCS:TRTLCriticalSection);
   begin
     criticalSection:=ruleCS;
+    timeout:=1E20;
     fill := 0;
     useCounter:=0;
     setLength(cached,MIN_BIN_COUNT);
@@ -54,7 +57,9 @@ DESTRUCTOR T_cache.destroy;
 PROCEDURE T_cache.polish;
   VAR binIdx,i,j: longint;
       dropThreshold:longint;
+      now_: TDateTime;
   begin
+    now_:=now;
     enterCriticalSection(criticalSection);
     try
       dropThreshold:=useCounter - fill shr 1;
@@ -62,7 +67,7 @@ PROCEDURE T_cache.polish;
       with cached[binIdx] do begin
         j:=0;
         for i := 0 to length(data)-1 do
-        if (data[i].lastUse>dropThreshold) then begin
+        if (data[i].lastUse>dropThreshold) and (data[i].goodUntil>now_) then begin
           data[j] := data[i];
           inc(j);
         end else begin
@@ -77,7 +82,7 @@ PROCEDURE T_cache.polish;
     end;
   end;
 
-PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
+PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal; CONST recycler:P_literalRecycler);
   PROCEDURE grow;
     VAR redistribute:array of T_cacheEntry=();
         i,j,k:longint;
@@ -123,11 +128,15 @@ PROCEDURE T_cache.put(CONST key: P_listLiteral; CONST value: P_literal);
         if (i>=length(data)) then begin
           setLength(data, i+1);
           inc(fill);
-          data[i].key     :=P_listLiteral(key^.rereferenced);
-          data[i].keyHash :=hash;
-          data[i].value   :=value^.rereferenced;
-          data[i].lastUse :=useCounter;
+          data[i].key      :=P_listLiteral(key^.rereferenced);
+          data[i].keyHash  :=hash;
+          data[i].value    :=value^.rereferenced;
+        end else if timeout<1E20 then begin
+          recycler^.disposeLiteral(data[i].value);
+          data[i].value    :=value^.rereferenced;
         end;
+        data[i].lastUse  :=useCounter;
+        data[i].goodUntil:=now+timeout;
       end;
       inc(useCounter);
       if (fill>MAX_ACCEPTED_COLLISIONS*length(cached)) then grow;
@@ -140,14 +149,16 @@ FUNCTION T_cache.get(CONST key: P_listLiteral): P_literal;
   VAR i: longint;
       hash:T_hashInt;
       binIdx: T_hashInt;
+      now_: TDateTime;
   begin
+    now_:=now;
     enterCriticalSection(criticalSection);
     try
       hash:=key^.hash;
       binIdx:=hash and (length(cached)-1);
       with cached[binIdx] do begin
         i := 0;
-        while (i<length(data)) and not((data[i].keyHash=hash) and key^.equals(data[i].key)) do inc(i);
+        while (i<length(data)) and not((data[i].keyHash=hash) and key^.equals(data[i].key) and (data[i].goodUntil>now_)) do inc(i);
         if i>=length(data) then result:=nil
         else begin
           inc(useCounter);
@@ -164,23 +175,26 @@ FUNCTION T_cache.getIfNotLocked(CONST key: P_listLiteral): P_literal;
   VAR i: longint;
       hash:T_hashInt;
       binIdx: T_hashInt;
+      now_: TDateTime;
   begin
-    if tryEnterCriticalsection(criticalSection)=0 then exit(nil) else
-    try
-      hash:=key^.hash;
-      binIdx:=hash and (length(cached)-1);
-      with cached[binIdx] do begin
-        i := 0;
-        while (i<length(data)) and not((data[i].keyHash=hash) and key^.equals(data[i].key)) do inc(i);
-        if i>=length(data) then result:=nil
-        else begin
-          inc(useCounter);
-          data[i].lastUse:=useCounter;
-          result:=data[i].value;
+    if tryEnterCriticalsection(criticalSection)=0 then exit(nil) else begin
+      now_:=now;
+      try
+        hash:=key^.hash;
+        binIdx:=hash and (length(cached)-1);
+        with cached[binIdx] do begin
+          i := 0;
+          while (i<length(data)) and not((data[i].keyHash=hash) and key^.equals(data[i].key) and (data[i].goodUntil>now_)) do inc(i);
+          if i>=length(data) then result:=nil
+          else begin
+            inc(useCounter);
+            data[i].lastUse:=useCounter;
+            result:=data[i].value;
+          end;
         end;
+      finally
+        leaveCriticalSection(criticalSection);
       end;
-    finally
-      leaveCriticalSection(criticalSection);
     end;
   end;
 
