@@ -2237,17 +2237,19 @@ FUNCTION newGeneratorFromStream(VAR deserializer:T_literalDeserializer):P_builti
 FUNCTION zip_imp intFuncSignature;
   VAR i:longint;
       zip:P_zipIterator;
+      allCompound:boolean=true;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then result:=recycler^.newListLiteral(0)
     else begin
+      for i:=0 to params^.size-1 do allCompound:=allCompound and (params^.value[i]^.literalType in C_compoundTypes);
+      if allCompound then exit(params^.transpose(recycler,nil,true));
       new(zip,create(tokenLocation));
       for i:=0 to params^.size-1 do if not(zip^.addGenerator(params^.value[i],recycler,tokenLocation)) then begin
         recycler^.disposeLiteral(zip);
         exit(nil);
       end;
       result:=zip;
-
     end;
   end;
 

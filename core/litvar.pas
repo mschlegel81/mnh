@@ -408,7 +408,7 @@ TYPE
       FUNCTION leading(CONST literalRecycler:P_literalRecycler; CONST trailSize: longint):P_listLiteral;
       FUNCTION trailing(CONST literalRecycler:P_literalRecycler                          ):P_literal;
       FUNCTION trailing(CONST literalRecycler:P_literalRecycler; CONST trailSize: longint):P_listLiteral;
-      FUNCTION transpose(CONST literalRecycler:P_literalRecycler; CONST filler:P_literal): P_listLiteral;
+      FUNCTION transpose(CONST literalRecycler:P_literalRecycler; CONST filler:P_literal; CONST truncate:boolean=false): P_listLiteral;
       PROCEDURE removeElement(CONST literalRecycler:P_literalRecycler; CONST index:longint);
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
     end;
@@ -1410,7 +1410,7 @@ FUNCTION T_listLiteral.leading(CONST literalRecycler:P_literalRecycler): P_listL
 FUNCTION T_listLiteral.leading(CONST literalRecycler:P_literalRecycler; CONST trailSize: longint): P_listLiteral;
   begin result:=head(literalRecycler,fill-trailSize); end;
 
-FUNCTION T_listLiteral.transpose(CONST literalRecycler:P_literalRecycler; CONST filler: P_literal): P_listLiteral;
+FUNCTION T_listLiteral.transpose(CONST literalRecycler:P_literalRecycler; CONST filler: P_literal; CONST truncate:boolean=false): P_listLiteral;
   VAR innerSize:longint=-1;
       i,j:longint;
       innerList:P_listLiteral;
@@ -1418,11 +1418,18 @@ FUNCTION T_listLiteral.transpose(CONST literalRecycler:P_literalRecycler; CONST 
       containsError:boolean=false;
   begin
     if literalType=lt_emptyList then exit(P_listLiteral(rereferenced));
-    for i:=0 to fill-1 do
-    if (dat[i]^.literalType in C_listTypes)
-    then innerSize:=max(innerSize,P_listLiteral(dat[i])^.size)
-    else innerSize:=max(innerSize,1);
-
+    if truncate then begin
+      innerSize:=MaxLongint;
+      for i:=0 to fill-1 do
+      if (dat[i]^.literalType in C_listTypes)
+      then innerSize:=min(innerSize,P_listLiteral(dat[i])^.size)
+      else innerSize:=min(innerSize,1);
+    end else begin
+      for i:=0 to fill-1 do
+      if (dat[i]^.literalType in C_listTypes)
+      then innerSize:=max(innerSize,P_listLiteral(dat[i])^.size)
+      else innerSize:=max(innerSize,1);
+    end;
     result:=literalRecycler^.newListLiteral;
     for i:=0 to innerSize-1 do if not(containsError) then begin
       if filler=nil then begin
