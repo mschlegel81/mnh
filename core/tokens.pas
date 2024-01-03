@@ -204,7 +204,7 @@ PROCEDURE T_token.define(CONST original: T_token; CONST literalRecycler:P_litera
 PROCEDURE T_token.undefine(CONST literalRecycler:P_literalRecycler);
   begin
     case tokType of
-      tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList: literalRecycler^.disposeLiteral(data);
+      tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList,tt_formatString: literalRecycler^.disposeLiteral(data);
       tt_each,tt_parallelEach: if data<>nil then literalRecycler^.disposeLiteral(data);
       tt_functionPattern: disposePattern(data,literalRecycler);
     end;
@@ -244,6 +244,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       end;
       tt_customTypeCheck: result:=':'+txt;
       tt_aggregatorExpressionLiteral,
+      tt_formatString       : result:='f'+P_literal(data)^.toString(limit);
       tt_literal            : result:=P_literal    (data)^.toString(limit);
       tt_parList_constructor: result:=toParameterListString(P_listLiteral(data),false,limit);
       tt_parList            : result:=toParameterListString(P_listLiteral(data),true ,limit);

@@ -1058,7 +1058,7 @@ The <i>memoized modifier</i> enables caching for the complete rule; if one subru
 <br>Caching means, that internally a hash map with key value pairs (<i>parameters</i>,<i>function result</i>) is created. For performance reasons this
 map has a size limit - if this limit is exceeded, key-value-pairs are "forgotten" based on a mixed strategy combining least-recently-used and least-frequently-used approaches.<br>
 Used appropriately, caching results in enormous speedup. <br>
-Note that memoized functions do not work well with parallelized evaluations.
+If you prefer an aging cache, you may annotate the memoized rule with <code>@MaxAge=</code><i>max_age_in_seconds</i>.
 
 <h4><br><a name="synchronizedMod">synchronized</a></h4>
 The <i>synchronized modifier</i> protects a rule against parallel execution.<br>
@@ -1096,7 +1096,7 @@ Functions modifying the value of a datastore value should be <a href="#synchroni
 
 <h4><br><a name="plainMod">plain</a></h4>
 The <i>plain modifier</i> is only allowed in combination with the datastore modifier.<br>
-It changes the representation of the persisted file to "plain text".
+It changes the representation of the persisted file to "plain text" to allow better integration with versioning tools.
 
 <h4><br><a name="localMod">local</a></h4>
 The <i>local modifier</i> ensures, that a variable is declared in the scope of the current <a href="#beginEnd">begin-end-blocks</a>.

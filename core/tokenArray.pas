@@ -1383,6 +1383,8 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
         then result.shortInfo:='suppresses warnings about unused rules';
         if result.tokenText=ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE
         then result.shortInfo:='suppresses warnings about unused parameters';
+        if result.tokenText=ATTRIBUTE_PREFIX+MAX_AGE_ATTRIBUTE
+        then result.shortInfo:='Sets the maximum age for a cached element in seconds';
       end;
       tt_userRule, tt_globalVariable: begin
         result.userDefRuleInfo:=P_abstractRule(token^.data)^.getStructuredInfo;
@@ -1409,6 +1411,12 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
   PROCEDURE fail(message:ansistring);
     begin
       messages^.raiseSimpleError(message,inputLocation);
+    end;
+
+  FUNCTION isFormatString:boolean;
+    begin
+      result:=(line[inputLocation.column]='f') and (inputLocation.column+1<length(line)) and
+              (line[inputLocation.column+1] in ['"','''']);
     end;
 
   FUNCTION leadingId:T_idString;
@@ -1565,9 +1573,12 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
         result^.tokType:=tt_parameterIdentifier;
       end;
       'a'..'z','A'..'Z','_':
-      if copy(line,inputLocation.column,length(C_tokenDefaultId[tt_operatorNotIn]))=C_tokenDefaultId[tt_operatorNotIn]
-      then apply(tt_operatorNotIn)
-      else begin
+      if copy(line,inputLocation.column,length(C_tokenDefaultId[tt_operatorNotIn]))=C_tokenDefaultId[tt_operatorNotIn] then apply(tt_operatorNotIn)
+      else if isFormatString then begin
+        stringValue:=unescapeString(line,inputLocation.column+1,parsedLength);
+        result^.tokType:=tt_formatString;
+        result^.data:=recycler^.newStringLiteral(stringValue);
+      end else begin
         result^.txt:=leadingId;
         result^.tokType:=tt_identifier;
         for tt:=low(T_tokenType) to high(T_tokenType) do

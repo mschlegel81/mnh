@@ -120,9 +120,10 @@ TYPE
       CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST ruleType:T_ruleType=rt_memoized);
       DESTRUCTOR destroy; virtual;
       PROCEDURE clearCache; virtual;
-      FUNCTION doPutCache(CONST param:P_listLiteral):P_literal;
+      FUNCTION doPutCache(CONST param:P_listLiteral; CONST recycler:P_literalRecycler):P_literal;
       FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; CONST recycler:P_recycler):boolean; virtual;
       FUNCTION isPure:boolean; virtual;
+      PROCEDURE addOrReplaceSubRule(CONST rule:P_subruleExpression; CONST context:P_context; CONST recycler:P_recycler); virtual;
   end;
 
   P_typeCheckRule=^T_typeCheckRule;
@@ -1142,6 +1143,14 @@ PROCEDURE T_ruleWithSubrules.addOrReplaceSubRule(CONST rule: P_subruleExpression
     clearCache;
   end;
 
+PROCEDURE T_memoizedRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; CONST context:P_context; CONST recycler:P_recycler);
+  VAR timeout_in_seconds:double;
+  begin
+    inherited addOrReplaceSubRule(rule,context,recycler);
+    timeout_in_seconds:=strToFloatDef(rule^.metaData.getAttribute(MAX_AGE_ATTRIBUTE).value,-1);
+    if timeout_in_seconds>0 then cache.timeout:=timeout_in_seconds*ONE_SECOND;
+  end;
+
 PROCEDURE T_typeCastRule.addOrReplaceSubRule(CONST rule:P_subruleExpression; CONST context:P_context; CONST recycler:P_recycler);
   begin
     inherited addOrReplaceSubRule(rule,context,recycler);
@@ -1311,7 +1320,6 @@ if param=nil then recycler^.disposeLiteral(useParam);
 exit}
   VAR lit:P_literal;
       useParam:P_listLiteral;
-      p:pointer;
 
   FUNCTION canBeAppliedNaively:boolean;
     VAR sub:P_subruleExpression;
@@ -1337,7 +1345,7 @@ exit}
     result:=false;
     if param=nil then useParam:=recycler^.newListLiteral
                  else useParam:=param;
-    lit:=cache.getIfNotLocked(useParam);
+    lit:=cache.get(useParam);
     if lit<>nil then begin
       //Result taken from cache
       lit^.rereference;
@@ -1694,13 +1702,13 @@ PROCEDURE T_memoizedRule.clearCache;
     leaveCriticalSection(rule_cs);
   end;
 
-FUNCTION T_memoizedRule.doPutCache(CONST param: P_listLiteral): P_literal;
+FUNCTION T_memoizedRule.doPutCache(CONST param: P_listLiteral; CONST recycler:P_literalRecycler): P_literal;
   VAR val:P_literal;
   begin
     val:=param^.value[1];
     if val=nil then val:=newVoidLiteral;
 
-    cache.put(P_listLiteral(param^.value[0]),val);
+    cache.put(P_listLiteral(param^.value[0]),val,recycler);
     result:=val^.rereferenced;
   end;
 
