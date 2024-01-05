@@ -72,8 +72,6 @@ PROCEDURE finalizeCodeAssistance;
 PROCEDURE ensureDefaultFiles(CONST progressCallback:F_simpleCallback; CONST overwriteExisting:boolean=false; CONST createHtmlDat:boolean=false);
 PROCEDURE postAssistanceRequest    (CONST scriptPath:string);
 FUNCTION  getAssistanceResponseSync(CONST editorMeta:P_codeProvider):P_codeAssistanceResponse;
-
-PROCEDURE postUsageScan            (CONST folderToScan:string);
 FUNCTION findScriptsUsing(CONST scriptName:string):T_arrayOfString;
 FUNCTION findRelatedScriptsTransitive(CONST scriptName:string):T_arrayOfString;
 
@@ -83,7 +81,7 @@ USES FileUtil,sysutils,myStringUtil,commandLineParameters,SynHighlighterMnh,mnh_
 TYPE T_usagePair=record usedScript,usingScript:string; end;
 VAR scriptUsage:record
       dat:array of T_usagePair;
-      foldersScanned:T_arrayOfString;
+      scriptsScanned:T_arrayOfString;
       scanning:boolean;
     end;
 
@@ -114,7 +112,6 @@ VAR codeAssistanceCs:TRTLCriticalSection;
     codeAssistantIsRunning:boolean=false;
     shuttingDown          :boolean=false;
     pendingRequests       :specialize G_threadsafeQueue<P_codeAssistanceRequest>;
-    pendingUsageScans     :specialize G_threadsafeQueue<string>;
     isFinalized:boolean=false;
 
 FUNCTION findScriptsUsing(CONST scriptName:string):T_arrayOfString;
@@ -211,38 +208,28 @@ PROCEDURE T_codeAssistanceThread.execute;
       end;
     end;
 
-  PROCEDURE scanFolder(CONST folder:string);
-    VAR scriptsInThisFolder:TStringList;
-        alreadyScannedFolder:string;
-        script:string;
+  PROCEDURE scanSingleScriptUsage(CONST scriptFileName:string);
     begin
       enterCriticalSection(codeAssistanceCs);
-      for alreadyScannedFolder in scriptUsage.foldersScanned do if folder=alreadyScannedFolder then begin
+      if arrContains(scriptUsage.scriptsScanned,scriptFileName) then begin
         leaveCriticalSection(codeAssistanceCs);
         exit;
       end;
       leaveCriticalSection(codeAssistanceCs);
+      {$ifdef debugMode}
+      writeln('  codeAssistanceThread: scan usages of ',scriptFileName);
+      {$endif}
 
-      scriptsInThisFolder:=FindAllFiles(folder+DirectorySeparator,'*.mnh',false);
-      //Load scripts
-      for script in scriptsInThisFolder do if not Terminated then begin
-        {$ifdef debugMode}
-        writeln(stdErr,'T_codeAssistanceThread/scanFolder: scanning ',script);
-        {$endif}
-        updateScriptUsage(script,findUsedAndExtendedPackages(script));
-      end;
-      scriptsInThisFolder.free;
+      updateScriptUsage(scriptFileName,findUsedAndExtendedPackages(scriptFileName));
 
       enterCriticalSection(codeAssistanceCs);
-      append(scriptUsage.foldersScanned,folder);
+      append(scriptUsage.scriptsScanned,scriptFileName);
       leaveCriticalSection(codeAssistanceCs);
     end;
 
-  VAR scriptsToScanAfterFileScanFinished:T_arrayOfString;
   PROCEDURE scanScript(CONST request:P_codeAssistanceRequest);
     VAR response: P_codeAssistanceResponse;
     begin
-      appendIfNew(scriptsToScanAfterFileScanFinished,request^.scriptPath);
       response:=request^.execute(recycler,globals,@adapters);
       {$ifdef debugMode}
       writeln('  response for ',request^.scriptPath,' is ',response^.stateHash);
@@ -251,11 +238,14 @@ PROCEDURE T_codeAssistanceThread.execute;
       preparedResponses.append(response);
     end;
 
+
+  VAR pendingFileScans:specialize G_queue<string>;
+      s:string;
   begin
     {$ifdef debugMode}
     writeln('  codeAssistanceThread started');
     {$endif}
-    setLength(scriptsToScanAfterFileScanFinished,0);
+    pendingFileScans.create;
     threadStartsSleeping; //low prio thread
     postIdeMessage('Code assistance started',false);
     //setup:
@@ -267,26 +257,17 @@ PROCEDURE T_codeAssistanceThread.execute;
       requests:=pendingRequests.getAll;
       if length(requests)=0
       then begin
-        if pendingUsageScans.canGetNext(folderToScan) then begin
-          if folderToScan=MARKER_USAGE_SCAN_END
-          then begin
-            //rescan all scripts after folders have been scanned
-            for folderToScan in scriptsToScanAfterFileScanFinished do postAssistanceRequest(folderToScan);
-            setLength(scriptsToScanAfterFileScanFinished,0);
-
-            //clean up pending folder scans
-            scriptsToScanAfterFileScanFinished:=pendingUsageScans.getAll;
-            dropValues(scriptsToScanAfterFileScanFinished,MARKER_USAGE_SCAN_END);
-            sortUnique(scriptsToScanAfterFileScanFinished);
-            for folderToScan in scriptsToScanAfterFileScanFinished do pendingUsageScans.append(folderToScan);
-            if length(scriptsToScanAfterFileScanFinished)>0 then pendingUsageScans.append(MARKER_USAGE_SCAN_END);
-            setLength(scriptsToScanAfterFileScanFinished,0);
-          end
-          else scanFolder(canonicalFileName(folderToScan));
+        if pendingFileScans.hasNext then begin
+          scanSingleScriptUsage(pendingFileScans.next);
           sleepBetweenRunsMillis:=0;
         end else begin
-          sleepBetweenRunsMillis+=1;
-          sleep(sleepBetweenRunsMillis);
+          for s in fileCache.listFilesMatching('') do
+          if not arrContains(scriptUsage.scriptsScanned,s)
+          then pendingFileScans.append(s);
+          if not(pendingFileScans.hasNext) then begin
+            sleepBetweenRunsMillis+=1;
+            sleep(sleepBetweenRunsMillis);
+          end;
         end;
       end
       else begin
@@ -500,7 +481,7 @@ FUNCTION T_codeAssistanceResponse.usedAndExtendedPackages: T_arrayOfString;
 
 FUNCTION T_codeAssistanceResponse.getImportablePackages: T_arrayOfString;
   begin
-    result:=listScriptIds(extractFilePath(package^.getPath));
+    result:=fileCache.availablePackages(extractFilePath(package^.getPath));
   end;
 
 FUNCTION T_codeAssistanceResponse.updateCompletionList(VAR wordsInEditor: T_setOfString; CONST lineIndex, colIdx: longint): boolean;
@@ -556,9 +537,9 @@ PROCEDURE postAssistanceRequest(CONST scriptPath:string);
     ensureCodeAssistanceThread;
   end;
 
-PROCEDURE postUsageScan(CONST folderToScan: string);
+FUNCTION stringsEqual(CONST a,b:string):boolean;
   begin
-    pendingUsageScans.append(folderToScan);
+    result:=a=b;
   end;
 
 FUNCTION getAssistanceResponseSync(CONST editorMeta:P_codeProvider):P_codeAssistanceResponse;
@@ -800,13 +781,11 @@ PROCEDURE finalizeCodeAssistance;
       sleep(1); ThreadSwitch;
       enterCriticalSection(codeAssistanceCs);
     end;
-    while pendingUsageScans.canGetNext(folderForUsageScan) do folderForUsageScan:='';
     while pendingRequests.canGetNext(assistanceRequest) do dispose(assistanceRequest,destroy);
 
     if not(codeAssistantIsRunning)
     then doneCriticalSection(codeAssistanceCs);
     pendingRequests.destroy;
-    pendingUsageScans.destroy;
     while preparedResponses.canGetNext(response) do disposeMessage(response);
     preparedResponses.destroy;
     isFinalized:=true;
@@ -818,11 +797,10 @@ INITIALIZATION
   initialize(scriptUsage);
   with scriptUsage do begin
     setLength(dat,0);
-    setLength(foldersScanned,0);
+    setLength(scriptsScanned,0);
     scanning:=false;
   end;
   pendingRequests.create;
-  pendingUsageScans.create;
   preparedResponses.create;
 
 FINALIZATION

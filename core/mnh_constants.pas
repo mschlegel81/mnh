@@ -62,6 +62,7 @@ CONST
 
   ONE_SECOND                    =1/(24*60*60);
   ONE_MINUTE                    =1/(24*60);
+  ONE_HOUR                      =1/ 24;
 
   ID_QUALIFY_CHARACTER          ='.';
   EACH_INDEX_IDENTIFIER         ='index';

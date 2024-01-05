@@ -49,6 +49,49 @@ TYPE
 
   F_newCodeProvider=FUNCTION (CONST path:ansistring):P_codeProvider;
 
+  P_folderContents=^T_folderContents;
+
+  { T_folderContents }
+
+  T_folderContents=object
+    folderName:string;
+    dontScanBefore:double;
+    Files:T_arrayOfString;
+    subfolders:array of P_folderContents;
+    CONSTRUCTOR create(CONST fn:string);
+    CONSTRUCTOR create(CONST original:P_folderContents);
+    DESTRUCTOR destroy;
+    PROCEDURE updateFrom(CONST other:P_folderContents);
+    PROCEDURE scan;
+    FUNCTION canFind(CONST packageId:string; OUT fullPath:string; CONST allowScan:boolean; OUT scanRequired:boolean):boolean;
+    FUNCTION hasSubdirectory(CONST directoryName:string; OUT subDir:P_folderContents):boolean;
+    FUNCTION listIdsRecursively(CONST timeout:double):T_arrayOfString;
+    FUNCTION listFilesRecursively:T_arrayOfString;
+    FUNCTION getDirectSubfolder(CONST fn:string):P_folderContents;
+  end;
+
+  { T_fileCache }
+
+  T_fileCache=object
+    private
+      cacheCs:TRTLCriticalSection;
+      roots:array of P_folderContents;
+      scan_task_state:(stopped,running,running_stop_requested);
+      FUNCTION ensurePathInCache(CONST path:string):P_folderContents;
+    public
+      CONSTRUCTOR create;
+      DESTRUCTOR destroy;
+      FUNCTION canLocateSource(CONST searchRoot,packageName:string; OUT foundFilePath:string):boolean;
+      FUNCTION availablePackages(CONST searchRoot:string):T_arrayOfString;
+      PROCEDURE postFolderToScan(CONST folderName:string);
+      PROCEDURE Invalidate(CONST folderName:string);
+      PROCEDURE scanInBackground;
+      FUNCTION listFilesMatching(CONST toMatch:string):T_arrayOfString;
+      FUNCTION allKnownFolders:T_arrayOfString;
+  end;
+
+  F_notify_event=PROCEDURE (CONST messageText:string; CONST warn:boolean);
+
 FUNCTION newFileCodeProvider(CONST path:ansistring):P_codeProvider;
 FUNCTION newVirtualFileCodeProvider(CONST path:ansistring; CONST lineData:T_arrayOfString):P_virtualFileCodeProvider;
 FUNCTION fileContent(CONST name: ansistring; OUT accessed: boolean): ansistring;
@@ -59,135 +102,23 @@ FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfStri
 FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs: boolean): T_arrayOfString;
 FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
 
-FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
-FUNCTION listScriptIds(CONST rootPath: ansistring): T_arrayOfString;
-FUNCTION listScriptFileNames(CONST rootPath: ansistring): T_arrayOfString;
 FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean; OUT pid:longint; CONST customFolder:string=''): int64;
 PROCEDURE ensurePath(CONST path:ansistring);
 
-VAR logFolderCallback:PROCEDURE(CONST name:string) of object=nil;
+VAR fileCache:T_fileCache;
+    notify_event:F_notify_event=nil;
 IMPLEMENTATION
-VAR fileByIDCache:specialize G_stringKeyMap<string>;
-    fileByIdCs:TRTLCriticalSection;
-
-PROCEDURE putFileCache(CONST searchRoot,searchForId,foundFile:string);
+CONST FILE_CACHE_MAX_AGE=5/(24*60); //=5 minutes
+FUNCTION cleanPath(CONST pathWithTrailingSeparator:string):string;
   begin
-    enterCriticalSection(fileByIdCs);
-    try
-      fileByIDCache.put(searchRoot+'#'+searchForId,foundFile);
-    finally
-      leaveCriticalSection(fileByIdCs);
-    end;
-  end;
-
-FUNCTION getCachedFile(CONST searchRoot,searchForId:string):string;
-  begin
-    enterCriticalSection(fileByIdCs);
-    try
-      if not(fileByIDCache.containsKey(searchRoot+'#'+searchForId,result)) then result:='';
-    finally
-      leaveCriticalSection(fileByIdCs);
-    end;
+    if pathWithTrailingSeparator='' then exit('');
+    result:=pathWithTrailingSeparator;
+    while result[length(result)]=DirectorySeparator do result:=copy(result,1,length(result)-1);
   end;
 
 PROCEDURE ensurePath(CONST path:ansistring);
   begin
     ForceDirectories(extractFilePath(expandFileName(path)));
-  end;
-
-FUNCTION locateSource(CONST rootPath, id: ansistring): ansistring;
-  VAR pathsToScan:T_arrayOfString;
-      pathFill:longint=0;
-      pathOffset:longint=0;
-  PROCEDURE addPath(CONST path:string);
-    VAR i:longint;
-    begin
-      if pathFill>=length(pathsToScan) then begin
-        for i:=pathOffset to pathFill-1 do
-          pathsToScan[i-pathOffset]:=pathsToScan[i];
-        dec(pathFill,pathOffset);
-        pathOffset:=0;
-        setLength(pathsToScan,round(length(pathsToScan)*1.2+1));
-      end;
-      pathsToScan[pathFill]:=path;
-      inc(pathFill);
-    end;
-
-  FUNCTION hasNextPath:boolean; begin  result:=pathOffset<pathFill; end;
-  FUNCTION nextPath:string;     begin result:=pathsToScan[pathOffset]; inc(pathOffset); end;
-
-  PROCEDURE scanPath(CONST path: ansistring);
-    VAR info: TSearchRec;
-        mnhFilesFound:boolean=false;
-    begin
-      initialize(info);
-      if (findFirst(path+'*'+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0) and
-         ((info.Attr and faDirectory)<>faDirectory)
-      then repeat
-        if (ExtractFileNameOnly(info.name)=id) or not(FilenamesCaseSensitive) and (uppercase(ExtractFileNameOnly(info.name))=uppercase(id))
-        then begin
-          result:=expandFileName(path+info.name);
-          putFileCache(rootPath,id,result);
-        end else putFileCache(rootPath,ExtractFileNameOnly(info.name),expandFileName(path+info.name));
-        mnhFilesFound:=true;
-      until (findNext(info)<>0);
-      sysutils.findClose(info);
-      if mnhFilesFound and (logFolderCallback<>nil) then logFolderCallback(path);
-      if result<>'' then exit;
-
-      if (findFirst(path+'*', faAnyFile, info) = 0) then repeat
-        if ((info.Attr and faDirectory)=faDirectory) and (info.name<>'.') and (info.name<>'..') then
-        addPath(path+info.name+DirectorySeparator);
-      until (findNext(info)<>0);
-      sysutils.findClose(info);
-    end;
-
-  begin
-    if id='' then exit('');
-    result := getCachedFile(rootPath,id);
-    if result<>'' then exit(result);
-    setLength(pathsToScan,3);
-    addPath(rootPath);
-    if configDir<>rootPath
-    then addPath(configDir);
-    if (extractFilePath(paramStr(0))<>configDir) and (extractFilePath(paramStr(0))<>rootPath)
-    then addPath(extractFilePath(paramStr(0)));
-    while (result='') and hasNextPath do scanPath(nextPath);
-  end;
-
-FUNCTION listScriptIds(CONST rootPath: ansistring): T_arrayOfString;
-  VAR s:string;
-  begin
-    setLength(result,0);
-    for s in listScriptFileNames(rootPath) do appendIfNew(result,filenameToPackageId(s));
-  end;
-
-FUNCTION listScriptFileNames(CONST rootPath: ansistring): T_arrayOfString;
-  PROCEDURE recursePath(CONST path: ansistring);
-    VAR info: TSearchRec;
-    begin
-      if (findFirst(path+'*'+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0)
-      then begin
-        repeat
-          if ((info.Attr and faDirectory)<>faDirectory) then
-          appendIfNew(result,path+info.name);
-        until (findNext(info)<>0) ;
-        if (logFolderCallback<>nil) then logFolderCallback(path);
-      end;
-      sysutils.findClose(info);
-
-      if findFirst(path+'*', faAnyFile, info) = 0
-      then repeat
-        if ((info.Attr and faDirectory)=faDirectory) and (info.name<>'.') and (info.name<>'..')
-        then recursePath(path+info.name+DirectorySeparator);
-      until (findNext(info)<>0);
-      sysutils.findClose(info);
-    end;
-  begin
-    setLength(result,0);
-    recursePath(rootPath);
-    recursePath(configDir);
-    recursePath(extractFilePath(paramStr(0)));
   end;
 
 FUNCTION newFileCodeProvider(CONST path: ansistring): P_codeProvider;
@@ -439,6 +370,437 @@ FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
     result:=ExtractFileNameOnly(filenameOrPath);
   end;
 
+{ T_folderContents }
+
+CONSTRUCTOR T_folderContents.create(CONST fn: string);
+  begin
+    folderName:=fn;
+    dontScanBefore:=0;
+    setLength(Files,0);
+    setLength(subfolders,0);
+  end;
+
+CONSTRUCTOR T_folderContents.create(CONST original:P_folderContents);
+  begin
+    create(original^.folderName);
+    updateFrom(original);
+  end;
+
+DESTRUCTOR T_folderContents.destroy;
+  VAR i:longint;
+  begin
+    for i:=0 to length(Files)-1 do Files[i]:='';
+    setLength(Files,0);
+    for i:=0 to length(subfolders)-1 do dispose(subfolders[i],destroy);
+    setLength(subfolders,0);
+  end;
+
+PROCEDURE T_folderContents.updateFrom(CONST other: P_folderContents);
+  VAR i,j:longint;
+      sub,othersub:P_folderContents;
+  begin
+    assert(other^.folderName=folderName);
+    if other^.dontScanBefore>dontScanBefore then begin
+
+      setLength(Files,length(other^.Files));
+      for i:=0 to length(Files)-1 do Files[i]:=other^.Files[i];
+
+      //Remove subfolders which do not exist anymore
+      i:=0;
+      while i<length(subfolders) do begin
+        if other^.getDirectSubfolder(subfolders[i]^.folderName)<>nil
+        then inc(i)
+        else begin
+          dispose(subfolders[i],destroy);
+          for j:=i to length(subfolders)-2 do subfolders[j]:=subfolders[j+1];
+          setLength(subfolders,length(subfolders)-1);
+        end;
+      end;
+
+      //update/add subfolders
+      for othersub in other^.subfolders do begin
+        sub:=getDirectSubfolder(othersub^.folderName);
+        if sub=nil then begin
+          setLength(subfolders,length(subfolders)+1);
+          new(subfolders[length(subfolders)-1],create(othersub));
+        end else sub^.updateFrom(othersub);
+      end;
+
+      dontScanBefore:=other^.dontScanBefore;
+    end;
+  end;
+
+PROCEDURE T_folderContents.scan;
+  VAR _temp_list:T_arrayOfString;
+      _temp_fill:longint=0;
+  PROCEDURE startList;
+    begin
+      _temp_fill:=0;
+    end;
+
+  PROCEDURE addToList(CONST s:ansistring);
+    begin
+      if _temp_fill>=length(_temp_list) then setLength(_temp_list,_temp_fill+_temp_fill);
+      _temp_list[_temp_fill]:=s;
+      inc(_temp_fill);
+    end;
+
+  FUNCTION finalizeList:T_arrayOfString;
+    VAR i:longint;
+    begin
+      setLength(result,_temp_fill);
+      for i:=0 to _temp_fill-1 do begin result[i]:=_temp_list[i]; _temp_list[i]:=''; end;
+      sortUnique(result);
+    end;
+
+  VAR info: TSearchRec;
+      subPath: string;
+      allFoundSubfolders:T_arrayOfString;
+      i,j:longint;
+      prefix: string;
+  begin
+    setLength(_temp_list,10);
+    for i:=0 to length(Files)-1 do Files[i]:='';
+    startList;
+    if (findFirst(folderName+DirectorySeparator+'*'+SCRIPT_EXTENSION, faAnyFile and not(faDirectory), info) = 0)
+    then repeat
+      if ((info.Attr and faDirectory)<>faDirectory) then addToList(info.name);
+    until (findNext(info)<>0);
+    sysutils.findClose(info);
+    Files:=finalizeList;
+    prefix:=folderName+DirectorySeparator;
+    startList;
+    if findFirst(prefix+'*', faAnyFile, info) = 0
+    then repeat
+      if ((info.Attr and faDirectory)=faDirectory) and (info.name<>'.') and (info.name<>'..')
+      then addToList(prefix+info.name);
+    until (findNext(info)<>0);
+    sysutils.findClose(info);
+    allFoundSubfolders:=finalizeList;
+
+    //Drop subfolders which are not found anymore...
+    i:=0;
+    while i<length(subfolders) do begin
+      if arrContains(allFoundSubfolders, subfolders[i]^.folderName)
+      then inc(i)
+      else begin
+        dispose(subfolders[i],destroy);
+        for j:=i to length(subfolders)-2 do subfolders[j]:=subfolders[j+1];
+        setLength(subfolders,length(subfolders)-1);
+      end;
+    end;
+
+    //Add new subfolders
+    for subPath in allFoundSubfolders do begin
+      i:=0;
+      while (i<length(subfolders)) and (subfolders[i]^.folderName<>subPath) do inc(i);
+      if i>=length(subfolders) then begin
+        setLength(subfolders,i+1);
+        new(subfolders[i],create(subPath));
+      end;
+    end;
+
+    for i:=0 to length(allFoundSubfolders)-1 do allFoundSubfolders[i]:='';
+    allFoundSubfolders:=C_EMPTY_STRING_ARRAY;
+    _temp_list        :=C_EMPTY_STRING_ARRAY;
+    if length(Files)=0
+    then dontScanBefore:=now+ONE_HOUR
+    else dontScanBefore:=now+FILE_CACHE_MAX_AGE;
+
+    {$ifdef debugMode}
+    writeln('Path "',folderName,'" scanned. Next scan: ',DateTimeToStr(dontScanBefore));
+    {$endif}
+  end;
+
+FUNCTION T_folderContents.canFind(CONST packageId: string; OUT fullPath: string; CONST allowScan:boolean; OUT scanRequired:boolean): boolean;
+  VAR fileName:string;
+      sub:P_folderContents;
+      subscanRequired:boolean;
+  begin
+    if (dontScanBefore<now) then begin
+      if allowScan then scan
+      else scanRequired:=true;
+    end else scanRequired:=false;
+
+    for fileName in Files do if ExtractFileNameOnly(fileName) = packageId then begin
+      fullPath:=folderName+DirectorySeparator+fileName;
+      if fileExists(fullPath)
+      then exit(true)
+      else begin
+        scanRequired:=true;
+        dontScanBefore:=0;
+      end;
+    end;
+    for sub in subfolders do begin
+      if sub^.canFind(packageId, fullPath, allowScan, subscanRequired) then exit(true);
+      scanRequired:=scanRequired or subscanRequired;
+    end;
+    result:=false;
+  end;
+
+FUNCTION T_folderContents.hasSubdirectory(CONST directoryName: string; OUT subDir: P_folderContents): boolean;
+  VAR sub:P_folderContents;
+  begin
+    if directoryName=folderName then begin
+      subDir:=@self;
+      exit(true);
+    end;
+    if not(startsWith(directoryName,folderName)) then exit(false);
+    if dontScanBefore<now then scan;
+    for sub in subfolders do if sub^.hasSubdirectory(directoryName,subDir) then exit(true);
+    result:=false;
+  end;
+
+FUNCTION T_folderContents.listIdsRecursively(CONST timeout:double): T_arrayOfString;
+  VAR sub:P_folderContents;
+  begin
+    if (dontScanBefore<now) and (timeout<now) then scan;
+    result:=Files;
+    for sub in subfolders do append(result,sub^.listIdsRecursively(timeout));
+  end;
+
+FUNCTION T_folderContents.listFilesRecursively: T_arrayOfString;
+  VAR i:longint;
+      sub:P_folderContents;
+  begin
+    setLength(result,length(Files));
+    for i:=0 to length(Files)-1 do result[i]:=folderName+DirectorySeparator+Files[i];
+    for sub in subfolders do append(result,sub^.listFilesRecursively);
+  end;
+
+FUNCTION T_folderContents.getDirectSubfolder(CONST fn:string):P_folderContents;
+  VAR sub:P_folderContents;
+  begin
+    result:=nil;
+    for sub in subfolders do if sub^.folderName=fn then exit(sub);
+  end;
+
+{ T_fileCache }
+
+FUNCTION T_fileCache.ensurePathInCache(CONST path: string): P_folderContents;
+  VAR root:P_folderContents;
+      i,j:longint;
+  begin
+    for root in roots do if root^.hasSubdirectory(path,result) then exit(result);
+    //Directory is not listed yet: create it!
+    new(result,create(path));
+
+    //Possible an existing root is subfolder of the new result:
+    i:=0;
+    while i<length(roots) do
+      if result^.hasSubdirectory(roots[i]^.folderName,root) then begin
+        root^.updateFrom(roots[i]);
+        dispose(roots[i],destroy);
+        for j:=i to length(roots)-2 do roots[j]:=roots[j+1];
+        setLength(roots,length(roots)-1);
+      end else inc(i);
+
+    setLength(roots,length(roots)+1);
+    roots[length(roots)-1]:=result;
+  end;
+
+CONSTRUCTOR T_fileCache.create;
+  begin
+    initCriticalSection(cacheCs);
+    scan_task_state:=stopped;
+    setLength(roots,0);
+    ensurePathInCache(cleanPath(configDir));
+    ensurePathInCache(cleanPath(extractFilePath(paramStr(0))));
+  end;
+
+DESTRUCTOR T_fileCache.destroy;
+  VAR i:longint;
+  begin
+    enterCriticalSection(cacheCs);
+    if scan_task_state=running then begin
+      scan_task_state:=running_stop_requested;
+      repeat
+        leaveCriticalSection(cacheCs);
+        sleep(100);
+        enterCriticalSection(cacheCs);
+      until scan_task_state=stopped;
+    end;
+    for i:=0 to length(roots)-1 do dispose(roots[i],destroy);
+    setLength(roots,0);
+    leaveCriticalSection(cacheCs);
+    doneCriticalSection(cacheCs);
+  end;
+
+FUNCTION T_fileCache.canLocateSource(CONST searchRoot, packageName: string; OUT foundFilePath: string): boolean;
+  VAR scanned:T_arrayOfString;
+  FUNCTION tryScan(CONST path:string):boolean;
+    VAR temp:T_folderContents;
+        cached:P_folderContents;
+        scanRequired:boolean;
+    begin
+      if (path='') or arrContains(scanned,path) then exit(false);
+      append(scanned,path);
+
+      enterCriticalSection(cacheCs);
+      cached:=ensurePathInCache(path);
+      result:=cached^.canFind(packageName,foundFilePath,false,scanRequired);
+      if result or not(scanRequired) then begin
+        leaveCriticalSection(cacheCs);
+        exit(result);
+      end else begin
+        //Some folders seem outdated, so we rescan (outside of critical section)...
+        temp.create(path);
+        temp.updateFrom(cached); //We update before scanning, to skip scans wherever possible
+        leaveCriticalSection(cacheCs);
+      end;
+      result:=temp.canFind(packageName,foundFilePath,true,scanRequired);
+
+      //After scanning, the cache might need refreshing
+      enterCriticalSection(cacheCs);
+      ensurePathInCache(path)^.updateFrom(@temp);
+      leaveCriticalSection(cacheCs);
+      temp.destroy;
+    end;
+
+  begin
+    setLength(scanned,0);
+    result:=tryScan(cleanPath(searchRoot                  ))
+         or tryScan(cleanPath(configDir                   ))
+         or tryScan(cleanPath(extractFilePath(paramStr(0))));
+  end;
+
+FUNCTION T_fileCache.availablePackages(CONST searchRoot: string): T_arrayOfString;
+  VAR root:P_folderContents;
+      timeout:double;
+  begin
+    timeout:=now+ONE_SECOND;
+    enterCriticalSection(cacheCs);
+    try
+      result:=C_EMPTY_STRING_ARRAY;
+      for root in roots do append(result,root^.listIdsRecursively(timeout));
+      sortUnique(result);
+    finally
+      leaveCriticalSection(cacheCs);
+    end;
+  end;
+
+FUNCTION fileCacheScanTask(p:pointer):ptrint;
+  FUNCTION nextPathToUpdate:string;
+    VAR oldest:P_folderContents=nil;
+    PROCEDURE recurse(CONST folderContents:P_folderContents);
+      VAR sub:P_folderContents;
+      begin
+        if (oldest=nil) or (oldest^.dontScanBefore>folderContents^.dontScanBefore) then begin
+          oldest:=folderContents;
+          if oldest^.dontScanBefore=0 then exit;
+        end;
+        for sub in folderContents^.subfolders do recurse(sub);
+      end;
+
+    VAR root:P_folderContents;
+    begin
+      enterCriticalSection(fileCache.cacheCs);
+      for root in fileCache.roots do recurse(root);
+      if (oldest=nil) or (oldest^.dontScanBefore>now)
+      then result:=''
+      else result:=oldest^.folderName;
+      leaveCriticalSection(fileCache.cacheCs);
+    end;
+
+  VAR temp:T_folderContents;
+  PROCEDURE updateFolder;
+    VAR root, fcSub:P_folderContents;
+    begin
+      enterCriticalSection(fileCache.cacheCs);
+      for root in fileCache.roots do if root^.hasSubdirectory(temp.folderName,fcSub) then fcSub^.updateFrom(@temp);
+      leaveCriticalSection(fileCache.cacheCs);
+    end;
+
+  VAR folderToScan:string;
+      i: integer;
+      lastRunWasIdle:boolean=false;
+  begin
+    repeat
+      folderToScan:=nextPathToUpdate;
+      if folderToScan='' then begin
+        if not(lastRunWasIdle) and (notify_event<>nil) then notify_event('Background folder scan finished',false);
+        for i:=0 to 9 do
+          if fileCache.scan_task_state<>running_stop_requested
+          then sleep(1000);
+        lastRunWasIdle:=true;
+      end else begin
+        if lastRunWasIdle and (notify_event<>nil) then notify_event('Rescanning folders ('+folderToScan+')',false);
+        temp.create(folderToScan);
+        temp.scan;
+        updateFolder;
+        temp.destroy;
+        lastRunWasIdle:=false;
+      end;
+    until fileCache.scan_task_state=running_stop_requested;
+
+    enterCriticalSection(fileCache.cacheCs);
+    fileCache.scan_task_state:=stopped;
+    leaveCriticalSection(fileCache.cacheCs);
+    result:=0;
+  end;
+
+PROCEDURE T_fileCache.scanInBackground;
+  begin
+    enterCriticalSection(cacheCs);
+    if scan_task_state=stopped then begin
+      if notify_event<>nil then notify_event('Background file scan started',false);
+      beginThread(@fileCacheScanTask);
+      scan_task_state:=running;
+    end;
+    leaveCriticalSection(cacheCs);
+  end;
+
+FUNCTION T_fileCache.listFilesMatching(CONST toMatch: string): T_arrayOfString;
+  VAR root:P_folderContents;
+  begin
+    enterCriticalSection(cacheCs);
+    result:=C_EMPTY_STRING_ARRAY;
+    for root in roots do append(result,root^.listFilesRecursively);
+    leaveCriticalSection(cacheCs);
+    result:=getListOfSimilarWords(toMatch,result,100,true);
+  end;
+
+FUNCTION T_fileCache.allKnownFolders:T_arrayOfString;
+  VAR count:longint=0;
+      cache:T_arrayOfString;
+  PROCEDURE recurse(CONST p:P_folderContents);
+    VAR sub:P_folderContents;
+    begin
+      if count>=length(cache) then setLength(cache,length(cache)*2+1);
+      cache[count]:=p^.folderName;
+      inc(count);
+      for sub in p^.subfolders do recurse(sub);
+    end;
+
+  VAR root:P_folderContents;
+  begin
+    enterCriticalSection(cacheCs);
+    setLength(cache,length(roots));
+    for root in roots do recurse(root);
+    setLength(cache,count);
+    result:=cache;
+    leaveCriticalSection(cacheCs);
+  end;
+
+PROCEDURE T_fileCache.postFolderToScan(CONST folderName: string);
+  begin
+    if folderName='' then begin
+      exit;
+    end;
+    enterCriticalSection(cacheCs);
+    ensurePathInCache(cleanPath(folderName));
+    leaveCriticalSection(cacheCs);
+    scanInBackground;
+  end;
+
+PROCEDURE T_fileCache.Invalidate(CONST folderName:string);
+  begin
+    enterCriticalSection(cacheCs);
+    ensurePathInCache(cleanPath(folderName))^.dontScanBefore:=0;
+    leaveCriticalSection(cacheCs);
+    scanInBackground;
+  end;
+
 CONSTRUCTOR T_blankCodeProvider.create; begin end;
 DESTRUCTOR T_blankCodeProvider.destroy; begin end;
 FUNCTION T_blankCodeProvider.getLines: T_arrayOfString; begin result:=C_EMPTY_STRING_ARRAY; end;
@@ -524,12 +886,9 @@ FUNCTION T_codeProvider.id: ansistring;
   end;
 
 INITIALIZATION
-  fileByIDCache.create();
-  initialize(fileByIdCs);
-  initCriticalSection(fileByIdCs);
+  fileCache.create;
 
 FINALIZATION
-  fileByIDCache.destroy;
-  doneCriticalSection(fileByIdCs);
+  fileCache.destroy;
 
 end.

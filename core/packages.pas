@@ -354,7 +354,7 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
     if length(scriptSource)=0 then begin
       if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
       then fileName:=expandFileName(filenameOrId)
-      else fileName:=locateSource(extractFilePath(locationForWarning.package^.getPath),filenameOrId);
+      else if not(fileCache.canLocateSource(extractFilePath(locationForWarning.package^.getPath),filenameOrId,fileName)) then fileName:='';
       if (fileName='') or not(fileExists(fileName)) then begin
         callerContext^.messages^.postTextMessage(mt_el2_warning,locationForWarning,'Cannot find script with id or path "'+filenameOrId+'"');
         fileName:='';
@@ -517,11 +517,8 @@ CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenL
   begin
     locationOfDeclaration:=tokenLocation;
     id:=packId;
-    path:=locateSource(extractFilePath(root),id);
-    if messages<>nil then begin
-      if (path='')
-      then messages^.raiseSimpleError('Cannot locate package for id "'+id+'"',tokenLocation);
-    end;
+    if not(fileCache.canLocateSource(extractFilePath(root),id,path)) then path:='';
+    if (messages<>nil) and (path='') then messages^.raiseSimpleError('Cannot locate package for id "'+id+'"',tokenLocation);
     pack:=nil;
   end;
 
@@ -596,7 +593,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
       first:=recycler^.disposeToken(first);
       if (first^.next=nil) and (first^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule]) then begin
         newId:=first^.txt;
-        helperUse.create(getCodeProvider^.getPath,first^.txt,first^.location,globals.primaryContext.messages);
+        helperUse.create(getCodeProvider^.getPath,first^.txt,first^.location,globals.primaryContext.messages,usecase);
       end else if (first^.next=nil) and (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
         newId:=P_stringLiteral(first^.data)^.value;
         helperUse.createWithSpecifiedPath(newId,first^.location,globals.primaryContext.messages);
@@ -692,7 +689,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
           end else begin
             j:=length(packageUses);
             setLength(packageUses,j+1);
-            packageUses[j].create(getCodeProvider^.getPath,first^.txt,first^.location,globals.primaryContext.messages);
+            packageUses[j].create(getCodeProvider^.getPath,first^.txt,first^.location,globals.primaryContext.messages,usecase);
             {$ifdef fullVersion}
             packageUses[j].supressUnusedWarning:=suppressUnusedImport;
             {$endif}

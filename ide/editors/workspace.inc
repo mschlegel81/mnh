@@ -478,8 +478,7 @@ FUNCTION T_workspace.addOrGetEditorMetaForFiles(CONST FileNames: array of string
         couldOpenFile:=result^.setFile(fileName);
         if couldOpenFile then begin
           updateMarkers(result);
-          //Update history:
-          fileHistory.logFolder(ExtractFileDir(fileName));
+          fileHistory.fileTouched(fileName,false);
         end else if openEvenIfNonexistent
         then result^.fileInfo.ignoreDeleted:=true
         else begin
@@ -626,7 +625,7 @@ PROCEDURE T_workspace.closeQuietly(CONST toClose: P_editorMeta);
           then oldMarkers[length(oldMarkers)-1].markIndex:=mark.BookmarkNumber
           else oldMarkers[length(oldMarkers)-1].markIndex:=10;
         end;
-        fileHistory.fileClosed(toClose^.fileInfo.filePath);
+        fileHistory.fileTouched(toClose^.fileInfo.filePath,true);
       end;
 
       //actually close editor...
@@ -700,7 +699,7 @@ FUNCTION T_workspace.saveCurrentFile(CONST forceDialog:boolean=false; CONST meta
     try
       if otherMeta<>nil then closeQuietly(otherMeta);
       toSave^.saveFile(newName);
-      fileHistory.fileClosed(newName);
+      fileHistory.fileTouched(toSave^.fileInfo.filePath,true);
       //If we closed another file, we may have switched tabs; so reactivate:
       toSave^.activate;
     finally

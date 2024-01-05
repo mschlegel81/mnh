@@ -41,6 +41,7 @@ TYPE
 
 FUNCTION saveFileDialog:TSaveFileDialog;
 IMPLEMENTATION
+USES fileWrappers;
 VAR mySaveFileDialog: TSaveFileDialog=nil;
 FUNCTION saveFileDialog:TSaveFileDialog;
   begin
@@ -134,7 +135,7 @@ FUNCTION TSaveFileDialog.showForRoot(CONST rootPath, fname, ext: string): string
     extEdit.text:=ext;
     //directory
     dirComboBox.items.clear;
-    for s in workspace.fileHistory.folderItems do addItemIfNew(s);
+    for s in fileCache.allKnownFolders do addItemIfNew(s);
     addItemIfNew(rootPath            );
     addItemIfNew(configDir+'packages');
     addItemIfNew(configDir+'demos'   );
@@ -159,6 +160,7 @@ FUNCTION TSaveFileDialog.showForRoot(CONST rootPath, fname, ext: string): string
 FUNCTION saveFile(CONST rootPath,fname,ext: string): string;
   begin
     result:=saveFileDialog.showForRoot(rootPath,fname,ext);
+    if result<>'' then fileCache.Invalidate(ExtractFileDir(result));
   end;
 
 INITIALIZATION

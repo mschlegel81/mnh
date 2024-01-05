@@ -172,7 +172,7 @@ VAR
   IdeMainForm: TIdeMainForm;
 
 IMPLEMENTATION
-USES mnh_splash,out_adapters,cmdLineInterpretation,shebangDialog,Clipbrd,eventsComponent,LCLType,myStringUtil,mnh_constants;
+USES mnh_splash,out_adapters,cmdLineInterpretation,shebangDialog,Clipbrd,eventsComponent,LCLType,myStringUtil,mnh_constants,fileWrappers;
 {$R idemain.lfm}
 
 PROCEDURE TIdeMainForm.FormDropFiles(Sender: TObject; CONST FileNames: array of string);
@@ -228,6 +228,7 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     miFocusEditorClick(Sender);
     threadStartsSleeping; //IDE thread is mainly idle
     timer.enabled:=true;
+    fileCache.scanInBackground;
   end;
 
 PROCEDURE TIdeMainForm.FormDestroy(Sender: TObject);
