@@ -1,0 +1,32 @@
+
+
+main(pid_string)->begin
+  assertGuiStarted;
+//  local waitForKeyDown:=future(::ask,['',false]);
+  local timeLine:=[];
+  local startTime:=systime;
+  local PID:=pid_string.toInt;
+  local lastSize:=0;
+  while(!plotClosed,begin
+    callMemoryCleaner;
+    local info:=getTaskInfo.filter((task)->task['PID']=PID)[0];
+    info==void ? halt : void;
+    lastSize==0
+    ? begin
+        printf('Watching task: {info["caption"]}');
+        printf('Command line : {info["commandLine"]}');
+      end
+    : void;
+
+    info['workingSetSize']==lastSize
+    ? void
+    : begin
+        printf('size: {info["workingSetSize"]} time: {formatTime(systime)}');
+        lastSize:=info['workingSetSize'];
+        timeLine|=[[(systime-startTime)*24*60,lastSize]];
+        plot(timeLine);
+        postDisplay;
+      end;
+    sleep(10);
+  end);
+end;

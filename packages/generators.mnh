@@ -121,3 +121,19 @@ save;
     a.isVoid OR b.isVoid ? void : return [a,b];
   end);
 end}.toIteratableExpression;
+
+//*Returns a window iterator, effectively returning all consecutive sub-lists of the given width/size
+window(I:Iteratable,width>1)->{begin
+  local gen:=I.toIteratableExpression;
+  local window:=[];
+  begin
+    local next:=void;
+    while(window.size<width AND !isVoid(next:=gen()),
+          window||=next);
+  end;
+save;
+  local out:=window;
+  window:=window.tail;
+  window||=gen();
+  out.size=width ? out : void;
+end}.toIteratableExpression;
