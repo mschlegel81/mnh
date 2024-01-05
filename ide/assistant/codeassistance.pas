@@ -261,7 +261,7 @@ PROCEDURE T_codeAssistanceThread.execute;
           scanSingleScriptUsage(pendingFileScans.next);
           sleepBetweenRunsMillis:=0;
         end else begin
-          for s in fileCache.listFilesMatching('') do
+          for s in fileCache.getAllFilesForBackgroundScan do
           if not arrContains(scriptUsage.scriptsScanned,s)
           then pendingFileScans.append(s);
           if not(pendingFileScans.hasNext) then begin

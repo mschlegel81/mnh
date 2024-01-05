@@ -188,7 +188,9 @@ PROCEDURE TIdeMainForm.FormKeyPress(Sender: TObject; VAR key: char);
   end;
 
 PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
+  VAR folder:string;
   begin
+    gui_started:=ide_starting_up;
     initIpcServer(self);
     setupEventsComponentOnIdeStartup;
     new(dockSites[cpNone        ],create(cpNone        ,nil         ));
@@ -213,7 +215,6 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
                      smScripts);
     runParameterHistory.create;
 
-    gui_started:=ide;
     firstStart:=splashOnStartup;
     FormResize(self);
     miDebug         .checked:=runnerModel.debugMode;
@@ -228,7 +229,9 @@ PROCEDURE TIdeMainForm.FormCreate(Sender: TObject);
     miFocusEditorClick(Sender);
     threadStartsSleeping; //IDE thread is mainly idle
     timer.enabled:=true;
-    fileCache.scanInBackground;
+    for folder in workspace.fileHistory.allFolders do fileCache.postFolderToScan(folder);
+    gui_started:=ide;
+    workspace.currentEditor^.InputEditChange(Sender);
   end;
 
 PROCEDURE TIdeMainForm.FormDestroy(Sender: TObject);

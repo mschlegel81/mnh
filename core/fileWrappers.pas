@@ -76,6 +76,7 @@ TYPE
     private
       cacheCs:TRTLCriticalSection;
       roots:array of P_folderContents;
+      cachePopulated:boolean;
       scan_task_state:(stopped,running,running_stop_requested);
       FUNCTION ensurePathInCache(CONST path:string):P_folderContents;
     public
@@ -87,6 +88,7 @@ TYPE
       PROCEDURE Invalidate(CONST folderName:string);
       PROCEDURE scanInBackground;
       FUNCTION listFilesMatching(CONST toMatch:string):T_arrayOfString;
+      FUNCTION getAllFilesForBackgroundScan:T_arrayOfString;
       FUNCTION allKnownFolders:T_arrayOfString;
   end;
 
@@ -602,6 +604,7 @@ FUNCTION T_fileCache.ensurePathInCache(CONST path: string): P_folderContents;
 CONSTRUCTOR T_fileCache.create;
   begin
     initCriticalSection(cacheCs);
+    cachePopulated:=false;
     scan_task_state:=stopped;
     setLength(roots,0);
     ensurePathInCache(cleanPath(configDir));
@@ -718,7 +721,10 @@ FUNCTION fileCacheScanTask(p:pointer):ptrint;
     repeat
       folderToScan:=nextPathToUpdate;
       if folderToScan='' then begin
-        if not(lastRunWasIdle) and (notify_event<>nil) then notify_event('Background folder scan finished',false);
+        if not(lastRunWasIdle) then begin
+          if (notify_event<>nil) then notify_event('Background folder scan finished',false);
+          fileCache.cachePopulated:=true;
+        end;
         for i:=0 to 9 do
           if fileCache.scan_task_state<>running_stop_requested
           then sleep(1000);
@@ -758,6 +764,17 @@ FUNCTION T_fileCache.listFilesMatching(CONST toMatch: string): T_arrayOfString;
     for root in roots do append(result,root^.listFilesRecursively);
     leaveCriticalSection(cacheCs);
     result:=getListOfSimilarWords(toMatch,result,100,true);
+  end;
+
+FUNCTION T_fileCache.getAllFilesForBackgroundScan:T_arrayOfString;
+  VAR root:P_folderContents;
+  begin
+    result:=C_EMPTY_STRING_ARRAY;
+    if not(cachePopulated) then exit(Result);
+    enterCriticalSection(cacheCs);
+    for root in roots do append(result,root^.listFilesRecursively);
+    leaveCriticalSection(cacheCs);
+    sortUnique(result);
   end;
 
 FUNCTION T_fileCache.allKnownFolders:T_arrayOfString;

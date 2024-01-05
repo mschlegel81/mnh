@@ -304,7 +304,7 @@ CONST
   messageSubset_warnings:T_messageTypeSet=[mt_el2_warning,mt_el2_userWarning];
 PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,options:string);
 {$ifdef fullVersion}VAR{$else}CONST{$endif}
-  gui_started:(NO,ide,REEVALUATION)=NO;
+  gui_started:(NO,ide,ide_starting_up,REEVALUATION)=NO;
 FUNCTION stringToMessageTypeSet(CONST s:string;           CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el3_evalError..mt_endOfEvaluation]):T_messageTypeSet;
 FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el3_evalError..mt_endOfEvaluation]):string;
 IMPLEMENTATION

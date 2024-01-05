@@ -28,6 +28,7 @@ T_fileHistory=object(T_serializable)
     PROCEDURE updateHistoryMenu;
     PROCEDURE fileHistoryClick(Sender: TObject);
     PROCEDURE getClonedFileItems(OUT fi:T_arrayOfString);
+    FUNCTION allFolders:T_arrayOfString;
   end;
 {$endif}
 {$ifdef includeImplementation}
@@ -207,6 +208,15 @@ PROCEDURE T_fileHistory.getClonedFileItems(OUT fi: T_arrayOfString);
     setLength(fi,length(fileItems));
     for i:=0 to length(fileItems)-1 do fi[i]:=fileItems[i];
     leaveCriticalSection(historyCs);
+  end;
+
+FUNCTION T_fileHistory.allFolders:T_arrayOfString;
+  VAR s:string;
+  begin
+    result:=C_EMPTY_STRING_ARRAY;
+    EnterCriticalSection(historyCs);
+    for s in fileItems do appendIfNew(result,ExtractFileDir(s));
+    LeaveCriticalSection(historyCs);
   end;
 
 {$endif}

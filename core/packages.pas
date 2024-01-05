@@ -593,7 +593,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
       first:=recycler^.disposeToken(first);
       if (first^.next=nil) and (first^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule]) then begin
         newId:=first^.txt;
-        helperUse.create(getCodeProvider^.getPath,first^.txt,first^.location,globals.primaryContext.messages,usecase);
+        helperUse.create(getCodeProvider^.getPath,first^.txt,first^.location,globals.primaryContext.messages);
       end else if (first^.next=nil) and (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
         newId:=P_stringLiteral(first^.data)^.value;
         helperUse.createWithSpecifiedPath(newId,first^.location,globals.primaryContext.messages);
@@ -689,7 +689,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
           end else begin
             j:=length(packageUses);
             setLength(packageUses,j+1);
-            packageUses[j].create(getCodeProvider^.getPath,first^.txt,first^.location,globals.primaryContext.messages,usecase);
+            packageUses[j].create(getCodeProvider^.getPath,first^.txt,first^.location,globals.primaryContext.messages);
             {$ifdef fullVersion}
             packageUses[j].supressUnusedWarning:=suppressUnusedImport;
             {$endif}
