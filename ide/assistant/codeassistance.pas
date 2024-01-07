@@ -238,7 +238,6 @@ PROCEDURE T_codeAssistanceThread.execute;
       preparedResponses.append(response);
     end;
 
-
   VAR pendingFileScans:specialize G_queue<string>;
       s:string;
   begin

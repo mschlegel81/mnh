@@ -1326,6 +1326,171 @@ FUNCTION iFFT_impl intFuncSignature;
     end else result:=nil;
   end;
 
+FUNCTION kMeans_impl intFuncSignature;
+  TYPE T_vector=array of double;
+  VAR raw_data:array of record
+                 x:T_vector;
+                 c:longint;
+               end;
+      centers :array of record
+                 x:T_vector;
+                 count:longint;
+               end;
+      k:longint=0;
+      dim:longint=0;
+  FUNCTION zero_vector:T_vector;
+    VAR i:longint;
+    begin
+      setLength(result,dim);
+      for i:=0 to dim-1 do result[i]:=0;
+    end;
+
+  FUNCTION toVector(CONST L:P_listLiteral):T_vector;
+    VAR i:longint;
+    begin
+      setLength(result,dim);
+      for i:=0 to dim-1 do result[i]:=P_numericLiteral(L^.value[i])^.floatValue;
+    end;
+
+  FUNCTION toNumList(CONST v:T_vector):P_listLiteral;
+    VAR i:longint;
+    begin
+      result:=recycler^.newListLiteral(length(v));
+      for i:=0 to length(v)-1 do result^.appendReal(recycler,v[i]);
+    end;
+
+  PROCEDURE vector_inc(VAR v:T_vector; CONST toAdd:T_vector); inline;
+    VAR i:longint;
+    begin
+      for i:=0 to dim-1 do v[i]+=toAdd[i];
+    end;
+
+  PROCEDURE vector_mult(VAR v:T_vector; CONST factor:double); inline;
+    VAR i:longint;
+    begin
+      for i:=0 to dim-1 do v[i]*=factor;
+    end;
+
+  FUNCTION classify(CONST v:T_vector):longint; inline;
+    VAR i,classIndex:longint;
+        dist,closest:double;
+    begin
+      for classIndex:=0 to k-1 do begin
+        dist:=0; for i:=0 to dim-1 do dist+=system.sqr(centers[classIndex].x[i]-v[i]);
+        if (classIndex=0) or (dist<closest) then begin
+          result:=classIndex;
+          closest:=dist;
+        end;
+      end;
+    end;
+
+  FUNCTION canFillRawData:boolean;
+    VAR i,j:longint;
+        entry:P_literal;
+    begin
+      setLength(raw_data,list0^.size);
+      setLength(centers,k);
+      result:=list0^.size>=k;
+      for i:=0 to list0^.size-1 do if result then begin
+        entry:=list0^.value[i];
+        if entry^.literalType in [lt_numList,lt_intList,lt_realList] then begin
+          if i=0
+          then begin
+            dim:=P_listLiteral(entry)^.size;
+            for j:=0 to length(centers)-1 do begin
+              centers[j].x:=zero_vector;
+              centers[j].count:=0;
+            end;
+          end else if dim<>P_listLiteral(entry)^.size
+          then result:=false;
+
+          raw_data[i].x:=toVector(P_listLiteral(entry));
+          j:=random(dim);
+          raw_data[i].c:=j;
+          vector_inc(centers[j].x,raw_data[i].x);
+          centers[j].count+=1;
+        end else result:=false;
+      end;
+
+      if not(result) then begin
+        for i:=0 to length(raw_data)-1 do with raw_data[i] do setLength(x,0);
+        setLength(raw_data,0);
+        for i:=0 to length(centers)-1 do with centers[i] do setLength(x,0);
+        setLength(centers,0);
+        context^.raiseError('kMeans requires a list of numeric lists of the same size as input. The input list must contain at least k elements.',tokenLocation);
+      end;
+    end;
+
+  FUNCTION classifyAll:P_mapLiteral;
+    PROCEDURE redistribute(CONST emptyClassIndex:longint);
+      VAR j:longint;
+      begin
+        j:=random(length(raw_data));
+        raw_data[j].c:=emptyClassIndex;
+        centers[emptyClassIndex].x:=raw_data[j].c;
+        centers[emptyClassIndex].count:=1;
+      end;
+
+    VAR i,j:longint;
+        anyClassChanged:boolean;
+        tempList:P_listLiteral;
+    begin
+      repeat
+        //1. Normalize centers
+        for i:=0 to k-1 do begin
+          if centers[i].count=0 then redistribute(i);
+          vector_mult(centers[i].x,1/centers[i].count);
+        end;
+        //2. Reclassify...
+        anyClassChanged:=false;
+        for i:=0 to length(raw_data)-1 do begin
+          j:=classify(raw_data[i].x);
+          if j<>raw_data[i].c then begin
+            raw_data[i].c:=j;
+            anyClassChanged:=true;
+          end;
+        end;
+        if anyClassChanged then begin
+          //3. Update centers
+          for j:=0 to k-1 do begin
+            centers[j].count:=0;
+            centers[j].x:=zero_vector;
+          end;
+          for i:=0 to length(raw_data)-1 do begin
+            j:=raw_data[i].c;
+            vector_inc(centers[j].x,raw_data[i].x);
+            inc(centers[j].count);
+          end;
+        end;
+      until not(anyClassChanged);
+      result:=newMapLiteral(2);
+      tempList:=recycler^.newListLiteral(length(raw_data));
+      for i:=0 to length(raw_data)-1 do begin
+        tempList^.appendInt(recycler,raw_data[i].c);
+        setLength(raw_data[i].x,0);
+      end;
+      setLength(raw_data,0);
+      result^.put(recycler,'class',tempList,false);
+
+      tempList:=recycler^.newListLiteral(k);
+      for j:=0 to length(centers)-1 do begin
+        tempList^.append(recycler,toNumList(centers[j].x),false);
+        setLength(centers[j].x,0);
+      end;
+      setLength(centers,0);
+      result^.put(recycler,'centers',tempList,false);
+    end;
+
+  begin
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_listTypes) and (arg1^.literalType=lt_smallint) and (int1^.intValue>=2) then begin
+      if list0^.size=0 then exit(list0^.rereferenced);
+      k:=int1^.intValue;
+      if not(canFillRawData)
+      then exit(nil)
+      else result:=classifyAll;
+    end else result:=nil;
+  end;
+
 INITIALIZATION
   //Unary Numeric -> real
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,ak_unary);
@@ -1379,4 +1544,5 @@ INITIALIZATION
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'FFT' ,@FFT_impl ,ak_unary);
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'iFFT',@iFFT_impl,ak_unary);
 
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'kMeans',@kMeans_impl,ak_binary);
 end.

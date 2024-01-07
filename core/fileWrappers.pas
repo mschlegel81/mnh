@@ -770,7 +770,7 @@ FUNCTION T_fileCache.getAllFilesForBackgroundScan:T_arrayOfString;
   VAR root:P_folderContents;
   begin
     result:=C_EMPTY_STRING_ARRAY;
-    if not(cachePopulated) then exit(Result);
+    if not(cachePopulated) then exit(result);
     enterCriticalSection(cacheCs);
     for root in roots do append(result,root^.listFilesRecursively);
     leaveCriticalSection(cacheCs);

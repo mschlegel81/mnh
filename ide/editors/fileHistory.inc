@@ -214,9 +214,9 @@ FUNCTION T_fileHistory.allFolders:T_arrayOfString;
   VAR s:string;
   begin
     result:=C_EMPTY_STRING_ARRAY;
-    EnterCriticalSection(historyCs);
+    enterCriticalSection(historyCs);
     for s in fileItems do appendIfNew(result,ExtractFileDir(s));
-    LeaveCriticalSection(historyCs);
+    leaveCriticalSection(historyCs);
   end;
 
 {$endif}
