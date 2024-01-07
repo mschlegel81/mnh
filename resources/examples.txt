@@ -1843,7 +1843,9 @@ vectorIfThenElse(x.isInfinite,0,x);
 #I zip
 #S zip(a,b,...);
 #C Returns an iterator over [a,b,...].transposed if any parameter is an iteratable expression or [a,b,...].transposed if all parameters are compound literals.
-zip(rangeGenerator(0),primeGenerator);
+zip(rangeGenerator(0),primeGenerator).head(10);
+
+//==END REG TEST==
 
 #I kMeans
 #S kMeans(inputList:List, k>=2);
@@ -1851,10 +1853,8 @@ zip(rangeGenerator(0),primeGenerator);
 #S kMeans(inputList:List, centers:List);
 #C Returns a map assigning a class index to each entry of the input list. The centers are initialized by the second argument.
 #C Note that all entries of inputList (and of centers if present) must be NumericList of the same size.
-kMeans([1..100].map(()->random(3)),3);
-kMeans([1..100].map(()->random(3)),[[0,0,1],[0,1,0],[1,0,0]]);
-
-//==END REG TEST==
+kMeans([1..100].map((i)->random(3)),3);
+kMeans([1..100].map((i)->random(3)),[[0,0,1],[0,1,0],[1,0,0]]);
 
 driveInfo;
 #S driveInfo;
