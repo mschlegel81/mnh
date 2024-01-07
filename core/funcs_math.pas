@@ -1338,7 +1338,7 @@ FUNCTION kMeans_impl intFuncSignature;
                end;
       k:longint=0;
       dim:longint=0;
-  FUNCTION zero_vector:T_vector;
+  FUNCTION ZERO_VECTOR:T_vector;
     VAR i:longint;
     begin
       setLength(result,dim);
@@ -1371,9 +1371,10 @@ FUNCTION kMeans_impl intFuncSignature;
       for i:=0 to dim-1 do v[i]*=factor;
     end;
 
-  FUNCTION classify(CONST v:T_vector):longint; inline;
+  FUNCTION classify(CONST v:T_vector):longint; {$ifndef debugMode} inline; {$endif}
     VAR i,classIndex:longint;
-        dist,closest:double;
+        dist   :double;
+        closest:double=infinity;
     begin
       for classIndex:=0 to k-1 do begin
         dist:=0; for i:=0 to dim-1 do dist+=system.sqr(centers[classIndex].x[i]-v[i]);
@@ -1382,67 +1383,119 @@ FUNCTION kMeans_impl intFuncSignature;
           closest:=dist;
         end;
       end;
+      assert((result>=0) and (result<k));
     end;
 
   FUNCTION canFillRawData:boolean;
-    VAR i,j:longint;
+    VAR i:longint;
         entry:P_literal;
     begin
       setLength(raw_data,list0^.size);
-      setLength(centers,k);
       result:=list0^.size>=k;
       for i:=0 to list0^.size-1 do if result then begin
         entry:=list0^.value[i];
         if entry^.literalType in [lt_numList,lt_intList,lt_realList] then begin
-          if i=0
-          then begin
-            dim:=P_listLiteral(entry)^.size;
-            for j:=0 to length(centers)-1 do begin
-              centers[j].x:=zero_vector;
-              centers[j].count:=0;
-            end;
-          end else if dim<>P_listLiteral(entry)^.size
-          then result:=false;
-
+          if dim=0
+          then dim:=P_listLiteral(entry)^.size
+          else if dim<>P_listLiteral(entry)^.size then result:=false;
           raw_data[i].x:=toVector(P_listLiteral(entry));
-          j:=random(dim);
-          raw_data[i].c:=j;
-          vector_inc(centers[j].x,raw_data[i].x);
-          centers[j].count+=1;
+          raw_data[i].c:=random(k);
         end else result:=false;
       end;
-
       if not(result) then begin
         for i:=0 to length(raw_data)-1 do with raw_data[i] do setLength(x,0);
         setLength(raw_data,0);
-        for i:=0 to length(centers)-1 do with centers[i] do setLength(x,0);
-        setLength(centers,0);
         context^.raiseError('kMeans requires a list of numeric lists of the same size as input. The input list must contain at least k elements.',tokenLocation);
+      end;
+    end;
+
+  PROCEDURE updateCenters;
+    VAR j, i: longint;
+    begin
+      for j:=0 to k-1 do begin
+        centers[j].count:=0;
+        centers[j].x:=ZERO_VECTOR;
+      end;
+      for i:=0 to length(raw_data)-1 do begin
+        j:=raw_data[i].c;
+        assert((j>=0) and (j<k),'Invalid class index: '+intToStr(j));
+        vector_inc(centers[j].x,raw_data[i].x);
+        inc(centers[j].count);
+      end;
+    end;
+
+  FUNCTION canInitCenters:boolean;
+    VAR entry: P_literal;
+        i,j:longint;
+    begin
+      setLength(centers,k);
+      result:=true;
+      if arg1^.literalType=lt_smallint then updateCenters
+      else begin
+        for i:=0 to list1^.size-1 do if result then begin
+          entry:=list1^.value[i];
+          if entry^.literalType in [lt_numList,lt_intList,lt_realList] then begin
+            if dim<>P_listLiteral(entry)^.size then result:=false;
+            centers[i].x:=toVector(P_listLiteral(entry));
+            centers[i].count:=0;
+          end else result:=false;
+        end;
+        if result then for i:=0 to length(raw_data)-1 do begin
+          j:=classify(raw_data[i].x);
+          raw_data[i].c:=j;
+          centers[j].count+=1;
+        end;
+      end;
+      if not(result) then begin
+        for i:=0 to length(raw_data)-1 do with raw_data[i] do setLength(x,0);
+        setLength(raw_data,0);
+        for i:=0 to length(raw_data)-1 do with centers[i] do setLength(x,0);
+        setLength(centers,0);
+        context^.raiseError('kMeans requires a list of numeric lists of the same size as input. The inital list of centers must contain numeric lists of the same size.',tokenLocation);
       end;
     end;
 
   FUNCTION classifyAll:P_mapLiteral;
     PROCEDURE redistribute(CONST emptyClassIndex:longint);
       VAR j:longint;
+          largestClassIndex:longint=0;
+          splitAxis:longint;
+          discriminant:double;
       begin
-        j:=random(length(raw_data));
-        raw_data[j].c:=emptyClassIndex;
-        centers[emptyClassIndex].x:=raw_data[j].c;
-        centers[emptyClassIndex].count:=1;
+        for j:=0 to k-1 do if centers[j].count>centers[largestClassIndex].count then largestClassIndex:=j;
+        splitAxis:=random(dim);
+        discriminant:=centers[largestClassIndex].x[splitAxis]/centers[largestClassIndex].count;
+
+        centers[largestClassIndex].count:=0; centers[largestClassIndex].x:=ZERO_VECTOR;
+        centers[emptyClassIndex  ].count:=0; centers[emptyClassIndex  ].x:=ZERO_VECTOR;
+
+        for j:=0 to length(raw_data)-1 do with raw_data[j] do if c=largestClassIndex then begin
+          if x[splitAxis]<discriminant
+          then c:=  emptyClassIndex
+          else c:=largestClassIndex;
+          vector_inc(centers[c].x,x);
+          inc       (centers[c].count);
+        end;
+
       end;
 
     VAR i,j:longint;
         anyClassChanged:boolean;
         tempList:P_listLiteral;
+        loopCount:longint=0;
     begin
       repeat
+        inc(loopCount);
         //1. Normalize centers
+        anyClassChanged:=false;
         for i:=0 to k-1 do begin
-          if centers[i].count=0 then redistribute(i);
+          if centers[i].count=0 then begin
+            redistribute(i);
+            anyClassChanged:=true;
+          end;
           vector_mult(centers[i].x,1/centers[i].count);
         end;
         //2. Reclassify...
-        anyClassChanged:=false;
         for i:=0 to length(raw_data)-1 do begin
           j:=classify(raw_data[i].x);
           if j<>raw_data[i].c then begin
@@ -1450,19 +1503,10 @@ FUNCTION kMeans_impl intFuncSignature;
             anyClassChanged:=true;
           end;
         end;
-        if anyClassChanged then begin
-          //3. Update centers
-          for j:=0 to k-1 do begin
-            centers[j].count:=0;
-            centers[j].x:=zero_vector;
-          end;
-          for i:=0 to length(raw_data)-1 do begin
-            j:=raw_data[i].c;
-            vector_inc(centers[j].x,raw_data[i].x);
-            inc(centers[j].count);
-          end;
-        end;
-      until not(anyClassChanged);
+        //3. Update centers
+        if anyClassChanged then updateCenters;
+
+      until not(anyClassChanged) or not(context^.continueEvaluation) or (loopCount>=100);
       result:=newMapLiteral(2);
       tempList:=recycler^.newListLiteral(length(raw_data));
       for i:=0 to length(raw_data)-1 do begin
@@ -1482,12 +1526,15 @@ FUNCTION kMeans_impl intFuncSignature;
     end;
 
   begin
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_listTypes) and (arg1^.literalType=lt_smallint) and (int1^.intValue>=2) then begin
+    if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_listTypes) and
+       ((arg1^.literalType=lt_smallint) and (int1^.intValue>=2) or (arg1^.literalType in C_listTypes) and (list1^.size>=2)) then begin
       if list0^.size=0 then exit(list0^.rereferenced);
-      k:=int1^.intValue;
-      if not(canFillRawData)
-      then exit(nil)
-      else result:=classifyAll;
+      if arg1^.literalType=lt_smallint
+      then k:=int1 ^.intValue
+      else k:=list1^.size;
+      if canFillRawData and canInitCenters
+      then result:=classifyAll
+      else result:=nil;
     end else result:=nil;
   end;
 
