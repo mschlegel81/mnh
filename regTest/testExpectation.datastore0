@@ -2861,7 +2861,7 @@ expectations:=
   'math.arccos','math.arcsin','math.arctan','math.arctan2','math.argMax','math.argMin','math.bitXor',
   'math.calculateFourierCoefficients','math.ceil','math.composeDigits','math.cos','math.digits','math.divMod',
   'math.euklideanNorm','math.exp','math.factorize','math.floor','math.gcd','math.hammingWeight','math.iDFT','math.iFFT',
-  'math.integrate','math.isInfinite','math.isNan','math.isPrime','math.isqrt','math.ln','math.max','math.min',
+  'math.integrate','math.isInfinite','math.isNan','math.isPrime','math.isqrt','math.kMeans','math.ln','math.max','math.min',
   'math.modularInverse','math.newBSpline','math.newFourierSeries','math.newLinearInterpolator','math.newLocalInterpolator',
   'math.newSplineInterpolator','math.permutationIterator','math.permutations','math.pi','math.powMod','math.primeGenerator',
   'math.primes','math.rangeGenerator','math.round','math.shiftRight','math.sign','math.sin','math.sqr','math.sqrt',
