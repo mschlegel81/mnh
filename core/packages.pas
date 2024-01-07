@@ -354,7 +354,7 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
     if length(scriptSource)=0 then begin
       if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
       then fileName:=expandFileName(filenameOrId)
-      else fileName:=locateSource(extractFilePath(locationForWarning.package^.getPath),filenameOrId);
+      else if not(fileCache.canLocateSource(extractFilePath(locationForWarning.package^.getPath),filenameOrId,fileName)) then fileName:='';
       if (fileName='') or not(fileExists(fileName)) then begin
         callerContext^.messages^.postTextMessage(mt_el2_warning,locationForWarning,'Cannot find script with id or path "'+filenameOrId+'"');
         fileName:='';
@@ -517,11 +517,8 @@ CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenL
   begin
     locationOfDeclaration:=tokenLocation;
     id:=packId;
-    path:=locateSource(extractFilePath(root),id);
-    if messages<>nil then begin
-      if (path='')
-      then messages^.raiseSimpleError('Cannot locate package for id "'+id+'"',tokenLocation);
-    end;
+    if not(fileCache.canLocateSource(extractFilePath(root),id,path)) then path:='';
+    if (messages<>nil) and (path='') then messages^.raiseSimpleError('Cannot locate package for id "'+id+'"',tokenLocation);
     pack:=nil;
   end;
 

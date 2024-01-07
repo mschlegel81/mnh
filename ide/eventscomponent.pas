@@ -34,7 +34,7 @@ PROCEDURE setupEventsComponentOnIdeStartup;
 PROCEDURE postIdeMessage(CONST messageText:string; CONST warn:boolean);
 PROCEDURE ensureEventsForm;
 IMPLEMENTATION
-USES basicTypes,myGenerics,mySys,mnh_settings,contexts;
+USES basicTypes,myGenerics,mySys,mnh_settings,contexts,fileWrappers;
 TYPE
   P_ideMessage=^T_ideMessage;
   T_ideMessage=object
@@ -230,7 +230,8 @@ begin
 end;
 
 INITIALIZATION
-  contexts.postIdeMessage:=@postIdeMessage;
+  contexts  .postIdeMessage:=@postIdeMessage;
+  fileWrappers.notify_event:=@postIdeMessage;
 
 FINALIZATION
   if eventsAdapterSingleton<>nil then dispose(eventsAdapterSingleton,destroy);

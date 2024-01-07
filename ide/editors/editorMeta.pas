@@ -300,7 +300,7 @@ FUNCTION T_editorMeta.loadFromStream(VAR stream:T_bufferedInputStreamWrapper):bo
 
     editor.CaretX:=stream.readNaturalNumber; //#9
     editor.CaretY:=stream.readNaturalNumber; //#10
-    language:=T_language(stream.readByte([byte(low(T_language))..byte(high(T_language))]));  //#11
+    inherited setLanguage(T_language(stream.readByte([byte(low(T_language))..byte(high(T_language))])));  //#11
     {$ifdef debugMode}
     writeln('Read language. ok=',stream.allOkay);
     {$endif}
@@ -543,7 +543,7 @@ PROCEDURE T_editorMeta.saveFile(CONST fileName:string='');
   begin
     previousName:=fileInfo.filePath;
     if fileName<>'' then fileInfo.filePath:=expandFileName(fileName);
-    workspace.fileHistory.fileClosed(fileInfo.filePath);
+    workspace.fileHistory.fileTouched(fileInfo.filePath,true);
     if previousName<>fileInfo.filePath
     then lineEndingSetting:=settings.newFileLineEnding
     else lineEndingSetting:=settings.overwriteLineEnding;

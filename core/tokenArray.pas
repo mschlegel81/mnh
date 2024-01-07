@@ -1308,11 +1308,12 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
 FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
   VAR i:longint;
   PROCEDURE getBuiltinRuleInfo(VAR link:string);
-    VAR doc:P_intrinsicFunctionDocumentation;
+    VAR doc:P_intrinsicFunctionDocumentation=nil;
     begin
-      if isQualified(result.tokenText)
-      then doc:=functionDocMap.get(copy(result.tokenText,2,length(result.tokenText)-1))
-      else doc:=functionDocMap.get(     result.tokenText                              );
+      if not(functionDocMap.containsKey(result.tokenText,doc)) then begin
+        if not(functionDocMap.containsKey(unqualifiedId(result.tokenText),doc))
+        then doc:=nil;
+      end;
       if doc<>nil then begin
         result.builtinRuleInfo:=doc^.getStructuredInfo(result.exampleText);
         link:=doc^.getHtmlLink;

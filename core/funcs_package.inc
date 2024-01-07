@@ -216,7 +216,7 @@ FUNCTION inspect_imp intFuncSignature;
         if lowercase(extractFileExt(filenameOrId))=SCRIPT_EXTENSION
         then fileName:=expandFileName(filenameOrId)
         else id      :=filenameOrId;
-        if id<>'' then fileName:=locateSource(extractFilePath(callerPackage^.getPath),id);
+        if (id<>'') and not(fileCache.canLocateSource(extractFilePath(callerPackage^.getPath),id,fileName)) then fileName:='';
         if (fileName='') or not(fileExists(fileName)) then begin
           context^.messages^.postTextMessage(mt_el2_warning,locationForWarning, 'Cannot locate package with id or path "'+id+'"');
           tempPackage:=nil;

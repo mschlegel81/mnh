@@ -219,8 +219,8 @@ PROCEDURE TSettingsForm.FileNameEdit1EditingDone(Sender: TObject);
 PROCEDURE TSettingsForm.clearFileHistoryButtonClick(Sender: TObject);
   begin
     workspace.fileHistory.clear;
-    workspace.fileHistory.logFolder(getPackagesRoot);
-    workspace.fileHistory.logFolder(getDemosRoot);
+    workspace.fileHistory.fileTouched(getPackagesRoot+'/.mnh',false);
+    workspace.fileHistory.fileTouched(getDemosRoot   +'/.mnh',false);
   end;
 
 PROCEDURE TSettingsForm.cbCopyAsHtmlChange(Sender: TObject);
