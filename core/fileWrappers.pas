@@ -392,6 +392,7 @@ CONSTRUCTOR T_folderContents.create(CONST original:P_folderContents);
 DESTRUCTOR T_folderContents.destroy;
   VAR i:longint;
   begin
+    folderName:='';
     for i:=0 to length(Files)-1 do Files[i]:='';
     setLength(Files,0);
     for i:=0 to length(subfolders)-1 do dispose(subfolders[i],destroy);
@@ -559,10 +560,12 @@ FUNCTION T_folderContents.hasSubdirectory(CONST directoryName: string; OUT subDi
   end;
 
 FUNCTION T_folderContents.listIdsRecursively(CONST timeout:double): T_arrayOfString;
-  VAR sub:P_folderContents;
+  VAR i:longint;
+      sub:P_folderContents;
   begin
     if (dontScanBefore<now) and (timeout<now) then scan;
-    result:=Files;
+    setLength(result,length(Files));
+    for i:=0 to length(Files)-1 do result[i]:=ExtractFileNameOnly(Files[i]);
     for sub in subfolders do append(result,sub^.listIdsRecursively(timeout));
   end;
 
