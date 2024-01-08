@@ -1359,10 +1359,12 @@ FUNCTION kMeans_impl intFuncSignature;
       for i:=0 to length(v)-1 do result^.appendReal(recycler,v[i]);
     end;
 
-  PROCEDURE vector_inc(VAR v:T_vector; CONST toAdd:T_vector); inline;
+  FUNCTION vector_inc(VAR v:T_vector; CONST toAdd:T_vector):boolean; inline;
     VAR i:longint;
     begin
-      for i:=0 to dim-1 do v[i]+=toAdd[i];
+      result:=true;
+      for i:=0 to dim-1 do result:=result and not(isInfinite(toAdd[i])) and not(isNan(toAdd[i]));
+      if result then for i:=0 to dim-1 do v[i]+=toAdd[i];
     end;
 
   PROCEDURE vector_mult(VAR v:T_vector; CONST factor:double); inline;
@@ -1419,8 +1421,8 @@ FUNCTION kMeans_impl intFuncSignature;
       for i:=0 to length(raw_data)-1 do begin
         j:=raw_data[i].c;
         assert((j>=0) and (j<k),'Invalid class index: '+intToStr(j));
-        vector_inc(centers[j].x,raw_data[i].x);
-        inc(centers[j].count);
+        if vector_inc(centers[j].x,raw_data[i].x)
+        then      inc(centers[j].count);
       end;
     end;
 
@@ -1437,13 +1439,12 @@ FUNCTION kMeans_impl intFuncSignature;
           if entry^.literalType in [lt_numList,lt_intList,lt_realList] then begin
             if dim<>P_listLiteral(entry)^.size then result:=false;
             centers[i].x:=toVector(P_listLiteral(entry));
-            centers[i].count:=0;
+            centers[i].count:=1;
           end else result:=false;
         end;
         if result then for i:=0 to length(raw_data)-1 do begin
           j:=classify(raw_data[i].x);
           raw_data[i].c:=j;
-          centers[j].count+=1;
         end;
       end;
       if not(result) then begin
@@ -1454,6 +1455,9 @@ FUNCTION kMeans_impl intFuncSignature;
         context^.raiseError('kMeans requires a list of numeric lists of the same size as input. The inital list of centers must contain numeric lists of the same size.',tokenLocation);
       end;
     end;
+
+  VAR max_steps:longint=100;
+      min_class_size:longint=1;
 
   FUNCTION classifyAll:P_mapLiteral;
     PROCEDURE redistribute(CONST emptyClassIndex:longint);
@@ -1473,10 +1477,16 @@ FUNCTION kMeans_impl intFuncSignature;
           if x[splitAxis]<discriminant
           then c:=  emptyClassIndex
           else c:=largestClassIndex;
-          vector_inc(centers[c].x,x);
-          inc       (centers[c].count);
+          if vector_inc(centers[c].x,x)
+          then      inc(centers[c].count);
         end;
+      end;
 
+    FUNCTION anyInvalid(CONST v:T_vector):boolean;
+      VAR i:longint;
+      begin
+        result:=false;
+        for i:=0 to dim-1 do result:=result or isNan(v[i]) or isInfinite(v[i]);
       end;
 
     VAR i,j:longint;
@@ -1489,7 +1499,7 @@ FUNCTION kMeans_impl intFuncSignature;
         //1. Normalize centers
         anyClassChanged:=false;
         for i:=0 to k-1 do begin
-          if centers[i].count=0 then begin
+          if (centers[i].count<min_class_size) or anyInvalid(centers[i].x) then begin
             redistribute(i);
             anyClassChanged:=true;
           end;
@@ -1504,9 +1514,9 @@ FUNCTION kMeans_impl intFuncSignature;
           end;
         end;
         //3. Update centers
-        if anyClassChanged then updateCenters;
+        updateCenters;
 
-      until not(anyClassChanged) or not(context^.continueEvaluation) or (loopCount>=100);
+      until not(anyClassChanged) or not(context^.continueEvaluation) or (loopCount>=max_steps);
       result:=newMapLiteral(2);
       tempList:=recycler^.newListLiteral(length(raw_data));
       for i:=0 to length(raw_data)-1 do begin
@@ -1518,6 +1528,7 @@ FUNCTION kMeans_impl intFuncSignature;
 
       tempList:=recycler^.newListLiteral(k);
       for j:=0 to length(centers)-1 do begin
+        vector_mult(centers[j].x,1/centers[j].count);
         tempList^.append(recycler,toNumList(centers[j].x),false);
         setLength(centers[j].x,0);
       end;
@@ -1526,12 +1537,17 @@ FUNCTION kMeans_impl intFuncSignature;
     end;
 
   begin
-    if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_listTypes) and
-       ((arg1^.literalType=lt_smallint) and (int1^.intValue>=2) or (arg1^.literalType in C_listTypes) and (list1^.size>=2)) then begin
+    if (params<>nil) and (params^.size>=2) and (params^.size<=4) and (arg0^.literalType in C_listTypes) and
+       ((arg1^.literalType=lt_smallint) and (int1^.intValue>=2) or (arg1^.literalType in C_listTypes) and (list1^.size>=2)) and
+       ((params^.size<3) or (arg2^.literalType=lt_smallint)) and
+       ((params^.size<4) or (arg3^.literalType=lt_smallint))
+    then begin
       if list0^.size=0 then exit(list0^.rereferenced);
       if arg1^.literalType=lt_smallint
       then k:=int1 ^.intValue
       else k:=list1^.size;
+      if params^.size>=3 then max_steps     :=int2^.intValue;
+      if params^.size =4 then min_class_size:=int3^.intValue;
       if canFillRawData and canInitCenters
       then result:=classifyAll
       else result:=nil;
@@ -1591,5 +1607,5 @@ INITIALIZATION
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'FFT' ,@FFT_impl ,ak_unary);
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'iFFT',@iFFT_impl,ak_unary);
 
-  builtinFunctionMap.registerRule(MATH_NAMESPACE,'kMeans',@kMeans_impl,ak_binary);
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'kMeans',@kMeans_impl,ak_variadic_2);
 end.
