@@ -23,6 +23,7 @@ object HelpForm: THelpForm
     Font.Quality = fqNonAntialiased
     ParentColor = False
     ParentFont = False
+    PopupMenu = PopupMenu1
     TabOrder = 0
     TabStop = False
     OnKeyUp = SynEdit1KeyUp
@@ -532,6 +533,7 @@ object HelpForm: THelpForm
     AutoSize = True
     Caption = 'Show in browser'
     OnClick = openHtmlButtonClick
+    PopupMenu = PopupMenu1
     TabOrder = 1
   end
   object UpdateToggleBox: TToggleBox
@@ -546,6 +548,7 @@ object HelpForm: THelpForm
     Caption = 'Update for Cursor'
     Checked = True
     OnChange = UpdateToggleBoxChange
+    PopupMenu = PopupMenu1
     State = cbChecked
     TabOrder = 2
   end
