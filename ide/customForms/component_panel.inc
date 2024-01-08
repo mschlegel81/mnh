@@ -87,7 +87,7 @@ CONSTRUCTOR T_panelMeta.createForExistingForm(CONST form: TscriptedForm);
   begin
     initCriticalSection(elementCs);
     setLength(elements,0);
-    lastControl:=form.closeButtonPanel;
+    lastControl:=nil;
     winControl:=form;
     containedInForm:=form;
     registerFontControl(form,ctGeneral);
@@ -104,6 +104,7 @@ PROCEDURE T_panelMeta.add(CONST meta: P_guiElementMeta);
     setLength(elements,length(elements)+1);
     elements[length(elements)-1]:=meta;
     lastControl:=meta^.getControl;
+    TscriptedForm(containedInForm).closeButtonPanel.BringToFront;
   end;
 
 FUNCTION T_panelMeta.evaluate(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean; begin result:=false; end;
