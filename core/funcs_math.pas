@@ -1399,7 +1399,7 @@ FUNCTION kMeans_impl intFuncSignature;
           then dim:=P_listLiteral(entry)^.size
           else if dim<>P_listLiteral(entry)^.size then result:=false;
           raw_data[i].x:=toVector(P_listLiteral(entry));
-          raw_data[i].c:=random(k);
+          raw_data[i].c:=context^.getGlobals^.prng.intRandom(k);
         end else result:=false;
       end;
       if not(result) then begin
@@ -1463,7 +1463,7 @@ FUNCTION kMeans_impl intFuncSignature;
           discriminant:double;
       begin
         for j:=0 to k-1 do if centers[j].count>centers[largestClassIndex].count then largestClassIndex:=j;
-        splitAxis:=random(dim);
+        splitAxis:=context^.getGlobals^.prng.intRandom(dim);
         discriminant:=centers[largestClassIndex].x[splitAxis]/centers[largestClassIndex].count;
 
         centers[largestClassIndex].count:=0; centers[largestClassIndex].x:=ZERO_VECTOR;

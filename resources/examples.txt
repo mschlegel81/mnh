@@ -1363,6 +1363,8 @@ permutationIterator([3,1,2]).map(::print).toList;
 #I lists.map
 //The result of <generator>.map(<f>) is a new generator
 rangeGenerator(1,100).map({$x^2});
+//You can use functions with more parameters if the input matches:
+zip([1..10],[10..1]*2).map((x,y)->x+y).toList;
 
 #I lists.mergeMaps
 #S mergeMaps(A:Map, B:Map, M:Expression(2));
@@ -1844,6 +1846,15 @@ vectorIfThenElse(x.isInfinite,0,x);
 #S zip(a,b,...);
 #C Returns an iterator over [a,b,...].transposed if any parameter is an iteratable expression or [a,b,...].transposed if all parameters are compound literals.
 zip(rangeGenerator(0),primeGenerator).head(10);
+
+#I kMeans
+#S kMeans(inputList:List, k>=2);
+#C Returns a map assigning a class index to each entry of the input list. The centers are initialized by random class assignments.
+#S kMeans(inputList:List, centers:List);
+#C Returns a map assigning a class index to each entry of the input list. The centers are initialized by the second argument.
+#C Note that all entries of inputList (and of centers if present) must be NumericList of the same size.
+kMeans([1..100].map((i)->random(3)),3);
+kMeans([1..100].map((i)->random(3)),[[0,0,1],[0,1,0],[1,0,0]]);
 
 //==END REG TEST==
 
