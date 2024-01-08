@@ -109,8 +109,9 @@ PROCEDURE ensurePath(CONST path:ansistring);
 
 VAR fileCache:T_fileCache;
     notify_event:F_notify_event=nil;
+    FILE_CACHE_MAX_AGE:double=1; //one day
 IMPLEMENTATION
-CONST FILE_CACHE_MAX_AGE=5/(24*60); //=5 minutes
+
 FUNCTION cleanPath(CONST pathWithTrailingSeparator:string):string;
   begin
     if pathWithTrailingSeparator='' then exit('');
@@ -519,12 +520,14 @@ FUNCTION T_folderContents.canFind(CONST packageId: string; OUT fullPath: string;
       sub:P_folderContents;
       subscanRequired:boolean;
   begin
+    scanRequired:=false;
     if (dontScanBefore<now) then begin
-      if allowScan then scan
+      if allowScan
+      then scan
       else scanRequired:=true;
-    end else scanRequired:=false;
+    end;
 
-    for fileName in Files do if ExtractFileNameOnly(fileName) = packageId then begin
+    for fileName in Files do if SameFileName(ExtractFileNameOnly(fileName),packageId) then begin
       fullPath:=folderName+DirectorySeparator+fileName;
       if fileExists(fullPath)
       then exit(true)
@@ -547,7 +550,9 @@ FUNCTION T_folderContents.hasSubdirectory(CONST directoryName: string; OUT subDi
       subDir:=@self;
       exit(true);
     end;
-    if not(startsWith(directoryName,folderName)) then exit(false);
+    if not(                               startsWith(          directoryName ,          folderName ) or
+           not(FileNameCaseSensitive) and startsWith(lowercase(directoryName),lowercase(folderName)))
+    then exit(false);
     if dontScanBefore<now then scan;
     for sub in subfolders do if sub^.hasSubdirectory(directoryName,subDir) then exit(true);
     result:=false;

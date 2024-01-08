@@ -116,6 +116,7 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
         and not(clf_GUI in commandLine.mnhExecutionOptions.flags);
       result:=not(quitImmediate);
     end else result:=false;
+    if result then fileWrappers.FILE_CACHE_MAX_AGE:=5*ONE_MINUTE;
     consoleAdapters.destroy;
   end;
 
