@@ -1853,6 +1853,8 @@ zip(rangeGenerator(0),primeGenerator).head(10);
 #S kMeans(inputList:List, centers:List);
 #C Returns a map assigning a class index to each entry of the input list. The centers are initialized by the second argument.
 #C Note that all entries of inputList (and of centers if present) must be NumericList of the same size.
+#S kMeans(inputList:List, k_or_centers, max_steps:Int, min_members_per_class:Int); 
+#C Fine tuned kMeans. If not present, max_steps defaults to 100 and min_members_per_class defaults to 1.
 kMeans([1..100].map((i)->random(3)),3);
 kMeans([1..100].map((i)->random(3)),[[0,0,1],[0,1,0],[1,0,0]]);
 

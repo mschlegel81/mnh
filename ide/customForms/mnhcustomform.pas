@@ -713,6 +713,8 @@ FUNCTION showDialog_impl(CONST params:P_listLiteral; CONST location:T_tokenLocat
       context^.messages^.postCustomMessage(formRequest,false);
       form:=formRequest^.getCreatedForm(context^.messages);
       disposeMessage(formRequest);
+
+      if form=nil then exit(nil);
       if context^.parentCustomForm<>nil then TscriptedForm(context^.parentCustomForm).hideAndDisconnectAll;
       while not(form.markedForCleanup) and (context^.continueEvaluation) do begin
         if form.processPendingEvents(location,context,recycler)
@@ -756,17 +758,26 @@ FUNCTION T_customFormAdapter.flushToGui(CONST forceFlush:boolean): T_messageType
             include(result,collected[i]^.messageType);
           end;
           mt_displayCustomForm: with P_customFormRequest(collected[i])^ do begin
-            newForm:=TscriptedForm.create(nil);
-            newForm.displayPending:=true;
-            newForm.caption:=setupTitle;
-            setLength(scriptedForms,length(scriptedForms)+1);
-            scriptedForms[length(scriptedForms)-1]:=newForm;
-            newForm.initialize(setupDef,setupLocation,setupContext,@globalLiteralRecycler,relatedPlotAdapter);
-            newForm.adapter:=@self;
-            setCreatedForm(newForm);
-            dockNewForm(newForm);
-            newForm.showAndConnectAll;
-            include(result,collected[i]^.messageType);
+            if not(setupContext^.continueEvaluation)
+            then setCreatedForm(nil)
+            else begin
+              newForm:=TscriptedForm.create(nil);
+              try
+                newForm.displayPending:=true;
+                newForm.caption:=setupTitle;
+                setLength(scriptedForms,length(scriptedForms)+1);
+                scriptedForms[length(scriptedForms)-1]:=newForm;
+                newForm.initialize(setupDef,setupLocation,setupContext,@globalLiteralRecycler,relatedPlotAdapter);
+                newForm.adapter:=@self;
+                setCreatedForm(newForm);
+                dockNewForm(newForm);
+                newForm.showAndConnectAll;
+                include(result,collected[i]^.messageType);
+              except
+                FreeAndNil(newForm);
+                setCreatedForm(nil);
+              end;
+            end;
           end;
         end;
       end;
