@@ -32,7 +32,6 @@ TYPE
       PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
 
       FUNCTION referencesAnyUserPackage: boolean; virtual;
-      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
   end;
 
 IMPLEMENTATION
@@ -162,13 +161,6 @@ PROCEDURE T_interpolator.cleanup(CONST literalRecycler: P_literalRecycler);
 
 FUNCTION T_interpolator.referencesAnyUserPackage: boolean;
   begin
-    result:=false;
-  end;
-
-FUNCTION T_interpolator.writeToStream(VAR serializer:T_literalSerializer):boolean;
-  begin
-    serializer.wrappedRaw^.logWrongTypeError;
-    serializer.raiseError('Cannot serialize builtin generator expression.');
     result:=false;
   end;
 

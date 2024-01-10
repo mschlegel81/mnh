@@ -44,9 +44,6 @@ TYPE
       FUNCTION getBuiltinTypeCheck:T_typeCheck;
       FUNCTION getBuiltinCheckParameter:longint;
       FUNCTION isTypeCheckOnly:boolean;
-
-      FUNCTION loadFromStream(VAR deserializer:T_literalDeserializer):boolean;
-      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean;
   end;
 
   T_patternElementLocation=object
@@ -99,9 +96,6 @@ TYPE
       FUNCTION getFirstParameterTypeWhitelist:T_literalTypeSet;
       FUNCTION getFirst:T_patternElement;
       FUNCTION usesStrictCustomTyping:boolean;
-
-      FUNCTION loadFromStream(VAR deserializer:T_literalDeserializer):boolean;
-      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean;
   end;
 
 {$ifdef fullVersion}
@@ -360,43 +354,6 @@ FUNCTION T_patternElement.getBuiltinCheckParameter: longint;
 FUNCTION T_patternElement.isTypeCheckOnly: boolean;
   begin
     result:=restrictionType in [tt_typeCheck,tt_customTypeCheck,tt_literal];
-  end;
-
-FUNCTION T_patternElement.loadFromStream(VAR deserializer:T_literalDeserializer): boolean;
-  begin
-    id:=deserializer.wrappedRaw^.readAnsiString;
-    restrictionType :=T_tokenType(deserializer.wrappedRaw^.readByte([byte(low(T_tokenType))..byte(high(T_tokenType))]));
-    builtinTypeCheck:=T_typeCheck(deserializer.wrappedRaw^.readByte([byte(low(T_typeCheck))..byte(high(T_typeCheck))]));
-    if restrictionType in [tt_comparatorEq..tt_comparatorListEq,tt_operatorIn] then begin
-      restrictionIdx:=deserializer.wrappedRaw^.readInteger;
-      if restrictionIdx<0
-      then restrictionValue:=deserializer.getLiteral
-      else restrictionValue:=nil;
-      if restrictionIdx>=0 then restrictionId:=deserializer.wrappedRaw^.readAnsiString;
-    end else if (restrictionType=tt_typeCheck) and C_typeCheckInfo[builtinTypeCheck].modifiable
-      then restrictionIdx:=deserializer.wrappedRaw^.readInteger
-    else if (restrictionType=tt_customTypeCheck) then begin
-      customTypeCheck:=deserializer.getTypeCheck(skipCustomCheck);
-    end;
-    thinOutWhitelistAndPlausibilize(nil);
-    result:=deserializer.wrappedRaw^.allOkay;
-  end;
-
-FUNCTION T_patternElement.writeToStream(VAR serializer:T_literalSerializer): boolean;
-  begin
-    serializer.wrappedRaw^.writeAnsiString(id);
-    serializer.wrappedRaw^.writeByte(byte(restrictionType));
-    serializer.wrappedRaw^.writeByte(byte(builtinTypeCheck));;
-    if restrictionType in [tt_comparatorEq..tt_comparatorListEq,tt_operatorIn] then begin
-      serializer.wrappedRaw^.writeInteger(restrictionIdx);
-      if restrictionIdx<0
-      then serializer.writeLiteral(restrictionValue);
-      if restrictionIdx>=0 then serializer.wrappedRaw^.writeAnsiString(restrictionId);
-    end else if (restrictionType=tt_typeCheck) and C_typeCheckInfo[builtinTypeCheck].modifiable
-      then serializer.wrappedRaw^.writeInteger(restrictionIdx)
-    else if (restrictionType=tt_customTypeCheck) then
-      serializer.wrappedRaw^.writeAnsiString(customTypeCheck^.getName);
-    result:=serializer.wrappedRaw^.allOkay;
   end;
 
 CONSTRUCTOR T_pattern.create;
@@ -859,27 +816,6 @@ FUNCTION T_pattern.usesStrictCustomTyping: boolean;
   begin
     result:=false;
     for s in sig do if (s.customTypeCheck<>nil) and not(s.customTypeCheck^.isDucktyping) then exit(true);
-  end;
-
-FUNCTION T_pattern.loadFromStream(VAR deserializer:T_literalDeserializer): boolean;
-  VAR i:longint;
-  begin
-    setLength(sig,deserializer.wrappedRaw^.readNaturalNumber);
-    hasOptionals:=deserializer.wrappedRaw^.readBoolean;
-    for i:=0 to length(sig)-1 do if deserializer.wrappedRaw^.allOkay then begin
-      sig[i].createAnonymous(deserializer.getLocation);
-      sig[i].loadFromStream(deserializer);
-    end;
-    result:=deserializer.wrappedRaw^.allOkay;
-  end;
-
-FUNCTION T_pattern.writeToStream(VAR serializer:T_literalSerializer): boolean;
-  VAR i:longint;
-  begin
-    serializer.wrappedRaw^.writeNaturalNumber(length(sig));
-    serializer.wrappedRaw^.writeBoolean(hasOptionals);
-    for i:=0 to length(sig)-1 do sig[i].writeToStream(serializer);
-    result:=serializer.wrappedRaw^.allOkay;
   end;
 
 FUNCTION patternToString(CONST p:pointer):ansistring;

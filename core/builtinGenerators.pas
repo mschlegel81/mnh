@@ -29,7 +29,6 @@ TYPE
     FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
     PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
     DESTRUCTOR destroy; virtual;
-    FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
     FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
@@ -50,7 +49,7 @@ FUNCTION T_listIterator.evaluate(CONST location:T_tokenLocation; CONST context:P
   begin
     result.reasonForStop:=rr_ok;
     if index>=length(values)
-    then result.literal:=newVoidLiteral
+    then result:=GENERATOR_END_EVAL_RESULT
     else result.literal:=values[index]^.rereferenced;
     inc(index);
   end;
@@ -78,7 +77,6 @@ TYPE
     FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
     PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
     DESTRUCTOR destroy; virtual;
-    FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
     FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
@@ -145,9 +143,7 @@ FUNCTION T_zipIterator.evaluate(CONST location:T_tokenLocation; CONST context:P_
       then listOutput^.append(recycler,element.literal,false)
       else begin
         P_literalRecycler(recycler)^.disposeLiteral(listOutput);
-        result.literal:=newVoidLiteral;
-        result.reasonForStop:=rr_ok;
-        exit(result);
+        exit(GENERATOR_END_EVAL_RESULT);
       end;
     end;
     result.reasonForStop:=rr_ok;
@@ -177,7 +173,6 @@ TYPE
     FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
     PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
     DESTRUCTOR destroy; virtual;
-    FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
     FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
@@ -196,7 +191,7 @@ FUNCTION T_singleValueIterator.toString(CONST lengthLimit:longint=maxLongint):st
 FUNCTION T_singleValueIterator.evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult;
   begin
     if didDeliver
-    then result.literal:=newVoidLiteral
+    then exit(GENERATOR_END_EVAL_RESULT)
     else result.literal:=value^.rereferenced;
     result.reasonForStop:=rr_ok;
     didDeliver:=true;
@@ -233,7 +228,6 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
       FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
@@ -279,13 +273,13 @@ FUNCTION T_rangeGenerator.evaluate(CONST location:T_tokenLocation; CONST context
           tmp:=bigNext+1;
           result.literal:=P_recycler(recycler)^.newIntLiteral(bigNext);
           bigNext:=tmp;
-        end else result.literal:=newVoidLiteral;
+        end else result:=GENERATOR_END_EVAL_RESULT;
       bLower:
         if bigNext.compare(bigLim) in [CR_GREATER,CR_EQUAL] then begin
           tmp:=bigNext-1;
           result.literal:=P_recycler(recycler)^.newIntLiteral(bigNext);
           bigNext:=tmp;
-        end else result.literal:=newVoidLiteral;
+        end else result:=GENERATOR_END_EVAL_RESULT;
       bNone : begin
         tmp:=bigNext+1;
         result.literal:=P_recycler(recycler)^.newIntLiteral(bigNext);
@@ -296,12 +290,12 @@ FUNCTION T_rangeGenerator.evaluate(CONST location:T_tokenLocation; CONST context
         if smallNext<=smallLim then begin
           result.literal:=P_recycler(recycler)^.newIntLiteral(smallNext);
           inc(smallNext);
-        end else result.literal:=newVoidLiteral;
+        end else result:=GENERATOR_END_EVAL_RESULT;
       bLower:
         if smallNext>=smallLim then begin
           result.literal:=P_recycler(recycler)^.newIntLiteral(smallNext);
           dec(smallNext);
-        end else result.literal:=newVoidLiteral;
+        end else result:=GENERATOR_END_EVAL_RESULT;
       bNone : begin
         result.literal:=P_recycler(recycler)^.newIntLiteral(smallNext);
         inc(smallNext);
@@ -344,7 +338,6 @@ TYPE
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
       FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
@@ -391,7 +384,7 @@ FUNCTION T_permutationIterator.evaluate(CONST location:T_tokenLocation; CONST co
     //find largest index k so that P[k]<P[k+1] <=> not(P[k+1]<=P[k]);
     for i:=0 to length(nextPermutation)-2 do if not(nextPermutation[i+1]^.leqForSorting(nextPermutation[i])) then k:=i;
     //no such k found: done
-    if k<0 then begin result.literal:=newVoidLiteral; exit; end;
+    if k<0 then exit(GENERATOR_END_EVAL_RESULT);
     //find largest index l so that P[k]<P[l] <=> not(P[l]<=P[k])
     l:=-1;
     for i:=0 to length(nextPermutation)-1 do if not(nextPermutation[i]^.leqForSorting(nextPermutation[k])) then l:=i;
@@ -452,7 +445,6 @@ TYPE
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
       FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
@@ -477,12 +469,12 @@ FUNCTION T_filterGenerator.evaluate(CONST location:T_tokenLocation; CONST contex
     repeat
       nextUnfiltered:=sourceGenerator^.evaluate(location,context,recycler);
       if (nextUnfiltered.literal<>nil) and (nextUnfiltered.literal^.literalType<>lt_void) then begin
-        if evaluateToBoolean_strict(filterExpression,location,context,recycler,nextUnfiltered.literal)
+        if evaluteExpressionFilter(filterExpression,location,P_context(context),recycler,nextUnfiltered.literal)
         then exit          (nextUnfiltered)
         else P_recycler(recycler)^.disposeLiteral(nextUnfiltered.literal);
       end else begin
-        if nextUnfiltered.literal=nil
-        then begin result.reasonForStop:=rr_ok; result.literal:=newVoidLiteral; exit(result); end
+        if nextUnfiltered.reasonForStop=rr_endOfGenerator
+        then exit(GENERATOR_END_EVAL_RESULT)
         else exit(nextUnfiltered);
       end;
     until (result.literal<>nil) or not(P_context(context)^.messages^.continueEvaluation);
@@ -513,7 +505,6 @@ TYPE
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
       FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
@@ -534,15 +525,15 @@ FUNCTION T_mapGenerator.toString(CONST lengthLimit:longint=maxLongint):string;
   end;
 
 FUNCTION T_mapGenerator.evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult;
-  VAR nextUnmapped:P_literal;
+  VAR nextUnmapped:T_evaluationResult;
   begin
     result:=NIL_EVAL_RESULT;
     repeat
-      nextUnmapped:=sourceGenerator^.evaluate(location,context,recycler).literal;
-      if (nextUnmapped<>nil) and (nextUnmapped^.literalType<>lt_void) then begin
+      nextUnmapped:=sourceGenerator^.evaluate(location,context,recycler);
+      if (nextUnmapped.reasonForStop=rr_ok) and (nextUnmapped.literal^.literalType<>lt_void) then begin
         if isNullary then result:=mapExpression^.evaluate(        location,context,recycler)
-                     else result:=evaluteExpressionMap(mapExpression,location,P_context(context),recycler,nextUnmapped);
-        P_recycler(recycler)^.disposeLiteral(nextUnmapped);
+                     else result:=evaluteExpressionMap(mapExpression,location,P_context(context),recycler,nextUnmapped.literal);
+        P_recycler(recycler)^.disposeLiteral(nextUnmapped.literal);
         //error handling
         if result.literal=nil then begin
           result.literal:=newVoidLiteral;
@@ -550,12 +541,7 @@ FUNCTION T_mapGenerator.evaluate(CONST location:T_tokenLocation; CONST context:P
           exit(result);
         end;
         if result.literal^.literalType=lt_void then P_recycler(recycler)^.disposeLiteral(result.literal);
-      end else begin
-        if nextUnmapped=nil
-        then result.literal:=newVoidLiteral
-        else result.literal:=nextUnmapped;
-        result.reasonForStop:=rr_ok; exit(result);
-      end;
+      end else exit(GENERATOR_END_EVAL_RESULT);
     until (result.literal<>nil) or not(P_context(context)^.messages^.continueEvaluation);
   end;
 
@@ -586,7 +572,6 @@ TYPE
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
       FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
@@ -611,7 +596,6 @@ FUNCTION T_flatMapGenerator.toString(CONST lengthLimit: longint): string;
 FUNCTION T_flatMapGenerator.evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult;
   VAR doneFetching:boolean=false;
   PROCEDURE fillQueue;
-    VAR someFetched:boolean=false;
     PROCEDURE appendEvaluated(unmapped:P_literal);
       VAR valueToAppend:P_literal;
       begin
@@ -619,7 +603,6 @@ FUNCTION T_flatMapGenerator.evaluate(CONST location:T_tokenLocation; CONST conte
           if mapExpression=nil
           then begin
             queue.append(unmapped);
-            someFetched:=true;
           end else begin
             if isNullary
             then valueToAppend:=mapExpression^.evaluate(        location,context,recycler).literal
@@ -630,7 +613,6 @@ FUNCTION T_flatMapGenerator.evaluate(CONST location:T_tokenLocation; CONST conte
               then P_recycler(recycler)^.disposeLiteral(valueToAppend)
               else begin
                 queue.append(valueToAppend);
-                someFetched:=true;
               end;
             end;
           end;
@@ -638,7 +620,7 @@ FUNCTION T_flatMapGenerator.evaluate(CONST location:T_tokenLocation; CONST conte
       end;
 
     VAR iter:T_arrayOfLiteral;
-        sub :P_literal;
+        sub :T_evaluationResult;
         stillFetchingFromIterator: boolean;
     begin
       result:=NIL_EVAL_RESULT;
@@ -665,16 +647,16 @@ FUNCTION T_flatMapGenerator.evaluate(CONST location:T_tokenLocation; CONST conte
             lt_stringSet,
             lt_map: begin
               iter:=P_compoundLiteral(currentUnmapped)^.forcedIteratableList(recycler);
-              for sub in iter do appendEvaluated(sub^.rereferenced);
+              for sub.literal in iter do appendEvaluated(sub.literal^.rereferenced);
               P_recycler(recycler)^.disposeLiterals(iter);
               P_recycler(recycler)^.disposeLiteral(currentUnmapped);
             end;
             lt_expression: begin
               if (P_expressionLiteral(currentUnmapped)^.typ in C_iteratableExpressionTypes) then begin
                 repeat
-                  sub:=P_expressionLiteral(currentUnmapped)^.evaluate(location,context,recycler).literal;
-                  stillFetchingFromIterator:=(sub<>nil) and (sub^.literalType<>lt_void);
-                  if stillFetchingFromIterator and context^.continueEvaluation then appendEvaluated(sub);
+                  sub:=P_expressionLiteral(currentUnmapped)^.evaluate(location,context,recycler);
+                  stillFetchingFromIterator:=sub.reasonForStop in [rr_ok,rr_okWithReturn];
+                  if stillFetchingFromIterator and context^.continueEvaluation then appendEvaluated(sub.literal);
                 until not(stillFetchingFromIterator) or not(context^.continueEvaluation) or (queue.fill>=256);
                 if not(stillFetchingFromIterator) or not(context^.continueEvaluation) then P_recycler(recycler)^.disposeLiteral(currentUnmapped);
               end else begin
@@ -687,7 +669,7 @@ FUNCTION T_flatMapGenerator.evaluate(CONST location:T_tokenLocation; CONST conte
           if currentUnmapped<>nil then P_recycler(recycler)^.disposeLiteral(currentUnmapped);
           doneFetching:=true;
         end;
-      until someFetched or doneFetching or not(context^.continueEvaluation);
+      until queue.hasNext or doneFetching or not(context^.continueEvaluation);
     end;
 
   begin
@@ -724,9 +706,7 @@ FUNCTION flatMap_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.size<=2) then begin
       if params^.size=2 then begin
-        if (arg1^.literalType=lt_expression) and
-           (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or
-            P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0))
+        if (arg1^.literalType=lt_expression)
         then mappingFunction:=P_expressionLiteral(arg1)
         else exit(nil);
       end;
@@ -748,7 +728,6 @@ TYPE
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
       FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
@@ -788,8 +767,7 @@ FUNCTION T_chunkIterator.evaluate(CONST location:T_tokenLocation; CONST context:
       until doneFetching or (unmappedList^.size>=chunkSize) or not(P_context(context)^.messages^.continueEvaluation);
       if doneFetching and (unmappedList^.size=0) then begin
         P_recycler(recycler)^.disposeLiteral(unmappedList);
-        result.literal:=newVoidLiteral;
-        exit(result);
+        exit(GENERATOR_END_EVAL_RESULT);
       end else begin
         if mapExpression=nil then result.literal:=unmappedList
         else begin
@@ -805,6 +783,7 @@ FUNCTION T_chunkIterator.evaluate(CONST location:T_tokenLocation; CONST context:
         end;
       end;
     until doneFetching or (result.literal<>nil) or not(P_context(context)^.messages^.continueEvaluation);
+    result:=GENERATOR_END_EVAL_RESULT;
   end;
 
 PROCEDURE T_chunkIterator.cleanup(CONST literalRecycler:P_literalRecycler);
@@ -825,9 +804,7 @@ FUNCTION chunkMap_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size>=2) and (params^.size<=3) and (arg1^.literalType=lt_smallint) and (int1^.intValue>0) then begin
       if params^.size=3 then begin
-        if (arg2^.literalType=lt_expression) and
-           (P_expressionLiteral(arg2)^.canApplyToNumberOfParameters(1) or
-            P_expressionLiteral(arg2)^.canApplyToNumberOfParameters(0))
+        if (arg2^.literalType=lt_expression)
         then mappingFunction:=P_expressionLiteral(arg2)
         else exit(nil);
       end;
@@ -862,7 +839,6 @@ TYPE
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
       PROCEDURE collectResults(CONST container:P_collectionLiteral; CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
-      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
       FUNCTION mustBeDroppedBeforePop:boolean; virtual;
       FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
@@ -874,7 +850,6 @@ TYPE
     public
       CONSTRUCTOR create(CONST source,filterEx:P_expressionLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
       FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
@@ -1037,7 +1012,7 @@ FUNCTION T_parallelMapGenerator.evaluate(CONST location:T_tokenLocation; CONST c
           exit(result);
         end else P_context(context)^.getGlobals^.taskQueue.activeDeqeue(P_recycler(recycler));
       until doneFetching and (firstToAggregate=nil) or not(context^.continueEvaluation);
-      result.literal:=newVoidLiteral;
+      result:=GENERATOR_END_EVAL_RESULT;
     end;
   end;
 
@@ -1123,7 +1098,7 @@ FUNCTION map_imp intFuncSignature;
 FUNCTION filter_imp intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) then begin
       case arg0^.literalType of
         lt_list..lt_emptyMap: result:=processFilterSerial(P_compoundLiteral(arg0),P_expressionLiteral(arg1),tokenLocation,context,recycler);
         lt_expression: if (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then
@@ -1136,9 +1111,7 @@ FUNCTION pMap_imp intFuncSignature;
   VAR mapGenerator:P_parallelMapGenerator;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
-       (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or
-        P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) then begin
       if (tco_spawnWorker in context^.threadOptions) and (context^.callDepth<STACK_DEPTH_LIMIT-16) and memoryCleaner.isMemoryInComfortZone and (settings.cpuCount>1)
       then begin
         new(mapGenerator,create(newIterator(recycler,arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation));
@@ -1156,8 +1129,7 @@ FUNCTION parallelFilter_imp intFuncSignature;
   VAR filterGenerator:P_parallelFilterGenerator;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
-        P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) then begin
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) then begin
       if (tco_spawnWorker in context^.threadOptions) and (context^.callDepth<STACK_DEPTH_LIMIT-16) and memoryCleaner.isMemoryInComfortZone and (settings.cpuCount>1)
       then begin
         new(filterGenerator,create(newIterator(recycler,arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation));
@@ -1287,7 +1259,7 @@ FUNCTION T_fileLineIterator.evaluate(CONST location:T_tokenLocation; CONST conte
     else if stringBuffer<>'' then begin
       result.literal:=P_recycler(recycler)^.newStringLiteral(stringBuffer);
       stringBuffer:='';
-    end else result.literal:=newVoidLiteral;
+    end else result:=GENERATOR_END_EVAL_RESULT;
   end;
 
 DESTRUCTOR T_fileLineIterator.destroy;
@@ -1418,7 +1390,7 @@ FUNCTION T_byteStreamIterator.evaluate(CONST location:T_tokenLocation; CONST con
     else if (buffer<>nil) and (buffer^.size>0) then begin
       result.literal:=buffer;
       buffer:=nil;
-    end else result.literal:=newVoidLiteral;
+    end else result:=GENERATOR_END_EVAL_RESULT;
   end;
 
 DESTRUCTOR T_byteStreamIterator.destroy;
@@ -1486,7 +1458,6 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
       FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
@@ -1627,11 +1598,7 @@ FUNCTION T_stringIterator.evaluate(CONST location:T_tokenLocation; CONST context
         currIdx[length(currIdx)-1]:=0;
       end;
     end;
-    if length(currIdx)>maxL then begin
-      result.reasonForStop:=rr_ok;
-      result.literal:=newVoidLiteral;
-      exit(result);
-    end;
+    if length(currIdx)>maxL then exit(GENERATOR_END_EVAL_RESULT);
 
     setLength(s,length(currIdx));
     for i:=0 to length(currIdx)-1 do s[length(s)-i]:=charSet[currIdx[i]];
@@ -1893,7 +1860,6 @@ T_vanDerCorputGenerator=object(T_builtinGeneratorExpression)
     CONSTRUCTOR create(CONST base_:longint; CONST loc:T_tokenLocation);
     FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
     FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
-    FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
     FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
 end;
 
@@ -1941,298 +1907,28 @@ FUNCTION vanDerCorputGenerator_impl intFuncSignature;
 FUNCTION T_listIterator.getBultinGeneratorType:T_builtinGeneratorType;
   begin result:=bgt_listIterator; end;
 
-FUNCTION T_listIterator.writeToStream(VAR serializer:T_literalSerializer):boolean;
-  begin
-    serializer.wrappedRaw^.writeByte(byte(typ));
-    serializer.wrappedRaw^.writeByte(byte(bgt_listIterator));
-    serializer.writeLiteral(underlying);
-    result:=serializer.wrappedRaw^.allOkay;
-  end;
-
-FUNCTION T_zipIterator.writeToStream(VAR serializer: T_literalSerializer
-  ): boolean;
-  VAR i:longint;
-  begin
-    serializer.wrappedRaw^.writeByte(byte(typ));
-    serializer.wrappedRaw^.writeByte(byte(bgt_zipIterator));
-    serializer.wrappedRaw^.writeNaturalNumber(length(underlying));
-    result:=true;
-    for i:=0 to length(underlying)-1 do
-      result:=result and underlying[i]^.writeToStream(serializer);
-    result:=result and serializer.wrappedRaw^.allOkay;
-  end;
-
 FUNCTION T_zipIterator.getBultinGeneratorType: T_builtinGeneratorType;
   begin
     result:=bgt_zipIterator;
   end;
 
-FUNCTION T_singleValueIterator.getBultinGeneratorType:T_builtinGeneratorType;
-  begin result:=bgt_singleValueIterator; end;
-
-FUNCTION T_singleValueIterator.writeToStream(VAR serializer:T_literalSerializer):boolean;
-  begin
-    serializer.wrappedRaw^.writeByte(byte(typ));
-    serializer.wrappedRaw^.writeByte(byte(bgt_singleValueIterator));
-    serializer.writeLiteral(value);
-    result:=serializer.wrappedRaw^.allOkay;
-  end;
-
-FUNCTION T_rangeGenerator.getBultinGeneratorType:T_builtinGeneratorType;
-  begin result:=bgt_rangeGenerator; end;
-
-FUNCTION T_rangeGenerator.writeToStream(VAR serializer:T_literalSerializer):boolean;
-  VAR tmp:T_bigInt;
-  begin
-    serializer.wrappedRaw^.writeByte(byte(typ));
-    serializer.wrappedRaw^.writeByte(byte(bgt_rangeGenerator));
-    serializer.wrappedRaw^.writeBoolean(bounding<>bNone);
-    if workBig then begin
-      bigNext.writeToStream(serializer.wrappedRaw);
-      if bounding<>bNone
-      then bigLim .writeToStream(serializer.wrappedRaw);
-    end else begin
-      tmp.fromInt(smallNext);
-      tmp.writeToStream(serializer.wrappedRaw);
-      if bounding<>bNone
-      then begin
-        tmp.fromInt(smallLim);
-        tmp.writeToStream(serializer.wrappedRaw);
-      end;
-    end;
-    result:=serializer.wrappedRaw^.allOkay;
-  end;
-
-FUNCTION T_permutationIterator.getBultinGeneratorType:T_builtinGeneratorType;
-  begin result:=bgt_permutationIterator; end;
-
-FUNCTION T_permutationIterator.writeToStream(VAR serializer:T_literalSerializer):boolean;
-  begin
-    serializer.wrappedRaw^.writeByte(byte(typ));
-    serializer.wrappedRaw^.writeByte(byte(bgt_permutationIterator));
-    serializer.writeLiteral(underlying);
-    result:=true;
-  end;
-
-FUNCTION T_filterGenerator.getBultinGeneratorType:T_builtinGeneratorType;
-  begin result:=bgt_filterGenerator; end;
-
-FUNCTION T_filterGenerator.writeToStream(VAR serializer:T_literalSerializer):boolean;
-  begin
-    serializer.wrappedRaw^.writeByte(byte(typ));
-    serializer.wrappedRaw^.writeByte(byte(bgt_filterGenerator));
-    serializer.writeLiteral(sourceGenerator);
-    serializer.writeLiteral(filterExpression);
-    result:=true;
-  end;
-
-FUNCTION T_mapGenerator.getBultinGeneratorType:T_builtinGeneratorType;
-  begin result:=bgt_mapGenerator; end;
-
-FUNCTION T_mapGenerator.writeToStream(VAR serializer:T_literalSerializer):boolean;
-  begin
-    serializer.wrappedRaw^.writeByte(byte(typ));
-    serializer.wrappedRaw^.writeByte(byte(bgt_mapGenerator));
-    serializer.writeLiteral(sourceGenerator);
-    serializer.writeLiteral(mapExpression);
-    result:=true;
-  end;
-
-FUNCTION T_flatMapGenerator.getBultinGeneratorType:T_builtinGeneratorType;
-  begin result:=bgt_flatMapGenerator; end;
-
-FUNCTION T_flatMapGenerator.writeToStream(VAR serializer:T_literalSerializer):boolean;
-  begin
-    serializer.wrappedRaw^.writeByte(byte(typ));
-    serializer.wrappedRaw^.writeByte(byte(bgt_flatMapGenerator));
-    serializer.writeLiteral(sourceGenerator);
-    serializer.wrappedRaw^.writeBoolean(mapExpression<>nil);
-    if mapExpression<>nil
-    then serializer.writeLiteral(mapExpression);
-    result:=true;
-  end;
-
-FUNCTION T_chunkIterator.getBultinGeneratorType:T_builtinGeneratorType;
-  begin result:=bgt_chunkMapGenerator; end;
-
-FUNCTION T_chunkIterator.writeToStream(VAR serializer:T_literalSerializer):boolean;
-  begin
-    serializer.wrappedRaw^.writeByte(byte(typ));
-    serializer.wrappedRaw^.writeByte(byte(bgt_chunkMapGenerator));
-    serializer.writeLiteral(sourceGenerator);
-    serializer.wrappedRaw^.writeNaturalNumber(chunkSize);
-    serializer.wrappedRaw^.writeBoolean(mapExpression<>nil);
-    if mapExpression<>nil
-    then serializer.writeLiteral(mapExpression);
-    result:=true;
-  end;
-
-FUNCTION T_parallelMapGenerator.getBultinGeneratorType:T_builtinGeneratorType;
-  begin result:=bgt_parallelMapGenerator; end;
-
-FUNCTION T_parallelMapGenerator.writeToStream(VAR serializer:T_literalSerializer):boolean;
-  begin
-    serializer.wrappedRaw^.writeByte(byte(typ));
-    serializer.wrappedRaw^.writeByte(byte(bgt_parallelMapGenerator));
-    serializer.writeLiteral(sourceGenerator);
-    serializer.writeLiteral(mapExpression);
-    result:=true;
-  end;
-
-FUNCTION T_parallelFilterGenerator.getBultinGeneratorType:T_builtinGeneratorType;
-  begin result:=bgt_parallelFilterGenerator; end;
-
-FUNCTION T_parallelFilterGenerator.writeToStream(VAR serializer:T_literalSerializer):boolean;
-  begin
-    serializer.wrappedRaw^.writeByte(byte(typ));
-    serializer.wrappedRaw^.writeByte(byte(bgt_parallelFilterGenerator));
-    serializer.writeLiteral(sourceGenerator);
-    serializer.writeLiteral(mapExpression);
-    result:=true;
-  end;
-
-FUNCTION T_primeGenerator.getBultinGeneratorType:T_builtinGeneratorType;
-  begin result:=bgt_primeGenerator; end;
-
-FUNCTION T_primeGenerator.writeToStream(VAR serializer:T_literalSerializer):boolean;
-  begin
-    serializer.wrappedRaw^.writeByte(byte(typ));
-    serializer.wrappedRaw^.writeByte(byte(bgt_primeGenerator));
-    result:=true;
-  end;
-
-FUNCTION T_vanDerCorputGenerator.getBultinGeneratorType:T_builtinGeneratorType;
-  begin result:=bgt_vanDerCorputGenerator; end;
-
-FUNCTION T_vanDerCorputGenerator.writeToStream(VAR serializer:T_literalSerializer):boolean;
-  begin
-    serializer.wrappedRaw^.writeByte(byte(typ));
-    serializer.wrappedRaw^.writeByte(byte(bgt_vanDerCorputGenerator));
-    serializer.wrappedRaw^.writeNaturalNumber(base);
-    result:=true;
-  end;
-
-FUNCTION T_fileLineIterator    .getBultinGeneratorType:T_builtinGeneratorType; begin result:=bgt_fileLineIterator;       end;
-FUNCTION T_byteStreamIterator  .getBultinGeneratorType:T_builtinGeneratorType; begin result:=bgt_byteStreamIterator;     end;
-FUNCTION T_stringIterator      .getBultinGeneratorType:T_builtinGeneratorType; begin result:=bgt_stringIterator;         end;
-FUNCTION T_realRandomGenerator .getBultinGeneratorType:T_builtinGeneratorType; begin result:=bgt_realRandomGenerator;    end;
-FUNCTION T_intRandomGenerator  .getBultinGeneratorType:T_builtinGeneratorType; begin result:=bgt_xorIntRandomGenerator;  end;
-FUNCTION T_isaacRandomGenerator.getBultinGeneratorType:T_builtinGeneratorType; begin result:=bgt_isaacIntRandomGenerator end;
-
-FUNCTION newGeneratorFromStream(VAR deserializer:T_literalDeserializer):P_builtinGeneratorExpression;
-  VAR generatorType:T_builtinGeneratorType;
-      lit,lit2:P_literal;
-      intParameter:longint;
-      bigint:T_bigInt;
-      bounded:boolean;
-  begin
-    generatorType:=T_builtinGeneratorType(deserializer.wrappedRaw^.readByte([byte(low(T_builtinGeneratorType))..byte(high(T_builtinGeneratorType))]));
-    result:=nil;
-    case generatorType of
-      bgt_listIterator: begin
-        lit:=deserializer.getLiteral;
-        if lit^.literalType in C_compoundTypes
-        then new(P_listIterator(result),create(@globalLiteralRecycler,P_compoundLiteral(lit),deserializer.getLocation))
-        else deserializer.wrappedRaw^.logWrongTypeError;
-        globalLiteralRecycler.disposeLiteral(lit); //is rereferenced in T_listIterator.create;
-      end;
-      bgt_singleValueIterator: begin
-        lit:=deserializer.getLiteral;
-        if lit^.literalType in C_compoundTypes
-        then new(P_listIterator(result),create(@globalLiteralRecycler,P_compoundLiteral(lit),deserializer.getLocation))
-        else deserializer.wrappedRaw^.logWrongTypeError;
-        globalLiteralRecycler.disposeLiteral(lit); //is rereferenced in T_singleValueIterator.create;
-      end;
-      bgt_rangeGenerator: begin
-        bounded:=deserializer.wrappedRaw^.readBoolean;
-        bigint.createZero;
-        bigint.readFromStream(deserializer.wrappedRaw);
-        lit:=globalLiteralRecycler.newIntLiteral(bigint);
-        if bounded then begin
-          bigint.createZero;
-          bigint.readFromStream(deserializer.wrappedRaw);
-          lit2:=globalLiteralRecycler.newIntLiteral(bigint);
-        end else lit2:=nil;
-        new(P_rangeGenerator(result),create(P_abstractIntLiteral(lit),P_abstractIntLiteral(lit2),deserializer.getLocation));
-        globalLiteralRecycler.disposeLiteral(lit);                    //is rereferenced in T_rangeGenerator.create
-        if lit2<>nil then globalLiteralRecycler.disposeLiteral(lit2); //is rereferenced in T_rangeGenerator.create
-      end;
-      bgt_permutationIterator: begin
-        lit:=deserializer.getLiteral;
-        if lit^.literalType in C_compoundTypes
-        then new(P_permutationIterator(result),create(@globalLiteralRecycler,P_compoundLiteral(lit),deserializer.getLocation))
-        else if lit^.literalType=lt_smallint
-             then new(P_permutationIterator(result),create(@globalLiteralRecycler,P_smallIntLiteral(lit)^.value,deserializer.getLocation));
-        globalLiteralRecycler.disposeLiteral(lit);
-      end;
-      bgt_filterGenerator: begin
-        lit :=deserializer.getLiteral;
-        lit2:=deserializer.getLiteral;
-        if (lit^.literalType=lt_expression) and (lit2^.literalType=lt_expression)
-        then new(P_filterGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),deserializer.getLocation));
-        globalLiteralRecycler.disposeLiteral(lit);
-        globalLiteralRecycler.disposeLiteral(lit2);
-      end;
-      bgt_mapGenerator: begin
-        lit :=deserializer.getLiteral;
-        lit2:=deserializer.getLiteral;
-        if (lit^.literalType=lt_expression) and (lit2^.literalType=lt_expression)
-        then new(P_mapGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),deserializer.getLocation));
-        globalLiteralRecycler.disposeLiteral(lit);
-        globalLiteralRecycler.disposeLiteral(lit2);
-      end;
-      bgt_parallelFilterGenerator: begin
-        lit :=deserializer.getLiteral;
-        lit2:=deserializer.getLiteral;
-        if (lit^.literalType=lt_expression) and (lit2^.literalType=lt_expression)
-        then new(P_parallelFilterGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),deserializer.getLocation));
-        globalLiteralRecycler.disposeLiteral(lit);
-        globalLiteralRecycler.disposeLiteral(lit2);
-      end;
-      bgt_parallelMapGenerator: begin
-        lit :=deserializer.getLiteral;
-        lit2:=deserializer.getLiteral;
-        if (lit^.literalType=lt_expression) and (lit2^.literalType=lt_expression)
-        then new(P_parallelMapGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),deserializer.getLocation));
-        globalLiteralRecycler.disposeLiteral(lit);
-        globalLiteralRecycler.disposeLiteral(lit2);
-      end;
-      bgt_flatMapGenerator: begin
-        lit :=deserializer.getLiteral;
-        if deserializer.wrappedRaw^.readBoolean
-        then lit2:=deserializer.getLiteral
-        else lit2:=nil;
-        if (lit^.literalType=lt_expression) and ((lit2=nil) or (lit2^.literalType=lt_expression))
-        then new(P_flatMapGenerator(result),create(P_expressionLiteral(lit),P_expressionLiteral(lit2),deserializer.getLocation));
-        globalLiteralRecycler.disposeLiteral(lit);
-        if lit2<>nil then globalLiteralRecycler.disposeLiteral(lit2);
-      end;
-      bgt_chunkMapGenerator: begin
-        lit :=deserializer.getLiteral;
-        intParameter:=deserializer.wrappedRaw^.readNaturalNumber;
-        if deserializer.wrappedRaw^.readBoolean
-        then lit2:=deserializer.getLiteral
-        else lit2:=nil;
-        if (lit^.literalType=lt_expression) and ((lit2=nil) or (lit2^.literalType=lt_expression))
-        then new(P_chunkIterator(result),create(P_expressionLiteral(lit),intParameter,P_expressionLiteral(lit2),deserializer.getLocation));
-        globalLiteralRecycler.disposeLiteral(lit);
-        if lit2<>nil then globalLiteralRecycler.disposeLiteral(lit2);
-      end;
-      bgt_primeGenerator: new(P_primeGenerator(result),create(deserializer.getLocation));
-      bgt_vanDerCorputGenerator: new(P_vanDerCorputGenerator(result),create(deserializer.wrappedRaw^.readNaturalNumber,deserializer.getLocation));
-      bgt_zipIterator: begin
-        new(P_zipIterator(result),create(deserializer.getLocation));
-        intParameter:=deserializer.wrappedRaw^.readNaturalNumber;
-        while intParameter>0 do begin
-          lit:=deserializer.getLiteral;
-          P_zipIterator(result)^.addUnderlying(P_expressionLiteral(lit));
-        end;
-      end;
-    end;
-    if result=nil then begin
-      deserializer.raiseError('Cannot deserialize generator/iterator expression of type: '+getEnumName(TypeInfo(generatorType),ord(generatorType)));
-    end;
-  end;
+FUNCTION T_singleValueIterator.getBultinGeneratorType:T_builtinGeneratorType;     begin result:=bgt_singleValueIterator;     end;
+FUNCTION T_rangeGenerator.getBultinGeneratorType:T_builtinGeneratorType;          begin result:=bgt_rangeGenerator;          end;
+FUNCTION T_permutationIterator.getBultinGeneratorType:T_builtinGeneratorType;     begin result:=bgt_permutationIterator;     end;
+FUNCTION T_filterGenerator.getBultinGeneratorType:T_builtinGeneratorType;         begin result:=bgt_filterGenerator;         end;
+FUNCTION T_mapGenerator.getBultinGeneratorType:T_builtinGeneratorType;            begin result:=bgt_mapGenerator;            end;
+FUNCTION T_flatMapGenerator.getBultinGeneratorType:T_builtinGeneratorType;        begin result:=bgt_flatMapGenerator;        end;
+FUNCTION T_chunkIterator.getBultinGeneratorType:T_builtinGeneratorType;           begin result:=bgt_chunkMapGenerator;       end;
+FUNCTION T_parallelMapGenerator.getBultinGeneratorType:T_builtinGeneratorType;    begin result:=bgt_parallelMapGenerator;    end;
+FUNCTION T_parallelFilterGenerator.getBultinGeneratorType:T_builtinGeneratorType; begin result:=bgt_parallelFilterGenerator; end;
+FUNCTION T_primeGenerator.getBultinGeneratorType:T_builtinGeneratorType;          begin result:=bgt_primeGenerator;          end;
+FUNCTION T_vanDerCorputGenerator.getBultinGeneratorType:T_builtinGeneratorType;   begin result:=bgt_vanDerCorputGenerator;   end;
+FUNCTION T_fileLineIterator    .getBultinGeneratorType:T_builtinGeneratorType;    begin result:=bgt_fileLineIterator;        end;
+FUNCTION T_byteStreamIterator  .getBultinGeneratorType:T_builtinGeneratorType;    begin result:=bgt_byteStreamIterator;      end;
+FUNCTION T_stringIterator      .getBultinGeneratorType:T_builtinGeneratorType;    begin result:=bgt_stringIterator;          end;
+FUNCTION T_realRandomGenerator .getBultinGeneratorType:T_builtinGeneratorType;    begin result:=bgt_realRandomGenerator;     end;
+FUNCTION T_intRandomGenerator  .getBultinGeneratorType:T_builtinGeneratorType;    begin result:=bgt_xorIntRandomGenerator;   end;
+FUNCTION T_isaacRandomGenerator.getBultinGeneratorType:T_builtinGeneratorType;    begin result:=bgt_isaacIntRandomGenerator; end;
 
 FUNCTION zip_imp intFuncSignature;
   VAR i:longint;
@@ -2253,7 +1949,6 @@ FUNCTION zip_imp intFuncSignature;
 
 INITIALIZATION
   createLazyMap:=@createLazyMapImpl;
-  newGeneratorFromStreamCallback:=@newGeneratorFromStream;
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'rangeGenerator',@rangeGenerator,ak_binary);
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'permutationIterator',@permutationIterator,ak_binary);
   builtinFunctionMap.registerRule(LIST_NAMESPACE,'map',    @map_imp   ,ak_binary);

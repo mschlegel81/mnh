@@ -1855,6 +1855,7 @@ zip(rangeGenerator(0),primeGenerator).head(10);
 #C Note that all entries of inputList (and of centers if present) must be NumericList of the same size.
 #S kMeans(inputList:List, k_or_centers, max_steps:Int, min_members_per_class:Int); 
 #C Fine tuned kMeans. If not present, max_steps defaults to 100 and min_members_per_class defaults to 1.
+#C Setting max_steps to 0 indicates, that only a nearest neighbor classification for the given input and centers is performed.
 kMeans([1..100].map((i)->random(3)),3);
 kMeans([1..100].map((i)->random(3)),[[0,0,1],[0,1,0],[1,0,0]]);
 

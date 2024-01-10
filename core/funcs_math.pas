@@ -313,6 +313,13 @@ FUNCTION max_imp intFuncSignature;
     result^.rereference;
   end;
 
+FUNCTION leq_for_min(CONST a,b:P_literal):boolean; inline;
+  begin
+    if (b^.literalType=lt_real) and IsNan(P_realLiteral(b)^.value) then exit(true);
+    if (a^.literalType=lt_real) and isNan(P_realLiteral(a)^.value) then exit(false);
+    result:=a^.leqForSorting(b);
+  end;
+
 FUNCTION min_imp intFuncSignature;
   VAR x:P_literal;
       it:T_arrayOfLiteral;
@@ -326,7 +333,7 @@ FUNCTION min_imp intFuncSignature;
     if x^.literalType in C_scalarTypes+C_mapTypes then exit(x^.rereferenced);
     it:=P_collectionLiteral(x)^.tempIteratableList;
     result:=it[0];
-    for x in it do if x^.leqForSorting(result) then result:=x;
+    for x in it do if leq_for_min(x,result) then result:=x;
     result^.rereference;
   end;
 
@@ -363,7 +370,7 @@ FUNCTION argMin_imp intFuncSignature;
       xMin:=L^.value[0];
       for i:=1 to L^.size-1 do begin
         x:=L^.value[i];
-        if x^.leqForSorting(xMin) then begin
+        if leq_for_min(x,xMin) then begin
           iMin:=i;
           xMin:=x;
         end;
@@ -1393,7 +1400,7 @@ FUNCTION kMeans_impl intFuncSignature;
         entry:P_literal;
     begin
       setLength(raw_data,list0^.size);
-      result:=list0^.size>=k;
+      result:=true;
       for i:=0 to list0^.size-1 do if result then begin
         entry:=list0^.value[i];
         if entry^.literalType in [lt_numList,lt_intList,lt_realList] then begin
@@ -1407,7 +1414,7 @@ FUNCTION kMeans_impl intFuncSignature;
       if not(result) then begin
         for i:=0 to length(raw_data)-1 do with raw_data[i] do setLength(x,0);
         setLength(raw_data,0);
-        context^.raiseError('kMeans requires a list of numeric lists of the same size as input. The input list must contain at least k elements.',tokenLocation);
+        context^.raiseError('kMeans requires a list of numeric lists of the same size as input.',tokenLocation);
       end;
     end;
 
@@ -1494,7 +1501,7 @@ FUNCTION kMeans_impl intFuncSignature;
         tempList:P_listLiteral;
         loopCount:longint=0;
     begin
-      repeat
+      if max_steps>0 then repeat
         inc(loopCount);
         //1. Normalize centers
         anyClassChanged:=false;
