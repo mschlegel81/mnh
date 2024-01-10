@@ -328,7 +328,10 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; CONST context:P_context; CONST
           rep^.data:=inlineSubRule;
           rep^.next:=t;
         end else begin
-          dispose(inlineSubRule,destroy);
+          try
+            inlineSubRule^.cleanup(recycler);
+            dispose(inlineSubRule,destroy);
+          except end; //This already is an error handling block, don't throw any more exceptions.
           prev^.next:=t;
         end;
       end;

@@ -575,8 +575,7 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
           if wrapEcho
           then result:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,preferredLineLength-C_echoPrefixLength)
           else result:=P_echoOutMessage(message)^.literal^.toString();
-
-          result[  0]:=marker+C_echoOutInfix+result[0];
+          if length(result)>0 then result[0]:=marker+C_echoOutInfix+result[0];
           for i:=1 to length(result)-1 do
             result[i]:=marker+C_echoContdInfix+result[i];
         end;
