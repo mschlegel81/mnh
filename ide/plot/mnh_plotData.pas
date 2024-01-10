@@ -1507,6 +1507,12 @@ FUNCTION T_plotSystem.canStartGuiInteraction:boolean;
       if tryEnterCriticalsection(animation.seriesCs)<>0 then begin
         if tryEnterCriticalsection(currentPlot.plotCs)<>0 then begin
           result:=true;
+          if length(currentPlot.row)=0 then begin
+            leaveCriticalSection(currentPlot.plotCs);
+            leaveCriticalSection(animation.seriesCs);
+            leaveCriticalSection(adapterCs);
+            exit(false);
+          end;
         end else begin
           leaveCriticalSection(animation.seriesCs);
           leaveCriticalSection(adapterCs);
