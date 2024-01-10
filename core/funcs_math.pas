@@ -315,7 +315,7 @@ FUNCTION max_imp intFuncSignature;
 
 FUNCTION leq_for_min(CONST a,b:P_literal):boolean; inline;
   begin
-    if (b^.literalType=lt_real) and IsNan(P_realLiteral(b)^.value) then exit(true);
+    if (b^.literalType=lt_real) and isNan(P_realLiteral(b)^.value) then exit(true);
     if (a^.literalType=lt_real) and isNan(P_realLiteral(a)^.value) then exit(false);
     result:=a^.leqForSorting(b);
   end;
