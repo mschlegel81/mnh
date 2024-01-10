@@ -313,6 +313,13 @@ FUNCTION max_imp intFuncSignature;
     result^.rereference;
   end;
 
+FUNCTION leq_for_min(CONST a,b:P_literal):boolean; inline;
+  begin
+    if (b^.literalType=lt_real) and IsNan(P_realLiteral(b)^.value) then exit(true);
+    if (a^.literalType=lt_real) and isNan(P_realLiteral(a)^.value) then exit(false);
+    result:=a^.leqForSorting(b);
+  end;
+
 FUNCTION min_imp intFuncSignature;
   VAR x:P_literal;
       it:T_arrayOfLiteral;
@@ -326,7 +333,7 @@ FUNCTION min_imp intFuncSignature;
     if x^.literalType in C_scalarTypes+C_mapTypes then exit(x^.rereferenced);
     it:=P_collectionLiteral(x)^.tempIteratableList;
     result:=it[0];
-    for x in it do if x^.leqForSorting(result) then result:=x;
+    for x in it do if leq_for_min(x,result) then result:=x;
     result^.rereference;
   end;
 
@@ -363,7 +370,7 @@ FUNCTION argMin_imp intFuncSignature;
       xMin:=L^.value[0];
       for i:=1 to L^.size-1 do begin
         x:=L^.value[i];
-        if x^.leqForSorting(xMin) then begin
+        if leq_for_min(x,xMin) then begin
           iMin:=i;
           xMin:=x;
         end;
