@@ -17,7 +17,6 @@ T_fileOutputStream=object(T_expressionLiteral)
     FUNCTION arity: T_arityInfo; virtual;
     FUNCTION canApplyToNumberOfParameters(CONST parCount: longint): boolean; virtual;
     FUNCTION referencesAnyUserPackage: boolean; virtual;
-    FUNCTION writeToStream(VAR serializer: T_literalSerializer): boolean; virtual;
   private
     streamCs    :TRTLCriticalSection;
     fileStream  : TFileStream;
@@ -48,11 +47,6 @@ FUNCTION T_fileOutputStream.canApplyToNumberOfParameters(CONST parCount: longint
   end;
 
 FUNCTION T_fileOutputStream.referencesAnyUserPackage: boolean;
-  begin
-    result:=false;
-  end;
-
-FUNCTION T_fileOutputStream.writeToStream(VAR serializer: T_literalSerializer): boolean;
   begin
     result:=false;
   end;

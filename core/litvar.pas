@@ -279,7 +279,6 @@ TYPE
       PROCEDURE makeIteratable(CONST context:P_abstractContext; CONST location:T_tokenLocation);
 
       FUNCTION getParentId:T_idString; virtual;
-      PROCEDURE validateSerializability(CONST adapters:P_messages); virtual;
       FUNCTION typeString:string; virtual;
       FUNCTION hash: T_hashInt; virtual;
       FUNCTION getLocation:T_tokenLocation; virtual;
@@ -483,7 +482,6 @@ CONST
   NO_ARITY_INFO  :T_arityInfo       =(minPatternLength:-1; maxPatternLength:-2);
 VAR
   resolveOperatorCallback: FUNCTION (CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer): P_literal;
-  readExpressionFromStreamCallback: FUNCTION(VAR deserializer:T_literalDeserializer):P_expressionLiteral;
 FUNCTION commonArity(CONST x,y:T_arityInfo):T_arityInfo;
 FUNCTION exp(CONST x:double):double; inline;
 
@@ -1936,11 +1934,6 @@ PROCEDURE T_expressionLiteral.makeIteratable(CONST context:P_abstractContext;  C
       et_inlineStateful : expressionType:=et_inlineIteratable;
     else if context<>nil then context^.raiseError('Only nullary stateful expressions may be iteratable.',location);
     end;
-  end;
-
-PROCEDURE T_expressionLiteral.validateSerializability(CONST adapters:P_messages);
-  begin
-    if adapters<>nil then adapters^.raiseSimpleError('Expression '+toString()+' cannot be serialized',getLocation);
   end;
 
 FUNCTION T_expressionLiteral.getParentId: T_idString; begin result:=''; end;
@@ -3505,10 +3498,6 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLo
     begin
       case L^.literalType of
         lt_boolean,lt_smallint,lt_bigint,lt_string,lt_real,lt_void: appendPart(L^.toString);
-        lt_expression: begin
-          P_expressionLiteral(L)^.validateSerializability(adapters);
-          if (adapters=nil) or (adapters^.continueEvaluation) then appendPart(L^.toString);
-        end;
         lt_list..lt_emptyList,
         lt_set ..lt_emptySet:
         begin

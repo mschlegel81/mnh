@@ -179,10 +179,6 @@ FUNCTION T_literalDeserializer.getLiteral: P_literal;
         end;
         result^.literalType:=lt_map;
       end;
-      lt_expression: begin
-        result:=readExpressionFromStreamCallback(self);
-        if result=nil then result:=newVoidLiteral;
-      end;
       else begin
         raiseError('Read invalid literal type '+typeStringOrNone(literalType)+' ('+intToStr(reusableIndex)+') ! Abort.');
         streamWrapper^.logWrongTypeError;
@@ -199,7 +195,7 @@ FUNCTION T_literalDeserializer.getLiteral: P_literal;
     end;
 
     if not(streamWrapper^.allOkay) then raiseError('Unknown error during deserialization.');
-    if ((literalType in [lt_string,lt_expression]) or (literalType in C_compoundTypes) or (customTypeName<>'')) and useReusableMap and (reusableFill<2097151) then begin
+    if ((literalType in [lt_string]) or (literalType in C_compoundTypes) or (customTypeName<>'')) and useReusableMap and (reusableFill<2097151) then begin
       reusableLiterals[reusableFill]:=result;
       inc(reusableFill);
     end;
@@ -351,18 +347,12 @@ PROCEDURE T_literalSerializer.writeLiteral(CONST l: P_literal);
           writeLiteral(mapEntry.value);
         end;
       end;
-      lt_expression: begin
-        if not(P_expressionLiteral(L)^.writeToStream(self)) then begin
-          if adapters<>nil then adapters^.raiseSimpleError('Cannot represent '+L^.typeString+' literal in binary form!',location)
-                           else raise Exception.create    ('Cannot represent '+L^.typeString+' literal in binary form!');
-        end;
-      end
       else begin
         if adapters<>nil then adapters^.raiseSimpleError('Cannot represent '+L^.typeString+' literal in binary form!',location)
                          else raise Exception.create    ('Cannot represent '+L^.typeString+' literal in binary form!');
       end;
     end;
-    if useReusableMap and (reusableMap.fill<2097151) and ((L^.literalType in [lt_string,lt_expression]) or (L^.literalType in C_typables)) then
+    if useReusableMap and (reusableMap.fill<2097151) and ((L^.literalType in [lt_string]) or (L^.literalType in C_typables)) then
       reusableMap.putNew(L,reusableMap.fill,reusableIndex);
   end;
 {$endif}

@@ -36,7 +36,6 @@ TYPE
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
       FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
       PROPERTY getQueuedCount:longint read queuedCount;
   end;
@@ -162,12 +161,6 @@ PROCEDURE T_queue.cleanup(CONST literalRecycler: P_literalRecycler);
 DESTRUCTOR T_queue.destroy;
   begin
     doneCriticalSection(queueCs);
-  end;
-
-FUNCTION T_queue.writeToStream(VAR serializer: T_literalSerializer): boolean;
-  begin
-    //Not serializable
-    result:=false;
   end;
 
 FUNCTION T_queue.getBultinGeneratorType: T_builtinGeneratorType;

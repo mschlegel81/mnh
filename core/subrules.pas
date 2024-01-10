@@ -84,7 +84,6 @@ TYPE
       PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:P_literalRecycler):P_expressionLiteral; virtual;
-      PROCEDURE validateSerializability(CONST messages:P_messages); virtual;
       //Pattern related:
       FUNCTION arity:T_arityInfo; virtual;
       FUNCTION isVariadic:boolean;
@@ -106,8 +105,6 @@ TYPE
       FUNCTION inspect(CONST literalRecycler:P_literalRecycler):P_mapLiteral; virtual;
       FUNCTION patternString:string;
       FUNCTION containsReturnToken:boolean; virtual;
-      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
-      FUNCTION loadFromStream(VAR deserializer:T_literalDeserializer):boolean;
       FUNCTION referencesAnyUserPackage:boolean; virtual;
       FUNCTION getSideEffects:T_sideEffects;
   end;
@@ -172,7 +169,6 @@ TYPE
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
       FUNCTION equals(CONST other:P_literal):boolean; virtual;
       FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler):P_expressionLiteral; virtual;
-      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
     end;
 
   T_builtinGeneratorType=(bgt_future,
@@ -206,7 +202,6 @@ TYPE
       FUNCTION arity:T_arityInfo; virtual;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
       FUNCTION getId:T_idString; virtual;
-      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual;
       FUNCTION referencesAnyUserPackage:boolean; virtual;
       FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual; abstract;
   end;
@@ -220,7 +215,6 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
 FUNCTION evaluteExpressionMap   (CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_literalRecycler; CONST arg0:P_literal):T_evaluationResult;
 FUNCTION evaluteExpressionFilter(CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_literalRecycler; CONST arg0:P_literal):boolean;
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
-    newGeneratorFromStreamCallback: FUNCTION(VAR deserializer:T_literalDeserializer):P_builtinGeneratorExpression;
     BUILTIN_PMAP:P_intFuncCallback;
 VAR identifiedInternalFunctionTally:longint=0;
 IMPLEMENTATION
@@ -1021,12 +1015,6 @@ FUNCTION T_builtinGeneratorExpression.applyBuiltinFunction(CONST intrinsicRuleId
     P_recycler(recycler)^.disposeLiteral(mapper);
   end;
 
-PROCEDURE T_inlineExpression.validateSerializability(CONST messages:P_messages);
-  begin
-    if messages=nil then exit;
-    if (typ<>et_inline) then messages^.raiseSimpleError('Expression literal '+toString(20)+' is not serializable',getLocation);
-  end;
-
 CONSTRUCTOR T_inlineExpression.createFromInlineWithOp(CONST original: P_inlineExpression; CONST intrinsicRuleId: string; CONST funcLocation: T_tokenLocation; CONST recycler:P_recycler);
   VAR i:longint;
   PROCEDURE appendToExpression(VAR T:T_token; CONST parameterIndex:byte);
@@ -1349,65 +1337,6 @@ FUNCTION T_inlineExpression.containsReturnToken: boolean;
   begin
     result:=false;
     for p in preparedBody do if p.token.tokType=tt_return then exit(true);
-  end;
-
-FUNCTION T_builtinExpressionProxy.writeToStream(VAR serializer:T_literalSerializer):boolean;
-  begin
-    serializer.wrappedRaw^.writeByte(byte(typ));
-    serializer.wrappedRaw^.writeAnsiString(id);
-    result:=true;
-  end;
-
-FUNCTION T_builtinGeneratorExpression.writeToStream(VAR serializer:T_literalSerializer):boolean;
-  begin
-    serializer.wrappedRaw^.logWrongTypeError;
-    serializer.raiseError('Cannot serialize builtin generator expression.');
-    result:=false;
-  end;
-
-FUNCTION T_inlineExpression.writeToStream(VAR serializer:T_literalSerializer):boolean;
-  VAR i:longint;
-  begin
-    if referencesAnyUserPackage then exit(false);
-    serializer.wrappedRaw^.writeByte(byte(typ));
-    serializer.wrappedRaw^.writeAnsiString(customId);
-    result:=pattern.writeToStream(serializer)
-            and serializer.wrappedRaw^.allOkay;
-    serializer.wrappedRaw^.writeNaturalNumber(length(preparedBody));
-    for i:=0 to length(preparedBody)-1 do begin
-      result:=result and preparedBody[i].token.serializeSingleToken(serializer);
-      serializer.wrappedRaw^.writeByte(preparedBody[i].parIdx);
-    end;
-    if (customType=nil)
-    then serializer.wrappedRaw^.writeAnsiString('')
-    else serializer.wrappedRaw^.writeAnsiString(customType^.getName);
-    if typ in C_statefulExpressionTypes
-    then serializer.wrappedRaw^.writeNaturalNumber(indexOfSave);
-    result:=result and serializer.wrappedRaw^.allOkay;
-  end;
-
-FUNCTION T_inlineExpression.loadFromStream(VAR deserializer:T_literalDeserializer):boolean;
-  VAR i:longint;
-      dummy: boolean;
-  begin
-    //This must happen on construction:
-    //typ=T_expressionType(stream^.readByte([low(T_expressionType)..high(T_expressionType)]));
-    customId:=deserializer.wrappedRaw^.readAnsiString;
-    result:=pattern.loadFromStream(deserializer)
-            and deserializer.wrappedRaw^.allOkay;
-    setLength(preparedBody,deserializer.wrappedRaw^.readNaturalNumber);
-    for i:=0 to length(preparedBody)-1 do begin
-      preparedBody[i].token.create;
-      if deserializer.wrappedRaw^.allOkay then begin
-        preparedBody[i].token.deserializeSingleToken(deserializer);
-        preparedBody[i].parIdx:=deserializer.wrappedRaw^.readByte;
-      end;
-    end;
-    customType:=deserializer.getTypeCheck(dummy);
-    if typ in C_statefulExpressionTypes
-    then indexOfSave:=deserializer.wrappedRaw^.readNaturalNumber
-    else indexOfSave:=-1;
-    result:=result and deserializer.wrappedRaw^.allOkay;
   end;
 
 FUNCTION T_inlineExpression.inspect(CONST literalRecycler:P_literalRecycler): P_mapLiteral;
@@ -2011,52 +1940,6 @@ FUNCTION interpret_imp intFuncSignature;
     end;
   end;
 
-FUNCTION readExpressionFromStream(VAR deserializer:T_literalDeserializer):P_expressionLiteral;
-  VAR expressionType:T_expressionType;
-      builtinId :string;
-      inlineEx :P_inlineExpression;
-  begin
-    expressionType:=T_expressionType(deserializer.wrappedRaw^.readByte([byte(low(T_expressionType))..byte(high(T_expressionType))]));
-    result:=nil;
-    if deserializer.wrappedRaw^.allOkay then case expressionType of
-      et_builtin          :
-        begin
-          builtinId:=deserializer.wrappedRaw^.readAnsiString;
-          if not(builtinFunctionMap.canGetIntrinsicRuleAsExpression(builtinId,result)) then begin
-            deserializer.raiseError('Cannot deserialize builtin function: '+builtinId);
-            deserializer.wrappedRaw^.logWrongTypeError;
-          end;
-        end;
-      //TODO: et_builtinStateful!
-      et_builtinIteratable,
-      et_builtinAsyncOrFuture    :
-        result:=newGeneratorFromStreamCallback(deserializer);
-      et_subrule          ,
-      et_inline           ,
-      et_subruleIteratable,
-      et_inlineIteratable ,
-      et_subruleStateful  ,
-      et_inlineStateful:
-        begin
-          new(inlineEx,init(expressionType,deserializer.getLocation));
-          if not(inlineEx^.loadFromStream(deserializer))
-          then begin
-            try
-              dispose(inlineEx,destroy);
-            except
-              //Note: The assertion of an empty body will fail.
-            end;
-            deserializer.raiseError('Cannot deserialize expression of type: '+getEnumName(TypeInfo(expressionType),ord(expressionType)));
-          end
-          else result:=inlineEx;
-        end;
-      else begin
-        deserializer.raiseError('Cannot deserialize expression of type: '+getEnumName(TypeInfo(expressionType),ord(expressionType)));
-        deserializer.wrappedRaw^.logWrongTypeError;
-      end;
-    end;
-  end;
-
 FUNCTION T_inlineExpression.referencesAnyUserPackage: boolean;
   VAR pt:T_preparedToken;
       locals:T_setOfString;
@@ -2093,7 +1976,6 @@ INITIALIZATION
   {$ifdef fullVersion}
   funcs_plot.generateRow:=@generateRow;
   {$endif}
-  litVar.readExpressionFromStreamCallback:=@readExpressionFromStream;
   funcs.makeBuiltinExpressionCallback:=@newBuiltinExpression;
   builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'arity'         ,@arity_imp         ,ak_unary);
   builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'parameterNames',@parameterNames_imp,ak_unary);
