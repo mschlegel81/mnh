@@ -477,7 +477,7 @@ FUNCTION T_filterGenerator.evaluate(CONST location:T_tokenLocation; CONST contex
     repeat
       nextUnfiltered:=sourceGenerator^.evaluate(location,context,recycler);
       if (nextUnfiltered.literal<>nil) and (nextUnfiltered.literal^.literalType<>lt_void) then begin
-        if evaluateToBoolean_strict(filterExpression,location,context,recycler,nextUnfiltered.literal)
+        if evaluteExpressionFilter(filterExpression,location,P_context(context),recycler,nextUnfiltered.literal)
         then exit          (nextUnfiltered)
         else P_recycler(recycler)^.disposeLiteral(nextUnfiltered.literal);
       end else begin
@@ -1123,7 +1123,7 @@ FUNCTION map_imp intFuncSignature;
 FUNCTION filter_imp intFuncSignature;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1)) then begin
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) then begin
       case arg0^.literalType of
         lt_list..lt_emptyMap: result:=processFilterSerial(P_compoundLiteral(arg0),P_expressionLiteral(arg1),tokenLocation,context,recycler);
         lt_expression: if (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then
@@ -1136,9 +1136,7 @@ FUNCTION pMap_imp intFuncSignature;
   VAR mapGenerator:P_parallelMapGenerator;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
-       (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or
-        P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0)) then begin
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) then begin
       if (tco_spawnWorker in context^.threadOptions) and (context^.callDepth<STACK_DEPTH_LIMIT-16) and memoryCleaner.isMemoryInComfortZone and (settings.cpuCount>1)
       then begin
         new(mapGenerator,create(newIterator(recycler,arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation));
@@ -1156,8 +1154,7 @@ FUNCTION parallelFilter_imp intFuncSignature;
   VAR filterGenerator:P_parallelFilterGenerator;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) and
-        P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) then begin
+    if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) then begin
       if (tco_spawnWorker in context^.threadOptions) and (context^.callDepth<STACK_DEPTH_LIMIT-16) and memoryCleaner.isMemoryInComfortZone and (settings.cpuCount>1)
       then begin
         new(filterGenerator,create(newIterator(recycler,arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation));
