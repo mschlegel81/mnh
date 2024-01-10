@@ -69,8 +69,11 @@ FUNCTION T_queue.evaluate(CONST location: T_tokenLocation; CONST context: P_abst
       enterCriticalSection(queueCs);
     end;
     if first=nil then begin
-      result.reasonForStop:=rr_ok;
-      result.literal:=newVoidLiteral;
+      if closed then result:=GENERATOR_END_EVAL_RESULT
+      else begin
+        result.reasonForStop:=rr_ok; //TODO: Timeout return code?
+        result.literal:=newVoidLiteral;
+      end;
     end else begin
       result.literal:=first^.value;
       result.reasonForStop:=rr_ok;

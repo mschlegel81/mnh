@@ -49,7 +49,7 @@ FUNCTION T_listIterator.evaluate(CONST location:T_tokenLocation; CONST context:P
   begin
     result.reasonForStop:=rr_ok;
     if index>=length(values)
-    then result.literal:=newVoidLiteral
+    then result:=GENERATOR_END_EVAL_RESULT
     else result.literal:=values[index]^.rereferenced;
     inc(index);
   end;
@@ -143,9 +143,7 @@ FUNCTION T_zipIterator.evaluate(CONST location:T_tokenLocation; CONST context:P_
       then listOutput^.append(recycler,element.literal,false)
       else begin
         P_literalRecycler(recycler)^.disposeLiteral(listOutput);
-        result.literal:=newVoidLiteral;
-        result.reasonForStop:=rr_ok;
-        exit(result);
+        exit(GENERATOR_END_EVAL_RESULT);
       end;
     end;
     result.reasonForStop:=rr_ok;
@@ -193,7 +191,7 @@ FUNCTION T_singleValueIterator.toString(CONST lengthLimit:longint=maxLongint):st
 FUNCTION T_singleValueIterator.evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult;
   begin
     if didDeliver
-    then result.literal:=newVoidLiteral
+    then exit(GENERATOR_END_EVAL_RESULT)
     else result.literal:=value^.rereferenced;
     result.reasonForStop:=rr_ok;
     didDeliver:=true;
@@ -275,13 +273,13 @@ FUNCTION T_rangeGenerator.evaluate(CONST location:T_tokenLocation; CONST context
           tmp:=bigNext+1;
           result.literal:=P_recycler(recycler)^.newIntLiteral(bigNext);
           bigNext:=tmp;
-        end else result.literal:=newVoidLiteral;
+        end else result:=GENERATOR_END_EVAL_RESULT;
       bLower:
         if bigNext.compare(bigLim) in [CR_GREATER,CR_EQUAL] then begin
           tmp:=bigNext-1;
           result.literal:=P_recycler(recycler)^.newIntLiteral(bigNext);
           bigNext:=tmp;
-        end else result.literal:=newVoidLiteral;
+        end else result:=GENERATOR_END_EVAL_RESULT;
       bNone : begin
         tmp:=bigNext+1;
         result.literal:=P_recycler(recycler)^.newIntLiteral(bigNext);
@@ -292,12 +290,12 @@ FUNCTION T_rangeGenerator.evaluate(CONST location:T_tokenLocation; CONST context
         if smallNext<=smallLim then begin
           result.literal:=P_recycler(recycler)^.newIntLiteral(smallNext);
           inc(smallNext);
-        end else result.literal:=newVoidLiteral;
+        end else result:=GENERATOR_END_EVAL_RESULT;
       bLower:
         if smallNext>=smallLim then begin
           result.literal:=P_recycler(recycler)^.newIntLiteral(smallNext);
           dec(smallNext);
-        end else result.literal:=newVoidLiteral;
+        end else result:=GENERATOR_END_EVAL_RESULT;
       bNone : begin
         result.literal:=P_recycler(recycler)^.newIntLiteral(smallNext);
         inc(smallNext);
@@ -386,7 +384,7 @@ FUNCTION T_permutationIterator.evaluate(CONST location:T_tokenLocation; CONST co
     //find largest index k so that P[k]<P[k+1] <=> not(P[k+1]<=P[k]);
     for i:=0 to length(nextPermutation)-2 do if not(nextPermutation[i+1]^.leqForSorting(nextPermutation[i])) then k:=i;
     //no such k found: done
-    if k<0 then begin result.literal:=newVoidLiteral; exit; end;
+    if k<0 then exit(GENERATOR_END_EVAL_RESULT);
     //find largest index l so that P[k]<P[l] <=> not(P[l]<=P[k])
     l:=-1;
     for i:=0 to length(nextPermutation)-1 do if not(nextPermutation[i]^.leqForSorting(nextPermutation[k])) then l:=i;
@@ -475,8 +473,8 @@ FUNCTION T_filterGenerator.evaluate(CONST location:T_tokenLocation; CONST contex
         then exit          (nextUnfiltered)
         else P_recycler(recycler)^.disposeLiteral(nextUnfiltered.literal);
       end else begin
-        if nextUnfiltered.literal=nil
-        then begin result.reasonForStop:=rr_ok; result.literal:=newVoidLiteral; exit(result); end
+        if nextUnfiltered.reasonForStop=rr_endOfGenerator
+        then exit(GENERATOR_END_EVAL_RESULT)
         else exit(nextUnfiltered);
       end;
     until (result.literal<>nil) or not(P_context(context)^.messages^.continueEvaluation);
@@ -527,15 +525,15 @@ FUNCTION T_mapGenerator.toString(CONST lengthLimit:longint=maxLongint):string;
   end;
 
 FUNCTION T_mapGenerator.evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult;
-  VAR nextUnmapped:P_literal;
+  VAR nextUnmapped:T_evaluationResult;
   begin
     result:=NIL_EVAL_RESULT;
     repeat
-      nextUnmapped:=sourceGenerator^.evaluate(location,context,recycler).literal;
-      if (nextUnmapped<>nil) and (nextUnmapped^.literalType<>lt_void) then begin
+      nextUnmapped:=sourceGenerator^.evaluate(location,context,recycler);
+      if (nextUnmapped.reasonForStop=rr_ok) and (nextUnmapped.literal^.literalType<>lt_void) then begin
         if isNullary then result:=mapExpression^.evaluate(        location,context,recycler)
-                     else result:=evaluteExpressionMap(mapExpression,location,P_context(context),recycler,nextUnmapped);
-        P_recycler(recycler)^.disposeLiteral(nextUnmapped);
+                     else result:=evaluteExpressionMap(mapExpression,location,P_context(context),recycler,nextUnmapped.literal);
+        P_recycler(recycler)^.disposeLiteral(nextUnmapped.literal);
         //error handling
         if result.literal=nil then begin
           result.literal:=newVoidLiteral;
@@ -543,12 +541,7 @@ FUNCTION T_mapGenerator.evaluate(CONST location:T_tokenLocation; CONST context:P
           exit(result);
         end;
         if result.literal^.literalType=lt_void then P_recycler(recycler)^.disposeLiteral(result.literal);
-      end else begin
-        if nextUnmapped=nil
-        then result.literal:=newVoidLiteral
-        else result.literal:=nextUnmapped;
-        result.reasonForStop:=rr_ok; exit(result);
-      end;
+      end else exit(GENERATOR_END_EVAL_RESULT);
     until (result.literal<>nil) or not(P_context(context)^.messages^.continueEvaluation);
   end;
 
@@ -603,7 +596,6 @@ FUNCTION T_flatMapGenerator.toString(CONST lengthLimit: longint): string;
 FUNCTION T_flatMapGenerator.evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult;
   VAR doneFetching:boolean=false;
   PROCEDURE fillQueue;
-    VAR someFetched:boolean=false;
     PROCEDURE appendEvaluated(unmapped:P_literal);
       VAR valueToAppend:P_literal;
       begin
@@ -611,7 +603,6 @@ FUNCTION T_flatMapGenerator.evaluate(CONST location:T_tokenLocation; CONST conte
           if mapExpression=nil
           then begin
             queue.append(unmapped);
-            someFetched:=true;
           end else begin
             if isNullary
             then valueToAppend:=mapExpression^.evaluate(        location,context,recycler).literal
@@ -622,7 +613,6 @@ FUNCTION T_flatMapGenerator.evaluate(CONST location:T_tokenLocation; CONST conte
               then P_recycler(recycler)^.disposeLiteral(valueToAppend)
               else begin
                 queue.append(valueToAppend);
-                someFetched:=true;
               end;
             end;
           end;
@@ -630,7 +620,7 @@ FUNCTION T_flatMapGenerator.evaluate(CONST location:T_tokenLocation; CONST conte
       end;
 
     VAR iter:T_arrayOfLiteral;
-        sub :P_literal;
+        sub :T_evaluationResult;
         stillFetchingFromIterator: boolean;
     begin
       result:=NIL_EVAL_RESULT;
@@ -657,16 +647,16 @@ FUNCTION T_flatMapGenerator.evaluate(CONST location:T_tokenLocation; CONST conte
             lt_stringSet,
             lt_map: begin
               iter:=P_compoundLiteral(currentUnmapped)^.forcedIteratableList(recycler);
-              for sub in iter do appendEvaluated(sub^.rereferenced);
+              for sub.literal in iter do appendEvaluated(sub.literal^.rereferenced);
               P_recycler(recycler)^.disposeLiterals(iter);
               P_recycler(recycler)^.disposeLiteral(currentUnmapped);
             end;
             lt_expression: begin
               if (P_expressionLiteral(currentUnmapped)^.typ in C_iteratableExpressionTypes) then begin
                 repeat
-                  sub:=P_expressionLiteral(currentUnmapped)^.evaluate(location,context,recycler).literal;
-                  stillFetchingFromIterator:=(sub<>nil) and (sub^.literalType<>lt_void);
-                  if stillFetchingFromIterator and context^.continueEvaluation then appendEvaluated(sub);
+                  sub:=P_expressionLiteral(currentUnmapped)^.evaluate(location,context,recycler);
+                  stillFetchingFromIterator:=sub.reasonForStop in [rr_ok,rr_okWithReturn];
+                  if stillFetchingFromIterator and context^.continueEvaluation then appendEvaluated(sub.literal);
                 until not(stillFetchingFromIterator) or not(context^.continueEvaluation) or (queue.fill>=256);
                 if not(stillFetchingFromIterator) or not(context^.continueEvaluation) then P_recycler(recycler)^.disposeLiteral(currentUnmapped);
               end else begin
@@ -679,7 +669,7 @@ FUNCTION T_flatMapGenerator.evaluate(CONST location:T_tokenLocation; CONST conte
           if currentUnmapped<>nil then P_recycler(recycler)^.disposeLiteral(currentUnmapped);
           doneFetching:=true;
         end;
-      until someFetched or doneFetching or not(context^.continueEvaluation);
+      until queue.hasNext or doneFetching or not(context^.continueEvaluation);
     end;
 
   begin
@@ -716,9 +706,7 @@ FUNCTION flatMap_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (params^.size<=2) then begin
       if params^.size=2 then begin
-        if (arg1^.literalType=lt_expression) and
-           (P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(1) or
-            P_expressionLiteral(arg1)^.canApplyToNumberOfParameters(0))
+        if (arg1^.literalType=lt_expression)
         then mappingFunction:=P_expressionLiteral(arg1)
         else exit(nil);
       end;
@@ -779,8 +767,7 @@ FUNCTION T_chunkIterator.evaluate(CONST location:T_tokenLocation; CONST context:
       until doneFetching or (unmappedList^.size>=chunkSize) or not(P_context(context)^.messages^.continueEvaluation);
       if doneFetching and (unmappedList^.size=0) then begin
         P_recycler(recycler)^.disposeLiteral(unmappedList);
-        result.literal:=newVoidLiteral;
-        exit(result);
+        exit(GENERATOR_END_EVAL_RESULT);
       end else begin
         if mapExpression=nil then result.literal:=unmappedList
         else begin
@@ -796,6 +783,7 @@ FUNCTION T_chunkIterator.evaluate(CONST location:T_tokenLocation; CONST context:
         end;
       end;
     until doneFetching or (result.literal<>nil) or not(P_context(context)^.messages^.continueEvaluation);
+    result:=GENERATOR_END_EVAL_RESULT;
   end;
 
 PROCEDURE T_chunkIterator.cleanup(CONST literalRecycler:P_literalRecycler);
@@ -816,9 +804,7 @@ FUNCTION chunkMap_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size>=2) and (params^.size<=3) and (arg1^.literalType=lt_smallint) and (int1^.intValue>0) then begin
       if params^.size=3 then begin
-        if (arg2^.literalType=lt_expression) and
-           (P_expressionLiteral(arg2)^.canApplyToNumberOfParameters(1) or
-            P_expressionLiteral(arg2)^.canApplyToNumberOfParameters(0))
+        if (arg2^.literalType=lt_expression)
         then mappingFunction:=P_expressionLiteral(arg2)
         else exit(nil);
       end;
@@ -1026,7 +1012,7 @@ FUNCTION T_parallelMapGenerator.evaluate(CONST location:T_tokenLocation; CONST c
           exit(result);
         end else P_context(context)^.getGlobals^.taskQueue.activeDeqeue(P_recycler(recycler));
       until doneFetching and (firstToAggregate=nil) or not(context^.continueEvaluation);
-      result.literal:=newVoidLiteral;
+      result:=GENERATOR_END_EVAL_RESULT;
     end;
   end;
 
@@ -1273,7 +1259,7 @@ FUNCTION T_fileLineIterator.evaluate(CONST location:T_tokenLocation; CONST conte
     else if stringBuffer<>'' then begin
       result.literal:=P_recycler(recycler)^.newStringLiteral(stringBuffer);
       stringBuffer:='';
-    end else result.literal:=newVoidLiteral;
+    end else result:=GENERATOR_END_EVAL_RESULT;
   end;
 
 DESTRUCTOR T_fileLineIterator.destroy;
@@ -1404,7 +1390,7 @@ FUNCTION T_byteStreamIterator.evaluate(CONST location:T_tokenLocation; CONST con
     else if (buffer<>nil) and (buffer^.size>0) then begin
       result.literal:=buffer;
       buffer:=nil;
-    end else result.literal:=newVoidLiteral;
+    end else result:=GENERATOR_END_EVAL_RESULT;
   end;
 
 DESTRUCTOR T_byteStreamIterator.destroy;
@@ -1612,11 +1598,7 @@ FUNCTION T_stringIterator.evaluate(CONST location:T_tokenLocation; CONST context
         currIdx[length(currIdx)-1]:=0;
       end;
     end;
-    if length(currIdx)>maxL then begin
-      result.reasonForStop:=rr_ok;
-      result.literal:=newVoidLiteral;
-      exit(result);
-    end;
+    if length(currIdx)>maxL then exit(GENERATOR_END_EVAL_RESULT);
 
     setLength(s,length(currIdx));
     for i:=0 to length(currIdx)-1 do s[length(s)-i]:=charSet[currIdx[i]];

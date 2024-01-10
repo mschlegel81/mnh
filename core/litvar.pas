@@ -244,7 +244,7 @@ TYPE
     PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
   end;
 
-  T_reduceResult=(rr_fail,rr_ok,rr_okWithReturn,rr_patternMismatch);
+  T_reduceResult=(rr_fail,rr_ok,rr_okWithReturn,rr_patternMismatch,rr_endOfGenerator);
   T_evaluationResult=record
     literal:P_literal;
     reasonForStop:T_reduceResult;
@@ -482,6 +482,7 @@ CONST
   NO_ARITY_INFO  :T_arityInfo       =(minPatternLength:-1; maxPatternLength:-2);
 VAR
   resolveOperatorCallback: FUNCTION (CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer): P_literal;
+FUNCTION GENERATOR_END_EVAL_RESULT:T_evaluationResult;
 FUNCTION commonArity(CONST x,y:T_arityInfo):T_arityInfo;
 FUNCTION exp(CONST x:double):double; inline;
 
@@ -535,6 +536,12 @@ CONST C_setType:array[false..true,false..true,false..true,false..true] of T_lite
 {$i literalRecycler.inc}
 {$i literalSerialization.inc}
 {$undef include_implementation}
+
+FUNCTION GENERATOR_END_EVAL_RESULT:T_evaluationResult;
+  begin
+    result.reasonForStop:=rr_endOfGenerator;
+    result.literal:=voidLit.rereferenced;
+  end;
 
 FUNCTION evaluateToBoolean_strict(CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST arg0:P_literal=nil; CONST arg1:P_literal=nil):boolean;
   VAR evResult:T_evaluationResult;

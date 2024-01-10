@@ -137,3 +137,15 @@ save;
   window||=gen();
   out.size=width ? out : void;
 end}.toIteratableExpression;
+
+//*Returns a dynamic concatenation of all given iteratables
+concat(A:Iteratable,...)->toIteratableExpression(()->begin
+  local remainingGenerators:=map($params,::toIteratableExpression);
+save;
+  local nextOutput:=(remainingGenerators[0] orElse {void})();
+  while(remainingGenerators.size>0 AND nextOutput.isVoid,begin
+    remainingGenerators:=remainingGenerators.tail;
+    nextOutput:=(remainingGenerators[0] orElse {void})();
+  end);
+  nextOutput;
+end);
