@@ -1393,7 +1393,7 @@ FUNCTION kMeans_impl intFuncSignature;
         entry:P_literal;
     begin
       setLength(raw_data,list0^.size);
-      result:=list0^.size>=k;
+      result:=true;
       for i:=0 to list0^.size-1 do if result then begin
         entry:=list0^.value[i];
         if entry^.literalType in [lt_numList,lt_intList,lt_realList] then begin
@@ -1407,7 +1407,7 @@ FUNCTION kMeans_impl intFuncSignature;
       if not(result) then begin
         for i:=0 to length(raw_data)-1 do with raw_data[i] do setLength(x,0);
         setLength(raw_data,0);
-        context^.raiseError('kMeans requires a list of numeric lists of the same size as input. The input list must contain at least k elements.',tokenLocation);
+        context^.raiseError('kMeans requires a list of numeric lists of the same size as input.',tokenLocation);
       end;
     end;
 
@@ -1494,7 +1494,7 @@ FUNCTION kMeans_impl intFuncSignature;
         tempList:P_listLiteral;
         loopCount:longint=0;
     begin
-      repeat
+      if max_steps>0 then repeat
         inc(loopCount);
         //1. Normalize centers
         anyClassChanged:=false;
