@@ -285,7 +285,6 @@ TYPE
       FUNCTION equals(CONST other:P_literal):boolean; virtual;
       FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
       FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler):P_expressionLiteral; virtual;
-      FUNCTION writeToStream(VAR serializer:T_literalSerializer):boolean; virtual; abstract;
       FUNCTION referencesAnyUserPackage:boolean; virtual; abstract;
       FUNCTION mustBeDroppedBeforePop:boolean; virtual;
       FUNCTION containsReturnToken:boolean; virtual;

@@ -667,29 +667,19 @@ unique([3,1,2,1,4,1,5]);
 #I compress
 #S compress(S:String);
 #C Returns a compressed version of S
-#S compress(S:String,k:Int);
-#C As above but with a specified algorithm:
-#C   1: deflate
-#C   2: huffman with relaxed default model
-#C   3: huffman with strict default model
-#C   4: huffman with numbers model
-#C   5: huffman with Wikipedia.de model
-#C   6: huffman with MNH code model
-#C   255: don't compress
-#C   other: try out algorithms and return the shortest representation
-#C The first character of the result indicates the algorithm used
+#S compress(S:String);
+#C If the plain text is shorted than the deflated version, the plain text is returned. The first character of the result indicates the algorithm used.
 
 #I decompress
 #S decompress(S:String);
 #C Returns an uncompressed version of S
 
-//compress/decompress uses a hybridization of different compression algorithms
 //It is possible that the compressed string equals the original string.
 compress('Test');
 compress('Test').decompress;
 
-compress('Testtext');
-compress('Testtext').decompress;
+compress('This text is long enough to give deflate a little edge. So deflate will be used.');
+compress('This text is long enough to give deflate a little edge. So deflate will be used.').decompress;
 
 relativeFileName('~/folder/','~/other/example.txt');
 #S relativeFileName(reference,file);
