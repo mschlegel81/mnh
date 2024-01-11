@@ -1444,7 +1444,9 @@ FUNCTION kMeans_impl intFuncSignature;
         for i:=0 to list1^.size-1 do if result then begin
           entry:=list1^.value[i];
           if entry^.literalType in [lt_numList,lt_intList,lt_realList] then begin
-            if dim<>P_listLiteral(entry)^.size then result:=false;
+            if dim=0
+            then dim:=P_listLiteral(entry)^.size
+            else if dim<>P_listLiteral(entry)^.size then result:=false;
             centers[i].x:=toVector(P_listLiteral(entry));
             centers[i].count:=1;
           end else result:=false;
@@ -1549,7 +1551,6 @@ FUNCTION kMeans_impl intFuncSignature;
        ((params^.size<3) or (arg2^.literalType=lt_smallint)) and
        ((params^.size<4) or (arg3^.literalType=lt_smallint))
     then begin
-      if list0^.size=0 then exit(list0^.rereferenced);
       if arg1^.literalType=lt_smallint
       then k:=int1 ^.intValue
       else k:=list1^.size;

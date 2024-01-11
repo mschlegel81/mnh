@@ -15,7 +15,6 @@ USES sysutils,Classes,
 IMPLEMENTATION
 USES mnh_settings,
      typinfo,
-     serializationUtil,
      mnh_messages;
 {$i func_defines.inc}
 TYPE
@@ -783,7 +782,6 @@ FUNCTION T_chunkIterator.evaluate(CONST location:T_tokenLocation; CONST context:
         end;
       end;
     until doneFetching or (result.literal<>nil) or not(P_context(context)^.messages^.continueEvaluation);
-    result:=GENERATOR_END_EVAL_RESULT;
   end;
 
 PROCEDURE T_chunkIterator.cleanup(CONST literalRecycler:P_literalRecycler);
@@ -905,8 +903,11 @@ FUNCTION T_parallelMapGenerator.canAggregate(CONST forceAggregate:boolean; CONST
 FUNCTION T_parallelMapGenerator.nextTask(VAR nextUnmapped:P_literal; CONST loc: T_tokenLocation;  CONST context:P_context; CONST recycler:P_recycler):P_chainTask;
   VAR task:P_mapTask=nil;
   begin
-    if isExpressionNullary
-    then recycler^.disposeLiteral(nextUnmapped);
+    assert(nextUnmapped<>nil);
+    if isExpressionNullary then begin
+      recycler^.disposeLiteral(nextUnmapped);
+      nextUnmapped:=newVoidLiteral;
+    end;
     with recycling do if fill>0 then begin
       dec(fill);
       task:=P_mapTask(dat[fill]);
@@ -926,6 +927,7 @@ FUNCTION T_parallelMapGenerator.nextTask(VAR nextUnmapped:P_literal; CONST loc: 
 FUNCTION T_parallelFilterGenerator.nextTask(VAR nextUnmapped:P_literal; CONST loc: T_tokenLocation;  CONST context:P_context; CONST recycler:P_recycler):P_chainTask;
   VAR task:P_filterTask=nil;
   begin
+    assert(nextUnmapped<>nil);
     with recycling do if fill>0 then begin
       dec(fill);
       task:=P_filterTask(dat[fill]);
@@ -943,7 +945,7 @@ FUNCTION T_parallelFilterGenerator.nextTask(VAR nextUnmapped:P_literal; CONST lo
   end;
 
 FUNCTION T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean;
-  VAR nextUnmapped:P_literal=nil;
+  VAR nextUnmapped:T_evaluationResult;
       doneQueuing :boolean=false;
       taskChain   :T_taskChain;
       startTime   :double;
@@ -958,13 +960,13 @@ FUNCTION T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; CONST
     slowProducer:=false;
     startTime:=now;
     repeat
-      nextUnmapped:=sourceGenerator^.evaluate(loc,context,recycler).literal;
-      if (nextUnmapped=nil) or (nextUnmapped^.literalType=lt_void) then begin
+      nextUnmapped:=sourceGenerator^.evaluate(loc,context,recycler);
+      if (nextUnmapped.reasonForStop=rr_endOfGenerator) or (nextUnmapped.literal=nil) then begin
         doneFetching:=true;
         taskChain.flush;
-      end else begin
+      end else if nextUnmapped.literal^.literalType=lt_void then nextUnmapped.literal^.unreference else begin
         result:=true;
-        if taskChain.enqueueOrExecute(nextTask(nextUnmapped,loc,context,recycler),recycler)
+        if taskChain.enqueueOrExecute(nextTask(nextUnmapped.literal,loc,context,recycler),recycler)
         then doneQueuing:=true
         else if (now-startTime>ONE_SECOND) then begin
           tasksToQueue:=taskChain.getQueuedCount;
@@ -1004,7 +1006,7 @@ FUNCTION T_parallelMapGenerator.evaluate(CONST location:T_tokenLocation; CONST c
     else begin
       if doneFetching and (firstToAggregate=nil) or not(context^.continueEvaluation)
       then begin
-        result.literal:=newVoidLiteral;
+        result:=GENERATOR_END_EVAL_RESULT;
       end else repeat
         doEnqueueTasks(location,P_context(context),P_recycler(recycler));
         if outputQueue.hasNext then begin
