@@ -244,6 +244,7 @@ FUNCTION evaluteExpressionMap(CONST e:P_expressionLiteral; CONST location:T_toke
     parameterList.create(1);
     parameterList.append(recycler,arg0,true);
     result:=e^.evaluate(location,context,recycler,@parameterList);
+    if not(result.reasonForStop in [rr_ok,rr_okWithReturn]) then context^.raiseCannotApplyError('map rule '+e^.toString(50),@parameterList,location);
     parameterList.cleanup(recycler);
     parameterList.destroy;
   end;
@@ -254,6 +255,7 @@ FUNCTION evaluteExpressionFilter(CONST e:P_expressionLiteral; CONST location:T_t
       tryMessages:T_messagesErrorHolder;
       oldMessages: P_messages;
       evResult: T_evaluationResult;
+      note:string;
   begin
     arity:=e^.arity;
     if not(e^.typ in C_builtinExpressionTypes) and (arity.maxPatternLength=arity.minPatternLength) and (arg0^.literalType in C_listTypes) and (P_listLiteral(arg0)^.size=arity.minPatternLength) and (P_listLiteral(arg0)^.customType=nil)
@@ -270,8 +272,10 @@ FUNCTION evaluteExpressionFilter(CONST e:P_expressionLiteral; CONST location:T_t
         exit(P_boolLiteral(evResult.literal)^.value);
       end else begin
         result:=false;
-        if evResult.reasonForStop=rr_patternMismatch then context^.raiseError('Cannot apply expression '+e^.toString(50)+' to parameter list '+toParameterListString(@parameterList,true,50),location)
-        else if (evResult.literal<>nil) then context^.raiseError('Expression does not return a boolean but a '+evResult.literal^.typeString,location);
+        if (evResult.literal<>nil)
+        then note:='Expression does not return a boolean but a '+evResult.literal^.typeString
+        else note:='';
+        context^.raiseCannotApplyError('filter rule '+e^.toString(50),@parameterList,location,note);
       end;
       if evResult.literal<>nil then recycler^.disposeLiteral(evResult.literal);
     end;
@@ -284,8 +288,10 @@ FUNCTION evaluteExpressionFilter(CONST e:P_expressionLiteral; CONST location:T_t
       result:=P_boolLiteral(evResult.literal)^.value;
     end else begin
       result:=false;
-      if evResult.reasonForStop=rr_patternMismatch then context^.raiseError('Cannot apply expression '+e^.toString(50)+' to parameter list '+toParameterListString(@parameterList,true,50),location)
-      else if (evResult.literal<>nil) then context^.raiseError('Expression does not return a boolean but a '+evResult.literal^.typeString,location);
+      if (evResult.literal<>nil)
+      then note:='Expression does not return a boolean but a '+evResult.literal^.typeString
+      else note:='';
+      context^.raiseCannotApplyError('filter rule '+e^.toString(50),@parameterList,location,note);
     end;
     if evResult.literal<>nil then recycler^.disposeLiteral(evResult.literal);
   end;
