@@ -64,6 +64,7 @@ TYPE
       beginEndStripped:boolean;
       indexOfSave:longint;
       saveValueStore:P_valueScope;
+      requiresBlockConstants:boolean;
       currentlyEvaluating:boolean;
 
       PROCEDURE stripExpression;
@@ -395,6 +396,7 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; CONST contex
       subExpressionLevel:longint=0;
       bracketLevel:longint;
   begin
+    requiresBlockConstants:=false;
     setLength(preparedBody,rep^.getCount);
     indexOfSave:=-1;
     t:=rep;
@@ -412,6 +414,7 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; CONST contex
         tt_endBlock     : dec(scopeLevel        );
         tt_expBraceOpen : inc(subExpressionLevel);
         tt_expBraceClose: dec(subExpressionLevel);
+        tt_formatString : requiresBlockConstants:=true;
         tt_functionPattern: begin
           bracketLevel:=0;
           while (t<>nil) and (bracketLevel>=0) do begin
@@ -615,36 +618,6 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; CONST contex
     end;
     pattern.create;
     constructExpression(rep,context,recycler,rep^.location);
-//
-//    t:=rep;
-//    i:=0;
-//    setLength(preparedBody,rep^.getCount);
-//
-//    while (t<>nil) do begin
-//      if (i>=length(preparedBody)) then setLength(preparedBody,length(preparedBody)+1);
-//      with preparedBody[i] do begin
-//        token:=t^;
-//        t^.tokType:=tt_EOL;
-//        t:=recycler^.disposeToken(t);
-//        token.next:=nil;
-//        case token.tokType of
-//          tt_beginBlock   : inc(scopeLevel        );
-//          tt_endBlock     : dec(scopeLevel        );
-//          tt_expBraceOpen : inc(subExpressionLevel);
-//          tt_expBraceClose: dec(subExpressionLevel);
-//          tt_save: if subExpressionLevel=0 then begin
-//            if indexOfSave>=0 then context^.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location);
-//            if scopeLevel<>1 then context^.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location);
-//            makeStateful(context,token.location);
-//            indexOfSave:=i;
-//          end;
-//        end;
-//        parIdx:=NO_PARAMETERS_IDX;
-//      end;
-//      inc(i);
-//    end;
-//    setLength(preparedBody,i);
-//    stripExpression;
     updatePatternForInline(recycler);
   end;
 
@@ -788,10 +761,12 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
       output.last:=output.first;
 
       {$ifdef fullVersion}
-      if parametersNode<>nil
-      then for i:=0 to pattern.arity-1
-           do parametersNode^.addEntry(pattern.idForIndexInline(i),param^.value[i],true);
+      if parametersNode<>nil then for i:=0 to pattern.arity-1  do parametersNode^.addEntry(pattern.idForIndexInline(i),param^.value[i],true);
       {$endif}
+      if requiresBlockConstants then for i:=0 to pattern.arity-1 do begin
+        output.last^.next:=recycler^.newToken(callLocation,pattern.idForIndexInline(i),tt_assignBlockConstant,param^.value[i]^.rereferenced);
+        output.last:=output.last^.next;
+      end;
 
       for i:=0 to length(preparedBody)-1 do begin
         with preparedBody[i] do case parIdx of
@@ -800,9 +775,6 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
             if allParams=nil then begin
               allParams:=recycler^.newListLiteral;
               if param<>nil then allParams^.appendAll(recycler,param);
-              {$ifdef fullVersion}
-              if parametersNode<>nil then parametersNode^.addEntry(ALL_PARAMETERS_TOKEN_TEXT,allParams,true);
-              {$endif}
               allParams^.unreference;
             end;
             output.last^.next:=recycler^.newToken(token.location,'',tt_literal,allParams^.rereferenced);
@@ -812,9 +784,6 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
               if param=nil
               then remaining:=recycler^.newListLiteral
               else remaining:=param^.tail(recycler,pattern.arity);
-              {$ifdef fullVersion}
-              if parametersNode<>nil then parametersNode^.addEntry(C_tokenDefaultId[tt_optionalParameters],remaining,true);
-              {$endif}
               remaining^.unreference;
             end;
             output.last^.next:=recycler^.newToken(token.location,'',tt_literal,remaining^.rereferenced);
@@ -1531,6 +1500,7 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
           case token.tokType of
             tt_identifier: if (parIdx=NO_PARAMETERS_IDX) then begin
               P_abstractPackage(token.location.package)^.resolveId(token,messages);
+              //TODO: If it is a format statement, block constants may be useful...
               idsReady:=idsReady and (token.tokType<>tt_identifier);
             end;
             tt_userRule, tt_globalVariable: begin

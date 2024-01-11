@@ -177,7 +177,7 @@ PROCEDURE T_token.define(CONST tokenLocation: T_tokenLocation; CONST tokenText: 
     tokType:=tokenType;
     data:=ptr;
     {$ifdef debugMode}
-    if (ptr=nil) and (tokenType=tt_literal) then raise Exception.create('Creating literal token without data in location @'+intToStr(tokenLocation.line)+':'+intToStr(tokenLocation.column)+'; Text is: '+toString(false,idLikeDummy));
+    if (ptr=nil) and (tokenType in [tt_literal,tt_formatString]) then raise Exception.create('Creating literal token without data in location @'+intToStr(tokenLocation.line)+':'+intToStr(tokenLocation.column)+'; Text is: '+toString(false,idLikeDummy));
     if (tokenLocation.package=nil) then raise Exception.create('Creating token without package in location @'+intToStr(tokenLocation.line)+':'+intToStr(tokenLocation.column)+'; Text is: '+toString(false,idLikeDummy));
     {$endif}
   end;
@@ -190,7 +190,7 @@ PROCEDURE T_token.define(CONST original: T_token; CONST literalRecycler:P_litera
     tokType :=original.tokType;
     data    :=original.data;
     case tokType of
-      tt_literal,tt_aggregatorExpressionLiteral,tt_parList: P_literal(data)^.rereference;
+      tt_literal,tt_aggregatorExpressionLiteral,tt_parList,tt_formatString: P_literal(data)^.rereference;
       tt_each,tt_parallelEach: if data<>nil then P_literal(data)^.rereference;
       tt_list_constructor,tt_parList_constructor: if data=nil then data:=literalRecycler^.newListLiteral else data:=P_listLiteral(original.data)^.clone(literalRecycler);
       tt_functionPattern: data:=clonePattern(original.data);
@@ -204,7 +204,7 @@ PROCEDURE T_token.define(CONST original: T_token; CONST literalRecycler:P_litera
 PROCEDURE T_token.undefine(CONST literalRecycler:P_literalRecycler);
   begin
     case tokType of
-      tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList,tt_formatString: literalRecycler^.disposeLiteral(data);
+      tt_literal,tt_aggregatorExpressionLiteral,tt_list_constructor,tt_parList_constructor,tt_parList,tt_formatString,tt_assignBlockConstant: literalRecycler^.disposeLiteral(data);
       tt_each,tt_parallelEach: if data<>nil then literalRecycler^.disposeLiteral(data);
       tt_functionPattern: disposePattern(data,literalRecycler);
     end;
@@ -242,6 +242,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
                    else result:=C_tokenDefaultId[tt_agg]+'(';
         if data<>nil then result:=result+P_literal(data)^.toString(limit-6)+',';
       end;
+      tt_assignBlockConstant: result:='const '+txt+':='+P_literal(data)^.toString(limit)+'; ';
       tt_customTypeCheck: result:=':'+txt;
       tt_aggregatorExpressionLiteral,
       tt_formatString       : result:='f'+P_literal(data)^.toString(limit);
