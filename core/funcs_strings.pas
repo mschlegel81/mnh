@@ -776,7 +776,9 @@ FUNCTION compress_impl intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
-    then result:=recycler^.newStringLiteral(compressString(str0^.value,[0..255]))
+    then result:=recycler^.newStringLiteral(compressString(str0^.value,C_compression_find_shortest))
+    else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_smallint) and (int1^.intValue>=0) and (int1^.intValue<=255)
+    then result:=recycler^.newStringLiteral(compressString(str0^.value,byte(int1^.intValue)))
     else result:=genericVectorization('compress',params,tokenLocation,context,recycler);
   end;
 
@@ -786,16 +788,14 @@ FUNCTION decompress_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and (arg0^.literalType=lt_string)
     then begin
-      {$ifndef debugMode}try{$endif}
+      try
         resultString:=decompressString(str0^.value);
-      {$ifndef debugMode}
       except
         on e:Exception do begin
           context^.raiseError('Internal error on decompression. '+e.message,tokenLocation);
           exit(nil);
         end;
       end;
-      {$endif}
       result:=recycler^.newStringLiteral(resultString);
     end else result:=genericVectorization('decompress',params,tokenLocation,context,recycler);
   end;
