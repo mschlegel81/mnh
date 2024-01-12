@@ -1338,6 +1338,7 @@ FUNCTION kMeans_impl intFuncSignature;
   VAR raw_data:array of record
                  x:T_vector;
                  c:longint;
+                 invalid:boolean;
                end;
       centers :array of record
                  x:T_vector;
@@ -1395,6 +1396,16 @@ FUNCTION kMeans_impl intFuncSignature;
       assert((result>=0) and (result<k));
     end;
 
+  FUNCTION anyInvalid(CONST v:T_vector):boolean;  {$ifndef debugMode} inline; {$endif}
+    VAR i:longint;
+    begin
+      result:=false;
+      for i:=0 to dim-1 do result:=result or isNan(v[i]) or isInfinite(v[i]);
+    end;
+
+  VAR max_steps:longint=100;
+      min_class_size:longint=1;
+
   FUNCTION canFillRawData:boolean;
     VAR i:longint;
         entry:P_literal;
@@ -1409,6 +1420,7 @@ FUNCTION kMeans_impl intFuncSignature;
           else if dim<>P_listLiteral(entry)^.size then result:=false;
           raw_data[i].x:=toVector(P_listLiteral(entry));
           raw_data[i].c:=context^.getGlobals^.prng.intRandom(k);
+          raw_data[i].invalid:=anyInvalid(raw_data[i].x);
         end else result:=false;
       end;
       if not(result) then begin
@@ -1416,6 +1428,7 @@ FUNCTION kMeans_impl intFuncSignature;
         setLength(raw_data,0);
         context^.raiseError('kMeans requires a list of numeric lists of the same size as input.',tokenLocation);
       end;
+      if length(raw_data)=0 then max_steps:=0;
     end;
 
   PROCEDURE updateCenters;
@@ -1425,7 +1438,7 @@ FUNCTION kMeans_impl intFuncSignature;
         centers[j].count:=0;
         centers[j].x:=ZERO_VECTOR;
       end;
-      for i:=0 to length(raw_data)-1 do begin
+      for i:=0 to length(raw_data)-1 do if not raw_data[i].invalid then begin
         j:=raw_data[i].c;
         assert((j>=0) and (j<k),'Invalid class index: '+intToStr(j));
         if vector_inc(centers[j].x,raw_data[i].x)
@@ -1463,10 +1476,8 @@ FUNCTION kMeans_impl intFuncSignature;
         setLength(centers,0);
         context^.raiseError('kMeans requires a list of numeric lists of the same size as input. The inital list of centers must contain numeric lists of the same size.',tokenLocation);
       end;
+      if dim=0 then max_steps:=0;
     end;
-
-  VAR max_steps:longint=100;
-      min_class_size:longint=1;
 
   FUNCTION classifyAll:P_mapLiteral;
     PROCEDURE redistribute(CONST emptyClassIndex:longint);
@@ -1489,13 +1500,6 @@ FUNCTION kMeans_impl intFuncSignature;
           if vector_inc(centers[c].x,x)
           then      inc(centers[c].count);
         end;
-      end;
-
-    FUNCTION anyInvalid(CONST v:T_vector):boolean;
-      VAR i:longint;
-      begin
-        result:=false;
-        for i:=0 to dim-1 do result:=result or isNan(v[i]) or isInfinite(v[i]);
       end;
 
     VAR i,j:longint;
@@ -1536,7 +1540,7 @@ FUNCTION kMeans_impl intFuncSignature;
       result^.put(recycler,'class',tempList,false);
 
       tempList:=recycler^.newListLiteral(k);
-      for j:=0 to length(centers)-1 do begin
+      for j:=0 to length(centers)-1 do if centers[j].count>0 then begin
         vector_mult(centers[j].x,1/centers[j].count);
         tempList^.append(recycler,toNumList(centers[j].x),false);
         setLength(centers[j].x,0);
@@ -1549,7 +1553,7 @@ FUNCTION kMeans_impl intFuncSignature;
     if (params<>nil) and (params^.size>=2) and (params^.size<=4) and (arg0^.literalType in C_listTypes) and
        ((arg1^.literalType=lt_smallint) and (int1^.intValue>=2) or (arg1^.literalType in C_listTypes) and (list1^.size>=2)) and
        ((params^.size<3) or (arg2^.literalType=lt_smallint)) and
-       ((params^.size<4) or (arg3^.literalType=lt_smallint))
+       ((params^.size<4) or (arg3^.literalType=lt_smallint) and (int3^.intValue>=0))
     then begin
       if arg1^.literalType=lt_smallint
       then k:=int1 ^.intValue
