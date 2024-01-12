@@ -181,6 +181,7 @@ TYPE
     tt_mut_assignAppend,    tt_mut_nestedAppend,    //|=
     tt_mut_assignAppendAlt, tt_mut_nestedAppendAlt, //||=
     tt_mut_assignDrop,      tt_mut_nestedDrop,      //>>
+    tt_assignBlockConstant,
     //type checks:
     tt_type,
     tt_typeCheck,
@@ -375,6 +376,7 @@ CONST
   {tt_mut_nestedAppendAlt}        '',
   {tt_mut_assignDrop}             '>>',
   {tt_mut_nestedDrop}             '',
+  {tt_assignBlockConstant}        '',
   {tt_type}                       '',
   {tt_typeCheck}                  '',
   {tt_customTypeCheck}            '',
@@ -491,6 +493,7 @@ CONST
 {tt_mut_nestedAppendAlt}        (reservedWordClass:rwc_operator;         helpText:''; helpLink:''),
 {tt_mut_assignDrop}             (reservedWordClass:rwc_operator;         helpText:'Drop operator. Drops element from a set (by value) or from a map (by key)'; helpLink:'/operators.html#cStyleOps'),
 {tt_mut_nestedDrop}             (reservedWordClass:rwc_operator;         helpText:''; helpLink:''),
+{tt_assignBlockConstant}        (reservedWordClass:rwc_operator;         helpText:''; helpLink:''),
 {tt_type}                       (reservedWordClass:rwc_not_reserved;     helpText:'Type'; helpLink:'/functions.html#restrictions'),
 {tt_typeCheck}                  (reservedWordClass:rwc_not_reserved;     helpText:'Type check'; helpLink:'/functions.html#restrictions'),
 {tt_customTypeCheck}            (reservedWordClass:rwc_not_reserved;     helpText:'Custom type check'; helpLink:'/functions.html#restrictions'),

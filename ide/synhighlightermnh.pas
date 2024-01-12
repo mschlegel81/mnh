@@ -328,6 +328,22 @@ PROCEDURE TAbstractSynMnhSyn.next;
       if fLine[run]<>#0 then inc(run);
     end;
 
+  PROCEDURE handleDoubleQuoteString;
+    begin
+      inc(run);
+      while (fLine [run]<>#0) and ((fLine [run]<>'"') or (fLine [run-1] = '\') and (fLine [run-2]<>'\')) do inc(run);
+      if (fLine [run] = '"') then inc(run);
+      fTokenId := tkString;
+    end;
+
+  PROCEDURE handleSingleQuoteString;
+    begin
+      inc(run);
+      while (fLine [run]<>#0) and (fLine [run]<>'''') do inc(run);
+      if (fLine [run] = '''') then inc(run);
+      fTokenId := tkString;
+    end;
+
   begin
     case fLine [run] of
       #0: fTokenId := tkNull;
@@ -354,7 +370,7 @@ PROCEDURE TAbstractSynMnhSyn.next;
         while fLine [run] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do inc(run);
         fTokenId := tkDollarIdentifier;
       end;
-      'a'..'z', 'A'..'Z': begin
+      'a'..'e','g'..'z', 'A'..'Z': begin
         localId := fLine [run];
         inc(run);
         while fLine [run] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do begin
@@ -362,6 +378,21 @@ PROCEDURE TAbstractSynMnhSyn.next;
           inc(run);
         end;
         handleId(localId,lineIndex+1,run);
+      end;
+      'f': begin
+        localId := fLine [run];
+        inc(run);
+        case fLine[run] of
+          '"': handleDoubleQuoteString;
+          '''': handleSingleQuoteString;
+          else begin
+            while fLine [run] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do begin
+              localId := localId+fLine [run];
+              inc(run);
+            end;
+            handleId(localId,lineIndex+1,run);
+          end;
+        end;
       end;
       '@': if (fTokenPos=0) or ((fTokenPos=3) and (blobEnder=chr(1))) then begin
              fTokenId:=tkSpecialComment;
@@ -383,18 +414,8 @@ PROCEDURE TAbstractSynMnhSyn.next;
         end
         else fTokenId := tkOperator;
       end;
-      '"': begin
-        inc(run);
-        while (fLine [run]<>#0) and ((fLine [run]<>'"') or (fLine [run-1] = '\') and (fLine [run-2]<>'\')) do inc(run);
-        if (fLine [run] = '"') then inc(run);
-        fTokenId := tkString;
-      end;
-      '''': begin
-        inc(run);
-        while (fLine [run]<>#0) and (fLine [run]<>'''') do inc(run);
-        if (fLine [run] = '''') then inc(run);
-        fTokenId := tkString;
-      end;
+      '"': handleDoubleQuoteString;
+      '''': handleSingleQuoteString;
       '#': begin
         inc(run);
         if fLine[run] in ['0'..'9'] then begin

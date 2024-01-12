@@ -666,9 +666,12 @@ unique([3,1,2,1,4,1,5]);
 
 #I compress
 #S compress(S:String);
-#C Returns a compressed version of S
-#S compress(S:String);
-#C If the plain text is shorted than the deflated version, the plain text is returned. The first character of the result indicates the algorithm used.
+#C Tries out compression algorithms and returns the shortest representation - this may be the input string.
+#S compress(S:String,algorithm in [0..2]);
+#C Returns the string compressed with the given method:
+#C   0: No compression
+#C   1: Deflate
+#C   2: Hardcoded Digram-Huffman
 
 #I decompress
 #S decompress(S:String);

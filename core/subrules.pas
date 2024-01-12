@@ -64,6 +64,7 @@ TYPE
       beginEndStripped:boolean;
       indexOfSave:longint;
       saveValueStore:P_valueScope;
+      requiresBlockConstants:boolean;
       currentlyEvaluating:boolean;
 
       PROCEDURE stripExpression;
@@ -215,8 +216,11 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
 FUNCTION evaluteExpressionMap   (CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_literalRecycler; CONST arg0:P_literal):T_evaluationResult;
 FUNCTION evaluteExpressionFilter(CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_literalRecycler; CONST arg0:P_literal):boolean;
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
+    identifiedInternalFunctionTally:longint=0;
     BUILTIN_PMAP:P_intFuncCallback;
-VAR identifiedInternalFunctionTally:longint=0;
+    FORMAT_FUNCTION:P_intFuncCallback=nil;
+    PRINTF_FUNCTION:P_intFuncCallback=nil;
+
 IMPLEMENTATION
 USES sysutils,strutils,funcs_mnh,typinfo
      {$ifdef fullVersion},plotstyles{$endif}
@@ -244,6 +248,7 @@ FUNCTION evaluteExpressionMap(CONST e:P_expressionLiteral; CONST location:T_toke
     parameterList.create(1);
     parameterList.append(recycler,arg0,true);
     result:=e^.evaluate(location,context,recycler,@parameterList);
+    if not(result.reasonForStop in [rr_ok,rr_okWithReturn]) then context^.raiseCannotApplyError('map rule '+e^.toString(50),@parameterList,location);
     parameterList.cleanup(recycler);
     parameterList.destroy;
   end;
@@ -254,6 +259,7 @@ FUNCTION evaluteExpressionFilter(CONST e:P_expressionLiteral; CONST location:T_t
       tryMessages:T_messagesErrorHolder;
       oldMessages: P_messages;
       evResult: T_evaluationResult;
+      note:string;
   begin
     arity:=e^.arity;
     if not(e^.typ in C_builtinExpressionTypes) and (arity.maxPatternLength=arity.minPatternLength) and (arg0^.literalType in C_listTypes) and (P_listLiteral(arg0)^.size=arity.minPatternLength) and (P_listLiteral(arg0)^.customType=nil)
@@ -270,8 +276,10 @@ FUNCTION evaluteExpressionFilter(CONST e:P_expressionLiteral; CONST location:T_t
         exit(P_boolLiteral(evResult.literal)^.value);
       end else begin
         result:=false;
-        if evResult.reasonForStop=rr_patternMismatch then context^.raiseError('Cannot apply expression '+e^.toString(50)+' to parameter list '+toParameterListString(@parameterList,true,50),location)
-        else if (evResult.literal<>nil) then context^.raiseError('Expression does not return a boolean but a '+evResult.literal^.typeString,location);
+        if (evResult.literal<>nil)
+        then note:='Expression does not return a boolean but a '+evResult.literal^.typeString
+        else note:='';
+        context^.raiseCannotApplyError('filter rule '+e^.toString(50),@parameterList,location,note);
       end;
       if evResult.literal<>nil then recycler^.disposeLiteral(evResult.literal);
     end;
@@ -284,8 +292,10 @@ FUNCTION evaluteExpressionFilter(CONST e:P_expressionLiteral; CONST location:T_t
       result:=P_boolLiteral(evResult.literal)^.value;
     end else begin
       result:=false;
-      if evResult.reasonForStop=rr_patternMismatch then context^.raiseError('Cannot apply expression '+e^.toString(50)+' to parameter list '+toParameterListString(@parameterList,true,50),location)
-      else if (evResult.literal<>nil) then context^.raiseError('Expression does not return a boolean but a '+evResult.literal^.typeString,location);
+      if (evResult.literal<>nil)
+      then note:='Expression does not return a boolean but a '+evResult.literal^.typeString
+      else note:='';
+      context^.raiseCannotApplyError('filter rule '+e^.toString(50),@parameterList,location,note);
     end;
     if evResult.literal<>nil then recycler^.disposeLiteral(evResult.literal);
   end;
@@ -389,6 +399,7 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; CONST contex
       subExpressionLevel:longint=0;
       bracketLevel:longint;
   begin
+    requiresBlockConstants:=false;
     setLength(preparedBody,rep^.getCount);
     indexOfSave:=-1;
     t:=rep;
@@ -406,6 +417,7 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; CONST contex
         tt_endBlock     : dec(scopeLevel        );
         tt_expBraceOpen : inc(subExpressionLevel);
         tt_expBraceClose: dec(subExpressionLevel);
+        tt_formatString : requiresBlockConstants:=true;
         tt_functionPattern: begin
           bracketLevel:=0;
           while (t<>nil) and (bracketLevel>=0) do begin
@@ -609,36 +621,6 @@ CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; CONST contex
     end;
     pattern.create;
     constructExpression(rep,context,recycler,rep^.location);
-//
-//    t:=rep;
-//    i:=0;
-//    setLength(preparedBody,rep^.getCount);
-//
-//    while (t<>nil) do begin
-//      if (i>=length(preparedBody)) then setLength(preparedBody,length(preparedBody)+1);
-//      with preparedBody[i] do begin
-//        token:=t^;
-//        t^.tokType:=tt_EOL;
-//        t:=recycler^.disposeToken(t);
-//        token.next:=nil;
-//        case token.tokType of
-//          tt_beginBlock   : inc(scopeLevel        );
-//          tt_endBlock     : dec(scopeLevel        );
-//          tt_expBraceOpen : inc(subExpressionLevel);
-//          tt_expBraceClose: dec(subExpressionLevel);
-//          tt_save: if subExpressionLevel=0 then begin
-//            if indexOfSave>=0 then context^.raiseError('save is allowed only once in a function body (other location: '+string(preparedBody[indexOfSave].token.location)+')',token.location);
-//            if scopeLevel<>1 then context^.raiseError('save is allowed only on the scope level 1 (here: '+intToStr(scopeLevel)+')',token.location);
-//            makeStateful(context,token.location);
-//            indexOfSave:=i;
-//          end;
-//        end;
-//        parIdx:=NO_PARAMETERS_IDX;
-//      end;
-//      inc(i);
-//    end;
-//    setLength(preparedBody,i);
-//    stripExpression;
     updatePatternForInline(recycler);
   end;
 
@@ -782,10 +764,12 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
       output.last:=output.first;
 
       {$ifdef fullVersion}
-      if parametersNode<>nil
-      then for i:=0 to pattern.arity-1
-           do parametersNode^.addEntry(pattern.idForIndexInline(i),param^.value[i],true);
+      if parametersNode<>nil then for i:=0 to pattern.arity-1  do parametersNode^.addEntry(pattern.idForIndexInline(i),param^.value[i],true);
       {$endif}
+      if requiresBlockConstants then for i:=0 to pattern.arity-1 do begin
+        output.last^.next:=recycler^.newToken(callLocation,pattern.idForIndexInline(i),tt_assignBlockConstant,param^.value[i]^.rereferenced);
+        output.last:=output.last^.next;
+      end;
 
       for i:=0 to length(preparedBody)-1 do begin
         with preparedBody[i] do case parIdx of
@@ -794,9 +778,6 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
             if allParams=nil then begin
               allParams:=recycler^.newListLiteral;
               if param<>nil then allParams^.appendAll(recycler,param);
-              {$ifdef fullVersion}
-              if parametersNode<>nil then parametersNode^.addEntry(ALL_PARAMETERS_TOKEN_TEXT,allParams,true);
-              {$endif}
               allParams^.unreference;
             end;
             output.last^.next:=recycler^.newToken(token.location,'',tt_literal,allParams^.rereferenced);
@@ -806,9 +787,6 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
               if param=nil
               then remaining:=recycler^.newListLiteral
               else remaining:=param^.tail(recycler,pattern.arity);
-              {$ifdef fullVersion}
-              if parametersNode<>nil then parametersNode^.addEntry(C_tokenDefaultId[tt_optionalParameters],remaining,true);
-              {$endif}
               remaining^.unreference;
             end;
             output.last^.next:=recycler^.newToken(token.location,'',tt_literal,remaining^.rereferenced);
@@ -1514,6 +1492,14 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
   VAR i:longint;
       inlineValue:P_literal;
       idsReady:boolean;
+
+  FUNCTION tokenRequiresBlockConstants(CONST token:T_token):boolean;
+    begin
+      result:=(token.tokType=tt_intrinsicRule) and
+              ((P_intFuncCallback(token.data)=FORMAT_FUNCTION) or
+               (P_intFuncCallback(token.data)=PRINTF_FUNCTION));
+    end;
+
   begin
     enterCriticalSection(subruleCallCs);
     try
@@ -1525,13 +1511,12 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
           case token.tokType of
             tt_identifier: if (parIdx=NO_PARAMETERS_IDX) then begin
               P_abstractPackage(token.location.package)^.resolveId(token,messages);
+              requiresBlockConstants:=requiresBlockConstants or tokenRequiresBlockConstants(token);
               idsReady:=idsReady and (token.tokType<>tt_identifier);
             end;
-            tt_userRule, tt_globalVariable: begin
-              if resolveIdContext=ON_DELEGATION then begin
-                token.tokType:=tt_identifier;
-                P_abstractPackage(token.location.package)^.resolveId(token,messages);
-              end;
+            tt_userRule, tt_globalVariable: if resolveIdContext=ON_DELEGATION then begin
+              token.tokType:=tt_identifier;
+              P_abstractPackage(token.location.package)^.resolveId(token,messages);
             end;
           end;
           case token.tokType of

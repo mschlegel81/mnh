@@ -3251,7 +3251,7 @@ FUNCTION mapMerge(CONST literalRecycler:P_literalRecycler; CONST params:P_listLi
         entry.value^.rereference;
       end else begin
         M:=evaluteExpression(merger,location,contextPointer,recycler,pTargetEntry^.value,entry.value).literal;
-        if M=nil then begin
+        if (M=nil) or (M^.literalType=lt_void) then begin
           literalRecycler^.disposeLiteral(result);
           exit(nil);
         end;
@@ -3502,6 +3502,7 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLo
         k:longint;
         sortedTemp:P_listLiteral=nil;
     begin
+      if L=nil then begin appendPart('void'); exit; end;
       case L^.literalType of
         lt_boolean,lt_smallint,lt_bigint,lt_string,lt_real,lt_void: appendPart(L^.toString);
         lt_list..lt_emptyList,

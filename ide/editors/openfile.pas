@@ -126,7 +126,7 @@ PROCEDURE TopenFileDialog.searchResultsListBoxKeyPress(Sender: TObject; VAR key:
 
 PROCEDURE TopenFileDialog.Timer1Timer(Sender: TObject);
   begin
-    searchEditChange(Sender);
+    if fileCache.currentlyScanning then searchEditChange(Sender);
   end;
 
 FUNCTION TopenFileDialog.showForRoot(CONST rootPath: string): longint;

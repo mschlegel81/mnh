@@ -12,7 +12,6 @@ USES sysutils,
      funcs;
 
 PROCEDURE formatMetaData(VAR meta:T_ruleMetaData; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
-VAR FORMAT_FUNCTION:P_intFuncCallback=nil;
 IMPLEMENTATION
 USES out_adapters;
 TYPE
@@ -538,6 +537,7 @@ FUNCTION parseTime_imp intFuncSignature;
   end;
 
 INITIALIZATION
+  PRINTF_FUNCTION:=
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'           ,@printf_imp    ,ak_variadic_1,[se_output]);
   FORMAT_FUNCTION:=
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE       ,'format'           ,@format_imp    ,ak_variadic_1);

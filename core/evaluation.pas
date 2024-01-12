@@ -1059,6 +1059,11 @@ end}
       debugRun:=debugRun and context^.stepping(first,@stack);
       {$endif}
       case cTokType[0] of
+        tt_assignBlockConstant: begin
+          context^.valueScope^.createVariable(first^.txt,first^.data,true);
+          first:=recycler^.disposeToken(first);
+          didSubstitution:=true;
+        end;
         tt_formatString: resolveFormatString;
 {cT[0]=}tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
  {cT[-1]=}tt_separatorMapItem: case cTokType[1] of

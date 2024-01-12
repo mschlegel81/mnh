@@ -651,7 +651,9 @@ FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage)
           append(result,trimRight(nextLine));
         end;
         mt_echo_output: begin
-          result:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,CONSOLE_OUT_WIDTH-C_echoPrefixLength);
+          if P_echoOutMessage(message)^.literal=nil
+          then result:=''
+          else result:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,CONSOLE_OUT_WIDTH-C_echoPrefixLength);
           if length(result)>0 then result[  0]:=C_echoOutInfix+result[0];
           for i:=1 to length(result)-1 do
             result[i]:=C_echoContdInfix+result[i];
