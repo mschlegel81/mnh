@@ -82,6 +82,7 @@ TYPE
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
+      PROCEDURE onMemoryPanic;
       FUNCTION canLocateSource(CONST searchRoot,packageName:string; OUT foundFilePath:string):boolean;
       FUNCTION availablePackages(CONST searchRoot:string):T_arrayOfString;
       PROCEDURE postFolderToScan(CONST folderName:string);
@@ -89,7 +90,8 @@ TYPE
       PROCEDURE scanInBackground;
       FUNCTION listFilesMatching(CONST toMatch:string):T_arrayOfString;
       FUNCTION getAllFilesForBackgroundScan:T_arrayOfString;
-      FUNCTION allKnownFolders:T_arrayOfString;
+      FUNCTION allKnownFolders(CONST containingScriptFiles:boolean=true):T_arrayOfString;
+      FUNCTION currentlyScanning:boolean;
   end;
 
   F_notify_event=PROCEDURE (CONST messageText:string; CONST warn:boolean);
@@ -617,17 +619,19 @@ CONSTRUCTOR T_fileCache.create;
     setLength(roots,0);
     ensurePathInCache(cleanPath(configDir));
     ensurePathInCache(cleanPath(extractFilePath(paramStr(0))));
+    memoryCleaner.registerObjectForCleanup(5,@onMemoryPanic);
   end;
 
 DESTRUCTOR T_fileCache.destroy;
   VAR i:longint;
   begin
+    memoryCleaner.unregisterObjectForCleanup(@onMemoryPanic);
     enterCriticalSection(cacheCs);
-    if scan_task_state=running then begin
+    if scan_task_state<>stopped then begin
       scan_task_state:=running_stop_requested;
       repeat
         leaveCriticalSection(cacheCs);
-        sleep(100);
+        sleep(10);
         enterCriticalSection(cacheCs);
       until scan_task_state=stopped;
     end;
@@ -635,6 +639,33 @@ DESTRUCTOR T_fileCache.destroy;
     setLength(roots,0);
     leaveCriticalSection(cacheCs);
     doneCriticalSection(cacheCs);
+  end;
+
+PROCEDURE T_fileCache.onMemoryPanic;
+  PROCEDURE purgeRoot(CONST r:P_folderContents);
+    VAR i:longint;
+    begin
+      with r^ do begin
+        for i:=0 to length(subfolders)-1 do dispose(subfolders[i],destroy);
+        setLength(subfolders,0);
+        setLength(Files,0);
+        dontScanBefore:=now;
+      end;
+    end;
+
+  VAR root:P_folderContents;
+  begin
+    enterCriticalSection(cacheCs);
+    if scan_task_state<>stopped then begin
+      scan_task_state:=running_stop_requested;
+      repeat
+        leaveCriticalSection(cacheCs);
+        sleep(1);
+        enterCriticalSection(cacheCs);
+      until scan_task_state=stopped;
+    end;
+    for root in roots do purgeRoot(root);
+    leaveCriticalSection(cacheCs);
   end;
 
 FUNCTION T_fileCache.canLocateSource(CONST searchRoot, packageName: string; OUT foundFilePath: string): boolean;
@@ -785,15 +816,17 @@ FUNCTION T_fileCache.getAllFilesForBackgroundScan:T_arrayOfString;
     sortUnique(result);
   end;
 
-FUNCTION T_fileCache.allKnownFolders:T_arrayOfString;
+FUNCTION T_fileCache.allKnownFolders(CONST containingScriptFiles:boolean=true):T_arrayOfString;
   VAR count:longint=0;
       cache:T_arrayOfString;
   PROCEDURE recurse(CONST p:P_folderContents);
     VAR sub:P_folderContents;
     begin
-      if count>=length(cache) then setLength(cache,length(cache)*2+1);
-      cache[count]:=p^.folderName;
-      inc(count);
+      if (length(p^.Files)>0) or not(containingScriptFiles) then begin
+        if count>=length(cache) then setLength(cache,length(cache)*2+1);
+        cache[count]:=p^.folderName;
+        inc(count);
+      end;
       for sub in p^.subfolders do recurse(sub);
     end;
 
@@ -805,6 +838,11 @@ FUNCTION T_fileCache.allKnownFolders:T_arrayOfString;
     setLength(cache,count);
     result:=cache;
     leaveCriticalSection(cacheCs);
+  end;
+
+FUNCTION T_fileCache.currentlyScanning:boolean;
+  begin
+    result:=scan_task_state<>stopped;
   end;
 
 PROCEDURE T_fileCache.postFolderToScan(CONST folderName: string);

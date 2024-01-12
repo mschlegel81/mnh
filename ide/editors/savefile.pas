@@ -129,6 +129,7 @@ FUNCTION TSaveFileDialog.showForRoot(CONST rootPath, fname, ext: string): string
   VAR s:string;
       i:longint;
   begin
+    fileCache.scanInBackground;
     nameEdit.caption:=fname;
     //extension
     ensureExtensions;
