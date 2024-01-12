@@ -216,8 +216,11 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
 FUNCTION evaluteExpressionMap   (CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_literalRecycler; CONST arg0:P_literal):T_evaluationResult;
 FUNCTION evaluteExpressionFilter(CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_literalRecycler; CONST arg0:P_literal):boolean;
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
+    identifiedInternalFunctionTally:longint=0;
     BUILTIN_PMAP:P_intFuncCallback;
-VAR identifiedInternalFunctionTally:longint=0;
+    FORMAT_FUNCTION:P_intFuncCallback=nil;
+    PRINTF_FUNCTION:P_intFuncCallback=nil;
+
 IMPLEMENTATION
 USES sysutils,strutils,funcs_mnh,typinfo
      {$ifdef fullVersion},plotstyles{$endif}
@@ -1489,6 +1492,14 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
   VAR i:longint;
       inlineValue:P_literal;
       idsReady:boolean;
+
+  FUNCTION tokenRequiresBlockConstants(CONST token:T_token):boolean;
+    begin
+      result:=(token.tokType=tt_intrinsicRule) and
+              ((P_intFuncCallback(token.data)=FORMAT_FUNCTION) or
+               (P_intFuncCallback(token.data)=PRINTF_FUNCTION));
+    end;
+
   begin
     enterCriticalSection(subruleCallCs);
     try
@@ -1500,14 +1511,12 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
           case token.tokType of
             tt_identifier: if (parIdx=NO_PARAMETERS_IDX) then begin
               P_abstractPackage(token.location.package)^.resolveId(token,messages);
-              //TODO: If it is a format statement, block constants may be useful...
+              requiresBlockConstants:=requiresBlockConstants or tokenRequiresBlockConstants(token);
               idsReady:=idsReady and (token.tokType<>tt_identifier);
             end;
-            tt_userRule, tt_globalVariable: begin
-              if resolveIdContext=ON_DELEGATION then begin
-                token.tokType:=tt_identifier;
-                P_abstractPackage(token.location.package)^.resolveId(token,messages);
-              end;
+            tt_userRule, tt_globalVariable: if resolveIdContext=ON_DELEGATION then begin
+              token.tokType:=tt_identifier;
+              P_abstractPackage(token.location.package)^.resolveId(token,messages);
             end;
           end;
           case token.tokType of
