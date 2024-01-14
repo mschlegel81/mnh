@@ -25,11 +25,7 @@ TARGET_FLAVOUR :=['debug'  =>['flags'    =>['-B','--bm=Default'],
                               'outSuffix'=>'_debug'].toMap,
                   'normal' =>['flags'    =>['-B','--bm=deployment'],
                               'part'     =>'O',
-                              'doTest'   =>true].toMap,
-                  'profile'=>['flags'    =>['-B','--bm=profiling'],
-                               'doTest'   =>false,
-                               'part'     =>'P',
-                               'outSuffix'=>'_prof'].toMap].toMap;
+                              'doTest'   =>true].toMap].toMap;
 private
 buildConfig(platformKey in (TARGET_PLATFORM.getInner(0)),
             projectKey  in (TARGET_PROJECT.getInner(0)),
@@ -54,7 +50,6 @@ BUILDS:=cross(TARGET_PLATFORM.getInner(0),
               TARGET_PROJECT .getInner(0),
               TARGET_FLAVOUR .getInner(0))
         .filter({$x[0]!='Linux' OR $x[2]!='portable'})
-        .filter({$x[0]=='Linux' OR $x[2]!='profile' })
         .map({buildConfig@$x});
 
 //*Prints out code size (excluding 3rd party code)
