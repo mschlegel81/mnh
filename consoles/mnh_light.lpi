@@ -19,10 +19,10 @@
     </i18n>
     <VersionInfo>
       <UseVersionInfo Value="True"/>
-      <MajorVersionNr Value="2"/>
-      <MinorVersionNr Value="4"/>
-      <RevisionNr Value="1"/>
-      <BuildNr Value="454"/>
+      <MajorVersionNr Value="3"/>
+      <MinorVersionNr Value="0"/>
+      <RevisionNr Value="0"/>
+      <BuildNr Value="455"/>
       <CharSet Value="04B0"/>
       <StringTable CompanyName="Martin Schlegel" FileDescription="MNH5 light interpreter" InternalName="mnh5_light" LegalCopyright="LGPL" OriginalFilename="mnh_light" ProductName="MNH5"/>
     </VersionInfo>

@@ -63,6 +63,8 @@ hashFiles
 .agg(+)
 .get([0,2])/1024));
 
+packSets(builtNoAndVersion:List(2))->
+        .each(B,[B[0].expandedFileName,builtNoAndVersion[1].join("."),B[1]]);
 memoized sevenZipExe->
   ["c:/Program Files/7-Zip/7z.exe",
    "c:/Program Files (x86)/7-Zip/7z.exe"]
