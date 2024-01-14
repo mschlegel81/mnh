@@ -71,14 +71,14 @@ hashFiles
 .get([0,2])/1024));
 
 @SuppressUnusedWarning
-packSets(builtNo:Int)->
+packSets(builtNoAndVersion:List(2))->
   BUILDS.filter({$B['distro']})
         .map({[$B['targetDest'].extractFileDirectory.extractFileNameOnly,$B['platform']!='Linux',$B['targetDest']]})
         .group(0).getInner(1)
         .map({[$x[0,0],$x[0,1],$x.getInner(2)]})
         .each(B,B[1] ? [B[2] | SSL(B[0]),B[0]&'_ssl'] : void ,
                        [B[2]            ,B[0]       ])
-        .each(B,[B[0].expandedFileName,builtNo,B[1]]);
+        .each(B,[B[0].expandedFileName,builtNoAndVersion[1].join("."),B[1]]);
 
 memoized sevenZipExe->
   ["c:/Program Files/7-Zip/7z.exe",

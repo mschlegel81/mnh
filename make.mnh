@@ -220,7 +220,7 @@ main('distro')->isLinux ? fail('Must be executed in windows environment') : begi
   linuxBuiltReady
   ? void
   : return print('Linux builts are not ready; cannot create distro');
-  packSets(getBuildNumberAndVersion(ensureCodeHash).head).pEach(zipTask,call7z@zipTask);
+  packSets(getBuildNumberAndVersion(ensureCodeHash)).pEach(zipTask,call7z@zipTask);
   writeAllDataStores;
   {fileExists($0)
    ? runScript(['name'=>$0,"side effects"=>listSideEffects,"connection level"=>3].toMap)
