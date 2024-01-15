@@ -56,6 +56,7 @@ CONST
   CONST
   {$endif}
   LITERAL_TEXT_VOID    = 'void';
+  LITERAL_TEXT_END_OF_GENERATOR = 'generatorClosed';
   LITERAL_NAN_TEXT     = 'Nan';
   LITERAL_INF_TEXT     = 'Inf';
   LITERAL_BOOL_TEXT: array[boolean] of string = ('false', 'true');
@@ -522,7 +523,7 @@ TYPE
     lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList, lt_emptyList,
     lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet,  lt_emptySet,
     lt_map,                                                                      lt_emptyMap,
-    lt_void);
+    lt_void, lt_generatorClosed);
   T_literalTypeSet=set of T_literalType;
 
 CONST
@@ -555,7 +556,8 @@ CONST
   {lt_emptySet   }(name:'EmptySet'       ; containedIn:[lt_list,lt_set]                                            ;comparableTo:[lt_expression,lt_boolean,lt_smallint,lt_bigint,lt_real,lt_string,lt_set ,lt_booleanSet ,lt_intSet ,lt_realSet ,lt_numSet ,lt_stringSet ,lt_emptySet]),
   {lt_map        }(name:'Map'            ; containedIn:[lt_list,lt_set]                                            ;comparableTo:[]),
   {lt_emptyMap   }(name:'EmptyMap'       ; containedIn:[lt_list,lt_set]                                            ;comparableTo:[]),
-  {lt_void       }(name:LITERAL_TEXT_VOID; containedIn:[]                                                          ;comparableTo:[]));
+  {lt_void       }(name:LITERAL_TEXT_VOID; containedIn:[]                                                          ;comparableTo:[]),
+  {lt_generato...}(name:LITERAL_TEXT_END_OF_GENERATOR; containedIn:[]                                              ;comparableTo:[]));
 
   C_compoundTypes     : T_literalTypeSet=[lt_list..lt_emptyMap];
   C_collectionTypes   : T_literalTypeSet=[lt_list..lt_emptySet];
@@ -680,11 +682,12 @@ CONST
        (name:'curry';         helpText:'Used to enable currying/uncurrying'                                             ; isRuleModifier:true ));
 
   {$ifdef fullVersion}
-  C_specialWordInfo:array[0..5] of record
+  C_specialWordInfo:array[0..6] of record
     txt:string;
     reservedWordClass:T_reservedWordClass;
     helpText:string;
   end=((txt:LITERAL_TEXT_VOID; reservedWordClass:rwc_specialLiteral; helpText:'void literal#Denotes a literal "which is not there"#Intended use: list construction and blank branches of inline if clauses'),
+       (txt:LITERAL_TEXT_END_OF_GENERATOR; reservedWordClass:rwc_specialLiteral; helpText:'special modification of a void literal to indicate that no more values will be returned from a generator'),
        (txt:LITERAL_NAN_TEXT;  reservedWordClass:rwc_specialLiteral; helpText:'not-a-number real literal'),
        (txt:LITERAL_INF_TEXT;  reservedWordClass:rwc_specialLiteral; helpText:'infinity real literal'),
        (txt:'false';           reservedWordClass:rwc_specialLiteral; helpText:'false literal'),
