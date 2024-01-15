@@ -62,6 +62,7 @@
 
 FUNCTION newBoolLiteral  (CONST value: boolean       ): P_boolLiteral;
 FUNCTION newVoidLiteral                               : P_voidLiteral;
+FUNCTION newGeneratorClosedLiteral                    : P_generatorClosedLiteral;
 FUNCTION newMapLiteral(CONST expectedSize:longint)    : P_mapLiteral;
 VAR emptyStringSingleton: T_stringLiteral;
 CONST maxSingletonInt=1000;
@@ -72,13 +73,15 @@ VAR boolLit       : array[false..true] of T_boolLiteral;
     negInfLit     : T_realLiteral;
     intLit : array[-100..maxSingletonInt] of T_smallIntLiteral;
     voidLit: T_voidLiteral;
+    generatorClosedLit: T_generatorClosedLiteral;
 
     globalLiteralRecycler:T_globalLiteralRecycler;
 {$endif}
 {$ifdef include_implementation}
-FUNCTION newBoolLiteral(CONST value: boolean)      : P_boolLiteral; begin result:=P_boolLiteral(boolLit[value].rereferenced); end;
-FUNCTION newVoidLiteral                            : P_voidLiteral; begin result:=P_voidLiteral(voidLit       .rereferenced); end;
-FUNCTION newMapLiteral (CONST expectedSize: longint): P_mapLiteral; begin new(result,create(expectedSize)); end;
+FUNCTION newBoolLiteral(CONST value: boolean)      : P_boolLiteral;            begin result:=P_boolLiteral(boolLit[value].rereferenced); end;
+FUNCTION newVoidLiteral                            : P_voidLiteral;            begin result:=P_voidLiteral(voidLit       .rereferenced); end;
+FUNCTION newGeneratorClosedLiteral                 : P_generatorClosedLiteral; begin result:=P_generatorClosedLiteral(generatorClosedLit.rereferenced); end;
+FUNCTION newMapLiteral (CONST expectedSize: longint): P_mapLiteral;            begin new(result,create(expectedSize)); end;
 
 PROCEDURE T_globalLiteralRecycler.freeMemory(CONST hard:boolean);
   VAR threshold:longint;
@@ -724,6 +727,7 @@ initialize(boolLit);
 boolLit[false].create(false);
 boolLit[true ].create(true);
 voidLit.create();
+generatorClosedLit.create();
 emptyStringSingleton.create('');
 for i:=low(intLit) to high(intLit) do intLit[i].create(i);
 for i:=0 to 255 do charLit[chr(i)].create(chr(i));
@@ -738,6 +742,7 @@ globalLiteralRecycler.destroy;
 boolLit[false].destroy;
 boolLit[true ].destroy;
 voidLit.destroy;
+generatorClosedLit.destroy;
 emptyStringSingleton.destroy;
 for i:=low(intLit) to high(intLit) do intLit[i].destroy;
 for i:=0 to 255 do charLit[chr(i)].destroy;

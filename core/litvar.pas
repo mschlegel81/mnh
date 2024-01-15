@@ -133,6 +133,13 @@ TYPE
     FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
   end;
 
+  P_generatorClosedLiteral = ^T_generatorClosedLiteral;
+  T_generatorClosedLiteral = object(T_voidLiteral)
+    private
+      CONSTRUCTOR create();
+  end;
+
+
   P_boolLiteral = ^T_boolLiteral;
   T_boolLiteral = object(T_literal)
   private
@@ -1193,6 +1200,7 @@ FUNCTION T_expressionLiteral.getLocation:T_tokenLocation; begin result:=declared
 {$define inline_init:=numberOfReferences:=1; literalType:=}
 CONSTRUCTOR T_literal.init(CONST lt: T_literalType); begin literalType:=lt; numberOfReferences:=1; end;
 CONSTRUCTOR T_voidLiteral.create();                              begin {inherited init}inline_init(lt_void);                end;
+CONSTRUCTOR T_generatorClosedLiteral.create();                   begin {inherited init}inline_init(lt_generatorClosed);     end;
 CONSTRUCTOR T_boolLiteral      .create(CONST value: boolean);    begin {inherited init}inline_init(lt_boolean); val:=value; end;
 CONSTRUCTOR T_bigIntLiteral    .create(CONST value: int64);      begin {inherited init}inline_init(lt_bigint);  val.fromInt(value); end;
 CONSTRUCTOR T_smallIntLiteral  .create(CONST value: longint);    begin {inherited init}inline_init(lt_smallint);val:=value; end;
