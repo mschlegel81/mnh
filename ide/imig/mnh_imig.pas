@@ -68,7 +68,7 @@ TYPE
 FUNCTION newImigSystemWithoutDisplay:P_imageSystem;
 {$i func_defines.inc}
 IMPLEMENTATION
-USES myParams,generationBasics,imageContexts;
+USES myParams,generationBasics,imageContexts,myColors;
 FUNCTION T_queryImigClosedMessage.internalType: shortstring;
 begin
   result:='T_queryImigClosedMessage';
@@ -501,6 +501,36 @@ FUNCTION imageJpgRawData_imp intFuncSignature;
     end;
   end;
 
+FUNCTION imageRawData_imp intFuncSignature;
+  VAR obtainedImage:P_rawImage;
+      dimensions: T_imageDimensions;
+      x,y:longint;
+      colorData:P_listLiteral;
+      ScanLine: P_floatColor;
+  begin
+    result:=nil;
+    if (params=nil) or (params^.size=0) then begin
+      obtainedImage:=obtainCurrentImageViaAdapters(context^.messages);
+      if obtainedImage=nil then context^.raiseError('Cannot display image because no image is loaded',tokenLocation)
+      else begin
+        dimensions:=obtainedImage^.dimensions;
+        colorData:=recycler^.newListLiteral(dimensions.width*dimensions.height);
+        for y:=0 to dimensions.height-1 do begin
+          ScanLine:=obtainedImage^.linePtr(y);
+          for x:=0 to dimensions.width-1 do begin
+            colorData^.append(recycler,
+                              recycler^.newListLiteral(3)^.appendReal(recycler,ScanLine^[cc_red])
+                                                         ^.appendReal(recycler,ScanLine^[cc_green])
+                                                         ^.appendReal(recycler,ScanLine^[cc_blue]),
+                              false);
+            inc(ScanLine);
+          end;
+        end;
+        result:=recycler^.newListLiteral(3)^.append(recycler,colorData,false)^.appendInt(recycler,dimensions.width)^.appendInt(recycler,dimensions.height);
+      end;
+    end;
+  end;
+
 FUNCTION listManipulations_imp intFuncSignature;
   VAR op:P_imageOperationMeta;
   begin
@@ -732,6 +762,7 @@ INITIALIZATION
   builtinFunctionMap.registerRule(IMIG_NAMESPACE,'resizeImage'    ,@resizeImage_imp    ,ak_variadic_2);
   builtinFunctionMap.registerRule(IMIG_NAMESPACE,'displayImage'   ,@displayImage_imp   ,ak_nullary);
   builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageJpgRawData',@imageJpgRawData_imp,ak_nullary);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageRawData'   ,@imageRawData_imp   ,ak_nullary);
   builtinFunctionMap.registerRule(IMIG_NAMESPACE,'listManipulations',@listManipulations_imp,ak_nullary);
   builtinFunctionMap.registerRule(IMIG_NAMESPACE,'calculateThumbnail',@getThumbnail_imp,ak_ternary,[se_readFile]);
   builtinFunctionMap.registerRule(IMIG_NAMESPACE,'renderPlotToCurrentImage',@renderPlotToCurrentImage,ak_binary);
