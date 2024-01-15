@@ -56,4 +56,5 @@ INITIALIZATION
   builtinFunctionMap.registerRule(IMIG_NAMESPACE,'validateWorkflow'        ,@requireGui,ak_variadic);
   builtinFunctionMap.registerRule(IMIG_NAMESPACE,'expandImageGeneration'   ,@requireGui,ak_variadic);
   builtinFunctionMap.registerRule(IMIG_NAMESPACE,'executeTodo'             ,@requireGui,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageRawData'            ,@requireGui,ak_variadic);
 end.
