@@ -343,7 +343,7 @@ FUNCTION executeTodo_imp intFuncSignature;
       if params^.size>1 then outputMethod:=P_expressionLiteral(arg1);
       thisWorkflow.create;
       thisWorkflow.messageQueue^.messageStringLengthLimit:=maxLongint;
-      if thisWorkflow.readFromFile(str0^.value,false) then begin
+      if thisWorkflow.readWorkflowOnlyFromFile(str0^.value,false) then begin
         enterCriticalSection(workflowCs);
         inc(workflowsActive);
         maxImageManipulationThreads:=settings.cpuCount;

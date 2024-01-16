@@ -1176,7 +1176,7 @@ FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST cont
     if matchesPatternAndReplaces(parameters,location,toReduce,P_context(context),P_recycler(recycler))
     then begin
       result:=P_context(context)^.reduceToLiteral(toReduce.first,P_recycler(recycler));
-      if (typ in C_statefulExpressionTypes) and (result.literal<>nil) and (Result.literal^.literalType=lt_generatorClosed) then begin
+      if (typ in C_statefulExpressionTypes) and (result.literal<>nil) and (result.literal^.literalType=lt_generatorClosed) then begin
         result.literal^.unreference;
         result:=GENERATOR_END_EVAL_RESULT;
       end;
