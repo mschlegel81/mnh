@@ -7,7 +7,7 @@ timingOutGenerator(sourceGenerator:IteratableExpression,runForSeconds:Numeric)->
  save;
    scriptTime<timeout
    ? gen()
-   : void;
+   : generatorClosed;
  end}.toIteratableExpression;
 
 //*Returns a list of all integer pairs [a,b] with initialSum<=(a+b)<=finalSum and a,b>=minElementValue, ordered by (a+b)
@@ -16,7 +16,7 @@ pairGenerator(initialSum,finalSum,minElementValue<=initialSum)->{begin
   local i:=minElementValue-1;
 save;
   (k-i<=minElementValue) ? begin k+=1; i:=minElementValue-1; end : void;
-  k<=finalSum ? [i+=1,k-i] : void;
+  k<=finalSum ? [i+=1,k-i] : generatorClosed;
 end}.toIteratableExpression;
 
 //*Returns a list of all integer pairs [a,b] with initialSum<=(a+b) and a,b>=1, ordered by (a+b)
@@ -57,7 +57,7 @@ outOfOrderMap(parameters:Collection,f:Expression(1))->{begin
   local pending:=map(parameters,(parameter)->future(f,[parameter]));
 save;
   pending.size=0
-  ? return void
+  ? return generatorClosed
   : void;
   local firstDone:=void;
   local sleepTime:=1E-4;
@@ -91,7 +91,7 @@ save;
   while(!next.isVoid AND next in seen AND (duplicatesCounted+=1)<=maxDuplicates,next:=iterator());
   seen||=next;
   duplicatesCounted>maxDuplicates
-  ? void
+  ? generatorClosed
   : next;
 end}.toIteratableExpression;
 
@@ -112,7 +112,7 @@ save;
         l1||=g1();
         l2||=g2();
         k>l1.size+l2.size-2
-        ? return void
+        ? return generatorClosed
         : i:=-1;
       end
     : void;
@@ -135,17 +135,5 @@ save;
   local out:=window;
   window:=window.tail;
   window||=gen();
-  out.size=width ? out : void;
+  out.size=width ? out : generatorClosed;
 end}.toIteratableExpression;
-
-//*Returns a dynamic concatenation of all given iteratables
-concat(A:Iteratable,...)->toIteratableExpression(()->begin
-  local remainingGenerators:=map($params,::toIteratableExpression);
-save;
-  local nextOutput:=(remainingGenerators[0] orElse {void})();
-  while(remainingGenerators.size>0 AND nextOutput.isVoid,begin
-    remainingGenerators:=remainingGenerators.tail;
-    nextOutput:=(remainingGenerators[0] orElse {void})();
-  end);
-  nextOutput;
-end);
