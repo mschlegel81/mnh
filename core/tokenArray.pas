@@ -1486,7 +1486,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
   //TODO: Move this functionality elswhere...
   PROCEDURE handleComment(CONST commentText:ansistring; CONST commentOpener:string);
     begin
-      result^.tokType:=tt_EOL;
+      result^.tokType:=tt_blank;
       if commentOpener=ATTRIBUTE_PREFIX then begin
         result^.txt:=trimRight(copy(commentText,length(ATTRIBUTE_PREFIX)+1,length(commentText)));
         result^.tokType:=tt_attributeComment;
@@ -1536,17 +1536,13 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
         parsedLength:=pos(closer,id)+length(closer)-1;
         inc(inputLocation.column,parsedLength);
         append(lines,copy(id,1,pos(closer,id)-1));
-        result^.txt:=closer;
+        result^.location:=start;
+        result^.tokType:=tt_literal;
+        result^.data:=recycler^.newStringLiteral(join(lines,C_lineBreakChar));
+        setLength(lines,0);
         closer:=#0;
         exit(result);
       end;
-    end else if length(lines)>0 then begin
-      result^.location:=start;
-      result^.tokType:=tt_literal;
-      result^.data:=recycler^.newStringLiteral(join(lines,C_lineBreakChar));
-      setLength(lines,0);
-      exit(result);
-    end;
     while (inputLocation.column<=length(line)) and
           (line[inputLocation.column] in [' ',C_lineBreakChar,C_tabChar,C_carriageReturnChar]) do inc(inputLocation.column);
     result^.location:=inputLocation;
