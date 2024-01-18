@@ -139,7 +139,6 @@ TYPE
       CONSTRUCTOR create();
   end;
 
-
   P_boolLiteral = ^T_boolLiteral;
   T_boolLiteral = object(T_literal)
   private
