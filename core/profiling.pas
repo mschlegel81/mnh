@@ -26,6 +26,17 @@ TYPE
   end;
 
   {$ifdef fullVersion}
+  P_callStackEntryProfilingPayload=^T_callStackEntryProfilingPayload;
+  T_callStackEntryProfilingPayload=record
+    callerLocation:T_tokenLocation;
+    calleeId:T_idString;
+    calleeLocation:T_tokenLocation;
+    callerFuncLocation:T_tokenLocation;
+    timeForProfiling_inclusive,
+    timeForProfiling_exclusive:double;
+    next:P_callStackEntryProfilingPayload;
+  end;
+
   T_callerMap=specialize G_stringKeyMap<T_profilingInfo>;
   T_stringMap=specialize G_stringKeyMap<string>;
 
@@ -47,15 +58,20 @@ TYPE
   P_profiler=^T_profiler;
   T_profiler=object
     private
-      cs:TRTLCriticalSection;
+      cs,pendingCs:TRTLCriticalSection;
       callee2callers:T_profilingMap;
       caller2callees:T_profilingMap;
       line2funcLoc  :T_stringMap;
+
+      pending:P_callStackEntryProfilingPayload;
+      pendingCount:longint;
+      PROCEDURE addInternal(CONST id: T_idString; CONST callerFuncLocation,callerLocation,calleeLocation: T_tokenLocation; CONST dt_inclusive,dt_exclusive:double);
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       PROCEDURE clear;
       PROCEDURE add(CONST id: T_idString; CONST callerFuncLocation,callerLocation,calleeLocation: T_tokenLocation; CONST dt_inclusive,dt_exclusive:double);
+      PROCEDURE flushPending;
       PROCEDURE logInfo(CONST adapters:P_messages);
   end;
   {$endif}
@@ -164,53 +180,110 @@ CONSTRUCTOR T_profiler.create;
     caller2callees.create(@disposeEntry);
     line2funcLoc.create();
     initCriticalSection(cs);
+    initCriticalSection(pendingCs);
+    pending:=nil;
+    pendingCount:=0;
   end;
 
 DESTRUCTOR T_profiler.destroy;
   begin
     enterCriticalSection(cs);
+    enterCriticalSection(pendingCs);
+    clear;
     try
       callee2callers.destroy;
       caller2callees.destroy;
       line2funcLoc.destroy;
     finally
       leaveCriticalSection(cs);
+      leaveCriticalSection(pendingCs);
     end;
     doneCriticalSection(cs);
+    doneCriticalSection(pendingCs);
   end;
 
 PROCEDURE T_profiler.clear;
+  VAR p:P_callStackEntryProfilingPayload;
   begin
     enterCriticalSection(cs);
+    enterCriticalSection(pendingCs);
     try
       callee2callers.clear;
       caller2callees.clear;
       line2funcLoc.clear;
+      while pending<>nil do begin
+        p:=pending; pending:=pending^.next;
+        freeMem(p,sizeOf(T_callStackEntryProfilingPayload));
+      end;
+      pendingCount:=0;
     finally
       leaveCriticalSection(cs);
+      leaveCriticalSection(pendingCs);
     end;
   end;
 
-PROCEDURE T_profiler.add(CONST id: T_idString; CONST callerFuncLocation,callerLocation,calleeLocation: T_tokenLocation; CONST dt_inclusive, dt_exclusive: double);
+PROCEDURE T_profiler.addInternal(CONST id: T_idString; CONST callerFuncLocation,callerLocation,calleeLocation: T_tokenLocation; CONST dt_inclusive,dt_exclusive:double);
   VAR profilingEntry:P_calleeEntry;
   begin
+    if not callee2callers.containsKey(calleeLocation,profilingEntry) then begin
+      new(profilingEntry,create(id,calleeLocation));
+      callee2callers.put(calleeLocation,profilingEntry);
+    end;
+    profilingEntry^.add(callerLocation,dt_inclusive,dt_exclusive);
+
+    if not caller2callees.containsKey(callerFuncLocation,profilingEntry) then begin
+      new(profilingEntry,create('?',callerFuncLocation));
+      caller2callees.put(callerFuncLocation,profilingEntry);
+    end;
+    profilingEntry^.add(calleeLocation,dt_inclusive,dt_exclusive);
+
+    line2funcLoc.put(callerLocation,callerFuncLocation);
+  end;
+
+PROCEDURE T_profiler.add(CONST id: T_idString; CONST callerFuncLocation,callerLocation,calleeLocation: T_tokenLocation; CONST dt_inclusive, dt_exclusive: double);
+  VAR newPending:P_callStackEntryProfilingPayload;
+  begin
+    if (pendingCount>1024) and (tryEnterCriticalsection(cs)<>0) then begin
+      try
+        addInternal(id,callerFuncLocation,callerLocation,calleeLocation,dt_inclusive,dt_exclusive);
+      finally
+        system.leaveCriticalSection(cs);
+      end;
+    end else begin
+      getMem(newPending,sizeOf(T_callStackEntryProfilingPayload));
+      initialize(newPending^);
+      newPending^.callerLocation            :=callerLocation;
+      newPending^.calleeId                  :=id;
+      newPending^.calleeLocation            :=calleeLocation;
+      newPending^.callerFuncLocation        :=callerFuncLocation;
+      newPending^.timeForProfiling_inclusive:=dt_inclusive;
+      newPending^.timeForProfiling_exclusive:=dt_exclusive;
+      enterCriticalSection(pendingCs);
+      try
+        newPending^.next:=pending;
+        pending:=newPending;
+        inc(pendingCount);
+      finally
+        leaveCriticalSection(pendingCs);
+      end;
+    end;
+  end;
+
+PROCEDURE T_profiler.flushPending;
+  VAR p:P_callStackEntryProfilingPayload;
+  begin
     enterCriticalSection(cs);
+    enterCriticalSection(pendingCs);
     try
-      if not callee2callers.containsKey(calleeLocation,profilingEntry) then begin
-        new(profilingEntry,create(id,calleeLocation));
-        callee2callers.put(calleeLocation,profilingEntry);
+      while pending<>nil do begin
+        p:=pending; pending:=pending^.next;
+        with p^ do addInternal(calleeId,callerFuncLocation,callerLocation,calleeLocation,timeForProfiling_inclusive,timeForProfiling_exclusive);
+        freeMem(p,sizeOf(T_callStackEntryProfilingPayload));
       end;
-      profilingEntry^.add(callerLocation,dt_inclusive,dt_exclusive);
-
-      if not caller2callees.containsKey(callerFuncLocation,profilingEntry) then begin
-        new(profilingEntry,create('?',callerFuncLocation));
-        caller2callees.put(callerFuncLocation,profilingEntry);
-      end;
-      profilingEntry^.add(calleeLocation,dt_inclusive,dt_exclusive);
-
-      line2funcLoc.put(callerLocation,callerFuncLocation);
+      pendingCount:=0;
     finally
-      system.leaveCriticalSection(cs);
+      leaveCriticalSection(cs);
+      leaveCriticalSection(pendingCs);
     end;
   end;
 
@@ -225,6 +298,7 @@ PROCEDURE T_profiler.logInfo(CONST adapters:P_messages);
       k:longint;
   begin
     enterCriticalSection(cs);
+    flushPending;
     try
       callee2callersList:=callee2callers.valueSet;
       locationToIdMap.create();
