@@ -72,7 +72,7 @@ cramerInvert(M:SquareMatrix)->begin
    : [[Nan,Nan],[Nan,Nan]]).toSquareMatrix;
 end;
 
-invert(M:SquareMatrix)->#M.size=2 ? M.cramerInvert :# begin
+invert(M:SquareMatrix)->begin
   //Gauss-Jordan Algorithm
   local aid:=M.each(row,begin local i:=index; row|(row.each(r,index=i ? 1 : 0)); end);
   [0..M.size-1].each(rowIndex,

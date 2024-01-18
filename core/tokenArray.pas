@@ -1500,7 +1500,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
         then begin
           blob.closer:=commentText[1+length(SPECIAL_COMMENT_BLOB_BEGIN_INFIX)];
           parsedLength:=length(commentOpener+SPECIAL_COMMENT_BLOB_BEGIN_INFIX)+1;
-        end else if commentOpener='#' then blob.closer:='#' else blob.closer:='''';
+        end else {if commentOpener='#' then blob.closer:='#' else} blob.closer:='''';
       end else if pos('TODO',commentText)>0 then messages^.postTextMessage(mt_el1_note,inputLocation,commentText);
     end;
 
@@ -1543,6 +1543,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
         closer:=#0;
         exit(result);
       end;
+    end;
     while (inputLocation.column<=length(line)) and
           (line[inputLocation.column] in [' ',C_lineBreakChar,C_tabChar,C_carriageReturnChar]) do inc(inputLocation.column);
     result^.location:=inputLocation;
