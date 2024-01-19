@@ -33,7 +33,6 @@ processSingleOutput(messageType:String,location:String,output:String)->format("%
 
 processSandboxOutput(L:List,excludes:List)->
   L.filter((l)->l[0] not in excludes)
-   .map((output)->output.size=2 ? warn(output) orElse output : output)
   .map((output)->processSingleOutput@output).split("\n").flatten;
 
 testFile(scriptFileName:String,doLog:Boolean)->

@@ -9,13 +9,20 @@ month(time:NumericOrList)->formatTime('mm',time).softCast;
 dayOfMonth(time:NumericOrList)->formatTime('dd',time).softCast;
 //*Returns the day of week of the given time
 dayOfWeek(time:NumericOrList)->(time.floor+5) mod 7;
-#*Constant to be used in conjunction with dayOfWeek# SATURDAY :=5;
-#*Constant to be used in conjunction with dayOfWeek# SUNDAY   :=6;
-#*Constant to be used in conjunction with dayOfWeek# MONDAY   :=0;
-#*Constant to be used in conjunction with dayOfWeek# TUESDAY  :=1;
-#*Constant to be used in conjunction with dayOfWeek# WEDNESDAY:=2;
-#*Constant to be used in conjunction with dayOfWeek# THURSDAY :=3;
-#*Constant to be used in conjunction with dayOfWeek# FRIDAY   :=4;
+//*Constant to be used in conjunction with dayOfWeek
+SATURDAY :=5;
+//*Constant to be used in conjunction with dayOfWeek
+SUNDAY   :=6;
+//*Constant to be used in conjunction with dayOfWeek
+MONDAY   :=0;
+//*Constant to be used in conjunction with dayOfWeek
+TUESDAY  :=1;
+//*Constant to be used in conjunction with dayOfWeek
+WEDNESDAY:=2;
+//*Constant to be used in conjunction with dayOfWeek
+THURSDAY :=3;
+//*Constant to be used in conjunction with dayOfWeek
+FRIDAY   :=4;
 
 //*Constructs a date from year, month and day of month
 dateOf(year>0,month in [1..12],dayOfMonth in [1..31])->parseTime('yyyymmdd',format('%4.4d%2.2d%2.2d',year,month,dayOfMonth)).round;

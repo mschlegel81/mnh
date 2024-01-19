@@ -45,6 +45,7 @@ TYPE
     fTokenId: T_tokenKind;
     fTokenSubId: T_tokenSubKind;
     fLineNumber: integer;
+    firstInLine: boolean;
 
   protected
     FUNCTION GetIdentChars: TSynIdentChars; override;
@@ -334,6 +335,7 @@ PROCEDURE TAbstractSynMnhSyn.next;
       while (fLine [run]<>#0) and ((fLine [run]<>'"') or (fLine [run-1] = '\') and (fLine [run-2]<>'\')) do inc(run);
       if (fLine [run] = '"') then inc(run);
       fTokenId := tkString;
+      firstInLine:=false;
     end;
 
   PROCEDURE handleSingleQuoteString;
@@ -342,6 +344,7 @@ PROCEDURE TAbstractSynMnhSyn.next;
       while (fLine [run]<>#0) and (fLine [run]<>'''') do inc(run);
       if (fLine [run] = '''') then inc(run);
       fTokenId := tkString;
+      firstInLine:=false;
     end;
 
   begin
@@ -350,10 +353,12 @@ PROCEDURE TAbstractSynMnhSyn.next;
       '{': begin
              inc(run);
              fTokenId := tkDefault;
+             firstInLine:=false;
            end;
       '}': begin
              inc(run);
              fTokenId := tkDefault;
+             firstInLine:=false;
            end;
       '0'..'9': begin
         while fLine [run] in ['0'..'9', '.'] do inc(run);
@@ -363,12 +368,14 @@ PROCEDURE TAbstractSynMnhSyn.next;
           while fLine[run] in ['0'..'9'] do inc(run);
         end;
         fTokenId := tkNonStringLiteral;
+        firstInLine:=false;
       end;
       #194: handle194;
       '$': begin
         inc(run);
         while fLine [run] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do inc(run);
         fTokenId := tkDollarIdentifier;
+        firstInLine:=false;
       end;
       'a'..'e','g'..'z', 'A'..'Z': begin
         localId := fLine [run];
@@ -378,6 +385,7 @@ PROCEDURE TAbstractSynMnhSyn.next;
           inc(run);
         end;
         handleId(localId,lineIndex+1,run);
+        firstInLine:=false;
       end;
       'f': begin
         localId := fLine [run];
@@ -393,8 +401,9 @@ PROCEDURE TAbstractSynMnhSyn.next;
             handleId(localId,lineIndex+1,run);
           end;
         end;
+        firstInLine:=false;
       end;
-      '@': if (fTokenPos=0) or ((fTokenPos=3) and (blobEnder=chr(1))) then begin
+      '@': if firstInLine then begin
              fTokenId:=tkSpecialComment;
              while fLine[run]<>#0 do inc(run);
            end else begin
@@ -405,6 +414,7 @@ PROCEDURE TAbstractSynMnhSyn.next;
         inc(run);
         while fLine [run] in ['=', '<', '>' ,'-','|', '^', '?', '+', '&', '*', '.',':'] do inc(run);
         fTokenId := tkOperator;
+        firstInLine:=false;
       end;
       '/': begin
         inc(run);
@@ -413,6 +423,7 @@ PROCEDURE TAbstractSynMnhSyn.next;
           handleComment([#0],false);
         end
         else fTokenId := tkOperator;
+        firstInLine:=false;
       end;
       '"': handleDoubleQuoteString;
       '''': handleSingleQuoteString;
@@ -421,7 +432,8 @@ PROCEDURE TAbstractSynMnhSyn.next;
         if fLine[run] in ['0'..'9'] then begin
           while (fLine[run] in ['0'..'9']) do inc(run);
           fTokenId:=tkString;
-        end else handleComment(['#',#0],true);
+        end else handleComment([#0],true);
+        firstInLine:=false;
       end
       else begin
         fTokenId := tkDefault;
@@ -567,6 +579,7 @@ FUNCTION TAbstractSynMnhSyn.GetTokenPos: integer;
 PROCEDURE TAbstractSynMnhSyn.ResetRange;
   begin
     if lineIndex=0 then blobEnder:=#0;
+    firstInLine:=true;
   end;
 
 PROCEDURE TAbstractSynMnhSyn.setRange(value: pointer);
