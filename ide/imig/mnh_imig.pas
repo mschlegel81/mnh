@@ -527,6 +527,7 @@ FUNCTION imageRawData_imp intFuncSignature;
           end;
         end;
         result:=recycler^.newListLiteral(3)^.append(recycler,colorData,false)^.appendInt(recycler,dimensions.width)^.appendInt(recycler,dimensions.height);
+        dispose(obtainedImage,destroy);
       end;
     end;
   end;
