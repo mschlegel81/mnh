@@ -3564,7 +3564,7 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLo
           appendPart('].toMap');
           if (L^.literalType in C_typables) and (P_typableLiteral(L)^.customType<>nil) then appendPart('.to'+P_typableLiteral(L)^.customType^.name);
         end;
-
+        lt_expression: appendPart(L^.toString());
         else if adapters<>nil then adapters^.raiseSimpleError('Literal of type '+L^.typeString+' ('+L^.toString+') cannot be serialized',location);
       end;
     end;
