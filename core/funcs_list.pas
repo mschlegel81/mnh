@@ -288,7 +288,7 @@ FUNCTION size_imp intFuncSignature;
       if arg0^.literalType in C_compoundTypes
       then result:=recycler^.newIntLiteral(compound0^.size)
       else if (arg0^.literalType=lt_expression)  and (P_expressionLiteral(arg0)^.typ=et_builtinIteratable) and (P_builtinGeneratorExpression(arg0)^.getBultinGeneratorType=bgt_queue)
-      then recycler^.newIntLiteral(P_queue(arg0)^.getQueuedCount)
+      then result:=recycler^.newIntLiteral(P_queue(arg0)^.getQueuedCount)
       else result:=recycler^.newIntLiteral(1);
     end;
   end;

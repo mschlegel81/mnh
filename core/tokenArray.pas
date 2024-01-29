@@ -1483,7 +1483,6 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
       parsedLength:=len;
     end;
 
-  //TODO: Move this functionality elswhere...
   PROCEDURE handleComment(CONST commentText:ansistring; CONST commentOpener:string);
     begin
       result^.tokType:=tt_blank;
