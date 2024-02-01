@@ -112,6 +112,7 @@ TYPE
                FILES_BUILTIN_NAMESPACE  ,
                TYPECAST_NAMESPACE       ,
                HTTP_NAMESPACE           ,
+               FTP_NAMESPACE            ,
                IPC_NAMESPACE            ,
                PLOT_NAMESPACE           ,
                GUI_NAMESPACE);
@@ -126,6 +127,7 @@ CONST
     'files',
     'typecast',
     'http',
+    'ftp',
     'ipc',
     'plot',
     'gui');

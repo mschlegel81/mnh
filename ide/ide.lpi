@@ -672,6 +672,10 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="funcs_fileStreams"/>
       </Unit106>
+      <Unit107>
+        <Filename Value="../core/funcs_ftp.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit107>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
