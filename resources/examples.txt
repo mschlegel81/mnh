@@ -2535,3 +2535,36 @@ bitXor(5,213,10);
 #C Parameter append can be omitted. It defaults to false.
 #C Parameter separator can be omitted. It defaults to an empty string.
 
+#I ftpConnect
+#S ftpConnect(host:String);
+#C Connect to FTP server with default port 21 and default credentials
+#C The result of the function is required for all further FTP operations.
+#C The result of the function is a function that returns true if the connection was successful.
+#S ftpConnect(host:String, port:Int);
+#C Connect to FTP server with default credentials
+#S ftpConnect(host:String, port:Int, user:String, pass:String);
+#C Connect to FTP server with default credentials
+
+#I getListing
+#S getListing(FTP_connection, path:String);
+#C Returns an FTP directory listing as a list of maps [filename=>String, directory=>Boolean, size=>Int, time=>Real];
+
+#I ftpDownload
+#S ftpDownload(FTP_connection, remoteSource:String, localTarget:String);
+#C Executes an FTP download and returns true on success.
+
+#I ftpUpload
+#S ftpUpload(FTP_connection, localSource:String, remoteTarget:String);
+#C Executes an FTP upload and returns true on success.
+
+#I ftpMakeDir
+#S ftpMakeDir(FTP_connection, path:String);
+#C Creates an FTP directory and returns true on success.
+
+#I ftpDeleteDir
+#S ftpDeleteDir(FTP_connection, path:String);
+#C Deletes an FTP directory and returns true on success.
+
+#I ftpDeleteFile
+#S ftpDeleteFile(FTP_connection, path:String);
+#C Deletes an FTP file and returns true on success.

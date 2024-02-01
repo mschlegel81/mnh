@@ -36,6 +36,7 @@ USES evaluation,
      funcs_interpolators,
      func_queues,
      funcs_fileStreams,
+     funcs_ftp,
      builtinGenerators,
      consoleAsk,
      basicTypes;
