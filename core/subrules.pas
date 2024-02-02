@@ -18,7 +18,6 @@ USES //my utilities
      {$endif}
      funcs,
      mnh_messages,
-     serializationUtil,
      patterns;
 TYPE
   T_subruleAttribute=record
@@ -151,6 +150,22 @@ TYPE
       FUNCTION referencesAnyUserPackage:boolean; virtual;
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:P_literalRecycler):P_expressionLiteral; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+  end;
+
+  P_builtinObject=^T_builtinObject;
+
+  { T_builtinObject }
+
+  T_builtinObject=object(T_builtinExpression)
+    protected
+      FUNCTION getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression; virtual;
+    public
+      CONSTRUCTOR create(CONST id_and_type_:T_idString; CONST location:T_tokenLocation);
+      FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
+      FUNCTION typeString:string; virtual;
+      FUNCTION hash: T_hashInt; virtual;
+      FUNCTION equals(CONST other:P_literal):boolean; virtual;
+      FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
   end;
 
   P_builtinExpressionProxy=^T_builtinExpressionProxy;
@@ -373,6 +388,46 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; CONST context:P_context; CONST
         end else dispose(inlineSubRule,destroy);
       end;
     end;
+  end;
+
+{ T_builtinObject }
+
+FUNCTION T_builtinObject.getEquivalentInlineExpression(CONST context: P_context; CONST recycler: P_recycler): P_inlineExpression;
+  VAR first:P_token;
+  begin
+    first:=recycler^.newToken(getLocation,getId,tt_literal,rereferenced);
+    first^.next:=getParametersForPseudoFuncPtr(1,false,getLocation,P_context(context),recycler);
+    new(result,createFromInline(first,P_context(context),recycler));
+  end;
+
+CONSTRUCTOR T_builtinObject.create(CONST id_and_type_: T_idString; CONST location: T_tokenLocation);
+  begin
+    inherited create(id_and_type_,et_builtinObject,location);
+  end;
+
+FUNCTION T_builtinObject.toString(CONST lengthLimit: longint): ansistring;
+  begin
+    result:=id+'@'+intToStr(hash);
+  end;
+
+FUNCTION T_builtinObject.typeString: string;
+  begin
+    result:=id;
+  end;
+
+FUNCTION T_builtinObject.hash: T_hashInt;
+  begin
+    result:=T_hashInt(@self);
+  end;
+
+FUNCTION T_builtinObject.equals(CONST other: P_literal): boolean;
+  begin
+    result:=(@other=@self);
+  end;
+
+FUNCTION T_builtinObject.isInRelationTo(CONST relation: T_tokenType;CONST other: P_literal): boolean;
+  begin
+    result:=equals(other) and (relation in [tt_comparatorEq,tt_comparatorGeq,tt_comparatorLeq,tt_comparatorListEq]);
   end;
 
 PROCEDURE T_inlineExpression.stripExpression;
@@ -604,10 +659,6 @@ PROCEDURE T_inlineExpression.updatePatternForInline(CONST literalRecycler:P_lite
   end;
 
 CONSTRUCTOR T_inlineExpression.createFromInline(CONST rep: P_token; CONST context:P_context; CONST recycler:P_recycler; CONST customId_:T_idString=''; CONST retainFirstToken:boolean=false);
-  VAR t:P_token;
-      i:longint;
-      scopeLevel:longint=0;
-      subExpressionLevel:longint=0;
   begin
     init(et_inline,rep^.location);
     customId:=customId_;

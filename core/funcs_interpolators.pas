@@ -1,7 +1,6 @@
 UNIT funcs_interpolators;
 INTERFACE
-USES serializationUtil,
-     mnh_constants,
+USES mnh_constants,
      myGenerics,
      basicTypes,
      out_adapters,
@@ -10,15 +9,12 @@ USES serializationUtil,
      litVar,subrules;
 
 TYPE
-  //TODO Make interpolators serializable
-  //TODO Enable analytic integration for interpolators
-  T_interpolator=object(T_builtinExpression)
+  T_interpolator=object(T_builtinObject)
     protected
       underlyingValues:P_listLiteral;
       accessByIndex:boolean;
       xValues,
       yValues:T_arrayOfDouble;
-      FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
       FUNCTION getSingleInterpolatedValue(CONST floatIdx:double):double; virtual; abstract;
       FUNCTION getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression; virtual;
       FUNCTION findIndexForX(CONST x:double):longint;
@@ -30,8 +26,7 @@ TYPE
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
       FUNCTION toString(CONST lengthLimit: longint=maxLongint): ansistring; virtual;
       PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
-
-      FUNCTION referencesAnyUserPackage: boolean; virtual;
+      FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
   end;
 
 IMPLEMENTATION
@@ -74,7 +69,7 @@ CONSTRUCTOR T_interpolator.createInterpolator(CONST id_:string; CONST values: P_
   VAR i:longint;
       ok:boolean=true;
   begin
-    inherited create(id_,et_builtinStateful,location);
+    inherited create(id_,location);
     values^.rereference;
     underlyingValues:=values;
 
@@ -157,11 +152,6 @@ PROCEDURE T_interpolator.cleanup(CONST literalRecycler: P_literalRecycler);
     setLength(xValues,0);
     setLength(yValues,0);
     underlyingValues:=nil;
-  end;
-
-FUNCTION T_interpolator.referencesAnyUserPackage: boolean;
-  begin
-    result:=false;
   end;
 
 TYPE

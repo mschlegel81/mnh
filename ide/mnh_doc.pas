@@ -121,7 +121,9 @@ PROCEDURE ensureBuiltinDocExamples(CONST progressCallback:F_simpleCallback);
 
   PROCEDURE processExample;
     VAR txt,ids:T_arrayOfString;
+        {$ifdef debugMode}
         s:string;
+        {$endif}
     begin
       if (length(code)<=0) then exit;
       demoCodeInterpretCallback(code,txt,ids,recycler);

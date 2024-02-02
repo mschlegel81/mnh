@@ -2568,3 +2568,12 @@ bitXor(5,213,10);
 #I ftpDeleteFile
 #S ftpDeleteFile(FTP_connection, path:String);
 #C Deletes an FTP file and returns true on success.
+
+#I setTimeout
+#S setTimeout(FTP_connection, timeout_in_milliseconds: Int);
+#C Sets the timeout for FTP operations.
+
+#I setLogging
+#S setLogging(FTP_connection, enable:Boolean);
+#C Enables or disables logging (level: Note) for FTP operations.
+#C Initially logging is enabled.

@@ -35,9 +35,8 @@ TYPE
       PROCEDURE cleanup(CONST hard:boolean);
 
       CONSTRUCTOR create;
-      DESTRUCTOR destroy;
     public
-
+      DESTRUCTOR destroy; virtual;
       PROCEDURE cleanupIfPosted;
       FUNCTION disposeToken(p:P_token):P_token; inline;
       PROCEDURE cascadeDisposeToken(VAR p:P_token);
