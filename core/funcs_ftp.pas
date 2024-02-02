@@ -17,13 +17,14 @@ USES sysutils,math,fphttpclient,lclintf,
      synsock;
 
 IMPLEMENTATION
-USES ftpsend,subrules;
+USES ftpsend,subrules,fileWrappers;
 TYPE
   P_ftpConnection=^T_ftpConnection;
   T_ftpConnection=object(T_builtinExpression)
     protected
       connectionCs:TRTLCriticalSection;
       connection:TFTPSend;
+      enableLogging:boolean;
       FUNCTION getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression; virtual;
     public
       CONSTRUCTOR create(CONST host, port, user, pass: string; CONST context:P_context; CONST location:T_tokenLocation);
@@ -65,6 +66,8 @@ CONSTRUCTOR T_ftpConnection.create(CONST host, port, user, pass: string; CONST c
 
     initCriticalSection(connectionCs);
     connection:=TFTPSend.create;
+    connection.messages:=context^.messages;
+    enableLogging:=true;
     with connection do begin
       Username := user;
       Password := Pass;
@@ -73,7 +76,7 @@ CONSTRUCTOR T_ftpConnection.create(CONST host, port, user, pass: string; CONST c
       loginSuccessful:=Login;
     end;
     if not loginSuccessful then begin
-      context^.messages^.postTextMessage(mt_el2_warning,location,'FTP login with the given credentials was rejected.');
+      context^.messages^.postTextMessage(mt_el2_warning,location,'FTP login with the given credentials was rejected. Last status: '+intToStr(connection.ResultCode));
       FreeAndNil(connection);
     end;
 
@@ -229,6 +232,9 @@ FUNCTION areValidFtpParameters(CONST L:P_listLiteral; CONST location:T_tokenLoca
           context^.messages^.postTextMessage(mt_el2_warning,location,'The given FTP connection is not valid. Probably an error ocurred during connecting.');
           outerResult:=newVoidLiteral;
           ftp:=nil;
+        end else begin
+          enterCriticalSection(ftp^.connectionCs);
+          if ftp^.enableLogging then ftp^.connection.messages:=context^.messages;
         end;
       end;
     end else exit(false);
@@ -243,8 +249,7 @@ FUNCTION ftp_listing_impl intFuncSignature;
     if areValidFtpParameters(params,tokenLocation,context,ftp,result) and (params^.size=2) and (arg1^.literalType=lt_string) then with ftp^.connection do begin
       result:=recycler^.newListLiteral(0);
       if not list(str1^.value,false) then begin
-        context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,'FTP directory listing failed');
-        exit(result);
+        context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,'FTP directory listing failed with status code '+intToStr(ResultCode));
       end else for k:=0 to FtpList.count -1 do  begin
         tmpMap:=newMapLiteral(4)^.put(recycler,'filename' ,FtpList[k].fileName)
                                 ^.put(recycler,'directory',FtpList[k].directory)
@@ -252,55 +257,101 @@ FUNCTION ftp_listing_impl intFuncSignature;
                                 ^.put(recycler,'time'     ,FtpList[k].FileTime);
         listResult^.append(recycler,tmpMap,false);
       end;
+      leaveCriticalSection(ftp^.connectionCs);
     end;
   end;
 
 FUNCTION ftp_download_impl intFuncSignature;
   VAR ftp:P_ftpConnection;
+      success:boolean;
   begin
     result:=nil;
     if areValidFtpParameters(params,tokenLocation,context,ftp,result) and (params^.size=3) and (arg1^.literalType=lt_string) and (arg2^.literalType=lt_string) then with ftp^.connection do begin
       DirectFileName := str2^.value;
       DirectFile:=true;
-      result := newBoolLiteral(RetrieveFile(str1^.value, false));
+      ensurePath(str2^.value);
+      success:=RetrieveFile(str1^.value, false);
+      result := newBoolLiteral(success);
+      if not(success) then context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,'FTP request failed with status code '+intToStr(ResultCode));
+      leaveCriticalSection(ftp^.connectionCs);
     end;
   end;
 
 FUNCTION ftp_upload_impl intFuncSignature;
   VAR ftp:P_ftpConnection;
+      success:boolean;
+      fullPath, nameOnly, directory: string;
   begin
     result:=nil;
     if areValidFtpParameters(params,tokenLocation,context,ftp,result) and (params^.size=3) and (arg1^.literalType=lt_string) and (arg2^.literalType=lt_string) then with ftp^.connection do begin
+      fullPath:=str2^.value;
+      nameOnly:=extractFileName(fullPath);
+      directory:=ExtractFileDir (fullPath);
       DirectFileName := str1^.value;
       DirectFile:=true;
-      result := newBoolLiteral(StoreFile(str2^.value, false));
+      success:=ChangeWorkingDir(directory) and StoreFile(nameOnly, false);
+      result := newBoolLiteral(success);
+      if not(success) then context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,'FTP request failed with status code '+intToStr(ResultCode));
+      leaveCriticalSection(ftp^.connectionCs);
     end;
   end;
 
 FUNCTION ftp_makeDir_impl intFuncSignature;
   VAR ftp:P_ftpConnection;
+      success:boolean;
   begin
     result:=nil;
     if areValidFtpParameters(params,tokenLocation,context,ftp,result) and (params^.size=2) and (arg1^.literalType=lt_string) then with ftp^.connection do begin
-      result := newBoolLiteral(CreateDir(str1^.value));
+      success := CreateDir(str1^.value);
+      result := newBoolLiteral(success);
+      if not(success) then context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,'FTP request failed with status code '+intToStr(ResultCode));
+      leaveCriticalSection(ftp^.connectionCs);
     end;
   end;
 
 FUNCTION ftp_deleteDir_impl intFuncSignature;
   VAR ftp:P_ftpConnection;
+      success:boolean;
   begin
     result:=nil;
     if areValidFtpParameters(params,tokenLocation,context,ftp,result) and (params^.size=2) and (arg1^.literalType=lt_string) then with ftp^.connection do begin
-      result := newBoolLiteral(DeleteDir(str1^.value));
+      success := DeleteDir(str1^.value);
+      result := newBoolLiteral(success);
+      if not(success) then context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,'FTP request failed with status code '+intToStr(ResultCode));
+      leaveCriticalSection(ftp^.connectionCs);
     end;
   end;
 
 FUNCTION ftp_deleteFile_impl intFuncSignature;
   VAR ftp:P_ftpConnection;
+      success:boolean;
   begin
     result:=nil;
     if areValidFtpParameters(params,tokenLocation,context,ftp,result) and (params^.size=2) and (arg1^.literalType=lt_string) then with ftp^.connection do begin
-      result := newBoolLiteral(DeleteFile(str1^.value));
+      success := DeleteFile(str1^.value);
+      result := newBoolLiteral(success);
+      if not(success) then context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,'FTP request failed with status code '+intToStr(ResultCode));
+      leaveCriticalSection(ftp^.connectionCs);
+    end;
+  end;
+
+FUNCTION ftp_setTimeout_impl intFuncSignature;
+  VAR ftp:P_ftpConnection;
+  begin
+    if areValidFtpParameters(params,tokenLocation,context,ftp,result) and (params^.size=2) and (arg1^.literalType=lt_smallint) then with ftp^.connection do begin
+      timeout:=int1^.intValue;
+      result:=arg0^.rereferenced;
+      leaveCriticalSection(ftp^.connectionCs);
+    end;
+  end;
+
+FUNCTION ftp_setLogging_impl intFuncSignature;
+  VAR ftp:P_ftpConnection;
+  begin
+    if areValidFtpParameters(params,tokenLocation,context,ftp,result) and (params^.size=2) and (arg1^.literalType=lt_boolean) then with ftp^ do begin
+      enableLogging:=bool1^.value;
+      result:=arg0^.rereferenced;
+      leaveCriticalSection(connectionCs);
     end;
   end;
 
@@ -312,6 +363,8 @@ INITIALIZATION
   builtinFunctionMap.registerRule(FTP_NAMESPACE,'ftpMakeDir'   ,@ftp_makeDir_impl   ,ak_binary);
   builtinFunctionMap.registerRule(FTP_NAMESPACE,'ftpDeleteDir' ,@ftp_deleteDir_impl ,ak_binary);
   builtinFunctionMap.registerRule(FTP_NAMESPACE,'ftpDeleteFile',@ftp_deleteFile_impl,ak_binary);
+  builtinFunctionMap.registerRule(FTP_NAMESPACE,'setTimeout'   ,@ftp_setTimeout_impl,ak_binary);
+  builtinFunctionMap.registerRule(FTP_NAMESPACE,'setLogging'   ,@ftp_setLogging_impl,ak_binary);
 
 end.
 
