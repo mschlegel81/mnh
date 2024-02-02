@@ -22,14 +22,15 @@ TYPE T_expressionType=(et_builtin          ,
                        et_inlineStateful   ,
                        et_eachBody         ,
                        et_whileBody        ,
-                       et_builtinStateful);
+                       et_builtinStateful,
+                       et_builtinObject);
 
-CONST C_builtinExpressionTypes:set of T_expressionType=[et_builtin,et_builtinStateful,et_builtinIteratable,et_builtinAsyncOrFuture];
+CONST C_builtinExpressionTypes:set of T_expressionType=[et_builtin,et_builtinStateful,et_builtinIteratable,et_builtinAsyncOrFuture,et_builtinObject];
       C_subruleExpressionTypes:set of T_expressionType=[et_subrule,et_subruleIteratable,et_subruleStateful];
       C_inlineExpressionTypes:set of T_expressionType =[et_inline,et_inlineIteratable,et_inlineStateful];
       C_statefulExpressionTypes:set of T_expressionType=[et_builtinStateful,et_builtinIteratable,et_builtinAsyncOrFuture,
                                                          et_subruleIteratable,et_subruleStateful,
-                                                         et_inlineIteratable ,et_inlineStateful];
+                                                         et_inlineIteratable ,et_inlineStateful, et_builtinObject];
       C_iteratableExpressionTypes:set of T_expressionType=[et_builtinIteratable,
                                                            et_subruleIteratable,
                                                            et_inlineIteratable];
@@ -45,7 +46,8 @@ CONST C_builtinExpressionTypes:set of T_expressionType=[et_builtin,et_builtinSta
         'inline stateful',
         'eachBody',
         'whileBody',
-        'builtin stateful');
+        'builtin stateful',
+        'builtin object');
 
 TYPE
   P_typedef=^T_typedef;
@@ -595,7 +597,7 @@ FUNCTION evaluteExpression(CONST e:P_expressionLiteral; CONST location:T_tokenLo
 
 FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; CONST modifier:longint=-1):boolean;
   begin
-    if not(valueToCheck^.literalType in C_typeCheckInfo[check].matching) then exit(false);
+    if not(valueToCheck^.literalType in C_typeCheckInfo[check].matching) or ((valueToCheck^.literalType=lt_expression) and (P_expressionLiteral(valueToCheck)^.expressionType=et_builtinObject)) then exit(false);
     if modifier<0 then case check of
       tc_typeCheckStatelessExpression : result:=not(P_expressionLiteral(valueToCheck)^.typ in C_statefulExpressionTypes);
       tc_typeCheckStatefulExpression  : result:=   (P_expressionLiteral(valueToCheck)^.typ in C_statefulExpressionTypes);

@@ -87,8 +87,8 @@ main('files')->begin
 
   newList==hashFiles
   ? return print('List is up to date')
-  : print('To be added  : ',newList.minus(hashFiles).toList,
-        "\nTo be removed: ",hashFiles.minus(newList).toList);
+  : print('Added  : ',newList.minus(hashFiles).toList,
+        "\nRemoved: ",hashFiles.minus(newList).toList);
 
   local make_config_path:=inspect['uses','make_config'];
   local markerRead:=false;
@@ -100,4 +100,7 @@ main('files')->begin
   newFileLines|=
   join(["hashFiles:=[\v",newList.map(::escape).join(",\n\v"),'];']).formatTabs;
   writeFileLines(make_config_path,newFileLines);
+
+  execPipeless(executor,[systemSpecificFilename(myPath.extractFileDirectory&'/'&'make.mnh'),
+                       'prepare']);
 end;

@@ -20,7 +20,7 @@ IMPLEMENTATION
 USES ftpsend,subrules,fileWrappers;
 TYPE
   P_ftpConnection=^T_ftpConnection;
-  T_ftpConnection=object(T_builtinExpression)
+  T_ftpConnection=object(T_builtinObject)
     protected
       connectionCs:TRTLCriticalSection;
       connection:TFTPSend;
@@ -35,18 +35,10 @@ TYPE
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:P_literalRecycler):P_expressionLiteral; virtual;
       FUNCTION arity:T_arityInfo; virtual;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
-      FUNCTION getParentId:T_idString; virtual;
-      FUNCTION typeString:string; virtual;
-      FUNCTION hash: T_hashInt; virtual;
-      FUNCTION equals(CONST other:P_literal):boolean; virtual;
-      FUNCTION isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean; virtual;
       FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler):P_expressionLiteral; virtual;
-      FUNCTION referencesAnyUserPackage:boolean; virtual;
       FUNCTION mustBeDroppedBeforePop:boolean; virtual;
-      FUNCTION containsReturnToken:boolean; virtual;
       FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
       //From T_builtinExpression
-      FUNCTION getId:T_idString; virtual;
       FUNCTION toString(CONST lengthLimit:longint=maxLongint): ansistring; virtual;
 
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
@@ -62,7 +54,7 @@ CONST FTP_TYPE_STRING='FTPconnection';
 CONSTRUCTOR T_ftpConnection.create(CONST host, port, user, pass: string; CONST context:P_context; CONST location:T_tokenLocation);
   VAR loginSuccessful:boolean;
   begin
-    inherited create(FTP_TYPE_STRING,et_builtin,location);
+    inherited create(FTP_TYPE_STRING,location);
 
     initCriticalSection(connectionCs);
     connection:=TFTPSend.create;
@@ -112,40 +104,10 @@ FUNCTION T_ftpConnection.canApplyToNumberOfParameters(CONST parCount: longint): 
     result:=parCount=0;
   end;
 
-FUNCTION T_ftpConnection.getParentId: T_idString;
-  begin
-    result:='';
-  end;
-
-FUNCTION T_ftpConnection.typeString: string;
-  begin
-    result:=FTP_TYPE_STRING;
-  end;
-
-FUNCTION T_ftpConnection.hash: T_hashInt;
-  begin
-    result:=T_hashInt(@self);
-  end;
-
-FUNCTION T_ftpConnection.equals(CONST other: P_literal): boolean;
-  begin
-    result:=(@other=@self);
-  end;
-
-FUNCTION T_ftpConnection.isInRelationTo(CONST relation: T_tokenType; CONST other: P_literal): boolean;
-  begin
-    result:=equals(other) and (relation in [tt_comparatorEq,tt_comparatorGeq,tt_comparatorLeq,tt_comparatorListEq]);
-  end;
-
 FUNCTION T_ftpConnection.clone(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: P_literalRecycler): P_expressionLiteral;
   begin
     context^.raiseError('FTP connections should never be cloned',location);
     result:=P_expressionLiteral(rereferenced);
-  end;
-
-FUNCTION T_ftpConnection.referencesAnyUserPackage: boolean;
-  begin
-    result:=false;
   end;
 
 FUNCTION T_ftpConnection.mustBeDroppedBeforePop: boolean;
@@ -153,19 +115,9 @@ FUNCTION T_ftpConnection.mustBeDroppedBeforePop: boolean;
     result:=true;
   end;
 
-FUNCTION T_ftpConnection.containsReturnToken: boolean;
-  begin
-    result:=false;
-  end;
-
 FUNCTION T_ftpConnection.getParameterNames(CONST literalRecycler: P_literalRecycler): P_listLiteral;
   begin
     result:=literalRecycler^.newListLiteral();
-  end;
-
-FUNCTION T_ftpConnection.getId: T_idString;
-  begin
-    result:=FTP_TYPE_STRING+intToStr(hash);
   end;
 
 FUNCTION T_ftpConnection.toString(CONST lengthLimit: longint): ansistring;
