@@ -176,7 +176,7 @@ FUNCTION areValidFtpParameters(CONST L:P_listLiteral; CONST location:T_tokenLoca
     ftp:=nil;
     if (L<>nil) and (L^.size>=1) then begin
       p0:=L^.value[0];
-      result:=(p0^.literalType=lt_expression) and (P_expressionLiteral(p0)^.typ=et_builtin) and (p0^.typeString=FTP_TYPE_STRING);
+      result:=(p0^.literalType=lt_expression) and (P_expressionLiteral(p0)^.typ=et_builtinObject) and (p0^.typeString=FTP_TYPE_STRING);
       if result then begin
         ftp:=P_ftpConnection(p0);
         if ftp^.connection=nil then begin
