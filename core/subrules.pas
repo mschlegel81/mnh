@@ -738,6 +738,11 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
       VAR i:longint;
           level:longint=1;
       begin
+        if indexOfSave+1>=length(preparedBody) then begin
+          for i:=0 to length(preparedBody)-1 do preparedBody[i].token.undefine(recycler);
+          setLength(preparedBody,0);
+          exit;
+        end;
         for i:=0 to indexOfSave+1 do preparedBody[i].token.undefine(recycler);
         for i:=0 to length(preparedBody)-(indexOfSave+2)-1 do begin
           preparedBody[i]:=preparedBody[i+indexOfSave+2];

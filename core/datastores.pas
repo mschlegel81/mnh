@@ -82,7 +82,7 @@ FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOf
         dummyTypeMap.destroy;
         if wrapper.allOkay and (literal<>nil) then begin
           dataAsStringList:=id+':=';
-          append(dataAsStringList,serializeToStringList(literal,dummyLocation,nil,maxLongint,maxLongint));
+          append(dataAsStringList,serializeToStringList(literal,dummyLocation,nil,true));
         end else result:=false;
       except
         result:=false;
@@ -322,7 +322,7 @@ FUNCTION T_datastoreMeta.writeValue(CONST L: P_literal; CONST location:T_tokenLo
 
     if writePlainText then begin
       plainText:=ruleId+':=';
-      append(plainText,serializeToStringList(L,location,threadLocalMessages,maxLongint,maxLongint));
+      append(plainText,serializeToStringList(L,location,threadLocalMessages,true));
       writeFileLines(result.tempFileName,plainText,C_lineBreakChar,false);
       result.finishedOk:=threadLocalMessages^.continueEvaluation;
     end else begin
