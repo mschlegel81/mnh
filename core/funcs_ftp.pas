@@ -3,10 +3,10 @@ UNIT funcs_ftp;
 {$mode objfpc}{$H+}
 
 INTERFACE
-USES sysutils,math,fphttpclient,lclintf,
+USES sysutils,lclintf,
      Classes,
      synautil,
-     myStringUtil,myGenerics,httpUtil,
+     myStringUtil,myGenerics,
      basicTypes,mnh_constants,
      mnh_messages,
      out_adapters,

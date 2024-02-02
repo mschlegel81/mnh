@@ -18,7 +18,6 @@ USES //my utilities
      {$endif}
      funcs,
      mnh_messages,
-     serializationUtil,
      patterns;
 TYPE
   T_subruleAttribute=record

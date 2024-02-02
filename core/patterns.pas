@@ -10,9 +10,7 @@ USES sysutils,
      litVar,
      tokens,
      contexts,
-     serializationUtil,
-     out_adapters,
-     tokenArray;
+     out_adapters{$ifdef fullVersion},tokenArray{$endif};
 TYPE
   T_patternElement=object
     private
