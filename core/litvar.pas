@@ -1507,9 +1507,41 @@ FUNCTION T_smallIntLiteral  .toString(CONST lengthLimit:longint=maxLongint): ans
 FUNCTION T_realLiteral      .toString(CONST lengthLimit:longint=maxLongint): ansistring; begin result:=myFloatToStr(val); end;
 FUNCTION T_stringLiteral    .toString(CONST lengthLimit:longint=maxLongint): ansistring;
   VAR dummy:boolean;
+      l0:longint;
   begin
-    if lengthLimit>=length(val)+2 then result:=escapeString(val                                ,es_pickShortest,getEncoding,dummy)
-                                  else result:=escapeString(UTF8Copy(val,1,lengthLimit-5)+'...',es_pickShortest,getEncoding,dummy);
+    if lengthLimit=maxLongint then exit(escapeString(val,es_pickShortest,getEncoding,dummy));
+
+    if getEncoding=se_utf8 then begin
+      if UTF8Length(val)>lengthLimit
+      then begin
+        l0:=lengthLimit-5;
+        result:=escapeString(UTF8Copy(val,1,l0)+'...',es_pickShortest,getEncoding,dummy);
+        l0+=3;
+      end else begin
+        l0:=UTF8Length(val);
+        result:=escapeString(val,es_pickShortest,getEncoding,dummy);
+      end;
+
+      if length(result)>lengthLimit then begin
+        l0:=floor(l0/length(result)*lengthLimit);
+        result:=escapeString(UTF8Copy(val,1,lengthLimit-5)+'...',es_pickShortest,getEncoding,dummy)
+      end;
+    end else begin
+      if length(val)>lengthLimit
+      then begin
+        l0:=lengthLimit-5;
+        result:=escapeString(copy(val,1,l0)+'...',es_pickShortest,getEncoding,dummy);
+        l0+=3;
+      end else begin
+        l0:=length(val);
+        result:=escapeString(val,es_pickShortest,getEncoding,dummy);
+      end;
+
+      if length(result)>lengthLimit then begin
+        l0:=floor(l0/length(result)*lengthLimit);
+        result:=escapeString(copy(val,1,lengthLimit-5)+'...',es_pickShortest,getEncoding,dummy)
+      end;
+    end;
   end;
 
 FUNCTION T_listLiteral.toString(CONST lengthLimit: longint): ansistring;
