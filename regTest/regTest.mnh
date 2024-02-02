@@ -112,6 +112,7 @@ testAll(logging:Boolean, forceRun:Boolean)->begin
     getFailedTests.size);
   allPassed ? print(#27"[92mAll tests ok     ",repeat(' ',50))
             : print(#27"[91;5mSome tests failed:",repeat(' ',50),"\n",join(#27"[91;5m    "&getFailedTests,"\n")) orElse setExitCode(99);
+  print(#27'[0m');
   showTestTimeInfo;
 end;
 
