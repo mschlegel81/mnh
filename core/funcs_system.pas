@@ -250,12 +250,18 @@ FUNCTION isGuiStarted_impl intFuncSignature;
 
 FUNCTION showConsole_impl intFuncSignature;
   begin
-    result:=newBoolLiteral((gui_started=ide) or showConsole);
+    result:=newBoolLiteral(showConsole);
   end;
 
 FUNCTION hideConsole_impl intFuncSignature;
   begin
-    result:=newBoolLiteral((gui_started<>ide) and hideConsole);
+    result:=newBoolLiteral(hideConsole);
+  end;
+
+FUNCTION freeConsole_impl intFuncSignature;
+  begin
+    detachFromConsole;
+    result:=newVoidLiteral;
   end;
 
 FUNCTION getCPULoadPercentage_impl intFuncSignature;
@@ -310,6 +316,7 @@ INITIALIZATION
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'isGuiStarted',@isGuiStarted_impl,ak_nullary);
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'showConsole',@showConsole_impl,ak_nullary);
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'hideConsole',@hideConsole_impl,ak_nullary);
+  builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'freeConsole',@freeConsole_impl,ak_nullary);
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'getCPULoadPercentage',@getCPULoadPercentage_impl,ak_nullary,[se_executingExternal]);
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'getTaskInfo',@getTaskInfo_impl,ak_nullary,[se_executingExternal]);
 end.
