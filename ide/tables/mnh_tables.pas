@@ -102,7 +102,7 @@ TYPE
   end;
 
 IMPLEMENTATION
-USES myStringUtil,strutils,math,LCLType,LazUTF8Classes,LConvEncoding;
+USES myStringUtil,strutils,math,LCLType,LConvEncoding;
 {$R *.lfm}
 
 FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler): P_literal;
@@ -265,7 +265,7 @@ PROCEDURE TtableForm.exportToCsv(Separator: char);
   VAR message:ansistring='';
       needFill:boolean=false;
       i:longint;
-      TheStream: TFileStreamUtf8;
+      TheStream: TFileStream;
       memStream: TMemoryStream;
   begin
     if SaveTableDialog.execute then begin
@@ -294,7 +294,7 @@ PROCEDURE TtableForm.exportToCsv(Separator: char);
             memStream.free;
           end;
         end else begin
-          TheStream:=TFileStreamUtf8.create(SaveTableDialog.fileName,fmCreate);
+          TheStream:=TFileStream.create(SaveTableDialog.fileName,fmCreate);
           try
             StringGrid.SaveToCSVStream(TheStream, Separator, false,true);
           finally

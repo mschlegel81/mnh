@@ -3528,7 +3528,7 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLo
   FUNCTION innerMaxLength:longint;
     begin
       if forceFullOutput
-      then result:=MaxLongint
+      then result:=maxLongint
       else result:=maxTotalLength-totalLength;
     end;
 
