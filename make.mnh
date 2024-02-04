@@ -36,8 +36,7 @@ private ensureDefaultFilesSource->begin
 end;
 
 private ensureFilesToDeleteSource->begin
-  local code:=[union(SSL32.extractFileName, SSL64.extractFileName).{'CONST ADDITIONAL_FILES_TO_DELETE:array[0..%s] of string=(%s);'.format($x.size-1, $x.escapePascal.join(','))}];
-
+  local code:=[SSL64.extractFileName.{'CONST ADDITIONAL_FILES_TO_DELETE:array[0..%s] of string=(%s);'.format($x.size-1, $x.escapePascal.join(','))}];
   local filename:='ide/res_toDeleteOnUninstall.inc';
   fileExists(filename) AND fileLines(filename)==code
   ? void

@@ -1750,14 +1750,8 @@ expectations:=
   "28    ┃ Alan   ┃ Alan        ┃ Ghosts","28    ┃ Alan   ┃ Alan        ┃ Zombies",
   "      ┃        ┃ Me          ┃ Things"],
  'heart'=>
- ['FDLinux'=>
-  ['png hash: 722D21838BE5D10941D8681295CC019B9E37A19263B366E8AD5442950AE1BC30'],
-  'FDWin64'=>
-  ['png hash: 722D21838BE5D10941D8681295CC019B9E37A19263B366E8AD5442950AE1BC30'],
-  'FOLinux'=>
-  ['png hash: 722D21838BE5D10941D8681295CC019B9E37A19263B366E8AD5442950AE1BC30'],
-  'FOWin64'=>
-  ['png hash: 722D21838BE5D10941D8681295CC019B9E37A19263B366E8AD5442950AE1BC30']].toMap,
+ ['FOWin64'=>
+  ['png hash: 97411217F49C36428979ADC1BDD7C0E33618E56411A6157379A2CC71563D800E']].toMap,
  'helloWorld'=>
  ['Hello world'],
  'helloWorldHttp'=>
@@ -1907,8 +1901,8 @@ expectations:=
   'strings.tokenSplit','strings.trim','strings.trimLeft','strings.trimRight','strings.unbrace','strings.upper',
   'strings.utf8ToAnsi','system.ask','system.assert','system.assertGuiStarted','system.async','system.beep',
   'system.callMemoryCleaner','system.changeDirectory','system.clearPrint','system.closeQueue','system.deserialize',
-  'system.driveInfo','system.fail','system.future','system.getCPULoadPercentage','system.getEnv','system.getTaskInfo',
-  'system.halt','system.hideConsole','system.intRandom','system.intRandomGenerator','system.isGuiStarted',
+  'system.driveInfo','system.fail','system.freeConsole','system.future','system.getCPULoadPercentage','system.getEnv',
+  'system.getTaskInfo','system.halt','system.hideConsole','system.intRandom','system.intRandomGenerator','system.isGuiStarted',
   'system.isaacRandomGenerator','system.localAsync','system.log','system.newQueue','system.note','system.peekFuture',
   'system.print','system.printDirect','system.printf','system.put','system.random','system.randomGenerator','system.resetRandom',
   'system.scriptTime','system.serialize','system.setExitCode','system.showConsole','system.systime','system.time','system.try',
@@ -2841,7 +2835,7 @@ expectations:=
   '[][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][][]'
  ],
  'sierpinskiCurve'=>
- ['png hash: 4EB8A27AA01E17EA2D6D227A16056E44F0E24157D4C565158AB2B67187642D64'],
+ ['png hash: 41FC3B2438643589F05736990BE68E0C59494D98526086A80A4A11077B83EF56'],
  'sierpinskiTriangle'=>
  ['                               A                                                               ',
   '                              A A                                                             ',
