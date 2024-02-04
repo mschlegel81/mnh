@@ -1141,14 +1141,13 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
       formatted,toPrint:T_arrayOfString;
       k:longint=0;
   begin
-    result:=message^.messageType in messageTypesToInclude;
+    result:=mySys.showConsole and (message^.messageType in messageTypesToInclude);
     if result then begin
       enterCriticalSection(adapterCs);
       try
         case message^.messageType of
           mt_clearConsole: mySys.clearConsole;
           mt_printdirect: begin
-            if not(mySys.isConsoleShowing) then mySys.showConsole;
             for s in P_storedMessageWithText(message)^.txt do
               begin
                 p:=s;
@@ -1159,7 +1158,6 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
               end;
           end;
           else begin
-            if not(mySys.isConsoleShowing) then mySys.showConsole;
             formatted:=messageFormatProvider^.formatMessage(message);
             setLength(toPrint,length(formatted));
             for s in formatted do if s=C_formFeedChar then mySys.clearConsole else begin toPrint[k]:=s; k+=1; end;

@@ -499,7 +499,7 @@ PROCEDURE T_guiFormatter.formatMessageAndLocation(CONST message: P_storedMessage
         end;
         mt_echo_output: begin
           if wrapEcho
-          then echo:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,preferredLineLength-C_echoPrefixLength)
+          then echo:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,false,preferredLineLength-C_echoPrefixLength)
           else echo:=P_echoOutMessage(message)^.literal^.toString();
 
           if length(echo) >0 then echo[  0]:=marker+C_echoOutInfix+echo[0];
@@ -573,7 +573,7 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
         end;
         mt_echo_output: begin
           if wrapEcho
-          then result:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,preferredLineLength-C_echoPrefixLength)
+          then result:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,false,preferredLineLength-C_echoPrefixLength,preferredLineLength*50)
           else result:=P_echoOutMessage(message)^.literal^.toString();
           if length(result)>0 then result[0]:=marker+C_echoOutInfix+result[0];
           for i:=1 to length(result)-1 do
@@ -653,7 +653,7 @@ FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage)
         mt_echo_output: begin
           if P_echoOutMessage(message)^.literal=nil
           then result:=''
-          else result:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,CONSOLE_OUT_WIDTH-C_echoPrefixLength);
+          else result:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,false,CONSOLE_OUT_WIDTH-C_echoPrefixLength,CONSOLE_OUT_WIDTH*50);
           if length(result)>0 then result[  0]:=C_echoOutInfix+result[0];
           for i:=1 to length(result)-1 do
             result[i]:=C_echoContdInfix+result[i];

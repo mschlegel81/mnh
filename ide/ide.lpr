@@ -34,7 +34,7 @@ begin
     else if sendParametersToOtherInstance(commandLine.filesToOpenInEditor)
     then halt
     else begin
-      hideConsole;
+      detachFromConsole;
       //restore settings if the CPU count was overridden
       if commandLine.mnhExecutionOptions.cpuCount<>-1 then loadSettings;
       Application.CreateForm(TIdeMainForm, IdeMainForm);
