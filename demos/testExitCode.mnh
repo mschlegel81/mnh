@@ -15,7 +15,10 @@ PREFIX_OF_MESSAGE_TYPE:=['el1_userNote'   =>'Note',
                          'el2_userWarning'=>'Warn',
                          'el3_userDefined'=>'Error',
                          'el3_evalError'  =>'Error'].toMap;
-
+COLOR_OF_MESSAGE_TYPE:=['el1_userNote'   =>#27'[3m',
+                        'el2_userWarning'=>#27'[93m',
+                        'el3_userDefined'=>#27'[91m',
+                        'el3_evalError'  =>#27'[91m'].toMap;
 runSandboxed(parameter)->
   [format('Calling %s %s',myPath.extractFileName,parameter),
    ['name'=>myPath,
@@ -30,7 +33,7 @@ runSandboxed(parameter)->
               ? void
               : format('%s %s %s',PREFIX_OF_MESSAGE_TYPE[$message[0]],
                                   $message[1].replace(myPath.systemSpecificFilename,myPath.extractFileNameOnly),
-                                  $message[2])})].flatten;
+                                  COLOR_OF_MESSAGE_TYPE[$message[0]] & $message[2] & #27'[0m')})].flatten;
 
 main->
   ['print','note','warn','fail','40','41','x'].each(parameter,begin

@@ -126,7 +126,7 @@
         <PackageName Value="LCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="107">
+    <Units Count="108">
       <Unit0>
         <Filename Value="ide.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -672,6 +672,10 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="funcs_fileStreams"/>
       </Unit106>
+      <Unit107>
+        <Filename Value="../core/funcs_ftp.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit107>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
