@@ -264,10 +264,13 @@ FUNCTION ftp_makeDir_impl intFuncSignature;
 FUNCTION ftp_deleteDir_impl intFuncSignature;
   VAR ftp:P_ftpConnection;
       success:boolean;
+      nameOnly, directory: string;
   begin
     result:=nil;
     if areValidFtpParameters(params,tokenLocation,context,ftp,result) and (params^.size=2) and (arg1^.literalType=lt_string) then with ftp^.connection do begin
-      success := DeleteDir(str1^.value);
+      nameOnly:=extractFileName(str1^.value);
+      directory:=ExtractFileDir(str1^.value);
+      success:=ChangeWorkingDir(directory) and DeleteDir(nameOnly);
       result := newBoolLiteral(success);
       if not(success) then context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,'FTP request failed with status code '+intToStr(ResultCode));
       leaveCriticalSection(ftp^.connectionCs);
@@ -277,10 +280,13 @@ FUNCTION ftp_deleteDir_impl intFuncSignature;
 FUNCTION ftp_deleteFile_impl intFuncSignature;
   VAR ftp:P_ftpConnection;
       success:boolean;
+      nameOnly, directory: string;
   begin
     result:=nil;
     if areValidFtpParameters(params,tokenLocation,context,ftp,result) and (params^.size=2) and (arg1^.literalType=lt_string) then with ftp^.connection do begin
-      success := DeleteFile(str1^.value);
+      nameOnly:=extractFileName(str1^.value);
+      directory:=ExtractFileDir(str1^.value);
+      success:=ChangeWorkingDir(directory) and DeleteFile(nameOnly);
       result := newBoolLiteral(success);
       if not(success) then context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,'FTP request failed with status code '+intToStr(ResultCode));
       leaveCriticalSection(ftp^.connectionCs);

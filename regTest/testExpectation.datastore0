@@ -1750,7 +1750,9 @@ expectations:=
   "28    ┃ Alan   ┃ Alan        ┃ Ghosts","28    ┃ Alan   ┃ Alan        ┃ Zombies",
   "      ┃        ┃ Me          ┃ Things"],
  'heart'=>
- ['FOWin64'=>
+ ['FDWin64'=>
+  ['png hash: 97411217F49C36428979ADC1BDD7C0E33618E56411A6157379A2CC71563D800E'],
+  'FOWin64'=>
   ['png hash: 97411217F49C36428979ADC1BDD7C0E33618E56411A6157379A2CC71563D800E']].toMap,
  'helloWorld'=>
  ['Hello world'],
