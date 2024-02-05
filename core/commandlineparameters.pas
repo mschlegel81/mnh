@@ -675,7 +675,7 @@ PROCEDURE displayHelp(CONST adapters:P_messages);
 FUNCTION getFormatterFor(CONST deferredAdapterCreation:T_textFileAdapterSpecification):P_messageFormatProvider;
   begin
     if deferredAdapterCreation.useLogFormatter then begin
-      new(P_logFormatter(result),create);
+      new(P_logFormatter(result),create(deferredAdapterCreation.textFileCase in [tfc_stderr,tfc_stdout]));
       with P_logFormatter(result)^ do begin
         timeFormat       :=deferredAdapterCreation.logDateFormat;
         maxLocationLength:=deferredAdapterCreation.logLocationLen;

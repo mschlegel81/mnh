@@ -30,7 +30,9 @@ TYPE
     timeFormat:string;
     handlePrintAsLog:boolean;
     fullLoc:boolean;
-    CONSTRUCTOR create;
+    allowColoring:boolean;
+
+    CONSTRUCTOR create(CONST targetIsConsole:boolean);
     FUNCTION getClonedInstance:P_messageFormatProvider; virtual;
     DESTRUCTOR destroy; virtual;
     FUNCTION formatMessage(CONST message:P_storedMessage):T_arrayOfString; virtual;
@@ -121,6 +123,8 @@ VAR defaultConsoleFormatter:T_defaultConsoleFormatter;
 FUNCTION newEchoMessage(CONST value: P_literal; CONST loc: T_searchTokenLocation):P_echoOutMessage;
 IMPLEMENTATION
 USES sysutils,LazFileUtils{$ifdef fullVersion},myStringUtil{$endif},recyclers;
+//CONST lvlColor:array[
+
 FUNCTION newEchoMessage(CONST value: P_literal; CONST loc: T_searchTokenLocation):P_echoOutMessage;
   begin
     new(result,create(value,loc));
@@ -302,19 +306,20 @@ FUNCTION T_defaultConsoleFormatter.getClonedInstance: P_messageFormatProvider;
     new(P_defaultConsoleFormatter(result),create);
   end;
 //------------------------------------------------------------------------------
-CONSTRUCTOR T_logFormatter.create;
+CONSTRUCTOR T_logFormatter.create(CONST targetIsConsole:boolean);
   begin
-    inherited;
+    inherited create;
     timeFormat:='hh:nn:ss.zzz';
     maxLocationLength:=maxLongint;
     handlePrintAsLog:=false;
     fullLoc:=false;
+    allowColoring:=targetIsConsole;
   end;
 
 DESTRUCTOR T_logFormatter.destroy; begin inherited; end;
 FUNCTION T_logFormatter.getClonedInstance: P_messageFormatProvider;
   begin
-    new(P_logFormatter(result),create);
+    new(P_logFormatter(result),create(allowColoring));
     P_logFormatter(result)^.handlePrintAsLog:=handlePrintAsLog;
     P_logFormatter(result)^.timeFormat:=timeFormat;
     P_logFormatter(result)^.maxLocationLength:=maxLocationLength;
@@ -355,6 +360,16 @@ FUNCTION T_logFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
       except
         result:='--erroneous time format--';
       end else result:='';
+    end;
+
+  FUNCTION optionalColorOff:string;
+    begin
+      if allowColoring then result:=C_ANSI_CODE_RESET else result:='';
+    end;
+
+  FUNCTION optionalColor(CONST mc:T_messageClass):string;
+    begin
+      if allowColoring then result:=C_messageClassMeta[mc].levelColor else result:='';
     end;
 
   VAR mc:T_messageClass;
@@ -423,16 +438,16 @@ FUNCTION T_logFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
     if (length(result)>1) and fullLoc then begin
       prepend(result,timePart+levelPart+locationPart);
       s:=StringOfChar(' ',length(timePart)+length(levelPart));
-      for i:=1 to length(result)-1 do result[i]:=s+result[i];
+      for i:=1 to length(result)-1 do result[i]:=s+optionalColor(mc) + result[i] + optionalColorOff;
     end else begin
       result[0]:=timePart+levelPart+locationPart+' '+result[0];
       s:=StringOfChar(' ',length(timePart)+length(levelPart)+length(locationPart)+1);
-      for i:=1 to length(result)-1 do result[i]:=s+result[i];
+      for i:=1 to length(result)-1 do result[i]:=s+optionalColor(mc) + result[i] + optionalColorOff;
     end;
     if (message^.internalType='T_errorMessage') then with P_errorMessage(message)^ do begin
       s:=StringOfChar(' ',length(timePart)+length(levelPart));
       for i:=0 to length(stacktrace)-1 do
-        append(result,s+formatLocation(stacktrace[i].location)+' call '+stacktrace[i].callee+' with '+stacktrace[i].parameters);
+        append(result,s+optionalColor(mc) +  formatLocation(stacktrace[i].location)+' call '+stacktrace[i].callee+' with '+stacktrace[i].parameters + optionalColorOff);
     end;
   end;
 //------------------------------------------------------------------------------
@@ -660,18 +675,18 @@ FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage)
             result[i]:=C_echoContdInfix+result[i];
         end;
       end;
-      mc_timing: for s in P_storedMessageWithText(message)^.txt do append(result,s);
+      mc_timing: for s in P_storedMessageWithText(message)^.txt do append(result,C_messageClassMeta[message^.messageClass].levelColor+ s + C_ANSI_CODE_RESET);
       mc_log    ,
       mc_note   ,
       mc_warning,
       mc_error  ,
       mc_fatal  : begin
         if length(P_storedMessageWithText(message)^.txt)=1 then begin
-          result:=C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart+P_storedMessageWithText(message)^.txt[0];
+          result:=C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart+C_messageClassMeta[message^.messageClass].levelColor + P_storedMessageWithText(message)^.txt[0] + C_ANSI_CODE_RESET;
         end else begin
           result:=C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart;
           for s in P_storedMessageWithText(message)^.txt do
-            append(result,StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1)+s);
+            append(result,StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1)+C_messageClassMeta[message^.messageClass].levelColor + s + C_ANSI_CODE_RESET);
         end;
         if (message^.internalType='T_errorMessage') then with P_errorMessage(message)^ do begin
           s:=StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1);

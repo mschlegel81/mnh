@@ -1703,14 +1703,19 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         scalingOptions:T_scalingOptions;
 
         refinementSteps:T_arrayOfLongint;
-        refinementRun:longint=0;
+        refinementRun:byte=0;
     begin
       scalingOptions:=getOptionsViaAdapters(context^.messages);
-      while stillOk and (dataRow.size<samples) and (refinementRun<3) do begin
+      while stillOk and (dataRow.size<samples) and (refinementRun<6) do begin
         //Prepare threshold:----------------------------------------------------
-        if refinementRun=0 then k:=(samples-dataRow.size) div 4 else
-        if refinementRun=1 then k:=(samples-dataRow.size) div 2 else
-                                k:=(samples-dataRow.size);
+        case refinementRun of
+          0: k:=(samples-dataRow.size) div 32;
+          1: k:=(samples-dataRow.size) div 16;
+          2: k:=(samples-dataRow.size) div 8;
+          3: k:=(samples-dataRow.size) div 4;
+          4: k:=(samples-dataRow.size) div 2;
+          else k:=samples-dataRow.size;
+        end;
         inc(refinementRun);
         refinementSteps:=scalingOptions.getRefinementSteps(dataRow,k);
         //----------------------------------------------------:Prepare threshold
