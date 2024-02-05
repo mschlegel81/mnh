@@ -1717,6 +1717,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
           else k:=samples-dataRow.size;
         end;
         inc(refinementRun);
+        if k=0 then continue;
         refinementSteps:=scalingOptions.getRefinementSteps(dataRow,k);
         //----------------------------------------------------:Prepare threshold
         //Prepare new time samples:---------------------------------------------
