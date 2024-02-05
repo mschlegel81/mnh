@@ -324,6 +324,7 @@ FUNCTION T_logFormatter.getClonedInstance: P_messageFormatProvider;
 FUNCTION T_logFormatter.formatLocation(CONST location:T_searchTokenLocation):string;
   VAR s  :string;
   begin
+    if maxLocationLength=0 then exit('');
     if (maxLocationLength<=1) or (maxLocationLength>1000) then begin
       fullLoc:=true;
       result:=location;
