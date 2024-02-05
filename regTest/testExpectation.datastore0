@@ -167,7 +167,9 @@ expectations:=
  'hashJoin'=>
  ['Table A:',"Age ┃ Name","━━━━╋━━━━━━━","27  ┃ Jonah","18  ┃ Alan","28  ┃ Glory","18  ┃ Popeye","28  ┃ Alan",'','Table B:',"Character ┃ Nemesis","━━━━━━━━━━╋━━━━━━━━","Jonah     ┃ Whales","Jonah     ┃ Spiders","Alan      ┃ Ghosts","Alan      ┃ Zombies","Glory     ┃ Buffy","Me        ┃ Things",'','Inner join:',"A.Age ┃ A.Name ┃ B.Character ┃ B.Nemesis","━━━━━━╋━━━━━━━━╋━━━━━━━━━━━━━╋━━━━━━━━━━","27    ┃ Jonah  ┃ Jonah       ┃ Whales","27    ┃ Jonah  ┃ Jonah       ┃ Spiders","18    ┃ Alan   ┃ Alan        ┃ Ghosts","18    ┃ Alan   ┃ Alan        ┃ Zombies","28    ┃ Glory  ┃ Glory       ┃ Buffy","28    ┃ Alan   ┃ Alan        ┃ Ghosts","28    ┃ Alan   ┃ Alan        ┃ Zombies",'','Outer join:',"A.Age ┃ A.Name ┃ B.Character ┃ B.Nemesis","━━━━━━╋━━━━━━━━╋━━━━━━━━━━━━━╋━━━━━━━━━━","27    ┃ Jonah  ┃ Jonah       ┃ Whales","27    ┃ Jonah  ┃ Jonah       ┃ Spiders","18    ┃ Alan   ┃ Alan        ┃ Ghosts","18    ┃ Alan   ┃ Alan        ┃ Zombies","28    ┃ Glory  ┃ Glory       ┃ Buffy","18    ┃ Popeye ┃             ┃","28    ┃ Alan   ┃ Alan        ┃ Ghosts","28    ┃ Alan   ┃ Alan        ┃ Zombies","      ┃        ┃ Me          ┃ Things"],
  'heart'=>
- ['FOWin64'=>
+ ['FDWin64'=>
+  ['png hash: 97411217F49C36428979ADC1BDD7C0E33618E56411A6157379A2CC71563D800E'],
+  'FOWin64'=>
   ['png hash: 97411217F49C36428979ADC1BDD7C0E33618E56411A6157379A2CC71563D800E']].toMap,
  'helloWorld'=>
  ['Hello world'],
