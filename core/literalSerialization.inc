@@ -129,7 +129,7 @@ FUNCTION T_literalDeserializer.getLiteral: P_literal;
       else customTypeName:='';
     end
     else begin
-      dec(reusableIndex,48);
+      dec(reusableIndex,2*byte(high(T_literalType))+2);
       if (reusableIndex<reusableFill) then begin
         result:=reusableLiterals[reusableIndex];
         result^.rereference;
@@ -195,7 +195,8 @@ FUNCTION T_literalDeserializer.getLiteral: P_literal;
     end;
 
     if not(streamWrapper^.allOkay) then raiseError('Unknown error during deserialization.');
-    if ((literalType in [lt_string]) or (literalType in C_compoundTypes) or (customTypeName<>'')) and useReusableMap and (reusableFill<2097151) then begin
+
+    if useReusableMap and (reusableFill<2097151) and ((literalType in [lt_string]) or (literalType in C_typables)) then begin
       reusableLiterals[reusableFill]:=result;
       inc(reusableFill);
     end;
