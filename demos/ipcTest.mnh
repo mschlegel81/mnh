@@ -9,11 +9,11 @@ private ensureServer->begin
   isIpcServerRunning(serverId)
   ? return void
   : executor.execAsync([myPath,'serve']);
-  while(!isIpcServerRunning(serverId),sleep(0.1));
+  while(!isIpcServerRunning(serverId),sleep(0.001));
 end;
 
 main('serve')->begin
-  print('Serving for 1 second');
+  freeConsole;
   startIpcServer(serverId,::serve);
   sleep(1);
   halt;

@@ -235,7 +235,7 @@ TYPE
       {$endif}
   end;
 
-CONST TASKS_TO_QUEUE_PER_CPU=16;
+CONST TASKS_TO_QUEUE_PER_CPU=4;
 VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; CONST context:P_context; CONST recycler:P_recycler):T_reduceResult;
     suppressBeep:boolean=false;
     contextPool:T_contextRecycler;

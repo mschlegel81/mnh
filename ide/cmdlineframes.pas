@@ -51,11 +51,8 @@ TYPE
     pauseOnErrorFlagCb: TCheckBox;
     guiFlagCb: TCheckBox;
     headlessFlagCb: TCheckBox;
-    GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
     PageControl1: TPageControl;
-    lightVersionRb: TRadioButton;
-    fullVersionRb: TRadioButton;
     TabSheet1: TTabSheet;
     TabSheet2: TTabSheet;
     PROCEDURE addOutFileClick(Sender: TObject);
@@ -74,7 +71,6 @@ TYPE
     PROCEDURE outputFileComboBoxSelect(Sender: TObject);
     PROCEDURE pauseFlagCbClick(Sender: TObject);
     PROCEDURE pauseOnErrorFlagCbClick(Sender: TObject);
-    PROCEDURE profileFlagCbClick(Sender: TObject);
     PROCEDURE rbOutputToFileClick(Sender: TObject);
     PROCEDURE rbOutputToStderrClick(Sender: TObject);
     PROCEDURE rbOutputToStdoutClick(Sender: TObject);
@@ -180,11 +176,6 @@ PROCEDURE TCmdLineParametersFrame.pauseFlagCbClick(Sender: TObject);
 PROCEDURE TCmdLineParametersFrame.pauseOnErrorFlagCbClick(Sender: TObject);
   begin
     if pauseOnErrorFlagCb.checked then headlessFlagCb.checked:=false;
-  end;
-
-PROCEDURE TCmdLineParametersFrame.profileFlagCbClick(Sender: TObject);
-  begin
-    if profileFlagCb.checked then fullVersionRb.checked:=true;
   end;
 
 PROCEDURE TCmdLineParametersFrame.rbOutputToFileClick(Sender: TObject);
@@ -341,10 +332,6 @@ PROCEDURE TCmdLineParametersFrame.updateLogSection;
 PROCEDURE TCmdLineParametersFrame.initLabels;
   VAR i:longint;
   begin
-    lightVersionRb.caption:=settings.lightFlavourLocation;
-    lightVersionRb.enabled:=fileExists(settings.lightFlavourLocation);
-    fullVersionRb.caption :=settings.fullFlavourLocation;
-
     guiFlagCb.caption:=FLAG_GUI;
     headlessFlagCb.caption:=FLAG_HEADLESS;
     pauseFlagCb.caption:=FLAG_PAUSE_ALWAYS;
@@ -411,12 +398,6 @@ PROCEDURE TCmdLineParametersFrame.initFromExecOptions(
     initializing:=true;
     initLabels;
     optionsToUpdate:=opt;
-
-    lightVersionRb.checked:=lightVersionRb.enabled and optionsToUpdate^.callLightFlavour;
-    fullVersionRb.checked:=not(lightVersionRb.checked);
-
-    if not(optionsToUpdate^.callLightFlavour) then optionsToUpdate^.executor:=settings.fullFlavourLocation;
-
     guiFlagCb         .checked:=clf_GUI          in optionsToUpdate^.flags;
     headlessFlagCb    .checked:=clf_HEADLESS     in optionsToUpdate^.flags;
     pauseFlagCb       .checked:=clf_PAUSE_ALWAYS in optionsToUpdate^.flags;
@@ -441,10 +422,8 @@ PROCEDURE TCmdLineParametersFrame.initFromExecOptions(
 
 PROCEDURE TCmdLineParametersFrame.guiFlagCbClick(Sender: TObject);
   begin
-    if guiFlagCb.checked then begin
-      fullVersionRb.checked:=true;
+    if guiFlagCb.checked then
       headlessFlagCb.checked:=false;
-    end;
   end;
 
 PROCEDURE TCmdLineParametersFrame.cbConsoleLikeLogClick(Sender: TObject);
@@ -522,7 +501,6 @@ PROCEDURE TCmdLineParametersFrame.anyPage1Change(Sender: TObject);
   begin
     if initializing then exit;
     optionsToUpdate^.cpuCount:=cpuCountComboBox.ItemIndex;
-    optionsToUpdate^.setCallLightFlavour(lightVersionRb.checked);
     optionsToUpdate^.flags:=[];
     optionsToUpdate^.verbosityString:=consoleVerbosityEdit.text;
     if guiFlagCb         .checked then include(optionsToUpdate^.flags,clf_GUI);

@@ -1,12 +1,12 @@
 object SettingsForm: TSettingsForm
   Left = 881
-  Height = 238
+  Height = 245
   Top = 287
   Width = 362
   AutoSize = True
   BorderIcons = [biSystemMenu]
   Caption = 'MNH - Settings'
-  ClientHeight = 238
+  ClientHeight = 245
   ClientWidth = 362
   Constraints.MinWidth = 233
   FormStyle = fsStayOnTop
@@ -14,22 +14,22 @@ object SettingsForm: TSettingsForm
   OnDestroy = FormDestroy
   OnShow = FormShow
   Position = poMainFormCenter
-  LCLVersion = '2.0.12.0'
+  LCLVersion = '3.0.0.3'
   object PageControl: TPageControl
     Left = 0
-    Height = 228
+    Height = 235
     Top = 0
     Width = 362
-    ActivePage = TabSheet_display
+    ActivePage = TabSheet_install
     Align = alClient
     ParentFont = False
-    TabIndex = 0
+    TabIndex = 3
     TabOrder = 0
     OnChange = PageControlChange
     Options = [nboKeyboardTabSwitch]
     object TabSheet_display: TTabSheet
       Caption = 'display'
-      ClientHeight = 200
+      ClientHeight = 207
       ClientWidth = 354
       ParentFont = False
       object Label2: TLabel
@@ -61,9 +61,9 @@ object SettingsForm: TSettingsForm
         BorderSpacing.Left = 3
         BorderSpacing.Top = 3
         Caption = 'EditorFontButton'
-        OnClick = EditorFontButtonClick
         ParentFont = False
         TabOrder = 0
+        OnClick = EditorFontButtonClick
       end
       object Label7: TLabel
         AnchorSideLeft.Control = Label2
@@ -92,10 +92,10 @@ object SettingsForm: TSettingsForm
         Anchors = [akTop, akLeft, akRight]
         BorderSpacing.Left = 3
         NumbersOnly = True
-        OnEditingDone = outputSizeLimitEditingDone
         ParentFont = False
         TabOrder = 3
         Text = 'outputSizeLimit'
+        OnEditingDone = outputSizeLimitEditingDone
       end
       object Label3: TLabel
         AnchorSideLeft.Control = Label2
@@ -125,9 +125,9 @@ object SettingsForm: TSettingsForm
         AutoSize = True
         BorderSpacing.Left = 3
         Caption = 'TableFontButton'
-        OnClick = TableFontButtonClick
         ParentFont = False
         TabOrder = 1
+        OnClick = TableFontButtonClick
       end
       object Label5: TLabel
         AnchorSideLeft.Control = Label2
@@ -157,9 +157,9 @@ object SettingsForm: TSettingsForm
         AutoSize = True
         BorderSpacing.Left = 3
         Caption = 'GeneralFontButton'
-        OnClick = GeneralFontButtonClick
         ParentFont = False
         TabOrder = 2
+        OnClick = GeneralFontButtonClick
       end
       object cbCopyAsHtml: TCheckBox
         AnchorSideLeft.Control = Label7
@@ -168,255 +168,255 @@ object SettingsForm: TSettingsForm
         Left = 3
         Height = 19
         Top = 101
-        Width = 111
+        Width = 109
         Align = alCustom
         Caption = 'copy text as html'
-        OnChange = cbCopyAsHtmlChange
         ParentFont = False
         TabOrder = 4
+        OnChange = cbCopyAsHtmlChange
       end
     end
     object TabSheet_lineEnding: TTabSheet
       Caption = 'line ending'
-      ClientHeight = 254
-      ClientWidth = 444
+      ClientHeight = 207
+      ClientWidth = 354
       ParentFont = False
       object GroupBox1: TGroupBox
         Left = 0
-        Height = 97
+        Height = 77
         Top = 0
-        Width = 444
+        Width = 354
         Align = alTop
         AutoSize = True
         Caption = 'new files'
-        ClientHeight = 77
-        ClientWidth = 440
+        ClientHeight = 57
+        ClientWidth = 350
         ParentFont = False
         TabOrder = 0
         object rb_saveNewDefault: TRadioButton
           Left = 0
-          Height = 24
+          Height = 19
           Top = 0
-          Width = 440
+          Width = 350
           Align = alTop
           Caption = 'System default'
           Checked = True
-          OnChange = rb_saveNewDefaultChange
           ParentFont = False
           TabOrder = 0
           TabStop = True
+          OnChange = rb_saveNewDefaultChange
         end
         object rb_saveNewLinux: TRadioButton
           Left = 0
-          Height = 24
-          Top = 24
-          Width = 440
+          Height = 19
+          Top = 19
+          Width = 350
           Align = alTop
           Caption = 'Linux'
-          OnChange = rb_saveNewDefaultChange
           ParentFont = False
           TabOrder = 1
+          OnChange = rb_saveNewDefaultChange
         end
         object rb_saveNewWindows: TRadioButton
           Left = 0
-          Height = 24
-          Top = 48
-          Width = 440
+          Height = 19
+          Top = 38
+          Width = 350
           Align = alTop
           Caption = 'Windows'
-          OnChange = rb_saveNewDefaultChange
           ParentFont = False
           TabOrder = 2
+          OnChange = rb_saveNewDefaultChange
         end
       end
       object GroupBox2: TGroupBox
         Left = 0
-        Height = 121
-        Top = 97
-        Width = 444
+        Height = 96
+        Top = 77
+        Width = 354
         Align = alTop
         AutoSize = True
         Caption = 'existing files'
-        ClientHeight = 101
-        ClientWidth = 440
+        ClientHeight = 76
+        ClientWidth = 350
         ParentFont = False
         TabOrder = 1
         object rb_saveDefault: TRadioButton
           Left = 0
-          Height = 24
-          Top = 24
-          Width = 440
+          Height = 19
+          Top = 19
+          Width = 350
           Align = alTop
           Caption = 'System defult'
-          OnChange = rb_saveDefaultChange
           ParentFont = False
           TabOrder = 1
+          OnChange = rb_saveDefaultChange
         end
         object rb_saveLinux: TRadioButton
           Left = 0
-          Height = 24
-          Top = 48
-          Width = 440
+          Height = 19
+          Top = 38
+          Width = 350
           Align = alTop
           Caption = 'Linux'
-          OnChange = rb_saveDefaultChange
           ParentFont = False
           TabOrder = 2
+          OnChange = rb_saveDefaultChange
         end
         object rb_saveWindows: TRadioButton
           Left = 0
-          Height = 24
-          Top = 72
-          Width = 440
+          Height = 19
+          Top = 57
+          Width = 350
           Align = alTop
           Caption = 'Windows'
-          OnChange = rb_saveDefaultChange
           ParentFont = False
           TabOrder = 3
+          OnChange = rb_saveDefaultChange
         end
         object rb_saveNoChange: TRadioButton
           Left = 0
-          Height = 24
+          Height = 19
           Top = 0
-          Width = 440
+          Width = 350
           Align = alTop
           Caption = 'Don''t change'
           Checked = True
-          OnChange = rb_saveDefaultChange
           ParentFont = False
           TabOrder = 0
           TabStop = True
+          OnChange = rb_saveDefaultChange
         end
       end
     end
     object TabSheet_global: TTabSheet
       Caption = 'global'
-      ClientHeight = 254
-      ClientWidth = 444
+      ClientHeight = 207
+      ClientWidth = 354
       ParentFont = False
       object Panel1: TPanel
         Left = 0
-        Height = 28
+        Height = 23
         Top = 0
-        Width = 444
+        Width = 354
         Align = alTop
         AutoSize = True
         BevelOuter = bvNone
-        ClientHeight = 28
-        ClientWidth = 444
+        ClientHeight = 23
+        ClientWidth = 354
         ParentFont = False
         TabOrder = 0
         object Label1: TLabel
           Left = 0
-          Height = 28
+          Height = 23
           Top = 0
-          Width = 36
+          Width = 31
           Align = alLeft
           Caption = 'CPUs:'
           ParentColor = False
           ParentFont = False
         end
         object workerThreadCountEdit: TEdit
-          Left = 36
-          Height = 28
+          Left = 31
+          Height = 23
           Top = 0
-          Width = 408
+          Width = 323
           Align = alClient
           NumbersOnly = True
-          OnEditingDone = workerThreadCountEditEditingDone
           ParentFont = False
           TabOrder = 0
           Text = '1'
+          OnEditingDone = workerThreadCountEditEditingDone
         end
       end
       object Panel2: TPanel
         Left = 0
-        Height = 28
-        Top = 28
-        Width = 444
+        Height = 23
+        Top = 23
+        Width = 354
         Align = alTop
         AutoSize = True
         BevelOuter = bvNone
-        ClientHeight = 28
-        ClientWidth = 444
+        ClientHeight = 23
+        ClientWidth = 354
         ParentFont = False
         TabOrder = 1
         object Label6: TLabel
           Left = 0
-          Height = 28
+          Height = 23
           Top = 0
-          Width = 131
+          Width = 107
           Align = alLeft
           Caption = 'Memory Limit (MB):'
           ParentColor = False
           ParentFont = False
         end
         object memLimitEdit: TEdit
-          Left = 131
-          Height = 28
+          Left = 107
+          Height = 23
           Hint = 'This is a soft limit;'#13#10'If exceeded MNH tries to minmize '#13#10'memory usage while using more CPU.'
           Top = 0
-          Width = 313
+          Width = 247
           Align = alClient
           NumbersOnly = True
-          OnEditingDone = memLimitEditEditingDone
           ParentFont = False
           ParentShowHint = False
           ShowHint = True
           TabOrder = 0
           Text = 'memLimitEdit'
+          OnEditingDone = memLimitEditEditingDone
         end
       end
       object Panel3: TPanel
         Left = 0
-        Height = 28
-        Top = 56
-        Width = 444
+        Height = 23
+        Top = 46
+        Width = 354
         Align = alTop
         AutoSize = True
         BevelOuter = bvNone
-        ClientHeight = 28
-        ClientWidth = 444
+        ClientHeight = 23
+        ClientWidth = 354
         ParentFont = False
         TabOrder = 2
         object Label4: TLabel
           Left = 0
-          Height = 28
+          Height = 23
           Top = 0
-          Width = 64
+          Width = 52
           Align = alLeft
           Caption = 'Autosave:'
           ParentColor = False
           ParentFont = False
         end
         object autosaveComboBox: TComboBox
-          Left = 64
+          Left = 52
           Height = 23
           Top = 0
-          Width = 380
+          Width = 302
           Align = alClient
           ItemHeight = 15
-          OnChange = autosaveComboBoxChange
           ParentFont = False
           Style = csDropDownList
           TabOrder = 0
+          OnChange = autosaveComboBoxChange
         end
       end
       object miSaveBeforeRun: TCheckBox
         Left = 0
-        Height = 24
-        Top = 84
-        Width = 444
+        Height = 19
+        Top = 69
+        Width = 354
         Align = alTop
         Caption = 'Autosave on execution'
-        OnChange = miSaveBeforeRunChange
         ParentFont = False
         TabOrder = 3
+        OnChange = miSaveBeforeRunChange
       end
     end
     object TabSheet_install: TTabSheet
       Caption = 'installation'
-      ClientHeight = 200
+      ClientHeight = 207
       ClientWidth = 354
       ParentFont = False
       object uninstallButton: TButton
@@ -427,9 +427,9 @@ object SettingsForm: TSettingsForm
         Align = alTop
         AutoSize = True
         Caption = 'Uninstall and quit immediately'
-        OnClick = uninstallButtonClick
         ParentFont = False
         TabOrder = 0
+        OnClick = uninstallButtonClick
       end
       object restorePacksAndDemosButton: TButton
         Left = 0
@@ -439,9 +439,9 @@ object SettingsForm: TSettingsForm
         Align = alTop
         AutoSize = True
         Caption = 'Restore default packages and demos'
-        OnClick = restorePacksAndDemosButtonClick
         ParentFont = False
         TabOrder = 1
+        OnClick = restorePacksAndDemosButtonClick
       end
       object togglePortableButton: TButton
         Left = 0
@@ -450,44 +450,9 @@ object SettingsForm: TSettingsForm
         Width = 354
         Align = alTop
         Caption = 'togglePortableButton'
-        OnClick = togglePortableButtonClick
         ParentFont = False
         TabOrder = 2
-      end
-      object Label8: TLabel
-        AnchorSideLeft.Control = togglePortableButton
-        AnchorSideTop.Control = togglePortableButton
-        AnchorSideTop.Side = asrBottom
-        Left = 0
-        Height = 15
-        Top = 189
-        Width = 70
-        Align = alCustom
-        Caption = 'light location'
-        ParentColor = False
-        ParentFont = False
-      end
-      object FileNameEdit1: TFileNameEdit
-        AnchorSideLeft.Control = Label8
-        AnchorSideLeft.Side = asrBottom
-        AnchorSideTop.Control = togglePortableButton
-        AnchorSideTop.Side = asrBottom
-        AnchorSideRight.Control = TabSheet_install
-        AnchorSideRight.Side = asrBottom
-        Left = 74
-        Height = 23
-        Top = 189
-        Width = 280
-        FilterIndex = 0
-        HideDirectories = False
-        ButtonWidth = 23
-        NumGlyphs = 1
-        Anchors = [akTop, akLeft, akRight]
-        BorderSpacing.Left = 4
-        MaxLength = 0
-        ParentFont = False
-        TabOrder = 3
-        OnEditingDone = FileNameEdit1EditingDone
+        OnClick = togglePortableButtonClick
       end
       object clearFileHistoryButton: TButton
         Left = 0
@@ -497,9 +462,9 @@ object SettingsForm: TSettingsForm
         Align = alTop
         AutoSize = True
         Caption = 'Clear file/folder history'
-        OnClick = clearFileHistoryButtonClick
         ParentFont = False
-        TabOrder = 4
+        TabOrder = 3
+        OnClick = clearFileHistoryButtonClick
       end
       object fileAssociationGroupBox: TGroupBox
         Left = 0
@@ -512,7 +477,7 @@ object SettingsForm: TSettingsForm
         ClientHeight = 69
         ClientWidth = 350
         ParentFont = False
-        TabOrder = 5
+        TabOrder = 4
         object rbAssociateFull: TRadioButton
           Left = 0
           Height = 19
@@ -526,24 +491,11 @@ object SettingsForm: TSettingsForm
           ShowHint = True
           TabOrder = 0
         end
-        object rbAssociateLight: TRadioButton
-          Left = 0
-          Height = 19
-          Hint = 'Light version starts faster and might delegate to full version if necessary.'
-          Top = 19
-          Width = 350
-          Align = alTop
-          Caption = 'associate mnh files with light version'
-          ParentFont = False
-          ParentShowHint = False
-          ShowHint = True
-          TabOrder = 1
-        end
         object rbAssociateNone: TRadioButton
           Left = 0
           Height = 19
           Hint = 'Remove file associations.'
-          Top = 38
+          Top = 19
           Width = 350
           Align = alTop
           Caption = 'no association of mnh files'
@@ -551,7 +503,7 @@ object SettingsForm: TSettingsForm
           ParentFont = False
           ParentShowHint = False
           ShowHint = True
-          TabOrder = 2
+          TabOrder = 1
           TabStop = True
         end
         object buttonApplyAssociations: TButton
@@ -569,9 +521,9 @@ object SettingsForm: TSettingsForm
           BorderSpacing.Right = 2
           BorderSpacing.Bottom = 2
           Caption = 'apply'
-          OnClick = buttonApplyAssociationsClick
           ParentFont = False
-          TabOrder = 3
+          TabOrder = 2
+          OnClick = buttonApplyAssociationsClick
         end
       end
     end
@@ -579,7 +531,7 @@ object SettingsForm: TSettingsForm
   object closeButton: TButton
     Left = 0
     Height = 10
-    Top = 228
+    Top = 235
     Width = 362
     Align = alBottom
     AutoSize = True

@@ -1558,7 +1558,7 @@ FUNCTION T_plotSystem.getPlotStatement(CONST frameIndexOrNegativeIfAll:longint; 
     try
       globalRowData:=globalLiteralRecycler.newListLiteral();
       setLength(result,2);
-      result[0]:='#!'+settings.fullFlavourLocation+' '+FLAG_GUI;
+      result[0]:='#!'+paramStr(0)+' '+FLAG_GUI;
       result[1]:='plain script;';
       commands:='resetOptions;';
       myGenerics.append(commands,'clearAnimation;');

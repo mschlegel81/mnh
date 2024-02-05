@@ -45,10 +45,6 @@ TYPE
     {$endif}
     FUNCTION parseShebangParameters(CONST fileName: string; VAR parsingState:T_parsingState): boolean;
     FUNCTION executeCommand:boolean;
-
-    FUNCTION isCallLightFlavour:boolean;
-    PROCEDURE setCallLightFlavour(CONST b:boolean);
-    PROPERTY callLightFlavour:boolean read isCallLightFlavour write setCallLightFlavour;
     FUNCTION allowedSideEffects:T_sideEffects;
 
     FUNCTION usingConsoleOutput:boolean;
@@ -171,11 +167,9 @@ PROCEDURE T_mnhExecutionOptions.clear;
     verbosityString:=DEF_VERBOSITY_STRING;
     setLength(deferredAdapterCreations,0);
     flags:=[];
-    executor:=settings.fullFlavourLocation;
+    executor:=paramStr(0);
     customDateFormat:='';
     customLogLocationLength:=maxLongint;
-    if (executor='') or not(fileExists(executor))
-    then executor:=settings.lightFlavourLocation;
   end;
 
 FUNCTION T_mnhExecutionOptions.getSerialVersion:dword;
@@ -187,7 +181,6 @@ FUNCTION T_mnhExecutionOptions.loadFromStream(VAR stream: T_bufferedInputStreamW
   begin
     clear;
     stream.read(flags,sizeOf(flags));
-    callLightFlavour:=stream.readBoolean;
     verbosityString:=stream.readAnsiString;
 
     customLogLocationLength:=stream.readLongint   ;
@@ -206,7 +199,6 @@ PROCEDURE T_mnhExecutionOptions.saveToStream(VAR stream: T_bufferedOutputStreamW
   VAR i:longint;
   begin
     stream.write(flags,sizeOf(flags));
-    stream.writeBoolean(callLightFlavour);
     stream.writeAnsiString(verbosityString);
 
     stream.writeLongint(customLogLocationLength);
@@ -439,18 +431,6 @@ FUNCTION T_mnhExecutionOptions.executeCommand: boolean;
     result:=clf_EXEC_CMD in flags;
   end;
 
-FUNCTION T_mnhExecutionOptions.isCallLightFlavour: boolean;
-  begin
-    result:=executor=settings.lightFlavourLocation;
-  end;
-
-PROCEDURE T_mnhExecutionOptions.setCallLightFlavour(CONST b: boolean);
-  begin
-    if b and fileExists(settings.lightFlavourLocation)
-    then executor:=settings.lightFlavourLocation
-    else executor:=settings.fullFlavourLocation;
-  end;
-
 FUNCTION T_mnhExecutionOptions.allowedSideEffects:T_sideEffects;
   begin
     result:=C_sideEffectProfile[sideEffectProfile].allowed;
@@ -536,9 +516,6 @@ PROCEDURE T_mnhExecutionOptions.initFromShebang(CONST shebangLine: string; CONST
     if requires*C_sideEffectsRequiringGui<>[] then include(flags,clf_GUI);
     if se_sound in requires then Exclude(flags,clf_SILENT);
     if (se_input in requires) or (clf_GUI in flags) then Exclude(flags,clf_HEADLESS);
-    setCallLightFlavour(not((clf_GUI in flags) or
-                            (requires*C_sideEffectsRequiringGui<>[]) or
-                            (executor=settings.fullFlavourLocation)));
   end;
 
 FUNCTION T_mnhExecutionOptions.getShebang: ansistring;

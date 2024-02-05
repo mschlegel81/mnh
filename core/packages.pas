@@ -145,7 +145,7 @@ TYPE
       FUNCTION loadForCodeAssistance(VAR packageToInspect:T_package; CONST recycler:P_recycler{$ifdef fullVersion}; OUT callAndIdInfos:P_callAndIdInfos{$endif}):T_storedMessages;
       FUNCTION runScript(CONST filenameOrId:string; CONST scriptSource,mainParameters:T_arrayOfString; CONST sideEffectWhitelist:T_sideEffects; CONST locationForWarning:T_tokenLocation; CONST callerContext:P_context; CONST recycler:P_recycler;  CONST connectLevel:byte; CONST enforceDeterminism:boolean):P_literal;
       {$ifdef fullVersion}
-      PROCEDURE runInstallScript(CONST associateFullVersion:boolean);
+      PROCEDURE runInstallScript;
       PROCEDURE runUninstallScript;
       PROCEDURE demoCallInterpretation(CONST input:T_arrayOfString; CONST recycler:P_recycler; OUT textOut,usedBuiltinIDs:T_arrayOfString);
       {$endif}
@@ -386,15 +386,13 @@ FUNCTION T_sandbox.runScript(CONST filenameOrId:string; CONST scriptSource,mainP
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_sandbox.runInstallScript(CONST associateFullVersion:boolean);
+PROCEDURE T_sandbox.runInstallScript;
   {$i res_ensureAssoc.inc}
   VAR recycler:P_recycler;
       noLoc:T_tokenLocation;
       targetExe:string;
   begin
-    if associateFullVersion
-    then targetExe:=settings.fullFlavourLocation
-    else targetExe:=settings.lightFlavourLocation;
+    targetExe:=paramStr(0);
     recycler:=newRecycler;
     runScript('tempFile',
         {src} split(decompressString(ensureAssoc_mnh),C_lineBreakChar),

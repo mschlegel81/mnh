@@ -11,14 +11,9 @@ begin
   if wantMainLoopAfterParseCmdLine then begin
     if clf_GUI in commandLine.mnhExecutionOptions.flags
     then begin
-      commandLine.mnhExecutionOptions.flags-=[clf_PAUSE_ALWAYS,clf_PAUSE_ON_ERR];
-      if fileExists(settings.fullFlavourLocation)
-      then runDetachedCommand(settings.fullFlavourLocation,myCommandLineParameters)
-      else begin
-        writeln('Delegate to full version is required but file "',settings.fullFlavourLocation,'" is invalid');
-        writeln('Reinstall to fix this problem');
-        ExitCode:=5;
-      end;
+      beep;
+      writeln(#27'[91;5mThis script cannot be run in light version'#27'[0m');
+      ExitCode:=5;
     end else displayHelp(nil);
   end;
   commandLine.pauseIfConfigured(ExitCode<>0);

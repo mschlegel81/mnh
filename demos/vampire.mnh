@@ -1,6 +1,8 @@
+
+private prod(I:IntList)->I.agg(*);
 private getFangs(i:Int)->begin
   local iDigits:=i.digits.sort;
-  local dividers:=factorize(i).subSets.map((s)->s.agg(*) orElse 1);
+  local dividers:=factorize(i).subSets.map(::prod);
   dividers:=dividers[10^(iDigits.size div 2-1)<=dividers and sqr(dividers)<=i];
   [dividers,i div dividers].transpose
     .filter({!($f mod 10=0).agg(AND) AND $f.digits.flatten.sort==iDigits})
@@ -28,7 +30,7 @@ private vampireCandidateGenerator->{
 begin
   local next:=1259;
 save;
-  (next+=1) in [100,10000,1000000]
+  (next+=1) in [10000,1000000]
   ? next*=10
   : next;
 end}.toIteratableExpression;

@@ -164,8 +164,7 @@ FUNCTION mnhInfo_imp intFuncSignature;
       .put(recycler,'build'          ,BUILD_NUMBER               )^
       .put(recycler,'flavour'        ,FLAVOUR_STRING             )^
       .put(recycler,'configDir'      ,configDir                  )^
-      .put(recycler,'fullVersionPath' ,settings.fullFlavourLocation)^
-      .put(recycler,'lightVersionPath',settings.lightFlavourLocation)^
+      .put(recycler,'executor'       ,paramStr(0))^
       .put(recycler,'configured_cpus',settings.cpuCount)^
       .put(recycler,'configured_mem' ,settings.memoryLimit)^
       .put(recycler,'used_mem'       ,memoryCleaner.getMemoryUsedInBytes)^

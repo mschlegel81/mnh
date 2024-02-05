@@ -1410,6 +1410,7 @@ FUNCTION T_scalingOptions.getRefinementSteps(CONST row:T_dataRow; CONST samplesT
       tmp:double=0;
       i:longint;
       k:longint=0;
+      samplesDistributed:longint=0;
   begin
     //1. Determine heights of triangles; replace Nan and infinite values by average of valid values
     setLength(triangleHeights,row.size-2);
@@ -1438,7 +1439,19 @@ FUNCTION T_scalingOptions.getRefinementSteps(CONST row:T_dataRow; CONST samplesT
     setLength(result,length(triangleHeights));
     if isNan(tmp) or isInfinite(tmp)
     then for k:=0 to length(result)-1 do result[k]:=1
-    else for k:=0 to length(result)-1 do result[k]:=round(triangleHeights[k]*tmp);
+    else for k:=0 to length(result)-1 do begin
+      result[k]:=round(triangleHeights[k]*tmp);
+      samplesDistributed+=result[k];
+    end;
+
+    while samplesDistributed<samplesToDistribute do begin
+      //find the highest triangle and add a sample
+      i:=0;
+      for k:=1 to length(triangleHeights)-1 do if triangleHeights[k]*(result[i]+1)>triangleHeights[i]*(result[k]+1) then i:=k;
+      result[i]+=1;
+      samplesDistributed+=1;
+    end;
+
   end;
 
 FUNCTION T_scalingOptions.screenToReal(CONST x, y: integer): T_point;

@@ -25,13 +25,10 @@ TYPE
     buttonApplyAssociations: TButton;
     cbCopyAsHtml: TCheckBox;
     CloseButton: TButton;
-    FileNameEdit1: TFileNameEdit;
     fileAssociationGroupBox: TGroupBox;
-    Label8: TLabel;
     miSaveBeforeRun: TCheckBox;
     clearFileHistoryButton: TButton;
     rbAssociateFull: TRadioButton;
-    rbAssociateLight: TRadioButton;
     rbAssociateNone: TRadioButton;
     TableFontButton: TButton;
     GeneralFontButton: TButton;
@@ -71,7 +68,6 @@ TYPE
     PROCEDURE buttonApplyAssociationsClick(Sender: TObject);
     PROCEDURE cbCopyAsHtmlChange(Sender: TObject);
     PROCEDURE clearFileHistoryButtonClick(Sender: TObject);
-    PROCEDURE FileNameEdit1EditingDone(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE GeneralFontButtonClick(Sender: TObject);
     PROCEDURE miSaveBeforeRunChange(Sender: TObject);
@@ -154,9 +150,6 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     autosaveComboBox.items.clear;
     for i:=0 to length(C_SAVE_INTERVAL)-1 do autosaveComboBox.items.add(C_SAVE_INTERVAL[i].text);
     autosaveComboBox.ItemIndex:=workspace.saveIntervalIdx;
-
-    FileNameEdit1.fileName:=settings.lightFlavourLocation;
-    rbAssociateLight.enabled:=fileExists(settings.lightFlavourLocation);
     miSaveBeforeRun.checked:=workspace.autosaveBeforeEachExecution;
     cbCopyAsHtml.checked:=ideSettings.copyTextAsHtml;
   end;
@@ -210,12 +203,6 @@ PROCEDURE TSettingsForm.FormDestroy(Sender: TObject);
     ideLayoutUtil.getFontSize_callback:=nil;
   end;
 
-PROCEDURE TSettingsForm.FileNameEdit1EditingDone(Sender: TObject);
-  begin
-    settings.lightFlavourLocation:=FileNameEdit1.fileName;
-    rbAssociateLight.enabled:=fileExists(settings.lightFlavourLocation);
-  end;
-
 PROCEDURE TSettingsForm.clearFileHistoryButtonClick(Sender: TObject);
   begin
     workspace.fileHistory.clear;
@@ -230,9 +217,8 @@ PROCEDURE TSettingsForm.cbCopyAsHtmlChange(Sender: TObject);
 
 PROCEDURE TSettingsForm.buttonApplyAssociationsClick(Sender: TObject);
   begin
-    if      rbAssociateFull .checked then begin sandbox^.runInstallScript(true) ; ideSettings.registeredAssociation:=raFullVersion;   end
-    else if rbAssociateLight.checked then begin sandbox^.runInstallScript(false); ideSettings.registeredAssociation:=raLightVersion; end
-    else if rbAssociateNone .checked then begin sandbox^.runUninstallScript;      ideSettings.registeredAssociation:=raNone;         end;
+    if      rbAssociateFull .checked then begin sandbox^.runInstallScript;   ideSettings.registeredAssociation:=raFullVersion;   end
+    else if rbAssociateNone .checked then begin sandbox^.runUninstallScript; ideSettings.registeredAssociation:=raNone;         end;
   end;
 
 PROCEDURE TSettingsForm.miSaveBeforeRunChange(Sender: TObject);
@@ -263,7 +249,6 @@ PROCEDURE TSettingsForm.uninstallButtonClick(Sender: TObject);
     DeleteFile(ideSettingsFilename);
     DeleteFile(defaultWorkspaceFilename);
     DeleteFile(runParameterHistoryFileName);
-    DeleteFile(settings.lightFlavourLocation);
     {$ifdef Windows}
     for fileName in ADDITIONAL_FILES_TO_DELETE do DeleteFile(fileName);
     APP_STYLE:=APP_STYLE_BLANK;
@@ -285,7 +270,6 @@ PROCEDURE TSettingsForm.FormShow(Sender: TObject);
     togglePortableButton.caption:=PORTABLE_BUTTON_CAPTION[APP_STYLE=APP_STYLE_NORMAL];
     case ideSettings.registeredAssociation of
       raFullVersion : rbAssociateFull.checked :=true;
-      raLightVersion: rbAssociateLight.checked:=true;
       raNone        : rbAssociateNone.checked :=true;
     end;
     {$endif}

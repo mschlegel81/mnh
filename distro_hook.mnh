@@ -1,13 +1,7 @@
 main->begin
-  ['target\Win64\mnh.exe',
-   'target\Win64\mnh_light.exe',
-   '..\art.bin\workflowScriptTemplate.mnh']
-   .filter(::fileExists)
-   .map({[$f,'C:\bin\'&extractFileName($f)]})
-   .map({begin
-      deleteFile($f[1]);
-      copyFile@$f
-      ? print('Copied ',$f[0],' -> ',$f[1])
-      : fail('Copy ',$f[0],' -> ',$f[1],' failed');
-    end});
+  local source:='target\Win64\mnh.exe';
+  local target:='C:\bin\mnh.exe';
+  source.fileExists
+  ? print('Copy ',source,'=>',target,' ',copyFile(source,target) ? 'o.k' : 'failed')
+  : void;
 end;
