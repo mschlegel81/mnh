@@ -2,8 +2,7 @@
 Lazarus64Path:='..\lazarus64';
 DelpPath     :='..\lazarus64\fpc\3.2.0\bin\x86_64-win64\delp.exe';
 FPDocPath    :='..\lazarus64\fpc\3.2.0\bin\x86_64-win64\fpdoc.exe';
-SSL64   :=files('../3rd_party/openSsl64/*').expandedFileName;
-SSL(w)->copy(w,0,5)=='Win32' ? SSL32 : SSL64;
+SSL64        :=files('3rd_party/openSsl64/*').expandedFileName;
 
 makedoc->FPDocPath.exec('--package=mnh'|hashFiles.map({format('--input=%s',$0)}));
 
@@ -75,8 +74,8 @@ packSets(builtNoAndVersion:List(2))->
         .map({[$B['targetDest'].extractFileDirectory.extractFileNameOnly,$B['platform']!='Linux',$B['targetDest']]})
         .group(0).getInner(1)
         .map({[$x[0,0],$x[0,1],$x.getInner(2)]})
-        .each(B,B[1] ? [B[2] | SSL(B[0]),B[0]&'_ssl'] : void ,
-                       [B[2]            ,B[0]       ])
+        .each(B,B[1] ? [B[2] | SSL64 ,B[0]&'_ssl'] : void ,
+                       [B[2]         ,B[0]       ])
         .each(B,[B[0].expandedFileName,builtNoAndVersion[1].join("."),B[1]]);
 
 memoized sevenZipExe->

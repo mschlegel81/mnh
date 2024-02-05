@@ -31,3 +31,4 @@ versions/*.zip
 /*/wpoData*
 *.lps
 /demos/inputs/unixdict2.txt
+/3rd_party/OpenSsl64/*
