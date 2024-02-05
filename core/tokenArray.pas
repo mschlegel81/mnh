@@ -578,6 +578,7 @@ DESTRUCTOR T_abstractLexer.destroy;
 FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recycler:P_recycler): T_enhancedStatement;
   VAR localIdStack:T_idStack;
       earlierSuppressedUnusedAttribute:boolean=false;
+      attributeSectionBeforeBody:boolean=true;
 
   FUNCTION hasSuppressedUnusedAttribute:boolean;
     VAR s:string;
@@ -591,7 +592,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
     begin
       case tok^.tokType of
         tt_attributeComment: begin
-          if tok^.txt<>'' then myGenerics.append(nextStatement.attributes,tok^.txt);
+          if (tok^.txt<>'') and attributeSectionBeforeBody then myGenerics.append(nextStatement.attributes,tok^.txt);
           if startsWith(tok^.txt,SUPPRESS_UNUSED_WARNING_ATTRIBUTE) then begin
             localIdStack.suppressUnusedWarningInLine(tok^.location.line+1);
           end;
@@ -607,8 +608,8 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
           recycler^.disposeToken(tok);
           exit;
         end;
-
       end;
+      attributeSectionBeforeBody:=false;
       if nextStatement.token.first=nil
       then nextStatement.token.first     :=tok
       else nextStatement.token.last^.next:=tok;
