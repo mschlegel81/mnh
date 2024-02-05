@@ -424,6 +424,7 @@ FUNCTION T_logFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
         end;
         append(result,trimRight(nextLine));
       end;
+      if allowColoring then for i:=0 to length(result)-1 do result[i]:=C_messageClassMeta[mc_echo].levelColor+result[i]+C_ANSI_CODE_RESET;
     end
     {$ifdef fullVersion}
     else if (message^.messageType=mt_profile_call_info) then exit(P_profileMessage(message)^.toString(@self))
@@ -440,7 +441,7 @@ FUNCTION T_logFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
       s:=StringOfChar(' ',length(timePart)+length(levelPart));
       for i:=1 to length(result)-1 do result[i]:=s+optionalColor(mc) + result[i] + optionalColorOff;
     end else begin
-      result[0]:=timePart+levelPart+locationPart+' '+result[0];
+      result[0]:=timePart+levelPart+locationPart+' '+optionalColor(mc)+result[0] + optionalColorOff;
       s:=StringOfChar(' ',length(timePart)+length(levelPart)+length(locationPart)+1);
       for i:=1 to length(result)-1 do result[i]:=s+optionalColor(mc) + result[i] + optionalColorOff;
     end;
@@ -655,16 +656,16 @@ FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage)
         mt_echo_input,
         mt_echo_declaration: begin
           if message^.messageType=mt_echo_input
-          then nextLine:=C_echoInInfix
-          else nextLine:=C_echoDeclInfix;
+          then nextLine:=C_echoInInfix  +C_messageClassMeta[mc_echo].levelColor
+          else nextLine:=C_echoDeclInfix+C_messageClassMeta[mc_echo].levelColor;
           for s in P_storedMessageWithText(message)^.txt do begin
             if (length(nextLine)>10) and (length(nextLine)+length(s)>CONSOLE_OUT_WIDTH)
             then begin
-              append(result,trimRight(nextLine));
+              append(result,trimRight(nextLine)+C_ANSI_CODE_RESET);
               nextLine:=C_echoContdInfix+trimLeft(s);
             end else nextLine+=s;
           end;
-          append(result,trimRight(nextLine));
+          append(result,trimRight(nextLine)+C_ANSI_CODE_RESET);
         end;
         mt_echo_output: begin
           if P_echoOutMessage(message)^.literal=nil
