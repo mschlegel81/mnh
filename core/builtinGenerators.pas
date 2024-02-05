@@ -1129,6 +1129,7 @@ FUNCTION pMap_imp intFuncSignature;
 
 FUNCTION parallelFilter_imp intFuncSignature;
   VAR filterGenerator:P_parallelFilterGenerator;
+      x: P_listLiteral;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) then begin
@@ -1146,6 +1147,11 @@ FUNCTION parallelFilter_imp intFuncSignature;
         end;
         filterGenerator^.cleanup(recycler);
         dispose(filterGenerator,destroy);
+        if arg0^.literalType=lt_map then begin
+          x:=listResult;
+          result:=P_listLiteral(result)^.toMap(recycler,tokenLocation,context);
+          recycler^.disposeLiteral(x);
+        end;
       end else result:=filter_imp(params,tokenLocation,context,recycler);
     end;
   end;

@@ -41,19 +41,19 @@ CONST
   C_echoDeclInfix ='decl> ';
   C_echoContdInfix=' ...> ';
   C_ANSI_CODE_RESET=#27'[0m';
-  C_messageClassMeta:array[T_messageClass] of record htmlSpan:string; guiMarker:string; levelTxt:string; levelColor:string; triggeredFlags:T_stateFlags; end=
-    {mc_echo   }((htmlSpan:''     ; guiMarker:ECHO_MARKER;    levelTxt:'';      levelColor:#27'[94m'; triggeredFlags:[]              ),
-    {mc_print  } (htmlSpan:''     ; guiMarker:'';             levelTxt:'';      levelColor:''; triggeredFlags:[]              ),
-    {mc_log    } (htmlSpan:''     ; guiMarker:'';             levelTxt:'Log';   levelColor:''; triggeredFlags:[]              ),
-    {mc_timing } (htmlSpan:''     ; guiMarker:TIMING_MARKER;  levelTxt:'';      levelColor:#27'[96m'; triggeredFlags:[]              ),
-    {mc_note   } (htmlSpan:''     ; guiMarker:NOTE_MARKER;    levelTxt:'Note';  levelColor:#27'[3m';  triggeredFlags:[]              ),
-    {mc_warning} (htmlSpan:''     ; guiMarker:WARNING_MARKER; levelTxt:'Warn';  levelColor:#27'[93m'; triggeredFlags:[]              ),
-    {mc_error  } (htmlSpan:'error'; guiMarker:ERROR_MARKER;   levelTxt:'Error'; levelColor:#27'[91m'; triggeredFlags:[FlagError]     ),
-    {mc_fatal  } (htmlSpan:'error'; guiMarker:ERROR_MARKER;   levelTxt:'Fatal'; levelColor:#27'[91;5m'; triggeredFlags:[FlagFatalError])
+  C_messageClassMeta:array[T_messageClass] of record guiMarker:string; levelTxt:string; levelColor:string; triggeredFlags:T_stateFlags; end=
+    {mc_echo   }((guiMarker:ECHO_MARKER;    levelTxt:'';      levelColor:#27'[94m'; triggeredFlags:[]              ),
+    {mc_print  } (guiMarker:'';             levelTxt:'';      levelColor:''; triggeredFlags:[]              ),
+    {mc_log    } (guiMarker:'';             levelTxt:'Log';   levelColor:''; triggeredFlags:[]              ),
+    {mc_timing } (guiMarker:TIMING_MARKER;  levelTxt:'';      levelColor:#27'[96m'; triggeredFlags:[]              ),
+    {mc_note   } (guiMarker:NOTE_MARKER;    levelTxt:'Note';  levelColor:#27'[3m';  triggeredFlags:[]              ),
+    {mc_warning} (guiMarker:WARNING_MARKER; levelTxt:'Warn';  levelColor:#27'[93m'; triggeredFlags:[]              ),
+    {mc_error  } (guiMarker:ERROR_MARKER;   levelTxt:'Error'; levelColor:#27'[91m'; triggeredFlags:[FlagError]     ),
+    {mc_fatal  } (guiMarker:ERROR_MARKER;   levelTxt:'Fatal'; levelColor:#27'[91;5m'; triggeredFlags:[FlagFatalError])
     {$ifdef fullVersion},
-    {mc_plot   } (htmlSpan:''     ; guiMarker:''; levelTxt:''; levelColor:''; triggeredFlags:[]),
-                 (htmlSpan:''     ; guiMarker:''; levelTxt:''; levelColor:''; triggeredFlags:[]),
-    {mc_gui}     (htmlSpan:''     ; guiMarker:''; levelTxt:''; levelColor:''; triggeredFlags:[])
+    {mc_plot   } (guiMarker:''; levelTxt:''; levelColor:''; triggeredFlags:[]),
+                 (guiMarker:''; levelTxt:''; levelColor:''; triggeredFlags:[]),
+    {mc_gui}     (guiMarker:''; levelTxt:''; levelColor:''; triggeredFlags:[])
     {$endif});
 
 TYPE
