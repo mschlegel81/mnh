@@ -39,10 +39,6 @@ T_settings=object(T_serializable)
   //Global:
   memoryLimit:int64;
   cpuCount:longint;
-
-  fullFlavourLocation,
-  lightFlavourLocation:string;
-
   newFileLineEnding,overwriteLineEnding:byte;
 
   CONSTRUCTOR create;
@@ -51,7 +47,6 @@ T_settings=object(T_serializable)
   FUNCTION loadFromStream(VAR stream:T_bufferedInputStreamWrapper):boolean; virtual;
   PROCEDURE saveToStream(VAR stream:T_bufferedOutputStreamWrapper); virtual;
   PROCEDURE initDefaults;
-  PROCEDURE fixLocations;
 end;
 
 FUNCTION settingsFileName: string;
@@ -92,14 +87,10 @@ PROCEDURE saveSettings;
 CONSTRUCTOR T_settings.create;
   begin
     cpuCount:=1;
-    fullFlavourLocation:='';
-    lightFlavourLocation:='';
   end;
 
 DESTRUCTOR T_settings.destroy;
   begin
-    fullFlavourLocation:='';
-    lightFlavourLocation:='';
   end;
 
 FUNCTION T_settings.getSerialVersion: dword; begin result:=164423; end;
@@ -116,8 +107,6 @@ FUNCTION T_settings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): bo
     if   memoryLimit> 1610612736 //=1.5GiB
     then memoryLimit:=1610612736;
     {$endif}
-    fullFlavourLocation:=stream.readAnsiString;
-    lightFlavourLocation:=stream.readAnsiString;
     newFileLineEnding  :=stream.readByte([LINE_ENDING_DEFAULT,LINE_ENDING_LINUX,LINE_ENDING_WINDOWS]);
     overwriteLineEnding:=stream.readByte([LINE_ENDING_DEFAULT,LINE_ENDING_LINUX,LINE_ENDING_WINDOWS,LINE_ENDING_UNCHANGED]);
     if not(stream.allOkay) then cleanExit else result:=true;
@@ -128,8 +117,6 @@ PROCEDURE T_settings.saveToStream(VAR stream:T_bufferedOutputStreamWrapper);
     inherited saveToStream(stream);
     stream.writeLongint(cpuCount);
     stream.writeInt64(memoryLimit);
-    stream.writeAnsiString(fullFlavourLocation);
-    stream.writeAnsiString(lightFlavourLocation);
     stream.writeByte(newFileLineEnding);
     stream.writeByte(overwriteLineEnding);
   end;
@@ -146,27 +133,8 @@ PROCEDURE T_settings.initDefaults;
                  {$else}
                  1000000000;
                  {$endif}
-    fullFlavourLocation:={$ifdef fullVersion}paramStr(0){$else}''{$endif};
-    lightFlavourLocation:={$ifdef fullVersion}''{$else}paramStr(0){$endif};
     newFileLineEnding:=LINE_ENDING_DEFAULT;
     overwriteLineEnding:=LINE_ENDING_UNCHANGED;
-  end;
-
-PROCEDURE T_settings.fixLocations;
-  begin
-    {$ifdef fullVersion}
-    fullFlavourLocation:=paramStr(0);
-    if lightFlavourLocation='' then begin
-      lightFlavourLocation:=ExtractFileDir(paramStr(0))+DirectorySeparator+'mnh_light'{$ifdef Windows}+'.exe'{$endif};
-      if not(fileExists(lightFlavourLocation)) then lightFlavourLocation:='';
-    end;
-    {$else}
-    lightFlavourLocation:=paramStr(0);
-    if fullFlavourLocation='' then begin
-      fullFlavourLocation:=ExtractFileDir(paramStr(0))+DirectorySeparator+'mnh'{$ifdef Windows}+'.exe'{$endif};
-      if not(fileExists(fullFlavourLocation)) then fullFlavourLocation:='';
-    end;
-    {$endif};
   end;
 
 PROCEDURE loadSettings;
@@ -179,9 +147,6 @@ PROCEDURE loadSettings;
 INITIALIZATION
   settings.create;
   loadSettings;
-  {$ifndef FULLVERSION}
-  settings.fixLocations;
-  {$endif}
 
 FINALIZATION
   settings.destroy;

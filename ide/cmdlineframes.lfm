@@ -27,141 +27,96 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
       ClientHeight = 323
       ClientWidth = 449
       ParentFont = False
-      object GroupBox1: TGroupBox
-        AnchorSideLeft.Control = TabSheet1
-        AnchorSideTop.Control = TabSheet1
-        AnchorSideRight.Control = TabSheet1
-        AnchorSideRight.Side = asrBottom
-        Left = 0
-        Height = 58
-        Top = 0
-        Width = 449
-        Align = alCustom
-        Anchors = [akTop, akLeft, akRight]
-        AutoSize = True
-        Caption = 'Executor'
-        ClientHeight = 38
-        ClientWidth = 445
-        ParentFont = False
-        TabOrder = 0
-        object lightVersionRb: TRadioButton
-          Left = 0
-          Height = 19
-          Top = 0
-          Width = 445
-          Align = alTop
-          Caption = 'lightVersionRb'
-          Checked = True
-          OnChange = anyPage1Change
-          OnClick = lightVersionRbClick
-          ParentFont = False
-          TabOrder = 0
-          TabStop = True
-        end
-        object fullVersionRb: TRadioButton
-          Left = 0
-          Height = 19
-          Top = 19
-          Width = 445
-          Align = alTop
-          Caption = 'fullVersionRb'
-          OnChange = anyPage1Change
-          ParentFont = False
-          TabOrder = 1
-        end
-      end
       object GroupBox2: TGroupBox
         AnchorSideLeft.Control = TabSheet1
-        AnchorSideTop.Control = GroupBox1
-        AnchorSideTop.Side = asrBottom
+        AnchorSideTop.Control = TabSheet1
         AnchorSideBottom.Control = GroupBox3
         AnchorSideBottom.Side = asrBottom
         Left = 0
         Height = 96
-        Top = 63
-        Width = 133
+        Top = 5
+        Width = 131
         Align = alCustom
         AutoSize = True
         BorderSpacing.Top = 5
         Caption = 'Input behavior'
         ClientHeight = 76
-        ClientWidth = 129
+        ClientWidth = 127
         ParentFont = False
-        TabOrder = 1
+        TabOrder = 0
         object guiFlagCb: TCheckBox
           Left = 0
           Height = 19
           Hint = 'start in GUI mode'
           Top = 0
-          Width = 129
+          Width = 127
           Align = alTop
           Caption = 'guiFlagCb'
-          OnChange = anyPage1Change
-          OnClick = guiFlagCbClick
           ParentFont = False
           ParentShowHint = False
           ShowHint = True
           TabOrder = 0
+          OnChange = anyPage1Change
+          OnClick = guiFlagCbClick
         end
         object headlessFlagCb: TCheckBox
           Left = 0
           Height = 19
           Hint = 'forbid all inputs'
           Top = 19
-          Width = 129
+          Width = 127
           Align = alTop
           Caption = 'headlessFlagCb'
-          OnChange = anyPage1Change
-          OnClick = headlessFlagCbClick
           ParentFont = False
           ParentShowHint = False
           ShowHint = True
           TabOrder = 1
+          OnChange = anyPage1Change
+          OnClick = headlessFlagCbClick
         end
         object pauseFlagCb: TCheckBox
           Left = 0
           Height = 19
           Hint = 'always pause after execution'
           Top = 38
-          Width = 129
+          Width = 127
           Align = alTop
           Caption = 'pauseFlagCb'
-          OnChange = anyPage1Change
-          OnClick = pauseFlagCbClick
           ParentFont = False
           ParentShowHint = False
           ShowHint = True
           TabOrder = 2
+          OnChange = anyPage1Change
+          OnClick = pauseFlagCbClick
         end
         object pauseOnErrorFlagCb: TCheckBox
           Left = 0
           Height = 19
           Hint = 'pause after execution if an error ocurred'
           Top = 57
-          Width = 129
+          Width = 127
           Align = alTop
           Caption = 'pauseOnErrorFlagCb'
-          OnChange = anyPage1Change
-          OnClick = pauseOnErrorFlagCbClick
           ParentFont = False
           ParentShowHint = False
           ShowHint = True
           TabOrder = 3
+          OnChange = anyPage1Change
+          OnClick = pauseOnErrorFlagCbClick
         end
       end
       object GroupBox3: TGroupBox
         AnchorSideLeft.Control = GroupBox2
         AnchorSideLeft.Side = asrBottom
-        AnchorSideTop.Control = GroupBox1
-        AnchorSideTop.Side = asrBottom
+        AnchorSideTop.Control = TabSheet1
         AnchorSideRight.Control = TabSheet1
         AnchorSideRight.Side = asrBottom
         AnchorSideBottom.Control = GroupBox2
         AnchorSideBottom.Side = asrBottom
-        Left = 138
+        Left = 136
         Height = 100
-        Top = 63
-        Width = 311
+        Top = 5
+        Width = 313
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
         AutoSize = True
@@ -169,22 +124,22 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
         BorderSpacing.Top = 5
         Caption = 'Output behavior'
         ClientHeight = 80
-        ClientWidth = 307
+        ClientWidth = 309
         ParentFont = False
-        TabOrder = 2
+        TabOrder = 1
         object quietFlagCb: TCheckBox
           Left = 0
           Height = 19
           Hint = 'suppress console output'
           Top = 0
-          Width = 84
+          Width = 82
           Align = alCustom
           Caption = 'quietFlagCb'
-          OnChange = anyPage1Change
           ParentFont = False
           ParentShowHint = False
           ShowHint = True
           TabOrder = 0
+          OnChange = anyPage1Change
         end
         object silentFlagCb: TCheckBox
           AnchorSideTop.Control = quietFlagCb
@@ -193,14 +148,14 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
           Height = 19
           Hint = 'suppress beeps'
           Top = 19
-          Width = 85
+          Width = 83
           Align = alCustom
           Caption = 'silentFlagCb'
-          OnChange = anyPage1Change
           ParentFont = False
           ParentShowHint = False
           ShowHint = True
           TabOrder = 1
+          OnChange = anyPage1Change
         end
         object Label1: TLabel
           AnchorSideLeft.Control = silentFlagCb
@@ -227,17 +182,17 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
           Height = 23
           Hint = 'Verbosity. Options can consist of multiple characters.'#13#10'Lowercase indicates enabling, uppercase indicates disabling.'#13#10'   p/P  : print out'#13#10'   i/I  : input echo'#13#10'   d/D  : declaration echo'#13#10'   o/O  : output echo'#13#10'   e/E  : all echo; same as ido'#13#10'   t/T  : timing info'#13#10'   n/N  : notes (error level 1 only)'#13#10'   w/W  : warnings (error level 2 only)'#13#10'   u/U  : user defined notes, warnings and errors'#13#10'   1..4 : override minimum error level'#13#10'   v/V  : be verbose; same as pidot1 (uppercase means disabling all output)'
           Top = 57
-          Width = 251
+          Width = 253
           Align = alCustom
           Alignment = taRightJustify
           Anchors = [akTop, akLeft, akRight]
           BorderSpacing.Left = 5
-          OnChange = anyPage1Change
-          OnEditingDone = anyPage1Change
           ParentFont = False
           ParentShowHint = False
           ShowHint = True
           TabOrder = 5
+          OnChange = anyPage1Change
+          OnEditingDone = anyPage1Change
         end
         object profileFlagCb: TCheckBox
           AnchorSideLeft.Control = silentFlagCb
@@ -247,15 +202,14 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
           Height = 19
           Hint = 'profile the script'
           Top = 38
-          Width = 91
+          Width = 89
           Align = alCustom
           Caption = 'profileFlagCb'
-          OnChange = anyPage1Change
-          OnClick = profileFlagCbClick
           ParentFont = False
           ParentShowHint = False
           ShowHint = True
           TabOrder = 2
+          OnChange = anyPage1Change
         end
         object forceStdOutCb: TCheckBox
           AnchorSideLeft.Control = forceStdErrCb
@@ -263,15 +217,15 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
           AnchorSideTop.Side = asrBottom
           AnchorSideRight.Control = GroupBox3
           AnchorSideRight.Side = asrBottom
-          Left = 194
+          Left = 198
           Height = 19
           Top = 19
-          Width = 99
+          Width = 97
           Caption = 'forceStdOutCb'
-          OnChange = anyPage1Change
-          OnClick = forceStdOutCbClick
           ParentFont = False
           TabOrder = 4
+          OnChange = anyPage1Change
+          OnClick = forceStdOutCbClick
         end
         object forceStdErrCb: TCheckBox
           AnchorSideLeft.Control = silentFlagCb
@@ -279,17 +233,17 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
           AnchorSideTop.Control = GroupBox3
           AnchorSideRight.Control = GroupBox3
           AnchorSideRight.Side = asrBottom
-          Left = 194
+          Left = 198
           Height = 19
           Top = 0
-          Width = 93
+          Width = 91
           Anchors = [akTop, akRight]
           BorderSpacing.Right = 20
           Caption = 'forceStdErrCb'
-          OnChange = anyPage1Change
-          OnClick = forceStdErrCbClick
           ParentFont = False
           TabOrder = 3
+          OnChange = anyPage1Change
+          OnClick = forceStdErrCbClick
         end
       end
       object GroupBox4: TGroupBox
@@ -300,7 +254,7 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
         AnchorSideRight.Side = asrBottom
         Left = 0
         Height = 43
-        Top = 163
+        Top = 105
         Width = 449
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
@@ -309,7 +263,7 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
         ClientHeight = 23
         ClientWidth = 445
         ParentFont = False
-        TabOrder = 3
+        TabOrder = 2
         object sideEffectsComboBox: TComboBox
           Left = 0
           Height = 23
@@ -317,11 +271,11 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
           Width = 445
           Align = alClient
           ItemHeight = 15
-          OnChange = anyPage1Change
-          OnSelect = anyPage1Change
           ParentFont = False
           Style = csDropDownList
           TabOrder = 0
+          OnChange = anyPage1Change
+          OnSelect = anyPage1Change
         end
       end
       object GroupBox7: TGroupBox
@@ -332,7 +286,7 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
         AnchorSideRight.Side = asrBottom
         Left = 0
         Height = 43
-        Top = 206
+        Top = 148
         Width = 449
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
@@ -341,7 +295,7 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
         ClientHeight = 23
         ClientWidth = 445
         ParentFont = False
-        TabOrder = 4
+        TabOrder = 3
         object cpuCountComboBox: TComboBox
           Left = 0
           Height = 23
@@ -369,12 +323,12 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
             '15'
             '16'
           )
-          OnChange = anyPage1Change
-          OnSelect = anyPage1Change
           ParentFont = False
           Style = csDropDownList
           TabOrder = 0
           Text = '<default>'
+          OnChange = anyPage1Change
+          OnSelect = anyPage1Change
         end
       end
     end
@@ -394,9 +348,9 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
         Anchors = [akTop, akRight]
         AutoSize = True
         Caption = '+'
-        OnClick = addOutFileClick
         ParentFont = False
         TabOrder = 1
+        OnClick = addOutFileClick
       end
       object removeOutFile: TButton
         AnchorSideTop.Control = TabSheet2
@@ -410,9 +364,9 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
         Anchors = [akTop, akRight]
         AutoSize = True
         Caption = '-'
-        OnClick = removeOutFileClick
         ParentFont = False
         TabOrder = 2
+        OnClick = removeOutFileClick
       end
       object GroupBox5: TGroupBox
         AnchorSideLeft.Control = TabSheet2
@@ -437,14 +391,14 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
           Left = 0
           Height = 19
           Top = 0
-          Width = 36
+          Width = 34
           Align = alCustom
           Caption = 'file'
           Checked = True
-          OnClick = rbOutputToFileClick
           ParentFont = False
           TabOrder = 0
           TabStop = True
+          OnClick = rbOutputToFileClick
         end
         object rbOutputToStdout: TRadioButton
           AnchorSideLeft.Control = rbOutputToFile
@@ -453,11 +407,11 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
           Left = 0
           Height = 19
           Top = 19
-          Width = 54
+          Width = 52
           Caption = 'stdout'
-          OnClick = rbOutputToStdoutClick
           ParentFont = False
           TabOrder = 2
+          OnClick = rbOutputToStdoutClick
         end
         object rbOutputToStderr: TRadioButton
           AnchorSideLeft.Control = rbOutputToStdout
@@ -466,11 +420,11 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
           Left = 0
           Height = 19
           Top = 38
-          Width = 50
+          Width = 48
           Caption = 'stderr'
-          OnClick = rbOutputToStderrClick
           ParentFont = False
           TabOrder = 3
+          OnClick = rbOutputToStderrClick
         end
         object logFilenameEdit: TEdit
           AnchorSideLeft.Control = rbOutputToFile
@@ -480,16 +434,16 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
           AnchorSideRight.Side = asrBottom
           AnchorSideBottom.Control = rbOutputToFile
           AnchorSideBottom.Side = asrBottom
-          Left = 36
+          Left = 34
           Height = 19
           Top = 0
-          Width = 325
+          Width = 327
           Align = alCustom
           Anchors = [akTop, akLeft, akRight, akBottom]
-          OnEditingDone = logFilenameEditEditingDone
           ParentFont = False
           TabOrder = 1
           Text = '?.log'
+          OnEditingDone = logFilenameEditEditingDone
         end
       end
       object verbosityGroupBox: TGroupBox
@@ -518,12 +472,12 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
           Top = 0
           Width = 80
           Align = alClient
-          OnChange = outFileVerbosityEditEditingDone
-          OnEditingDone = outFileVerbosityEditEditingDone
           ParentFont = False
           ParentShowHint = False
           ShowHint = True
           TabOrder = 0
+          OnChange = outFileVerbosityEditEditingDone
+          OnEditingDone = outFileVerbosityEditEditingDone
         end
       end
       object GroupBox6: TGroupBox
@@ -551,12 +505,12 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
           Left = 0
           Height = 19
           Top = 0
-          Width = 135
+          Width = 133
           Align = alCustom
           Caption = 'use console formatter'
-          OnClick = cbConsoleLikeLogClick
           ParentFont = False
           TabOrder = 0
+          OnClick = cbConsoleLikeLogClick
         end
         object cbConvertPrintToLog: TCheckBox
           AnchorSideLeft.Control = cbConsoleLikeLog
@@ -564,22 +518,22 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
           AnchorSideTop.Control = GroupBox6
           AnchorSideRight.Control = GroupBox6
           AnchorSideRight.Side = asrBottom
-          Left = 135
+          Left = 133
           Height = 19
           Top = 0
-          Width = 310
+          Width = 312
           Align = alCustom
           Anchors = [akTop, akLeft, akRight]
           Caption = 'convert print to log'
-          OnClick = cbConvertPrintToLogClick
           ParentFont = False
           TabOrder = 2
+          OnClick = cbConvertPrintToLogClick
         end
         object Label2: TLabel
           AnchorSideLeft.Control = cbConvertPrintToLog
           AnchorSideTop.Control = timeFormatEdit
           AnchorSideTop.Side = asrCenter
-          Left = 135
+          Left = 133
           Height = 15
           Top = 23
           Width = 68
@@ -593,15 +547,15 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
           AnchorSideTop.Side = asrBottom
           AnchorSideRight.Control = cbConvertPrintToLog
           AnchorSideRight.Side = asrBottom
-          Left = 249
+          Left = 247
           Height = 23
           Top = 19
-          Width = 196
+          Width = 198
           Anchors = [akTop, akLeft, akRight]
-          OnEditingDone = cbConvertPrintToLogClick
           ParentFont = False
           TabOrder = 3
           Text = 'hh:mm:ss.zzz'
+          OnEditingDone = cbConvertPrintToLogClick
         end
         object logLocationLengthEdit: TEdit
           AnchorSideLeft.Control = Label3
@@ -610,24 +564,24 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
           AnchorSideTop.Side = asrBottom
           AnchorSideRight.Control = GroupBox6
           AnchorSideRight.Side = asrBottom
-          Left = 249
+          Left = 247
           Height = 23
           Top = 44
-          Width = 196
+          Width = 198
           Anchors = [akTop, akLeft, akRight]
           BorderSpacing.Left = 5
           BorderSpacing.Top = 2
           NumbersOnly = True
-          OnEditingDone = logLocationLengthEditEditingDone
           ParentFont = False
           TabOrder = 4
           Text = '30'
+          OnEditingDone = logLocationLengthEditEditingDone
         end
         object Label3: TLabel
           AnchorSideLeft.Control = Label2
           AnchorSideTop.Control = logLocationLengthEdit
           AnchorSideTop.Side = asrCenter
-          Left = 135
+          Left = 133
           Height = 15
           Top = 48
           Width = 109
@@ -669,12 +623,12 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
           Left = 0
           Height = 19
           Top = 19
-          Width = 94
+          Width = 92
           Align = alCustom
           Caption = 'append mode'
-          OnClick = cbLogAppendClick
           ParentFont = False
           TabOrder = 1
+          OnClick = cbLogAppendClick
         end
       end
       object outputFileComboBox: TComboBox
@@ -688,10 +642,10 @@ object CmdLineParametersFrame: TCmdLineParametersFrame
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
         ItemHeight = 15
-        OnSelect = outputFileComboBoxSelect
         ParentFont = False
         Style = csDropDownList
         TabOrder = 0
+        OnSelect = outputFileComboBoxSelect
       end
     end
   end

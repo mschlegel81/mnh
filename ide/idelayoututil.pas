@@ -9,7 +9,7 @@ USES
   SynEditTypes,SynExportHTML,SynEditHighlighter,myGenerics;
 
 TYPE
-  T_registeredAssociation=(raNone,raFullVersion,raLightVersion);
+  T_registeredAssociation=(raNone,raFullVersion);
   T_windowStateForUpdate=(wsfuNone,wsfuNormal,wsfuMaximized,wsfuFullscreen);
   T_ideComponent=(icOutline,
                   icHelp,
@@ -1040,7 +1040,7 @@ FUNCTION T_ideSettings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper):
     doShowSplashScreen:=stream.readBoolean;
     htmlDocGeneratedForCodeHash:=stream.readAnsiString;
     copyTextAsHtml:=stream.readBoolean;
-    registeredAssociation:=T_registeredAssociation(stream.readByte([byte(raNone),byte(raFullVersion),byte(raLightVersion)]));
+    registeredAssociation:=T_registeredAssociation(stream.readByte([byte(raNone),byte(raFullVersion)]));
     result:=result and stream.allOkay;
     if not(result) then begin
       if mainForm<>nil then begin
