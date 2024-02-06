@@ -516,6 +516,8 @@ FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; 
 FUNCTION evaluateToBoolean_strict  (CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST arg0:P_literal=nil; CONST arg1:P_literal=nil):boolean; {$ifndef debugMode} inline; {$endif}
 FUNCTION evaluateToBoolean_tolerant(CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST arg0:P_literal=nil; CONST arg1:P_literal=nil):boolean; {$ifndef debugMode} inline; {$endif}
 FUNCTION evaluteExpression(CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST arg0:P_literal=nil; CONST arg1:P_literal=nil):T_evaluationResult; {$ifndef debugMode} inline; {$endif}
+FUNCTION toVector(CONST L:P_listLiteral; CONST location:T_tokenLocation; CONST context:P_abstractContext):T_arrayOfDouble;
+FUNCTION vectorToList(CONST V:T_arrayOfDouble; CONST recycler:P_literalRecycler):P_listLiteral;
 IMPLEMENTATION
 USES sysutils, math,
      zstream,
@@ -593,6 +595,30 @@ FUNCTION evaluteExpression(CONST e:P_expressionLiteral; CONST location:T_tokenLo
     result:=e^.evaluate(location,context,recycler,@parameterList);
     parameterList.fill:=0;
     parameterList.destroy;
+  end;
+
+FUNCTION toVector(CONST L:P_listLiteral; CONST location:T_tokenLocation; CONST context:P_abstractContext):T_arrayOfDouble;
+  VAR i:longint;
+  begin
+    if L^.literalType in [lt_emptyList,lt_numList,lt_realList,lt_intList] then begin
+      setLength(result,L^.fill);
+      for i:=0 to length(result)-1 do result[i]:=P_numericLiteral(L^.dat[i])^.floatValue;
+    end else begin
+      setLength(result,0);
+      context^.raiseError('Cannot transform '+L^.typeString+' to vector',location);
+    end;
+  end;
+
+FUNCTION vectorToList(CONST V:T_arrayOfDouble; CONST recycler:P_literalRecycler):P_listLiteral;
+  VAR i:longint;
+  begin
+    result:=recycler^.newListLiteral(length(V));
+    for i:=0 to length(V)-1 do result^.dat[i]:=recycler^.newRealLiteral(V[i]);
+    result^.fill :=length(V);
+    result^.reals:=length(V);
+    if length(V)=0
+    then result^.literalType:=lt_emptyList
+    else result^.literalType:=lt_realList;
   end;
 
 FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; CONST modifier:longint=-1):boolean;

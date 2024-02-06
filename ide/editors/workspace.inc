@@ -172,17 +172,21 @@ PROCEDURE T_checkFilesThread.execute;
       metaIndex:=0;
       while (metaIndex>=0) and (metaIndex<length(workspace.metas)) do begin
         m:=workspace.metas[metaIndex];
-        with m^ do
-        if (fileInfo.filePath<>'') and not(fileExists(fileInfo.filePath)) and not(fileInfo.ignoreDeleted) then begin
-          message.filePath:=fileInfo.filePath;
-          message.deleted :=true;
-          message.modified:=false;
-          workspace.changedFilesQueue.appendIfNew(message,@equals_fileChangedMessage);
-        end else if fileIsModifiedOnFileSystem and not(fileInfo.ignoreChanged) then begin
-          message.filePath:=fileInfo.filePath;
-          message.modified:=true;
-          message.deleted :=false;
-          workspace.changedFilesQueue.appendIfNew(message,@equals_fileChangedMessage);
+        try
+          with m^ do
+          if (fileInfo.filePath<>'') and not(fileExists(fileInfo.filePath)) and not(fileInfo.ignoreDeleted) then begin
+            message.filePath:=fileInfo.filePath;
+            message.deleted :=true;
+            message.modified:=false;
+            workspace.changedFilesQueue.appendIfNew(message,@equals_fileChangedMessage);
+          end else if fileIsModifiedOnFileSystem and not(fileInfo.ignoreChanged) then begin
+            message.filePath:=fileInfo.filePath;
+            message.modified:=true;
+            message.deleted :=false;
+            workspace.changedFilesQueue.appendIfNew(message,@equals_fileChangedMessage);
+          end;
+        except
+          //Ignore all exceptions
         end;
         inc(metaIndex);
       end;

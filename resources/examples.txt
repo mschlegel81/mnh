@@ -2577,3 +2577,8 @@ bitXor(5,213,10);
 #S setLogging(FTP_connection, enable:Boolean);
 #C Enables or disables logging (level: Note) for FTP operations.
 #C Initially logging is enabled.
+
+#I convolve1D
+#S convolve1D(F:NumericList,G:NumericList,allowGrowth:Boolean)
+#C Returns the discrete convolution of F and G.
+#C If allowGrowth is false (or omitted), G is taken to be a symmetric kernel; the output wil have the same size as F.
