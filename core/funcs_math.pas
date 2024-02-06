@@ -1566,6 +1566,47 @@ FUNCTION kMeans_impl intFuncSignature;
     end else result:=nil;
   end;
 
+FUNCTION convolve1D_impl intFuncSignature;
+  VAR allowGrowth:boolean=false;
+      f,g,fcg:T_arrayOfDouble;
+      i,j,k:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size>=2) and (params^.size<=3) and
+       (arg0^.literalType in [lt_intList,lt_realList,lt_numList]) and
+       (arg1^.literalType in [lt_intList,lt_realList,lt_numList]) and
+       ((params^.size=2) or (arg2^.literalType=lt_boolean))  then begin
+      if params^.size=3 then allowGrowth:=bool2^.value;
+      f:=toVector(list0,tokenLocation,context);
+      g:=toVector(list1,tokenLocation,context);
+
+      if allowGrowth then begin
+        // fcg[i] = sum_j f[j]*g[i-j]
+        //          by f: 0<= j <=    length(f)-1
+        //          by g: i>= j >=1+i-length(g)
+        // 1+i_max-length(g) = length(f)-1
+        //   i_max           = length(g)+length(f)-2
+        setLength(fcg,length(f)+length(g)-1);
+        for i:=0 to length(fcg)-1 do begin
+          fcg[i]:=0;
+          for j:=max(0,1+i-length(g)) to min(length(f)-1,i) do fcg[i]+=f[j]*g[i-j];
+        end;
+      end else begin
+        k:=length(g) div 2;
+        // fcg[i] = sum_j f[j]*g[i-j+k]
+        //          by f: 0  <= j <=length(f)-1
+        //          by g: i+k>= j >=1+i+k-length(g)
+        setLength(fcg,length(f));
+        for i:=0 to length(fcg)-1 do begin
+          fcg[i]:=0;
+          for j:=max(0,1+k+i-length(g)) to min(length(f)-1,i+k) do fcg[i]+=f[j]*g[k+i-j];
+        end;
+      end;
+      result:=vectorToList(fcg,recycler);
+      setLength(fcg,0);
+    end;
+  end;
+
 INITIALIZATION
   //Unary Numeric -> real
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,ak_unary);
@@ -1619,5 +1660,6 @@ INITIALIZATION
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'FFT' ,@FFT_impl ,ak_unary);
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'iFFT',@iFFT_impl,ak_unary);
 
-  builtinFunctionMap.registerRule(MATH_NAMESPACE,'kMeans',@kMeans_impl,ak_variadic_2);
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'kMeans'    ,@kMeans_impl,ak_variadic_2);
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'convolve1D',@convolve1D_impl,ak_variadic_2);
 end.
