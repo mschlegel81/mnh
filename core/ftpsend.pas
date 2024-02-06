@@ -18,7 +18,7 @@
 |                                                                              |
 | Neither the name of Lukas Gebauer nor the names of its contributors may      |
 | be used to endorse or promote products derived from this software without    |
-| specific prior written permission.                                           |
+| specific prior written Permission.                                           |
 |                                                                              |
 | THIS SOFTWARE is PROVIDED by THE COPYRIGHT HOLDERS and CONTRIBUTORS "as is"  |
 | and ANY EXPRESS or IMPLIED WARRANTIES, INCLUDING, BUT not limited to, THE    |
@@ -183,7 +183,7 @@ TYPE
     {:Set of lines with RAW directory listing for @link(parseLines)}
     PROPERTY lines: TStringList read FLines;
 
-    {:set of masks for directory listing parser. it is predefined by default,
+    {:set of Masks for directory listing parser. it is predefined by default,
     however you can modify it as you need. (for example, you can add your own
     definition mask.) mask is same as mask used in TotalCommander.}
     PROPERTY Masks: TStringList read FMasks;
@@ -195,7 +195,7 @@ TYPE
   {:@abstract(IMPLEMENTATION of FTP protocol.)
    note: Are you missing properties for setting Username and Password? Look to
    parent @link(TSynaClient) object! (Username and Password have default values
-   for "anonymous" FTP login)
+   for "anonymous" FTP Login)
 
    Are you missing properties for specify server address and port? Look to
    parent @link(TSynaClient) too!}
@@ -210,7 +210,7 @@ TYPE
     FAccount: string;
     FFWHost: string;
     FFWPort: string;
-    FFWUsername: string;
+    FFWUserName: string;
     FFWPassword: string;
     FFWMode: integer;
     FDataStream: TMemoryStream;
@@ -222,7 +222,7 @@ TYPE
     FPassiveMode: boolean;
     FForceDefaultPort: boolean;
     FForceOldPort: boolean;
-    FFtpList: TFTPList;
+    FFTPList: TFTPList;
     FBinaryMode: boolean;
     FAutoTLS: boolean;
     FIsTLS: boolean;
@@ -237,7 +237,7 @@ TYPE
     PROCEDURE DoStatus(response: boolean; CONST value: string); virtual;
   public
     messages:P_messages;
-    {:Custom definition of login sequence. You can use this when you set
+    {:Custom definition of Login sequence. You can use this when you set
      @link(FWMode) to value -1.}
     CustomLogon: TLogonActions;
 
@@ -273,7 +273,7 @@ TYPE
      Sock.OnStatus event, or from another thread.)}
     PROCEDURE Abort; virtual;
 
-    {:break current transmission of data. it is same as Abort, but it send abort
+    {:break current transmission of data. it is same as Abort, but it send Abort
      telnet commands prior ABOR FTP command. Some servers need it. (You can call
      this method from Sock.OnStatus event, or from another thread.)}
     PROCEDURE TelnetAbort; virtual;
@@ -282,7 +282,7 @@ TYPE
      empty string, download listing of current working directory.
      if NameList is @true, download only names of Files in directory.
      (internally use NLST command instead list command)
-     if NameList is @false, returned list is also parsed to @link(FTPList)
+     if NameList is @false, returned list is also parsed to @link(FtpList)
      PROPERTY.}
     FUNCTION list(directory: string; NameList: boolean): boolean; virtual;
 
@@ -314,7 +314,7 @@ TYPE
      implemented), return -1.}
     FUNCTION filesize(CONST fileName: string): int64; virtual;
 
-    {:Send NOOP command to FTP server for preserve of disconnect by inactivity
+    {:Send NoOp command to FTP server for preserve of disconnect by inactivity
      timeout.}
     FUNCTION NoOp: boolean; virtual;
 
@@ -365,13 +365,13 @@ TYPE
     PROPERTY FWPort: string read FFWPort write FFWPort;
 
     {:Username for login to firewall. (if needed)}
-    PROPERTY FWUsername: string read FFWUsername write FFWUsername;
+    PROPERTY FWUsername: string read FFWUserName write FFWUserName;
 
     {:password for login to firewall. (if needed)}
     PROPERTY FWPassword: string read FFWPassword write FFWPassword;
 
     {:TYPE of Firewall. used only if you set some firewall address. Supported
-     predefined firewall login sequences are described by comments in source
+     predefined firewall Login sequences are described by comments in source
      file where you can see pseudocode decribing each sequence.}
     PROPERTY FWMode: integer read FFWMode write FFWMode;
 
@@ -426,7 +426,7 @@ TYPE
     PROPERTY OnStatus: TFTPStatus read FOnStatus write FOnStatus;
 
     {:After LIST command is here parsed list of files in given directory.}
-    PROPERTY FtpList: TFTPList read FFtpList;
+    PROPERTY FtpList: TFTPList read FFTPList;
 
     {:if @true (default), then data transfers is in binary mode. if this is set
      to @false, then ASCII mode is used.}
@@ -449,17 +449,17 @@ TYPE
     PROPERTY TLSonData: boolean read FTLSonData write FTLSonData;
   end;
 
-{:A very useful FUNCTION, and example of use can be found in the TFtpSend object.
+{:A very useful FUNCTION, and example of use can be found in the TFTPSend object.
  Dowload specified file from FTP server to LocalFile.}
 FUNCTION FtpGetFile(CONST ip, port, fileName, LocalFile,
-  user, Pass: string): boolean;
+  user, pass: string): boolean;
 
-{:A very useful FUNCTION, and example of use can be found in the TFtpSend object.
+{:A very useful FUNCTION, and example of use can be found in the TFTPSend object.
  Upload specified LocalFile to FTP server.}
 FUNCTION FtpPutFile(CONST ip, port, fileName, LocalFile,
-  user, Pass: string): boolean;
+  user, pass: string): boolean;
 
-{:A very useful FUNCTION, and example of use can be found in the TFtpSend object.
+{:A very useful FUNCTION, and example of use can be found in the TFTPSend object.
  Initiate transfer of file between two FTP servers.}
 FUNCTION FtpInterServerTransfer(
   CONST FromIP, FromPort, FromFile, FromUser, FromPass: string;
@@ -477,10 +477,10 @@ begin
   FSock.ConvertLineEnd := true;
   FDSock := TTCPBlockSocket.create;
   FDSock.owner := self;
-  FFtpList := TFTPList.create;
+  FFTPList := TFTPList.create;
   FTimeout := 300000;
   FTargetPort := cFtpProtocol;
-  FUsername := 'anonymous';
+  FUserName := 'anonymous';
   FPassword := 'anonymous@' + FSock.LocalName;
   FDirectFile := false;
   FPassiveMode := true;
@@ -489,7 +489,7 @@ begin
   FAccount := '';
   FFWHost := '';
   FFWPort := cFtpProtocol;
-  FFWUsername := '';
+  FFWUserName := '';
   FFWPassword := '';
   FFWMode := 0;
   FBinaryMode := true;
@@ -1186,7 +1186,7 @@ begin
   if (FTPCommand('PWD') div 100) = 2 then
   begin
     result := SeparateRight(FResultString, '"');
-    result := trim(Separateleft(result, '"'));
+    result := trim(SeparateLeft(result, '"'));
   end;
 end;
 
@@ -1322,7 +1322,7 @@ begin
   begin
     flr := TFTPListRec.create;
     flr.assign(value[n]);
-    Flist.add(flr);
+    FList.add(flr);
   end;
   lines.assign(value.lines);
   Masks.assign(value.Masks);
@@ -1352,7 +1352,7 @@ end;
 
 FUNCTION TFTPList.ParseByMask(value, NextValue, mask: ansistring): integer;
 VAR
-  Ivalue, IMask: integer;
+  Ivalue, Imask: integer;
   MaskC, LastMaskC: AnsiChar;
   c: AnsiChar;
   s: string;
@@ -1364,7 +1364,7 @@ begin
   if mask = '' then
     exit;
   Ivalue := 1;
-  IMask := 1;
+  Imask := 1;
   result := 1;
   LastMaskC := ' ';
   while Imask <= length(mask) do
@@ -1429,9 +1429,9 @@ begin
           if LastMaskC in ['n', 'v'] then
           begin
             if Imask = length(mask) then
-              s := copy(value, IValue, maxInt)
+              s := copy(value, Ivalue, maxInt)
             else
-              while IValue <= length(value) do
+              while Ivalue <= length(value) do
               begin
                 if value[Ivalue] = ' ' then
                   break;
@@ -1445,7 +1445,7 @@ begin
           end
           else
           begin
-            while IValue <= length(value) do
+            while Ivalue <= length(value) do
             begin
               if not(value[Ivalue] in ['0'..'9']) then
                 break;
@@ -1457,38 +1457,38 @@ begin
                 size := size + s;
             end;
           end;
-          dec(IValue);
+          dec(Ivalue);
         end;
       '!':
         begin
-          while IValue <= length(value) do
+          while Ivalue <= length(value) do
           begin
             if value[Ivalue] = ' ' then
               break;
             inc(Ivalue);
           end;
-          while IValue <= length(value) do
+          while Ivalue <= length(value) do
           begin
             if value[Ivalue] <> ' ' then
               break;
             inc(Ivalue);
           end;
-          dec(IValue);
+          dec(Ivalue);
         end;
       '$':
         begin
-          while IValue <= length(value) do
+          while Ivalue <= length(value) do
           begin
             if not(value[Ivalue] in [' ', #9]) then
               break;
             inc(Ivalue);
           end;
-          dec(IValue);
+          dec(Ivalue);
         end;
       '=':
         begin
           s := '';
-          case LastmaskC of
+          case LastMaskC of
             'S':
               begin
                 while Imask <= length(mask) do
@@ -1503,8 +1503,8 @@ begin
               end;
             'T':
               begin
-                Monthnames := copy(mask, IMask, 12 * 3);
-                inc(IMask, 12 * 3);
+                Monthnames := copy(mask, Imask, 12 * 3);
+                inc(Imask, 12 * 3);
               end;
             'd':
               begin
@@ -1516,7 +1516,7 @@ begin
       '\':
         begin
           value := NextValue;
-          IValue := 0;
+          Ivalue := 0;
           result := 2;
         end;
     end;
@@ -1533,13 +1533,13 @@ begin
   result := false;
   if fileName <> '' then
   begin
-    if pos('?', VMSFilename) > 0 then
+    if pos('?', VMSFileName) > 0 then
       exit;
-    if pos('*', VMSFilename) > 0 then
+    if pos('*', VMSFileName) > 0 then
       exit;
   end;
   if VMSFileName <> '' then
-    if pos(';', VMSFilename) <= 0 then
+    if pos(';', VMSFileName) <= 0 then
       exit;
   if (fileName = '') and (VMSFileName = '') then
     exit;
@@ -1555,7 +1555,7 @@ begin
   if Day <> '' then
   begin
     Day := TrimSP(Day);
-    x := strToIntDef(day, -1);
+    x := strToIntDef(Day, -1);
     if (x < 1) or (x > 31) then
       exit;
   end;
@@ -1663,7 +1663,7 @@ VAR
   myear: word;
   mmonth: word;
   mday: word;
-  mhours, mminutes, mseconds: word;
+  mHours, mminutes, mseconds: word;
   n: integer;
 begin
   s := DirFlagValue;
@@ -1675,8 +1675,8 @@ begin
     value.fileName := SeparateLeft(fileName, ' -> ');
   if VMSFileName <> '' then
   begin
-    value.fileName := VMSFilename;
-    value.directory := pos('.DIR;',VMSFilename) > 0;
+    value.fileName := VMSFileName;
+    value.directory := pos('.DIR;',VMSFileName) > 0;
   end;
   value.fileName := TrimSPRight(value.fileName);
   value.Readable := not value.directory;
@@ -1691,12 +1691,12 @@ begin
   {$endif}
 
   DecodeDate(Date,myear,mmonth,mday);
-  mhours := 0;
+  mHours := 0;
   mminutes := 0;
   mseconds := 0;
 
   if Day <> '' then
-    mday := strToIntDef(day, 1);
+    mday := strToIntDef(Day, 1);
   if Month <> '' then
     mmonth := strToIntDef(Month, 1);
   if length(Monthnames) = (12 * 3) then
@@ -1717,11 +1717,11 @@ begin
     if pos(':', YearTime) > 0 then
     begin
       YearTime := TrimSP(YearTime);
-      mhours := strToIntDef(Separateleft(YearTime, ':'), 0);
+      mHours := strToIntDef(SeparateLeft(YearTime, ':'), 0);
       mminutes := strToIntDef(SeparateRight(YearTime, ':'), 0);
-      if (Encodedate(myear, mmonth, mday)
+      if (EncodeDate(myear, mmonth, mday)
         + EncodeTime(mHours, mminutes, 0, 0)) > now then
-        dec(mYear);
+        dec(myear);
     end
     else
       myear := strToIntDef(YearTime, 0);
@@ -1736,21 +1736,21 @@ begin
     if HoursModif <> '' then
       if uppercase(HoursModif[1]) = 'P' then
         if mHours <> 12 then
-          mHours := MHours + 12;
+          mHours := mHours + 12;
   end;
-  value.FileTime := Encodedate(myear, mmonth, mday)
+  value.FileTime := EncodeDate(myear, mmonth, mday)
     + EncodeTime(mHours, mminutes, mseconds, 0);
   if Permissions <> '' then
   begin
     value.Permission := Permissions;
-    value.Readable := uppercase(permissions)[2] = 'R';
-    if uppercase(permissions)[1] = 'D' then
+    value.Readable := uppercase(Permissions)[2] = 'R';
+    if uppercase(Permissions)[1] = 'D' then
     begin
       value.directory := true;
       value.Readable := false;
     end
     else
-      if uppercase(permissions)[1] = 'L' then
+      if uppercase(Permissions)[1] = 'L' then
         value.directory := true;
   end;
 end;
@@ -1798,7 +1798,7 @@ begin
       begin
         flr.OriginalLine := os;
         flr.mask := 'EPLF';
-        Flist.add(flr);
+        FList.add(flr);
         result := true;
       end;
     end;
@@ -1840,7 +1840,7 @@ begin
             if flr.directory and ((flr.fileName = '.') or (flr.fileName = '..')) then
               flr.free
             else
-              Flist.add(flr);
+              FList.add(flr);
             b := true;
             break;
           end;
@@ -1856,7 +1856,7 @@ end;
 {==============================================================================}
 
 FUNCTION FtpGetFile(CONST ip, port, fileName, LocalFile,
-  user, Pass: string): boolean;
+  user, pass: string): boolean;
 begin
   result := false;
   with TFTPSend.create do
@@ -1864,7 +1864,7 @@ begin
     if user <> '' then
     begin
       Username := user;
-      Password := Pass;
+      Password := pass;
     end;
     TargetHost := ip;
     TargetPort := port;
@@ -1880,7 +1880,7 @@ begin
 end;
 
 FUNCTION FtpPutFile(CONST ip, port, fileName, LocalFile,
-  user, Pass: string): boolean;
+  user, pass: string): boolean;
 begin
   result := false;
   with TFTPSend.create do
@@ -1888,7 +1888,7 @@ begin
     if user <> '' then
     begin
       Username := user;
-      Password := Pass;
+      Password := pass;
     end;
     TargetHost := ip;
     TargetPort := port;
@@ -1913,7 +1913,7 @@ VAR
 begin
   result := false;
   FromFTP := TFTPSend.create;
-  toFTP := TFTPSend.create;
+  ToFTP := TFTPSend.create;
   try
     if FromUser <> '' then
     begin
