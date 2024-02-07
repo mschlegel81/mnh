@@ -9,8 +9,9 @@ USES mnh_constants,
      litVar,subrules;
 
 TYPE
-  T_interpolator=object(T_builtinObject)
+  T_1D_interpolator=object(T_builtinObject)
     protected
+      //TODO: Enable cyclic/periodic interpolation
       underlyingValues:P_listLiteral;
       accessByIndex:boolean;
       xValues,
@@ -29,14 +30,35 @@ TYPE
       FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
   end;
 
+  { T_2D_interpolator }
+
+  T_2D_interpolator=object(T_builtinObject)
+    protected
+      underlyingValues:P_listLiteral;
+      //TODO: Enable cyclic/periodic interpolation
+      valueMatrix:array of T_arrayOfDouble;
+      x0,y0,invHx,invHy:double;
+      FUNCTION getSingleInterpolatedValue(CONST floatIdx:double):double; virtual; abstract;
+      FUNCTION getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression; virtual;
+    public
+      CONSTRUCTOR create2DInterpolator(CONST id_:string; CONST values:P_listLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST allowUnordered:boolean=false);
+      DESTRUCTOR destroy; virtual;
+      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
+      FUNCTION arity:T_arityInfo; virtual;
+      FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
+      FUNCTION toString(CONST lengthLimit: longint=maxLongint): ansistring; virtual;
+      PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
+      FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
+  end;
+
 IMPLEMENTATION
 USES funcs,tokens,sysutils,math,mnh_messages;
-FUNCTION T_interpolator.getParameterNames(CONST literalRecycler: P_literalRecycler): P_listLiteral;
+FUNCTION T_1D_interpolator.getParameterNames(CONST literalRecycler: P_literalRecycler): P_listLiteral;
   begin
     result:=P_listLiteral(literalRecycler^.newListLiteral^.appendString(literalRecycler,'i'));
   end;
 
-FUNCTION T_interpolator.getEquivalentInlineExpression(CONST context: P_context; CONST recycler: P_recycler): P_inlineExpression;
+FUNCTION T_1D_interpolator.getEquivalentInlineExpression(CONST context: P_context; CONST recycler: P_recycler): P_inlineExpression;
   VAR first:P_token;
   begin
     first:=P_recycler(recycler)^.newToken(getLocation,getId,tt_literal,rereferenced);
@@ -44,7 +66,7 @@ FUNCTION T_interpolator.getEquivalentInlineExpression(CONST context: P_context; 
     new(result,createFromInline(first,P_context(context),recycler));
   end;
 
-FUNCTION T_interpolator.findIndexForX(CONST x:double):longint;
+FUNCTION T_1D_interpolator.findIndexForX(CONST x:double):longint;
   VAR i0,i1,ic:longint;
   begin
     if accessByIndex
@@ -65,7 +87,7 @@ FUNCTION T_interpolator.findIndexForX(CONST x:double):longint;
     end;
   end;
 
-CONSTRUCTOR T_interpolator.createInterpolator(CONST id_:string; CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context; CONST allowUnordered:boolean=false);
+CONSTRUCTOR T_1D_interpolator.createInterpolator(CONST id_:string; CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context; CONST allowUnordered:boolean=false);
   VAR i:longint;
       ok:boolean=true;
   begin
@@ -76,8 +98,7 @@ CONSTRUCTOR T_interpolator.createInterpolator(CONST id_:string; CONST values: P_
     if values^.literalType in [lt_numList,lt_realList,lt_intList] then begin
       accessByIndex:=true;
       setLength(xValues,0);
-      setLength(yValues,values^.size);
-      for i:=0 to values^.size-1 do yValues[i]:=P_numericLiteral(values^.value[i])^.floatValue;
+      yValues:=toVector(values,location,context);
     end else if values^.literalType=lt_list then begin
       accessByIndex:=false;
       setLength(xValues,values^.size);
@@ -99,13 +120,13 @@ CONSTRUCTOR T_interpolator.createInterpolator(CONST id_:string; CONST values: P_
     end else context^.raiseError('Cannot create interpolator based on '+values^.typeString,location);
   end;
 
-DESTRUCTOR T_interpolator.destroy;
+DESTRUCTOR T_1D_interpolator.destroy;
   begin
     assert(underlyingValues=nil);
     inherited;
   end;
 
-FUNCTION T_interpolator.evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult;
+FUNCTION T_1D_interpolator.evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult;
   VAR aSub: P_literal;
   begin
     result.reasonForStop:=rr_ok;
@@ -129,24 +150,24 @@ FUNCTION T_interpolator.evaluate(CONST location:T_tokenLocation; CONST context:P
     end;
   end;
 
-FUNCTION T_interpolator.arity: T_arityInfo;
+FUNCTION T_1D_interpolator.arity: T_arityInfo;
   begin
     result.maxPatternLength:=1;
     result.minPatternLength:=1;
   end;
 
-FUNCTION T_interpolator.canApplyToNumberOfParameters(CONST parCount: longint): boolean;
+FUNCTION T_1D_interpolator.canApplyToNumberOfParameters(CONST parCount: longint): boolean;
   begin
     result:=parCount=1;
   end;
 
-FUNCTION T_interpolator.toString(CONST lengthLimit: longint): ansistring;
+FUNCTION T_1D_interpolator.toString(CONST lengthLimit: longint): ansistring;
   begin
     result:=getId+'(';
     result+=underlyingValues^.toString(lengthLimit-length(result)-1)+')';
   end;
 
-PROCEDURE T_interpolator.cleanup(CONST literalRecycler: P_literalRecycler);
+PROCEDURE T_1D_interpolator.cleanup(CONST literalRecycler: P_literalRecycler);
   begin
     if underlyingValues<>nil then literalRecycler^.disposeLiteral(underlyingValues);
     setLength(xValues,0);
@@ -154,9 +175,79 @@ PROCEDURE T_interpolator.cleanup(CONST literalRecycler: P_literalRecycler);
     underlyingValues:=nil;
   end;
 
+{ T_2D_interpolator }
+
+FUNCTION T_2D_interpolator.getEquivalentInlineExpression(CONST context: P_context; CONST recycler: P_recycler): P_inlineExpression;
+  VAR first: P_token;
+  begin
+    first:=P_recycler(recycler)^.newToken(getLocation,getId,tt_literal,rereferenced);
+    first^.next:=getParametersForPseudoFuncPtr(2,false,getLocation,P_context(context),recycler);
+    new(result,createFromInline(first,P_context(context),recycler));
+  end;
+
+CONSTRUCTOR T_2D_interpolator.create2DInterpolator(CONST id_: string; CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context: P_context; CONST allowUnordered: boolean);
+  VAR ok:boolean;
+      i: integer;
+  begin
+    inherited create(id_,location);
+    values^.rereference;
+    underlyingValues:=values;
+
+    setLength(valueMatrix,values^.size);
+
+    for i:=0 to values^.size-1 do if ok then begin
+      if (values^.value[i]^.literalType in [lt_numList,lt_realList,lt_intList])
+      and ((i=0) or (P_listLiteral(values^.value[i])^.size=length(valueMatrix[0]))) then begin
+        valueMatrix[i]:=toVector(P_listLiteral(values^.value[i]),location,context);
+      end else begin
+        context^.raiseError('All list entries must be numeric lists of the same size; entry is: '+P_listLiteral(values^.value[i])^.typeString,location);
+        ok:=false;
+      end;
+    end;
+    if not(ok) then context^.raiseError('Cannot create interpolator based on '+values^.typeString,location);
+  end;
+
+DESTRUCTOR T_2D_interpolator.destroy;
+  begin
+    assert(underlyingValues=nil);
+    inherited;
+  end;
+
+FUNCTION T_2D_interpolator.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: P_literalRecycler; CONST parameters: P_listLiteral): T_evaluationResult;
+  begin
+    //TODO
+  end;
+
+FUNCTION T_2D_interpolator.arity: T_arityInfo;
+  begin
+    result.minPatternLength:=2;
+    result.maxPatternLength:=2;
+  end;
+
+FUNCTION T_2D_interpolator.canApplyToNumberOfParameters(CONST parCount: longint): boolean;
+  begin
+    result:=parCount=2;
+  end;
+
+FUNCTION T_2D_interpolator.toString(CONST lengthLimit: longint): ansistring;
+  begin
+    result:=getId+'(';
+    result+=underlyingValues^.toString(lengthLimit-length(result)-1)+')';
+  end;
+
+PROCEDURE T_2D_interpolator.cleanup(CONST literalRecycler: P_literalRecycler);
+  begin
+    //TODO
+  end;
+
+FUNCTION T_2D_interpolator.getParameterNames(CONST literalRecycler: P_literalRecycler): P_listLiteral;
+  begin
+    result:=P_listLiteral(literalRecycler^.newListLiteral()^.appendString(literalRecycler,'x')^.appendString(literalRecycler,'y'));
+  end;
+
 TYPE
   P_linearInterpolator=^T_linearInterpolator;
-  T_linearInterpolator=object(T_interpolator)
+  T_linearInterpolator=object(T_1D_interpolator)
     protected
       FUNCTION getSingleInterpolatedValue(CONST floatIdx:double):double; virtual;
     public
@@ -212,7 +303,7 @@ FUNCTION linearInterpolator_imp intFuncSignature;
 
 TYPE
   P_cSplineInterpolator=^T_cSplineInterpolator;
-  T_cSplineInterpolator=object(T_interpolator)
+  T_cSplineInterpolator=object(T_1D_interpolator)
     protected
       M:T_arrayOfDouble;
       FUNCTION getSingleInterpolatedValue(CONST floatIdx:double):double; virtual;
@@ -467,7 +558,7 @@ FUNCTION cSplineInterpolator_imp intFuncSignature;
 
 TYPE
   P_bSplineApproximator=^T_bSplineApproximator;
-  T_bSplineApproximator=object(T_interpolator)
+  T_bSplineApproximator=object(T_1D_interpolator)
     protected
       FUNCTION getSingleInterpolatedValue(CONST floatIdx:double):double; virtual;
     public
@@ -532,7 +623,7 @@ FUNCTION bSplineApproximator_imp intFuncSignature;
 
 TYPE
   P_localInterpolator=^T_localInterpolator;
-  T_localInterpolator=object(T_interpolator)
+  T_localInterpolator=object(T_1D_interpolator)
     protected
       FUNCTION getSingleInterpolatedValue(CONST floatIdx:double):double; virtual;
     public
@@ -605,7 +696,7 @@ FUNCTION localInterpolator_imp intFuncSignature;
 
 TYPE
   P_fourierSeries=^T_fourierSeries;
-  T_fourierSeries=object(T_interpolator)
+  T_fourierSeries=object(T_1D_interpolator)
     protected
       includeXcos,
       includeYsin:boolean;

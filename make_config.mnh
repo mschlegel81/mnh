@@ -39,7 +39,7 @@ begin
   result['compilerCall']:=[platform['compiler'],flavor['flags'] | project['lpi']];
   result['compilate'   ]:=project['out']&flavor['outSuffix']&platform['outExt'];
   result['targetDest'  ]:='target/'&platformKey&(flavourKey=='portable' ? '_portable' : '') &'/'&result['compilate'].extractFileName;
-  result['distro'      ]:=flavourKey=='normal' AND platformKey!='Win32';
+  result['distro'      ]:=flavourKey=='normal' AND projectKey=='full';
   result['doTest'      ]:=flavor['doTest'];
   result['canBuild'    ]:=(platformKey=='Linux')==isLinux;
   result;
@@ -64,7 +64,7 @@ hashFiles
 
 @SuppressUnusedWarning
 packSets(builtNoAndVersion:List(2))->
-  BUILDS.filter({$B['distro']})
+  BUILDS.filter((B)->B['distro'])
         .map({[$B['targetDest'].extractFileDirectory.extractFileNameOnly,$B['platform']!='Linux',$B['targetDest']]})
         .group(0).getInner(1)
         .map({[$x[0,0],$x[0,1],$x.getInner(2)]})
@@ -80,6 +80,9 @@ memoized sevenZipExe->
 
 @SuppressUnusedWarning
 call7z(fileList:StringList,builtNo,suffix)->begin
+  fileExists(fileList).agg(and)
+  ? void
+  : return warn('Distro build is missing for ',suffix);
   local zipFileName:=format('target/mnh5_%s_%s.zip',builtNo,suffix);
   fileExists(zipFileName)
   ? return print('Not creating ',zipFileName,' because the file already exists')
