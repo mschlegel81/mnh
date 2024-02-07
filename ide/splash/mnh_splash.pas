@@ -26,7 +26,6 @@ TYPE
     Label1: TLabel;
     Label2: TLabel;
     Panel1: TPanel;
-    ProgressBar: TProgressBar;
     PROCEDURE buttonInitNormalClick(Sender: TObject);
     PROCEDURE buttonInitPortableClick(Sender: TObject);
     PROCEDURE CheckBox1Change(Sender: TObject);
@@ -36,7 +35,6 @@ TYPE
   private
     startupCall:boolean;
     PROCEDURE prepareDoc;
-    PROCEDURE stepProgress;
   public
     PROCEDURE showAbout;
   end;
@@ -78,27 +76,19 @@ PROCEDURE TSplashForm.CheckBox1Change(Sender: TObject);
   end;
 
 PROCEDURE TSplashForm.FormActivate(Sender: TObject);
-  VAR okayUpToHere:boolean;
-
-  PROCEDURE loadStepDone(CONST ok:boolean);
-    begin
-      okayUpToHere:=okayUpToHere and ok;
-      ProgressBar.position:=ProgressBar.position+1;
-      Application.ProcessMessages;
-    end;
-
   begin
     if {$ifdef Windows}(APP_STYLE<>APP_STYLE_BLANK) and {$endif} startupCall then begin
-      ProgressBar.position:=0;
-      ProgressBar.visible:=true;
-      ProgressBar.caption:='Loading/applying settings';
+      Application.ProcessMessages;
       ideSettings.loadFromFile(ideSettingsFilename);
       CheckBox1.checked:=ideSettings.doShowSplashScreen;
-      loadStepDone(workspace.loadFromFile(ideSettings.workspaceFilename));
+      workspace.loadFromFile(ideSettings.workspaceFilename);
       workspace.fileHistory.updateHistoryMenu;
-      loadStepDone(runParameterHistory.loadFromFile(runParameterHistoryFileName));
+      runParameterHistory.loadFromFile(runParameterHistoryFileName);
       prepareDoc;
-      if not(ideSettings.doShowSplashScreen) then close;
+      if not(ideSettings.doShowSplashScreen) then begin
+        Application.ProcessMessages;
+        close;
+      end;
     end;
   end;
 
@@ -109,6 +99,13 @@ PROCEDURE TSplashForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     {$endif}
   end;
 
+FUNCTION prepare_doc_thread(p:pointer):ptrint;
+  begin
+    ensureDefaultFiles(nil,CODE_HASH<>htmlDocGeneratedForCodeHash,CODE_HASH<>htmlDocGeneratedForCodeHash);
+    makeHtmlFromTemplate(nil);
+    result:=1;
+  end;
+
 PROCEDURE TSplashForm.prepareDoc;
   begin
     {$ifdef Windows}
@@ -117,25 +114,7 @@ PROCEDURE TSplashForm.prepareDoc;
     buttonInitPortable.enabled:=APP_STYLE=APP_STYLE_BLANK;
     buttonInitPortable.visible:=APP_STYLE=APP_STYLE_BLANK;
     {$endif}
-    ProgressBar.visible:=true;
-    ProgressBar.caption:='Initializing';
-    ensureDefaultFiles(@stepProgress,CODE_HASH<>htmlDocGeneratedForCodeHash,CODE_HASH<>htmlDocGeneratedForCodeHash);
-    makeHtmlFromTemplate(@stepProgress);
-    ProgressBar.visible:=false;
-  end;
-
-{$ifdef debugMode}
-VAR progressCounted:longint=0;
-{$endif}
-PROCEDURE TSplashForm.stepProgress;
-  begin
-    ProgressBar.position:=ProgressBar.position+1;
-    {$ifdef debugMode}
-    inc(progressCounted);
-    writeln('PROGRESS: ',ProgressBar.position,' / ',ProgressBar.max, ' (',progressCounted,')');
-    {$endif}
-    Application.ProcessMessages;
-
+    beginThread(@prepare_doc_thread);
   end;
 
 PROCEDURE TSplashForm.showAbout;
@@ -149,7 +128,6 @@ PROCEDURE TSplashForm.buttonInitNormalClick(Sender: TObject);
   begin
     {$ifdef Windows}
     APP_STYLE:=APP_STYLE_NORMAL;
-    ProgressBar.visible:=true;
     prepareDoc;
     close;
     {$endif}
@@ -159,7 +137,6 @@ PROCEDURE TSplashForm.buttonInitPortableClick(Sender: TObject);
   begin
     {$ifdef Windows}
     APP_STYLE:=APP_STYLE_PORTABLE;
-    ProgressBar.visible:=true;
     prepareDoc;
     close;
     {$endif}

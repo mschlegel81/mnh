@@ -1872,7 +1872,7 @@ expectations:=
   'lists.pFilter','lists.pMap','lists.reverseList','lists.size','lists.sort','lists.sortPerm','lists.tail','lists.trailing',
   'lists.transpose','lists.trueCount','lists.union','lists.unique','lists.vectorIfThenElse','lists.zip','math.DFT','math.FFT',
   'math.abs','math.arccos','math.arcsin','math.arctan','math.arctan2','math.argMax','math.argMin','math.bitXor',
-  'math.calculateFourierCoefficients','math.ceil','math.composeDigits','math.cos','math.digits','math.divMod',
+  'math.calculateFourierCoefficients','math.ceil','math.composeDigits','math.convolve1D','math.cos','math.digits','math.divMod',
   'math.euklideanNorm','math.exp','math.factorize','math.floor','math.gcd','math.hammingWeight','math.iDFT','math.iFFT',
   'math.integrate','math.isInfinite','math.isNan','math.isPrime','math.isqrt','math.kMeans','math.ln','math.max','math.min',
   'math.modularInverse','math.newBSpline','math.newFourierSeries','math.newLinearInterpolator','math.newLocalInterpolator',
