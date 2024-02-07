@@ -11,6 +11,7 @@ USES mnh_constants,
 TYPE
   T_1D_interpolator=object(T_builtinObject)
     protected
+      //TODO: Enable cyclic/periodic interpolation
       underlyingValues:P_listLiteral;
       accessByIndex:boolean;
       xValues,
@@ -34,6 +35,7 @@ TYPE
   T_2D_interpolator=object(T_builtinObject)
     protected
       underlyingValues:P_listLiteral;
+      //TODO: Enable cyclic/periodic interpolation
       valueMatrix:array of T_arrayOfDouble;
       x0,y0,invHx,invHy:double;
       FUNCTION getSingleInterpolatedValue(CONST floatIdx:double):double; virtual; abstract;
@@ -183,8 +185,24 @@ FUNCTION T_2D_interpolator.getEquivalentInlineExpression(CONST context: P_contex
   end;
 
 CONSTRUCTOR T_2D_interpolator.create2DInterpolator(CONST id_: string; CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context: P_context; CONST allowUnordered: boolean);
+  VAR ok:boolean;
   begin
-    //TODO
+    inherited create(id_,location);
+    values^.rereference;
+    underlyingValues:=values;
+
+    setLength(valueMatrix,values^.size);
+
+    for i:=0 to values^.size-1 do if ok then begin
+      if (values^.value[i]^.literalType in [lt_numList,lt_realList,lt_intList])
+      and ((i=0) or (P_listLiteral(values^.value[i])^.size=length(valueMatrix[0]))) then begin
+        valueMatrix[i]:=toVector(P_listLiteral(values^.value[i]),location,context);
+      end else begin
+        context^.raiseError('All list entries must be numeric lists of the same size; entry is: '+P_listLiteral(values^.value[i])^.typeString,location);
+        ok:=false;
+      end;
+    end;
+    if not(ok) then context^.raiseError('Cannot create interpolator based on '+values^.typeString,location);
   end;
 
 DESTRUCTOR T_2D_interpolator.destroy;
