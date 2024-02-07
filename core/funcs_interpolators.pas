@@ -178,6 +178,7 @@ PROCEDURE T_1D_interpolator.cleanup(CONST literalRecycler: P_literalRecycler);
 { T_2D_interpolator }
 
 FUNCTION T_2D_interpolator.getEquivalentInlineExpression(CONST context: P_context; CONST recycler: P_recycler): P_inlineExpression;
+  VAR first: P_token;
   begin
     first:=P_recycler(recycler)^.newToken(getLocation,getId,tt_literal,rereferenced);
     first^.next:=getParametersForPseudoFuncPtr(2,false,getLocation,P_context(context),recycler);
@@ -186,6 +187,7 @@ FUNCTION T_2D_interpolator.getEquivalentInlineExpression(CONST context: P_contex
 
 CONSTRUCTOR T_2D_interpolator.create2DInterpolator(CONST id_: string; CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context: P_context; CONST allowUnordered: boolean);
   VAR ok:boolean;
+      i: integer;
   begin
     inherited create(id_,location);
     values^.rereference;
@@ -240,7 +242,7 @@ PROCEDURE T_2D_interpolator.cleanup(CONST literalRecycler: P_literalRecycler);
 
 FUNCTION T_2D_interpolator.getParameterNames(CONST literalRecycler: P_literalRecycler): P_listLiteral;
   begin
-    result:=P_listLiteral(literalRecycler^.newListLiteral()^.appendString('x')^.appendString('y'));
+    result:=P_listLiteral(literalRecycler^.newListLiteral()^.appendString(literalRecycler,'x')^.appendString(literalRecycler,'y'));
   end;
 
 TYPE
