@@ -187,7 +187,7 @@ TYPE
       references:T_tokenLocation;
       linksTo:(nothing,packageUse,packageInclude);
       endsAtColumn:longint;
-      FUNCTION renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; CONST oldName:string; newName:string):boolean;
+      FUNCTION renameInLine(VAR line:string; CONST referencedLocation:T_searchTokenLocation; CONST oldName,newName:string):boolean;
     public
       CONSTRUCTOR create(CONST tok:P_token; CONST callAndIdInfos:P_callAndIdInfos; CONST package:P_abstractPackage);
       PROCEDURE cleanup(CONST recycler:P_recycler);
@@ -1311,7 +1311,8 @@ DESTRUCTOR T_enhancedToken.destroy;
     assert(token=nil);
   end;
 
-FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation: T_searchTokenLocation; CONST oldName:string; newName: string): boolean;
+FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation: T_searchTokenLocation; CONST oldName,newName: string): boolean;
+  VAR partBefore, partBetween, partAfter: string;
   begin
     case token^.tokType of
       tt_identifier         ,
@@ -1326,14 +1327,18 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
       else exit(false);
     end;
     {$WARN 5092 OFF}
-    case token^.tokType of
-      tt_each,tt_parallelEach: newName:=C_tokenDefaultId[token^.tokType]+'('+newName+',';
-      else newName:=replaceOne(token^.singleTokenToString,oldName,newName);
-    end;
     result:=true;
     if endsAtColumn>length(line) then endsAtColumn:=length(line);
     if line[endsAtColumn]=' ' then dec(endsAtColumn);
-    line:=copy(line,1,token^.location.column-1)+newName+copy(line,endsAtColumn+1,length(line));
+    partBefore :=copy(line,1,token^.location.column-1);
+    partBetween:=copy(line,token^.location.column,endsAtColumn-token^.location.column+1);
+    partAfter  :=copy(line,endsAtColumn+1,length(line));
+    if token^.tokType in [tt_each,tt_parallelEach]
+    then partBetween:=C_tokenDefaultId[token^.tokType]+'('+newName+','
+    else if partBetween='is'+oldName then partBetween:='is'+newName
+    else if partBetween='to'+oldName then partBetween:='to'+newName
+    else    partBetween:=replaceOne(partBetween,oldName,newName);
+    line:=partBefore+partBetween+partAfter;
   end;
 
 FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
