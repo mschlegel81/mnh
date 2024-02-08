@@ -2362,6 +2362,7 @@ FUNCTION T_stringLiteral.leqForSorting(CONST other: P_literal): boolean;
 PROCEDURE T_stringLiteral.cleanup(CONST literalRecycler: P_literalRecycler);
   begin
     setLength(val,0);
+    val:='';
     enc:=se_testPending;
   end;
 
