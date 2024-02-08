@@ -558,9 +558,8 @@ FUNCTION T_workspace.openLocation(CONST location: T_searchTokenLocation): P_edit
       else meta:=addOrGetEditorMetaForFiles(ExpandFileNameUTF8(location.fileName),false,false);
       if meta<>nil then begin
         inputPageControl.activePage:=meta^.tabsheet;
-        meta^.setCaret(location);
-        inputPageControl.activePage:=meta^.tabsheet;
         mainForm.ActiveControl:=meta^.editor;
+        meta^.setCaret(location);
         result:=meta;
       end;
     finally
@@ -758,6 +757,8 @@ PROCEDURE T_workspace.renameWordUnderCursor;
        (renameForm.showModalFor(id,idType,scanOther)=mrOk)
     then begin
       meta^.doRename(renameLocation,id,renameForm.newId,renameForm.checkAllEditorsCheckBox.checked and scanOther);
+      inputPageControl.activePage:=meta^.tabsheet;
+      mainForm.ActiveControl:=meta^.editor;
     end;
   end;
 
