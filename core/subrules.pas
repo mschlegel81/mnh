@@ -294,7 +294,7 @@ FUNCTION evaluteExpressionFilter(CONST e:P_expressionLiteral; CONST location:T_t
         if (evResult.literal<>nil)
         then note:='Expression does not return a boolean but a '+evResult.literal^.typeString
         else note:='';
-        context^.raiseCannotApplyError('filter rule '+e^.toString(50),@parameterList,location,note);
+        context^.raiseCannotApplyError('filter rule '+e^.toString(50),P_listLiteral(arg0),location,note);
       end;
       if evResult.literal<>nil then recycler^.disposeLiteral(evResult.literal);
     end;
