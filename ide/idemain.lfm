@@ -5,7 +5,7 @@ object IdeMainForm: TIdeMainForm
   Width = 449
   AllowDropFiles = True
   Caption = 'mnh'
-  ClientHeight = 282
+  ClientHeight = 302
   ClientWidth = 449
   Color = clWhite
   Icon.Data = {
@@ -423,10 +423,10 @@ object IdeMainForm: TIdeMainForm
   OnKeyPress = FormKeyPress
   OnResize = FormResize
   UseDockManager = True
-  LCLVersion = '2.2.6.0'
+  LCLVersion = '3.0.0.3'
   object PageControl1: TPageControl
     Left = 352
-    Height = 265
+    Height = 285
     Top = 0
     Width = 97
     Align = alRight
@@ -439,7 +439,7 @@ object IdeMainForm: TIdeMainForm
   end
   object Splitter1: TSplitter
     Left = 347
-    Height = 265
+    Height = 285
     Top = 0
     Width = 5
     Align = alRight
@@ -448,19 +448,20 @@ object IdeMainForm: TIdeMainForm
   end
   object Panel1: TPanel
     Left = 106
-    Height = 265
+    Height = 285
     Top = 0
     Width = 241
     Align = alClient
     BevelOuter = bvNone
-    ClientHeight = 265
+    ClientHeight = 285
     ClientWidth = 241
+    ParentBackground = False
     ParentFont = False
     TabOrder = 2
     object PageControl2: TPageControl
       Left = 0
       Height = 83
-      Top = 182
+      Top = 202
       Width = 241
       Align = alBottom
       DockSite = True
@@ -474,7 +475,7 @@ object IdeMainForm: TIdeMainForm
       Cursor = crVSplit
       Left = 0
       Height = 5
-      Top = 177
+      Top = 197
       Width = 241
       Align = alBottom
       OnMoved = Splitter1Moved
@@ -482,18 +483,19 @@ object IdeMainForm: TIdeMainForm
     end
     object Panel2: TPanel
       Left = 0
-      Height = 177
+      Height = 197
       Top = 0
       Width = 241
       Align = alClient
       BevelOuter = bvNone
-      ClientHeight = 177
+      ClientHeight = 197
       ClientWidth = 241
+      ParentBackground = False
       ParentFont = False
       TabOrder = 2
       object PageControl3: TPageControl
         Left = 0
-        Height = 177
+        Height = 197
         Top = 0
         Width = 115
         Align = alLeft
@@ -506,14 +508,14 @@ object IdeMainForm: TIdeMainForm
       end
       object Splitter3: TSplitter
         Left = 115
-        Height = 177
+        Height = 197
         Top = 0
         Width = 5
         OnMoved = Splitter1Moved
       end
       object EditorsPageControl: TPageControl
         Left = 120
-        Height = 177
+        Height = 197
         Top = 0
         Width = 121
         TabStop = False
@@ -528,14 +530,14 @@ object IdeMainForm: TIdeMainForm
   end
   object Splitter4: TSplitter
     Left = 101
-    Height = 265
+    Height = 285
     Top = 0
     Width = 5
     OnMoved = Splitter1Moved
   end
   object PageControl4: TPageControl
     Left = 0
-    Height = 265
+    Height = 285
     Top = 0
     Width = 101
     Align = alLeft
@@ -549,12 +551,13 @@ object IdeMainForm: TIdeMainForm
   object StatusPanel: TPanel
     Left = 0
     Height = 17
-    Top = 265
+    Top = 285
     Width = 449
     Align = alBottom
     AutoSize = True
     ClientHeight = 17
     ClientWidth = 449
+    ParentBackground = False
     ParentFont = False
     TabOrder = 5
     object evaluationStateLabel: TLabel

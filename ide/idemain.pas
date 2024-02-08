@@ -245,6 +245,7 @@ PROCEDURE TIdeMainForm.FormDestroy(Sender: TObject);
 
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
+    fileCache.onMemoryPanic;
     ensureTimerSuspend;
     saveIdeSettings;
     closeAllForms;
