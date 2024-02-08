@@ -8,9 +8,9 @@ private relativeFrequency(L:List)->begin
   Freq.each(t,[t[1]*f,t[0]]);
 end;
 
-private memoized lengthTable->length(words).relativeFrequency;
-private memoized firstTable->words.copy(0,1).relativeFrequency;
-private memoized followerTable->words.pEach(word,word.length<2 ? void : word.copy([0..length(word)-2],2).chars,|)
+private lengthTable:=length(words).relativeFrequency;
+private firstTable:=words.copy(0,1).relativeFrequency;
+private followerTable:=words.pEach(word,word.length<2 ? void : word.copy([0..length(word)-2],2).chars,|)
                                      .group(0)
                                      .pEach(g,g[0]=>g[1].getInner(1).relativeFrequency)
                                      .toMap;
@@ -33,7 +33,7 @@ randomWord->begin
   result;
 end;
 
-@demo_for=http, memoization, map operations, strings
+@demo_for=memoization, map operations, strings
 main(count)->begin
   local cnt:=toInt(count);
   assert(cnt>0,'count must be >0');
