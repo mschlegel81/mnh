@@ -128,12 +128,12 @@ CONSTRUCTOR T_localLiteralRecycler.create;
 
 DESTRUCTOR T_globalLiteralRecycler.destroy;
   begin
-    with smallIntLiterals do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); doneCriticalSection(cs); end;
-    with bigIntLiterals   do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); doneCriticalSection(cs); end;
-    with realLiterals     do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); doneCriticalSection(cs); end;
-    with stringLiterals   do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); doneCriticalSection(cs); end;
-    with listLiterals     do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); doneCriticalSection(cs); end;
-    with setLiterals      do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); doneCriticalSection(cs); end;
+    with smallIntLiterals do begin while fill>0 do begin dec(fill); {$ifndef debugMode} try {$endif} dispose(dat[fill],destroy); {$ifndef debugMode}except dat[fill]:=nil; end;{$endif} end; setLength(dat,0); doneCriticalSection(cs); end;
+    with bigIntLiterals   do begin while fill>0 do begin dec(fill); {$ifndef debugMode} try {$endif} dispose(dat[fill],destroy); {$ifndef debugMode}except dat[fill]:=nil; end;{$endif} end; setLength(dat,0); doneCriticalSection(cs); end;
+    with realLiterals     do begin while fill>0 do begin dec(fill); {$ifndef debugMode} try {$endif} dispose(dat[fill],destroy); {$ifndef debugMode}except dat[fill]:=nil; end;{$endif} end; setLength(dat,0); doneCriticalSection(cs); end;
+    with stringLiterals   do begin while fill>0 do begin dec(fill); {$ifndef debugMode} try {$endif} dispose(dat[fill],destroy); {$ifndef debugMode}except dat[fill]:=nil; end;{$endif} end; setLength(dat,0); doneCriticalSection(cs); end;
+    with listLiterals     do begin while fill>0 do begin dec(fill); {$ifndef debugMode} try {$endif} dispose(dat[fill],destroy); {$ifndef debugMode}except dat[fill]:=nil; end;{$endif} end; setLength(dat,0); doneCriticalSection(cs); end;
+    with setLiterals      do begin while fill>0 do begin dec(fill); {$ifndef debugMode} try {$endif} dispose(dat[fill],destroy); {$ifndef debugMode}except dat[fill]:=nil; end;{$endif} end; setLength(dat,0); doneCriticalSection(cs); end;
   end;
 
 DESTRUCTOR T_localLiteralRecycler.destroy;

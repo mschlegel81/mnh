@@ -65,6 +65,9 @@ end;
 //*See http://rosettacode.org/wiki/Pangram_checker
 main('check',...)->checkForPangram(join(...,' '));
 //*Generates n random pangrams from a dictionary
-main('generate',count)->rangeGenerator(1,count.toInt).pMap(::randomPangram).map(::print);
+main('generate',count)->begin
+  letterMap;
+  rangeGenerator(1,count.toInt).pMap(::randomPangram).agg((x)->print(x));
+end;
 //*Tries to find a short random pangram
 main('find')->findShortRandomPangram;

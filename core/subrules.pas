@@ -691,8 +691,8 @@ PROCEDURE T_inlineExpression.cleanup(CONST literalRecycler: P_literalRecycler);
 
 DESTRUCTOR T_inlineExpression.destroy;
   begin
+    if length(preparedBody)>0 then cleanup(@globalLiteralRecycler);
     inherited destroy;
-    assert(length(preparedBody)=0);
     doneCriticalSection(subruleCallCs);
   end;
 
@@ -1398,7 +1398,17 @@ FUNCTION T_subruleExpression.inspect(CONST literalRecycler:P_literalRecycler): P
 FUNCTION T_inlineExpression.patternString: string; begin result:=pattern.toString; end;
 
 CONSTRUCTOR T_ruleMetaData.create; begin sideEffects:=[]; comment:=''; setLength(attributes,0); end;
-DESTRUCTOR T_ruleMetaData.destroy; begin comment:=''; setLength(attributes,0); end;
+DESTRUCTOR T_ruleMetaData.destroy;
+  VAR i:longint;
+  begin
+    comment:='';
+    for i:=0 to length(attributes)-1 do with attributes[i] do begin
+      key:='';
+      value:='';
+    end;
+    setLength(attributes,0);
+  end;
+
 PROCEDURE T_ruleMetaData.setComment(CONST commentText: ansistring);
   begin
     if commentText<>'' then comment:=commentText;
@@ -1551,7 +1561,7 @@ PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST messages:P_messages);
 PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
   VAR i:longint;
       inlineValue:P_literal;
-      idsReady:boolean;
+      idsReady, prevWasPseudoFuncPointer:boolean;
 
   FUNCTION tokenRequiresBlockConstants(CONST token:T_token):boolean;
     begin
@@ -1582,13 +1592,14 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
           case token.tokType of
             tt_userRule: if (P_abstractRule(token.data)^.getRuleType in [rt_normal,rt_delegate]) and (resolveIdContext=ON_EVALUATION) then begin
               inlineValue:=P_abstractRule(token.data)^.getInlineValue;
-              if inlineValue<>nil then begin
+              if (inlineValue<>nil) and not(prevWasPseudoFuncPointer) then begin
                 token.data:=inlineValue;
                 token.tokType:=tt_literal;
               end;
             end;
             tt_intrinsicRule: meta.sideEffects+=builtinFunctionMap.getSideEffects(P_intFuncCallback(token.data));
           end;
+          prevWasPseudoFuncPointer:=token.tokType=tt_pseudoFuncPointer;
         end;
       end;
       if idsReady then case resolveIdContext of
