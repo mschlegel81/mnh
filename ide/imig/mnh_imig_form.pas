@@ -131,7 +131,7 @@ PROCEDURE T_guiImageSystem.render(VAR target: TImage; CONST enlargeSmall,shrinkB
         then currentImage^.copyToImage(target)
         else begin
           resizedPic.create(currentImage^);
-          resizedPic.resize(imageDimensions(target.width,target.height),res_fit);
+          resizedPic.resize(imageDimensions(target.width,target.height),res_fit,true);
           resizedPic.copyToImage(target);
           resizedPic.destroy;
         end;

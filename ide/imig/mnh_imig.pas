@@ -464,7 +464,7 @@ FUNCTION resizeImage_imp intFuncSignature;
       obtainedImage:=obtainCurrentImageViaAdapters(context^.messages);
       if obtainedImage=nil then context^.raiseError('Cannot resize image because no image is loaded',tokenLocation)
       else begin
-        obtainedImage^.resize(res,r);
+        obtainedImage^.resize(res,r,true);
         postNewImage(context^.messages,obtainedImage);
         result:=newVoidLiteral;
       end;
@@ -564,7 +564,7 @@ FUNCTION getThumbnail_imp intFuncSignature;
         exit(nil);
       end;
       img.create(str0^.value);
-      img.resize(imageDimensions(int1^.intValue,int2^.intValue),res_fit);
+      img.resize(imageDimensions(int1^.intValue,int2^.intValue),res_fit,false);
       result:=recycler^.newStringLiteral(img.getJpgFileData(80));
       img.destroy;
     end;
