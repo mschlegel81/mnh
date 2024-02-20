@@ -516,7 +516,7 @@ PROCEDURE T_guiFormatter.formatMessageAndLocation(CONST message: P_storedMessage
         end;
         mt_echo_output: begin
           if wrapEcho
-          then echo:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,false,preferredLineLength-C_echoPrefixLength)
+          then echo:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,false,preferredLineLength-C_echoPrefixLength,preferredLineLength*50)
           else echo:=P_echoOutMessage(message)^.literal^.toString();
 
           if length(echo) >0 then echo[  0]:=marker+C_echoOutInfix+echo[0];
@@ -671,9 +671,9 @@ FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage)
           if P_echoOutMessage(message)^.literal=nil
           then result:=''
           else result:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,false,CONSOLE_OUT_WIDTH-C_echoPrefixLength,CONSOLE_OUT_WIDTH*50);
-          if length(result)>0 then result[  0]:=C_echoOutInfix+result[0];
+          if length(result)>0 then result[  0]:=C_echoOutInfix+C_messageClassMeta[mc_echo].levelColor+result[0]+C_ANSI_CODE_RESET;
           for i:=1 to length(result)-1 do
-            result[i]:=C_echoContdInfix+result[i];
+            result[i]:=C_echoContdInfix+C_messageClassMeta[mc_echo].levelColor+result[i]+C_ANSI_CODE_RESET;
         end;
       end;
       mc_timing: for s in P_storedMessageWithText(message)^.txt do append(result,C_messageClassMeta[message^.messageClass].levelColor+ s + C_ANSI_CODE_RESET);
