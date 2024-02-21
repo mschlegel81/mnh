@@ -2439,12 +2439,19 @@ bitXor(5,213,10);
 #C Validates the workflow returning a boolean flag indicating validity
 
 #I executeWorkflow
-#C Executes the workflow with the given options. Use "-" as source or target to read/write the current image.
+#C Executes the workflow with the given options.
+#C Use "-" as source or target to read/write the current image.
+#C Use "+" as target to directly obtain the raw data of the execution (as via imageRawData).
 #S executeWorkflow(wf:list,xRes>0,yRes>0,target:string);
 #S executeWorkflow(wf:list,source:string,target:string);
 #S executeWorkflow(wf:list,xRes>0,yRes>0,sizeLimitInBytes>0,target:string);
 #S executeWorkflow(wf:list,source:string,sizeLimitInBytes>0,target:string);
 #C Give an additional expression(1) parameter for progress output
+
+#I imageRawData
+#S imageRawData
+#C Returns the current image (if there is one) as a list [pixels,width,height]
+#C Pixels in turn is a list of colors, RealList(3) each.
 
 #I executeTodo
 #S executeTodo(filename:String);

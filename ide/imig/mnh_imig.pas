@@ -14,6 +14,7 @@ USES sysutils,
      workflows, imageGeneration,mypics,pixMaps,ig_ifs;
 CONST
   WORKFLOW_START_INTERVAL_MILLISECONDS=1100;
+  C_rawDataOutput='+';
 
 TYPE
   P_queryImigClosedMessage=^T_queryImigClosedMessage;
@@ -210,6 +211,28 @@ PROCEDURE pollLog(VAR thisWorkflow:T_simpleWorkflow; CONST location:T_tokenLocat
     end;
   end;
 
+FUNCTION image_to_mnh_representation(CONST image:P_rawImage; CONST recycler:P_recycler):P_collectionLiteral;
+  VAR dimensions: T_imageDimensions;
+      x,y:longint;
+      colorData:P_listLiteral;
+      ScanLine: P_floatColor;
+  begin
+    dimensions:=image^.dimensions;
+    colorData:=recycler^.newListLiteral(dimensions.width*dimensions.height);
+    for y:=0 to dimensions.height-1 do begin
+      ScanLine:=image^.linePtr(y);
+      for x:=0 to dimensions.width-1 do begin
+        colorData^.append(recycler,
+                          recycler^.newListLiteral(3)^.appendReal(recycler,ScanLine^[cc_red])
+                                                     ^.appendReal(recycler,ScanLine^[cc_green])
+                                                     ^.appendReal(recycler,ScanLine^[cc_blue]),
+                          false);
+        inc(ScanLine);
+      end;
+    end;
+    result:=recycler^.newListLiteral(3)^.append(recycler,colorData,false)^.appendInt(recycler,dimensions.width)^.appendInt(recycler,dimensions.height);
+  end;
+
 FUNCTION executeWorkflow_imp intFuncSignature;
   VAR isValid:boolean=true;
       source:string='';
@@ -291,7 +314,7 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         end;
         inc(workflowsActive);
         leaveCriticalSection(workflowCs);
-        if dest<>C_nullSourceOrTargetFileName then try
+        if (dest<>C_nullSourceOrTargetFileName) and (dest<>C_rawDataOutput) then try
           thisWorkflow.appendSaveStep(dest,sizeLimit);
         except
           on e:Exception do begin
@@ -318,12 +341,15 @@ FUNCTION executeWorkflow_imp intFuncSignature;
         dec(workflowsActive);
         leaveCriticalSection(workflowCs);
       end;
-      if (context^.messages^.continueEvaluation) and (dest=C_nullSourceOrTargetFileName) then begin
-        postNewImage(context^.messages,newFromWorkflowImage);
-        doOutput('Output of workflow copied to current image',false,tokenLocation,context,recycler,outputMethod);
-      end;
-      if isValid then result:=newBoolLiteral(thisWorkflow.isDone)
-                 else result:=nil;
+      if (context^.messages^.continueEvaluation) then begin
+        if (dest=C_nullSourceOrTargetFileName) then begin
+          postNewImage(context^.messages,newFromWorkflowImage);
+          doOutput('Output of workflow copied to current image',false,tokenLocation,context,recycler,outputMethod);
+          result:=newBoolLiteral(thisWorkflow.isDone);
+        end else if dest=C_rawDataOutput then begin
+          result:=image_to_mnh_representation(@thisWorkflow.image,recycler);
+        end else result:=newBoolLiteral(thisWorkflow.isDone);
+      end else result:=nil;
       thisWorkflow.destroy;
     end else result:=nil;
   end;
