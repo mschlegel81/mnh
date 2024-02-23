@@ -8,7 +8,7 @@ FUNCTION returnFalse(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoca
     result:=newBoolLiteral(false);
   end;
 
-FUNCTION requireGui(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
+FUNCTION requireFullVersion(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
   begin
     context^.messages^.logGuiNeeded;
     result:=nil;
@@ -16,26 +16,26 @@ FUNCTION requireGui(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocat
 
 INITIALIZATION
   builtinFunctionMap.registerRule(GUI_NAMESPACE ,'anyFormShowing',   @returnFalse,ak_variadic);
-  builtinFunctionMap.registerRule(GUI_NAMESPACE ,'showDialog',       @requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(GUI_NAMESPACE ,'showTable',        @requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(GUI_NAMESPACE ,'showVariable',     @requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(HTTP_NAMESPACE,'formatHtmlPage',   @requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'addAnimationFrame',@requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'addPlot',          @requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plotRasterImage',  @requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'clearAnimation',   @requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'display',          @requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'drawText',         @requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'drawTextAbsolute', @requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'getOptions',       @requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plot',             @requireGui ,ak_variadic);
+  builtinFunctionMap.registerRule(GUI_NAMESPACE ,'showDialog',       @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(GUI_NAMESPACE ,'showTable',        @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(GUI_NAMESPACE ,'showVariable',     @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(HTTP_NAMESPACE,'formatHtmlPage',   @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'addAnimationFrame',@requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'addPlot',          @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plotRasterImage',  @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'clearAnimation',   @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'display',          @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'drawText',         @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'drawTextAbsolute', @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'getOptions',       @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plot',             @requireFullVersion ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plotClosed',       @returnFalse,ak_variadic);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plotImageSize',    @requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'postDisplay',      @requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'removePlot',       @requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToFile',     @requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToString',   @requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'resetOptions',     @requireGui ,ak_variadic);
-  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'setOptions',       @requireGui ,ak_variadic);
-
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'plotImageSize',    @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'postDisplay',      @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'removePlot',       @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToFile',     @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToString',   @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'resetOptions',     @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'setOptions',       @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToRawData',  @requireFullVersion ,ak_variadic);
 end.

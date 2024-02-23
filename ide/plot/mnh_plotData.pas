@@ -68,7 +68,7 @@ TYPE
       FUNCTION getOptionsWaiting(CONST errorFlagProvider:P_messages):T_scalingOptions;
   end;
 
-  T_plotRenderTarget=(prt_file,prt_fileInBackground,prt_pngString,prt_bmpString);
+  T_plotRenderTarget=(prt_file,prt_fileInBackground,prt_pngString,prt_bmpString,prt_rawData);
 
   P_plotRenderRequest=^T_plotRenderRequest;
   T_plotRenderRequest=object(T_payloadMessage)
@@ -78,14 +78,14 @@ TYPE
       target:T_plotRenderTarget;
       fileName:string;
       width,height:longint;
-      retrieved:boolean;
-      outputString:string;
+      outputLiteral:P_literal;
     public
       FUNCTION internalType:shortstring; virtual;
-      CONSTRUCTOR createRenderToFileRequest  (CONST filename_:string; CONST width_,height_:longint; CONST backgroundRendering:boolean; CONST feedbackLocation_:T_searchTokenLocation; CONST feedbackMessages_:P_messages);
-      CONSTRUCTOR createRenderToStringRequest(CONST width_,height_:longint; CONST feedbackLocation_:T_searchTokenLocation; CONST feedbackMessages_:P_messages; CONST pngFormat:boolean);
-      PROCEDURE setString(CONST s:string);
-      FUNCTION getStringWaiting(CONST errorFlagProvider:P_messages):string;
+      CONSTRUCTOR createRenderToFileRequest   (CONST filename_:string; CONST width_,height_:longint; CONST backgroundRendering:boolean; CONST feedbackLocation_:T_searchTokenLocation; CONST feedbackMessages_:P_messages);
+      CONSTRUCTOR createRenderToStringRequest (CONST width_,height_:longint; CONST feedbackLocation_:T_searchTokenLocation; CONST feedbackMessages_:P_messages; CONST pngFormat:boolean);
+      CONSTRUCTOR createRenderToRawDataRequest(CONST width_,height_:longint; CONST feedbackLocation_:T_searchTokenLocation; CONST feedbackMessages_:P_messages);
+      PROCEDURE setLiteral(CONST L:P_literal);
+      FUNCTION getLiteralWaiting(CONST errorFlagProvider:P_messages):P_literal;
   end;
 
   P_plotDropRowRequest=^T_plotDropRowRequest;
@@ -172,6 +172,7 @@ TYPE
       PROCEDURE renderPlot(VAR plotImage: TImage);
       PROCEDURE renderToFile(CONST fileName:string; CONST width,height:longint; CONST feedbackLocation:T_searchTokenLocation; CONST feedbackMessages:P_messages);
       FUNCTION renderToString(CONST width,height:longint; CONST pngFormat:boolean):ansistring;
+      FUNCTION renderToRawData(CONST width,height:longint):P_collectionLiteral;
 
       PROCEDURE copyFrom(VAR p:T_plot);
       FUNCTION getRowStatements(CONST prevOptions:T_scalingOptions; CONST literalRecycler:P_literalRecycler; VAR globalRowData:T_listLiteral; CONST haltExport:PBoolean; CONST Application:Tapplication; CONST progress:TProgressBar):T_arrayOfString;
@@ -246,10 +247,12 @@ FUNCTION newPlotSystemWithoutDisplay:P_plotSystem;
 FUNCTION getOptionsViaAdapters(CONST messages:P_messages):T_scalingOptions;
 FUNCTION timedPlotExecution(CONST timer:TEpikTimer; CONST timeout:double):T_timedPlotExecution;
 IMPLEMENTATION
-USES
-     myStringUtil,
+USES myStringUtil,
      commandLineParameters,
-     contexts;
+     contexts,
+     IntfGraphics,
+     GraphType,
+     recyclers;
 {$ifdef enable_render_threads}
 VAR preparationThreadsRunning:longint=0;
 TYPE
@@ -637,8 +640,7 @@ CONSTRUCTOR T_plotRenderRequest.createRenderToFileRequest(CONST filename_: strin
     fileName:=filename_;
     width:=width_;
     height:=height_;
-    retrieved:=false;
-    outputString:='';
+    outputLiteral:=nil;
   end;
 
 CONSTRUCTOR T_plotRenderRequest.createRenderToStringRequest(CONST width_,height_: longint; CONST feedbackLocation_:T_searchTokenLocation; CONST feedbackMessages_:P_messages; CONST pngFormat:boolean);
@@ -652,27 +654,39 @@ CONSTRUCTOR T_plotRenderRequest.createRenderToStringRequest(CONST width_,height_
     fileName:='';
     width:=width_;
     height:=height_;
-    retrieved:=false;
-    outputString:='';
+    outputLiteral:=nil;
   end;
 
-PROCEDURE T_plotRenderRequest.setString(CONST s: string);
+CONSTRUCTOR T_plotRenderRequest.createRenderToRawDataRequest(CONST width_,height_:longint; CONST feedbackLocation_:T_searchTokenLocation; CONST feedbackMessages_:P_messages);
+  begin
+    inherited create(mt_plot_renderRequest);
+    feedbackLocation:=feedbackLocation_;
+    feedbackMessages:=feedbackMessages_;
+    target:=prt_rawData;
+    fileName:='';
+    width:=width_;
+    height:=height_;
+    outputLiteral:=nil;
+  end;
+
+PROCEDURE T_plotRenderRequest.setLiteral(CONST L:P_literal);
   begin
     enterCriticalSection(messageCs);
-    outputString:=s;
-    retrieved:=true;
+    if L=nil
+    then outputLiteral:=newVoidLiteral
+    else outputLiteral:=L;
     leaveCriticalSection(messageCs);
   end;
 
-FUNCTION T_plotRenderRequest.getStringWaiting(CONST errorFlagProvider:P_messages): string;
+FUNCTION T_plotRenderRequest.getLiteralWaiting(CONST errorFlagProvider:P_messages):P_literal;
   begin
     enterCriticalSection(messageCs);
-    while not(retrieved) and (errorFlagProvider^.continueEvaluation) do begin
+    while (outputLiteral=nil) and (errorFlagProvider^.continueEvaluation) do begin
       leaveCriticalSection(messageCs);
       sleep(1); ThreadSwitch;
       enterCriticalSection(messageCs);
     end;
-    result:=outputString;
+    result:=outputLiteral;
     leaveCriticalSection(messageCs);
   end;
 
@@ -1369,6 +1383,48 @@ FUNCTION T_plot.renderToString(CONST width, height: longint; CONST pngFormat:boo
     storeImage.destroy;
   end;
 
+FUNCTION T_plot.renderToRawData(CONST width,height:longint):P_collectionLiteral;
+  VAR storeImage: TImage;
+      x,y:longint;
+      tempIntfImage,
+      ScanLineImage: TLazIntfImage;
+      ImgFormatDescription: TRawImageDescription;
+      pix:PByte;
+      pc:array[0..2] of byte;
+      pixelList:P_listLiteral;
+      recycler: P_recycler;
+  begin
+    recycler:=newRecycler;
+    storeImage:=obtainPlot(width,height);
+    ScanLineImage:=TLazIntfImage.create(storeImage.width,storeImage.height);
+    ImgFormatDescription.Init_BPP24_B8G8R8_BIO_TTB(storeImage.width,storeImage.height);
+    ImgFormatDescription.ByteOrder:=riboMSBFirst;
+    ScanLineImage.DataDescription:=ImgFormatDescription;
+    tempIntfImage:=storeImage.picture.Bitmap.CreateIntfImage;
+    ScanLineImage.CopyPixels(tempIntfImage);
+    pixelList:=globalLiteralRecycler.newListLiteral(width*height);
+    for y:=0 to storeImage.height-1 do begin
+      pix:=ScanLineImage.GetDataLineStart(y);
+      for x:=0 to storeImage.width-1 do begin
+        move((pix+3*x)^,pc,3);
+        pixelList^.append(recycler,
+          globalLiteralRecycler.newListLiteral(3)
+                      ^.appendReal(recycler,pc[0]/255)
+                      ^.appendReal(recycler,pc[1]/255)
+                      ^.appendReal(recycler,pc[2]/255),
+          false);
+      end;
+    end;
+    result:=recycler^.newListLiteral(3)
+      ^.append(recycler,pixelList,false)
+      ^.appendInt(recycler,storeImage.width)
+      ^.appendInt(recycler,storeImage.height);
+    ScanLineImage.free;
+    tempIntfImage.free;
+    storeImage.destroy;
+    freeRecycler(recycler);
+  end;
+
 PROCEDURE T_plot.copyFrom(VAR p: T_plot);
   VAR i:longint;
   begin
@@ -1458,19 +1514,22 @@ PROCEDURE T_plotSystem.processMessage(CONST message: P_storedMessage);
         end;
       end;
       mt_plot_renderRequest: begin
-        with P_plotRenderRequest(message)^ do if target in [prt_bmpString,prt_pngString]
-        then setString(currentPlot.renderToString(width,height,target=prt_pngString))
-        else begin
-          {$ifdef enable_render_threads}
-          if target=prt_fileInBackground then begin
-            new(clonedPlot,createWithDefaults);
-            clonedPlot^.copyFrom(currentPlot);
-            if not(clonedPlot^.canRenderToFileInBackground(fileName,width,height,true,true,feedbackLocation,feedbackMessages))
-            then dispose(clonedPlot,destroy);
-          end else
-          {$endif}
-          currentPlot.renderToFile(fileName,   width,height,feedbackLocation,feedbackMessages);
-          P_plotRenderRequest(message)^.setString('');
+        with P_plotRenderRequest(message)^ do case target of
+          prt_pngString: setLiteral(globalLiteralRecycler.newStringLiteral(currentPlot.renderToString(width,height,true )));
+          prt_bmpString: setLiteral(globalLiteralRecycler.newStringLiteral(currentPlot.renderToString(width,height,false)));
+          prt_rawData  : setLiteral(currentPlot.renderToRawData(width,height));
+          else begin
+            {$ifdef enable_render_threads}
+            if target=prt_fileInBackground then begin
+              new(clonedPlot,createWithDefaults);
+              clonedPlot^.copyFrom(currentPlot);
+              if not(clonedPlot^.canRenderToFileInBackground(fileName,width,height,true,true,feedbackLocation,feedbackMessages))
+              then dispose(clonedPlot,destroy);
+            end else
+            {$endif}
+            currentPlot.renderToFile(fileName,   width,height,feedbackLocation,feedbackMessages);
+            P_plotRenderRequest(message)^.setLiteral(newBoolLiteral(true));
+          end;
         end;
         P_plotRenderRequest(message)^.fileName:='';
       end;

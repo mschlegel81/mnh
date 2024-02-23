@@ -314,15 +314,29 @@ FUNCTION renderToString_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=2) and
       (arg0^.literalType in [lt_smallint,lt_bigint]) and
-      (arg1^.literalType in [lt_smallint,lt_bigint]) and
-      ((params^.size = 2) or (params^.size = 3) and
-      (arg2^.literalType in [lt_smallint,lt_bigint])) then begin
+      (arg1^.literalType in [lt_smallint,lt_bigint]) then begin
       width:=int0^.intValue;
       height:=int1^.intValue;
       new(renderRequest,createRenderToStringRequest(width,height,tokenLocation,context^.messages,true));
       context^.messages^.postCustomMessage(renderRequest^.rereferenced,true);
-      result:=recycler^.newStringLiteral(renderRequest^.getStringWaiting(context^.messages));
-      renderRequest^.setString('');
+      result:=renderRequest^.getLiteralWaiting(context^.messages);
+      disposeMessage(renderRequest);
+    end;
+  end;
+
+FUNCTION renderToRawData_impl intFuncSignature;
+  VAR width, height: longint;
+      renderRequest:P_plotRenderRequest;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and
+      (arg0^.literalType in [lt_smallint,lt_bigint]) and
+      (arg1^.literalType in [lt_smallint,lt_bigint]) then begin
+      width:=int0^.intValue;
+      height:=int1^.intValue;
+      new(renderRequest,createRenderToRawDataRequest(width,height,tokenLocation,context^.messages));
+      context^.messages^.postCustomMessage(renderRequest^.rereferenced,true);
+      result:=renderRequest^.getLiteralWaiting(context^.messages);
       disposeMessage(renderRequest);
     end;
   end;
@@ -422,6 +436,7 @@ INITIALIZATION
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'resetOptions',@resetOptions_impl, ak_nullary,[se_alterGuiState]);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToFile', @renderToFile_impl, ak_variadic_3,[se_writeFile,se_readGuiState]);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToString', @renderToString_impl, ak_binary,[se_readGuiState]);
+  builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToRawData', @renderToRawData_impl, ak_binary,[se_readGuiState]);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'removePlot',@removePlot_imp, ak_variadic,[se_alterGuiState]);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'drawText',@drawText_imp, ak_variadic_3,[se_alterGuiState]);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'drawTextAbsolute',@drawTextAbs_imp, ak_variadic_3,[se_alterGuiState]);

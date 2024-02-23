@@ -2434,6 +2434,11 @@ bitXor(5,213,10);
 #S isIpcServerRunning;
 #C Returns true if this script is already running and called assertUniqueInstance
 
+#I renderToRawData
+#S renderToRawData(width,height);
+#C Returns the current plot as a list [pixels,width,height]
+#C Pixels in turn is a list of colors, RealList(3) each.
+
 #I newQueue
 #S newQueue;
 #C Returns a new queue; The queue can be filled with "put" and otherwise behaves as an iteratable.
