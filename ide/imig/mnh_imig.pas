@@ -529,30 +529,14 @@ FUNCTION imageJpgRawData_imp intFuncSignature;
 
 FUNCTION imageRawData_imp intFuncSignature;
   VAR obtainedImage:P_rawImage;
-      dimensions: T_imageDimensions;
-      x,y:longint;
-      colorData:P_listLiteral;
-      ScanLine: P_floatColor;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
       obtainedImage:=obtainCurrentImageViaAdapters(context^.messages);
-      if obtainedImage=nil then context^.raiseError('Cannot display image because no image is loaded',tokenLocation)
+      if obtainedImage=nil
+      then context^.raiseError('Cannot display image because no image is loaded',tokenLocation)
       else begin
-        dimensions:=obtainedImage^.dimensions;
-        colorData:=recycler^.newListLiteral(dimensions.width*dimensions.height);
-        for y:=0 to dimensions.height-1 do begin
-          ScanLine:=obtainedImage^.linePtr(y);
-          for x:=0 to dimensions.width-1 do begin
-            colorData^.append(recycler,
-                              recycler^.newListLiteral(3)^.appendReal(recycler,ScanLine^[cc_red])
-                                                         ^.appendReal(recycler,ScanLine^[cc_green])
-                                                         ^.appendReal(recycler,ScanLine^[cc_blue]),
-                              false);
-            inc(ScanLine);
-          end;
-        end;
-        result:=recycler^.newListLiteral(3)^.append(recycler,colorData,false)^.appendInt(recycler,dimensions.width)^.appendInt(recycler,dimensions.height);
+        result:=image_to_mnh_representation(obtainedImage,recycler);
         dispose(obtainedImage,destroy);
       end;
     end;
@@ -603,6 +587,7 @@ FUNCTION renderPlotToCurrentImage intFuncSignature;
       imgStream:TStringStream;
       plotImage:TImage;
       plotPic  :P_rawImage;
+      dataLiteral: P_literal;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=2) and
@@ -616,7 +601,9 @@ FUNCTION renderPlotToCurrentImage intFuncSignature;
       context^.messages^.postCustomMessage(renderRequest^.rereferenced);
       plotImage:=TImage.create(nil);
       plotImage.SetInitialBounds(0,0,width,height);
-      imgStream:=TStringStream.create(renderRequest^.getStringWaiting(context^.messages));
+      dataLiteral:=renderRequest^.getLiteralWaiting(context^.messages);
+      imgStream:=TStringStream.create(P_stringLiteral(dataLiteral)^.value);
+      recycler^.disposeLiteral(dataLiteral);
       disposeMessage(renderRequest);
       imgStream.position:=0;
       plotImage.picture.Bitmap.loadFromStream(imgStream);

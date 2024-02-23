@@ -2516,6 +2516,11 @@ bitXor(5,213,10);
 #S renderPlotToCurrentImage(width,height);
 #C Renders the current plot to the current image
 
+#I renderToRawData
+#S renderToRawData(width,height);
+#C Returns the current plot as a list [pixels,width,height]
+#C Pixels in turn is a list of colors, RealList(3) each.
+
 #I randomIfs
 #S randomIfs;
 #C returns a random IFS to be fed to executeWorkflow
