@@ -1592,9 +1592,13 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
           case token.tokType of
             tt_userRule: if (P_abstractRule(token.data)^.getRuleType in [rt_normal,rt_delegate]) and (resolveIdContext=ON_EVALUATION) then begin
               inlineValue:=P_abstractRule(token.data)^.getInlineValue;
-              if (inlineValue<>nil) and not(prevWasPseudoFuncPointer) then begin
-                token.data:=inlineValue;
-                token.tokType:=tt_literal;
+              if (inlineValue<>nil) then begin
+                if prevWasPseudoFuncPointer
+                then inlineValue^.unreference
+                else begin
+                  token.data:=inlineValue;
+                  token.tokType:=tt_literal;
+                end;
               end;
             end;
             tt_intrinsicRule: meta.sideEffects+=builtinFunctionMap.getSideEffects(P_intFuncCallback(token.data));
