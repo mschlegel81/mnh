@@ -1391,27 +1391,42 @@ FUNCTION T_plot.renderToRawData(CONST width,height:longint):P_collectionLiteral;
       ImgFormatDescription: TRawImageDescription;
       pix:PByte;
       pc:array[0..2] of byte;
+      literal_lookup:T_arrayOfLiteral;
       pixelList:P_listLiteral;
       recycler: P_recycler;
+      {$ifdef debugMode}
+      startTicks:qword;
+      {$endif}
   begin
     recycler:=newRecycler;
+    setLength(literal_lookup,256);
+    for x:=0 to 255 do literal_lookup[x]:=recycler^.newRealLiteral(x/255);
+
     storeImage:=obtainPlot(width,height);
+    {$ifdef debugMode}
+    startTicks:=GetTickCount64;
+    {$endif}
     ScanLineImage:=TLazIntfImage.create(storeImage.width,storeImage.height);
     ImgFormatDescription.Init_BPP24_B8G8R8_BIO_TTB(storeImage.width,storeImage.height);
     ImgFormatDescription.ByteOrder:=riboMSBFirst;
     ScanLineImage.DataDescription:=ImgFormatDescription;
     tempIntfImage:=storeImage.picture.Bitmap.CreateIntfImage;
     ScanLineImage.CopyPixels(tempIntfImage);
-    pixelList:=globalLiteralRecycler.newListLiteral(width*height);
+    pixelList:=recycler^.newListLiteral(width*height);
+    {$ifdef debugMode}
+    writeln('   -- renderToRawData: laz copy       done in ',GetTickCount64-startTicks,' ticks');
+    startTicks:=GetTickCount64;
+    {$endif}
+
     for y:=0 to storeImage.height-1 do begin
       pix:=ScanLineImage.GetDataLineStart(y);
       for x:=0 to storeImage.width-1 do begin
         move((pix+3*x)^,pc,3);
         pixelList^.append(recycler,
-          globalLiteralRecycler.newListLiteral(3)
-                      ^.appendReal(recycler,pc[0]/255)
-                      ^.appendReal(recycler,pc[1]/255)
-                      ^.appendReal(recycler,pc[2]/255),
+          recycler^.newListLiteral(3)
+                      ^.append(recycler,literal_lookup[pc[0]],true)
+                      ^.append(recycler,literal_lookup[pc[1]],true)
+                      ^.append(recycler,literal_lookup[pc[2]],true),
           false);
       end;
     end;
@@ -1419,9 +1434,13 @@ FUNCTION T_plot.renderToRawData(CONST width,height:longint):P_collectionLiteral;
       ^.append(recycler,pixelList,false)
       ^.appendInt(recycler,storeImage.width)
       ^.appendInt(recycler,storeImage.height);
+    {$ifdef debugMode}
+    writeln('   -- renderToRawData: pixelwise copy done in ',GetTickCount64-startTicks,' ticks');
+    {$endif}
     ScanLineImage.free;
     tempIntfImage.free;
     storeImage.destroy;
+    recycler^.disposeLiterals(literal_lookup);
     freeRecycler(recycler);
   end;
 
