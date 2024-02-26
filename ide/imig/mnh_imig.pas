@@ -598,7 +598,7 @@ FUNCTION renderPlotToCurrentImage intFuncSignature;
       width:=int0^.intValue;
       height:=int1^.intValue;
       new(renderRequest,createRenderToStringRequest(width,height,tokenLocation,context^.messages,false));
-      context^.messages^.postCustomMessage(renderRequest^.rereferenced);
+      context^.messages^.postCustomMessage(renderRequest);
       plotImage:=TImage.create(nil);
       plotImage.SetInitialBounds(0,0,width,height);
       dataLiteral:=renderRequest^.getLiteralWaiting(context^.messages);

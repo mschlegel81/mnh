@@ -675,7 +675,10 @@ FUNCTION T_flatMapGenerator.evaluate(CONST location:T_tokenLocation; CONST conte
     result:=NIL_EVAL_RESULT;
     if context^.continueEvaluation and not(queue.hasNext) then fillQueue;
     if not(queue.hasNext) or not(context^.continueEvaluation)
-    then result.literal:=newVoidLiteral
+    then begin
+      result.literal:=newVoidLiteral;
+      if doneFetching then result.reasonForStop:=rr_endOfGenerator;
+    end
     else result.literal:=queue.next;
   end;
 
