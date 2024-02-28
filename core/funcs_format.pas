@@ -13,7 +13,7 @@ USES sysutils,
 
 PROCEDURE formatMetaData(VAR meta:T_ruleMetaData; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
 IMPLEMENTATION
-USES out_adapters;
+USES out_adapters,LazUTF8;
 TYPE
   T_format=object
     category:(fmtCat_decimal,
@@ -115,6 +115,16 @@ PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST loc
       while length(result)             <lengthPar1 do result:=' '+result;
     end;
 
+  FUNCTION formatUtf8String(CONST s:string):string;
+    begin
+      if (lengthPar2>0) and (UTF8Length(s)>lengthPar2)
+      then result:=UTF8Copy(s,1,lengthPar2)
+      else result:=s;
+      if lengthPar1<0
+      then while UTF8Length(result)<-lengthPar1 do result+=' '
+      else while UTF8Length(result)< lengthPar1 do result:=' '+result;
+    end;
+
   begin
     DefaultFormatSettings.DecimalSeparator:='.';
     case category of
@@ -126,7 +136,9 @@ PROCEDURE T_format.formatAppend(VAR txt:ansistring; CONST l:P_literal; CONST loc
       fmtCat_decimal: if l^.literalType in [lt_smallint,lt_bigint] then begin txt+=pad(P_abstractIntLiteral(l)^.toString   ,true); exit; end;
       fmtCat_hex    : if l^.literalType in [lt_smallint,lt_bigint] then begin txt+=pad(P_abstractIntLiteral(l)^.toHexString,true); exit; end;
     end;
-    txt+=sysutils.format(strFmt,[P_abstractPackage(location.package)^.literalToString(L,location,context,recycler)]);
+    if (L^.literalType=lt_string) and (P_stringLiteral(L)^.getEncoding=se_utf8)
+    then txt+=formatUtf8String(       P_abstractPackage(location.package)^.literalToString(L,location,context,recycler))
+    else txt+=sysutils.format(strFmt,[P_abstractPackage(location.package)^.literalToString(L,location,context,recycler)]);
   end;
 
 DESTRUCTOR T_format.destroy;
