@@ -333,7 +333,7 @@ PROCEDURE TIdeMainForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
           runnerModel.postHalt;
           stopQuickEvaluation;
           quitPosted:=true;
-          quitTimeout:=now+ONE_SECOND*10;
+          quitTimeout:=now+ONE_SECOND;
           CanClose:=false;
         end;
       end;
