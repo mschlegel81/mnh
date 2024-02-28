@@ -149,7 +149,6 @@ FUNCTION ord_imp intFuncSignature;
 
 FUNCTION mnhInfo_imp intFuncSignature;
   begin
-    if not(context^.checkSideEffects('mnhInfo',tokenLocation,[se_sleep])) then exit(nil);
     if (params=nil) or (params^.size=0) then
     result:=newMapLiteral(17)^
       .put(recycler,'isFullVersion'  ,{$ifdef fullVersion}true{$else}false{$endif})^
