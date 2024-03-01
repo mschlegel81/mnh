@@ -310,7 +310,8 @@ PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,opt
 FUNCTION stringToMessageTypeSet(CONST s:string;           CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el3_evalError..mt_endOfEvaluation]):T_messageTypeSet;
 FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el3_evalError..mt_endOfEvaluation]):string;
 IMPLEMENTATION
-USES myStringUtil,strutils,fileWrappers,Classes;
+USES myStringUtil,strutils,fileWrappers,Classes
+     {$ifdef Windows},windows{$endif};
 VAR globalAdaptersCs:TRTLCriticalSection;
     allConnectors:array of P_messagesDistributor;
 TYPE
@@ -1140,6 +1141,31 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
       p:ansistring;
       formatted,toPrint:T_arrayOfString;
       k:longint=0;
+      clearFirst:boolean=false;
+
+  {$ifdef Windows}
+  PROCEDURE directOutput;
+    CONST origin: COORD=(x:0;y:0);
+    VAR
+      hStdOut: handle;
+      csbi:TCONSOLESCREENBUFFERINFO;
+      conSize,written: dword;
+      newCursor:COORD=(x:0;y:0);
+      lpReserved: pointer;
+    begin
+      hStdOut:=GetStdHandle(STD_OUTPUT_HANDLE);
+      if not GetConsoleScreenBufferInfo(hStdOut,csbi) then exit;
+      conSize:=dword(csbi.dwSize.x)*dword(csbi.dwSize.Y);
+      SetConsoleCursorPosition(hStdOut,origin);
+      FillConsoleOutputCharacter(hStdOut,' ',conSize,origin,written);
+      SetConsoleCursorPosition(hStdOut,origin);
+      WriteConsole(hStdOut,@p[1],length(p),written,lpReserved);
+      FillConsoleOutputAttribute(hStdOut,csbi.wAttributes,conSize,origin,written);
+      newCursor.Y:=length(toPrint);
+      SetConsoleCursorPosition(hStdOut,newCursor);
+    end;
+  {$endif}
+
   begin
     result:=mySys.showConsole and (message^.messageType in messageTypesToInclude);
     if result then begin
@@ -1160,14 +1186,30 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
           else begin
             formatted:=messageFormatProvider^.formatMessage(message);
             setLength(toPrint,length(formatted));
-            for s in formatted do if s=C_formFeedChar then mySys.clearConsole else begin toPrint[k]:=s; k+=1; end;
+            for s in formatted do if s=C_formFeedChar then begin
+              clearFirst:=true;
+              k:=0;
+            end else begin
+              toPrint[k]:=s;
+              {$ifdef Windows} SetCodePage(RawByteString(toPrint[k]),CP_NONE,false); {$endif}
+              k+=1;
+            end;
             setLength(toPrint,k);
             p:=join(toPrint,LineEnding);
             {$ifdef Windows} SetCodePage(RawByteString(p),CP_NONE,false); {$endif}
             if    (message^.messageType in [mt_printline,mt_log]) and (mode in [com_normal,com_stdout_only]) or
                not(message^.messageType in [mt_printline,mt_log]) and (mode = com_stdout_only)
-            then writeln(       p)
-            else writeln(stdErr,p);
+            then begin
+              {$ifdef Windows}
+              if clearFirst then directOutput else
+              {$else}
+              if clearFirst then mySys.clearConsole;
+              {$endif}
+              writeln(       p);
+            end else begin
+              if clearFirst then mySys.clearConsole;
+              writeln(stdErr,p);
+            end;
           end;
         end;
         flush(StdOut);
