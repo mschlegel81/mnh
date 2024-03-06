@@ -122,7 +122,7 @@ CONSTRUCTOR T_completionLogic.create;
     SynCompletion.OnCodeCompletion:=@SynCompletionCodeCompletion;
     SynCompletion.OnExecute       :=@SynCompletionExecute;
     SynCompletion.OnSearchPosition:=@SynCompletionSearchPosition;
-    SynCompletion.EndOfTokenChr:='()[],{}+-*/&^:<>=';
+    SynCompletion.EndOfTokenChr:='()[],{}+-*/&^:<>=!';
   end;
 
 DESTRUCTOR T_completionLogic.destroy;
@@ -143,7 +143,7 @@ PROCEDURE T_completionLogic.assignEditor(CONST edit:TSynEdit; CONST ad:P_codeAss
     SynCompletion.editor:=editor;
   end;
 
-CONST delimiters:set of char=['(',')','[',']',',','{','}','+','-','*','/','&','^',':','?','<','>','=','@','.',' '];
+CONST delimiters:set of char=['(',')','[',']',',','{','}','+','-','*','/','&','^',':','?','<','>','=','@','.',' ','!'];
 
 PROCEDURE T_completionLogic.SynCompletionCodeCompletion(VAR value: string; sourceValue: string; VAR SourceStart, SourceEnd: TPoint; KeyChar: TUTF8Char; Shift: TShiftState);
   VAR i:longint;
