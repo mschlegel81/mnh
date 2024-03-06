@@ -256,9 +256,11 @@ FUNCTION evaluteExpressionMap(CONST e:P_expressionLiteral; CONST location:T_toke
 
       result:=e^.evaluate(location,context,recycler,P_listLiteral(arg0));
 
+      if P_listLiteral(arg0)^.size<>1 then oldMessages^.postCustomMessages(tryMessages.storedMessages(false));
+
       tryMessages.destroy;
       context^.messages:=oldMessages;
-      if result.reasonForStop in [rr_ok,rr_okWithReturn] then exit(result);
+      if (result.reasonForStop in [rr_ok,rr_okWithReturn]) or (P_listLiteral(arg0)^.size<>1) then exit(result);
     end;
     parameterList.create(1);
     parameterList.append(recycler,arg0,true);
