@@ -2899,14 +2899,14 @@ expectations:=
  ['o.k. (4348kB compared)'],
  'testExitCode'=>
  ['Calling testExitCode.mnh print','Hello world','Exit code: 0','Sandbox produces the same output',
-  'Calling testExitCode.mnh note','Note @testExitCode:2,15 e[3mThis is a notee[0m','Exit code: 0',
-  'Sandbox produces the same output','Calling testExitCode.mnh warn','Warn @testExitCode:3,15 e[93mThis is a warninge[0m',
+  'Calling testExitCode.mnh note',"Note @testExitCode:2,15 \e[3mThis is a note\e[0m",'Exit code: 0',
+  'Sandbox produces the same output','Calling testExitCode.mnh warn',"Warn @testExitCode:3,15 \e[93mThis is a warning\e[0m",
   'Exit code: 0','Sandbox produces the same output','Calling testExitCode.mnh fail',
-  'Error @testExitCode:4,15 e[91mThis is a failuree[0m','Exit code: 2','Sandbox produces the same output',
+  "Error @testExitCode:4,15 \e[91mThis is a failure\e[0m",'Exit code: 2','Sandbox produces the same output',
   'Calling testExitCode.mnh 40','Setting exit code 40','Exit code: 40','Sandbox produces the same output',
   'Calling testExitCode.mnh 41','Setting exit code 41','Exit code: 41','Sandbox produces the same output',
   'Calling testExitCode.mnh x',
-  "Error @testExitCode:5,45 e[91mCannot apply intrinsic rule toInt to parameter list (String):  ('x')e[0m",'Exit code: 3',
+  "Error @testExitCode:5,45 \e[91mCannot apply intrinsic rule toInt to parameter list (String):  ('x')\e[0m",'Exit code: 3',
   'Sandbox produces the same output'],
  'testExpressionSerialization'=>
  ['','Test deserialization of unary function',"  f    = (x)->1-x²",'  f(2) = -3.00000','',
