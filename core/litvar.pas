@@ -623,7 +623,7 @@ FUNCTION vectorToList(CONST V:T_arrayOfDouble; CONST recycler:P_literalRecycler)
 
 FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; CONST modifier:longint=-1):boolean;
   begin
-    if not(valueToCheck^.literalType in C_typeCheckInfo[check].matching) or ((valueToCheck^.literalType=lt_expression) and (P_expressionLiteral(valueToCheck)^.expressionType=et_builtinObject)) then exit(false);
+    if not(valueToCheck^.literalType in C_typeCheckInfo[check].matching) then exit(false);
     if modifier<0 then case check of
       tc_typeCheckStatelessExpression : result:=not(P_expressionLiteral(valueToCheck)^.typ in C_statefulExpressionTypes);
       tc_typeCheckStatefulExpression  : result:=   (P_expressionLiteral(valueToCheck)^.typ in C_statefulExpressionTypes);

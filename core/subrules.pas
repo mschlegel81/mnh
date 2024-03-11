@@ -153,9 +153,6 @@ TYPE
   end;
 
   P_builtinObject=^T_builtinObject;
-
-  { T_builtinObject }
-
   T_builtinObject=object(T_builtinExpression)
     protected
       FUNCTION getEquivalentInlineExpression(CONST context:P_context; CONST recycler:P_recycler):P_inlineExpression; virtual;
@@ -415,6 +412,7 @@ FUNCTION T_builtinObject.toString(CONST lengthLimit: longint): ansistring;
 FUNCTION T_builtinObject.typeString: string;
   begin
     result:=id;
+    if length(result)>=1 then result[1]:=UpCase(result[1]);
   end;
 
 FUNCTION T_builtinObject.hash: T_hashInt;

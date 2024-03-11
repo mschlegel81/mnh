@@ -662,7 +662,7 @@ FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage)
             if (length(nextLine)>10) and (length(nextLine)+length(s)>CONSOLE_OUT_WIDTH)
             then begin
               append(result,trimRight(nextLine)+C_ANSI_CODE_RESET);
-              nextLine:=C_echoContdInfix+trimLeft(s);
+              nextLine:=C_echoContdInfix+C_messageClassMeta[mc_echo].levelColor+trimLeft(s);
             end else nextLine+=s;
           end;
           append(result,trimRight(nextLine)+C_ANSI_CODE_RESET);

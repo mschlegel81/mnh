@@ -16,6 +16,7 @@ USES sysutils,lclintf,
      funcs,
      synsock;
 
+CONST FTP_TYPE_STRING='FTPconnection';
 IMPLEMENTATION
 USES ftpsend,subrules,fileWrappers;
 TYPE
@@ -50,7 +51,6 @@ FUNCTION T_ftpConnection.getEquivalentInlineExpression(CONST context: P_context;
     result:=nil;
   end;
 
-CONST FTP_TYPE_STRING='FTPconnection';
 CONSTRUCTOR T_ftpConnection.create(CONST host, port, user, pass: string; CONST context:P_context; CONST location:T_tokenLocation);
   VAR loginSuccessful:boolean;
   begin
@@ -83,7 +83,9 @@ DESTRUCTOR T_ftpConnection.destroy;
 FUNCTION T_ftpConnection.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: P_literalRecycler; CONST parameters: P_listLiteral): T_evaluationResult;
   begin
     enterCriticalSection(connectionCs);
-    result.literal:= newBoolLiteral(connection<>nil);
+    if connection=nil
+    then result.literal:=newVoidLiteral
+    else result.literal:=recycler^.newStringLiteral('ftp://'+connection.TargetHost+':'+connection.TargetPort+'/');
     result.reasonForStop:=rr_ok;
     leaveCriticalSection(connectionCs);
   end;

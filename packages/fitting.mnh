@@ -1,5 +1,5 @@
 private average(L:NumericList)->L.agg(+)/L.size;
-private fitParameters(x:NumericList,y:NumericList)->begin
+fitParameters(x:NumericList,y:NumericList)->begin
   local mask:=!(isInfinite(x) or isNan(x) or isInfinite(y) or isNan(y));
   local mx:=(local x_:=x[mask]).average;
   local my:=(local y_:=y[mask]).average;

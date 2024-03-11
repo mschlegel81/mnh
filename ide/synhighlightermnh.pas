@@ -377,7 +377,7 @@ PROCEDURE TAbstractSynMnhSyn.next;
         fTokenId := tkDollarIdentifier;
         firstInLine:=false;
       end;
-      'a'..'e','g'..'z', 'A'..'Z': begin
+      'a'..'e','g'..'z', 'A'..'Z','_': begin
         localId := fLine [run];
         inc(run);
         while fLine [run] in ['a'..'z', 'A'..'Z', '_', '0'..'9'] do begin
@@ -437,6 +437,7 @@ PROCEDURE TAbstractSynMnhSyn.next;
       end
       else begin
         fTokenId := tkDefault;
+        //TODO: ⚡ Ensure, that utf8 glyphs are handled as a single token and not bytewise ⚡
         inc(run);
       end;
     end;
