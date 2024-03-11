@@ -192,10 +192,12 @@ FUNCTION toMap_imp intFuncSignature;
   begin
     result:=nil;
     if (params=nil) or (params^.size=0) then exit(newBoolLiteral(false));
-    if (params<>nil) and (params^.size=1) then
-    result:=newBoolLiteral((arg0^.literalType in C_typeCheckInfo[TYPE_CHECK].matching) and typeCheckAccept(arg0,TYPE_CHECK))
-    else if (C_typeCheckInfo[TYPE_CHECK].modifiable) and (params^.size=2) and (arg1^.literalType in [lt_smallint,lt_bigint]) then
-    result:=newBoolLiteral((arg0^.literalType in C_typeCheckInfo[TYPE_CHECK].matching) and typeCheckAccept(arg0,TYPE_CHECK,int1^.intValue));
+    if (params<>nil) and (params^.size=1)
+    then result:=newBoolLiteral(typeCheckAccept(arg0,TYPE_CHECK))
+    else if (C_typeCheckInfo[TYPE_CHECK].modifiable) and
+            (params^.size=2) and
+            (arg1^.literalType in [lt_smallint,lt_bigint])
+         then result:=newBoolLiteral(typeCheckAccept(arg0,TYPE_CHECK,int1^.intValue));
   end}
 
 {$define TYPE_CHECK:=tc_typeCheckScalar          } {$define FUNC_ID:=isScalar           } GENERIC_TYPE_CHECK;

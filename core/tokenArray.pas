@@ -771,7 +771,7 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
       end;
       tt_iifElse: begin
         if scope[topIdx].scopeStartToken^.tokType<>tt_iifCheck
-        then raiseMismatchError;
+        then exit;
       end;
       tt_endBlock: begin
         if scope[topIdx].scopeStartToken^.tokType<>tt_beginBlock
@@ -922,6 +922,7 @@ PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST 
           if context^.continueEvaluation
           then prepareLambdaBody
           else begin
+            pattern^.cleanup(recycler);
             dispose(pattern,destroy);
             t^.tokType:=tt_EOL;
           end;

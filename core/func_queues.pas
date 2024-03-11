@@ -12,7 +12,7 @@ USES sysutils,Classes,
      funcs,contexts,
      recyclers,
      subrules;
-
+CONST QUEUE_TYPE_NAME='Queue';
 TYPE
   P_queueEntry=^T_queueEntry;
   T_queueEntry=record
@@ -33,6 +33,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST location: T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
+      FUNCTION typeString: string; virtual;
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
@@ -56,6 +57,11 @@ CONSTRUCTOR T_queue.create(CONST location: T_tokenLocation);
 FUNCTION T_queue.toString(CONST lengthLimit: longint): string;
   begin
     result:='queue';
+  end;
+
+FUNCTION T_queue.typeString: string;
+  begin
+    result:=QUEUE_TYPE_NAME;
   end;
 
 FUNCTION T_queue.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: P_literalRecycler; CONST parameters: P_listLiteral): T_evaluationResult;

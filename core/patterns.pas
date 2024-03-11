@@ -148,6 +148,7 @@ FUNCTION T_patternElement.accept(VAR parameterList:T_listLiteral; CONST ownIndex
   VAR L:P_literal;
   begin
     L:=parameterList.value[ownIndex];
+    if builtinTypeCheck=tc_byTypeString then exit(L^.typeString=restrictionId);
     if not(L^.literalType in typeWhitelist) then exit(false);
     result:=true;
     case restrictionType of
@@ -227,7 +228,7 @@ FUNCTION T_patternElement.isEquivalent(CONST pe: T_patternElement): boolean;
 PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler{$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos{$endif});
   VAR tok:P_token;
   begin
-    if (restrictionId<>'') and (restrictionIdx<0) then begin
+    if (restrictionId<>'') and (restrictionIdx<0) and (builtinTypeCheck<>tc_byTypeString) then begin
       tok:=recycler^.newToken(location,restrictionId,tt_identifier,nil);
       {$ifdef fullVersion}
       if callAndIdInfos<>nil then begin
@@ -246,6 +247,7 @@ PROCEDURE T_patternElement.lateRHSResolution(CONST location:T_tokenLocation; CON
 
 PROCEDURE T_patternElement.thinOutWhitelistAndPlausibilize(CONST context:P_context);
   begin
+    if builtinTypeCheck = tc_byTypeString then exit;
     if restrictionType = tt_customTypeCheck then begin
       typeWhitelist:=C_typeCheckInfo[customTypeCheck^.builtinTypeCheck].matching;
       exit;
@@ -639,8 +641,8 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
       closingBracket:=first^.next;
     end else begin
       if replaceOpeningBracketByPatternToken
-      then parts:=getBodyParts(first,0,context,closingBracket,[                      tt_endOfPatternDeclare])
-      else parts:=getBodyParts(first,0,context,closingBracket,[tt_endOfPatternAssign,tt_endOfPatternDeclare]);
+      then parts:=getBodyParts(first,0,context,closingBracket,[                      tt_endOfPatternDeclare],[tt_iifElse])
+      else parts:=getBodyParts(first,0,context,closingBracket,[tt_endOfPatternAssign,tt_endOfPatternDeclare],[tt_iifElse]);
       if closingBracket=nil then begin
         context^.raiseError('Invalid pattern.',first^.location);
         exit;
@@ -661,7 +663,14 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
           rulePatternElement.create(parts[i].first^.txt,parts[i].first^.location);
           parts[i].first:=recycler^.disposeToken(parts[i].first);
           if (parts[i].first<>nil) then begin
-            if (parts[i].first^.tokType=tt_typeCheck) then begin
+            if (parts[i].first^.tokType=tt_iifElse) and (parts[i].first^.next<>nil) and (parts[i].first^.next^.tokType in [tt_identifier]) then begin
+              rulePatternElement.restrictionType :=tt_typeCheck;
+              rulePatternElement.builtinTypeCheck:=tc_byTypeString;
+              rulePatternElement.restrictionId   :=parts[i].first^.next^.txt;
+              if parts[i].first^.next^.next<>nil then fail(parts[i].first);
+              parts[i].first:=recycler^.disposeToken(parts[i].first);
+              parts[i].first:=recycler^.disposeToken(parts[i].first);
+            end else if (parts[i].first^.tokType=tt_typeCheck) then begin
               //Type check: f(x:Int)
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
               rulePatternElement.builtinTypeCheck:=parts[i].first^.getTypeCheck;

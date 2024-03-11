@@ -8,6 +8,13 @@ USES mnh_constants,
      contexts,
      litVar,subrules;
 
+CONST INTERPOLATOR_TYPE_NAMES:array [0..4] of string =
+      ('LinearInterpolator',
+       'CSplineInterpolator',
+       'BSpline',
+       'LocalInterpolator',
+       'FourierSeries');
+
 TYPE
   T_1D_interpolator=object(T_builtinObject)
     protected
@@ -31,7 +38,7 @@ TYPE
   end;
 
   { T_2D_interpolator }
-
+  //TODO: Implement descendants or remove
   T_2D_interpolator=object(T_builtinObject)
     protected
       underlyingValues:P_listLiteral;
@@ -681,7 +688,7 @@ FUNCTION T_localInterpolator.getSingleInterpolatedValue(CONST floatIdx: double):
 
 CONSTRUCTOR T_localInterpolator.create(CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context:P_context);
   begin
-    inherited createInterpolator('local',values,location,context);
+    inherited createInterpolator('localInterpolator',values,location,context);
     if length(yValues)<2 then context^.raiseError('localInterpolator requires at least 2 points.',location);
   end;
 

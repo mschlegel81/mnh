@@ -40,7 +40,6 @@ TYPE
     FUNCTION hash:T_hashInt;
     FUNCTION equals(CONST other:T_token):boolean;
     FUNCTION singleTokenToString:ansistring;
-    FUNCTION getTokenOnBracketLevel(CONST types:T_tokenTypeSet; CONST onLevel:longint; CONST initialLevel:longint=0):P_token;
     {$ifdef fullVersion}
     FUNCTION getRawToken:T_rawToken;
     {$endif}
@@ -67,7 +66,7 @@ FUNCTION tokensToString(CONST first:P_token; CONST limit:longint=maxLongint):ans
 FUNCTION tokensToStrings(CONST first:P_token; CONST limit:longint=maxLongint):T_arrayOfString;
 FUNCTION tokensToEcho(CONST first:P_token):T_arrayOfString;
 FUNCTION safeTokenToString(CONST t:P_token):ansistring;
-FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractContext; OUT closingBracket:P_token; CONST acceptedClosers:T_tokenTypeSet=[tt_braceClose]):T_bodyParts;
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractContext; OUT closingBracket:P_token; CONST acceptedClosers:T_tokenTypeSet=[tt_braceClose]; CONST ignoredTokenTypes:T_tokenTypeSet=[]):T_bodyParts;
 IMPLEMENTATION
 USES typinfo,myStringUtil;
 FUNCTION tokensToString(CONST first:P_token; CONST limit:longint):ansistring;
@@ -112,7 +111,7 @@ FUNCTION safeTokenToString(CONST t:P_token):ansistring;
     else result:=t^.singleTokenToString;
   end;
 
-FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractContext; OUT closingBracket:P_token; CONST acceptedClosers:T_tokenTypeSet=[tt_braceClose]):T_bodyParts;
+FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CONST context:P_abstractContext; OUT closingBracket:P_token; CONST acceptedClosers:T_tokenTypeSet=[tt_braceClose]; CONST ignoredTokenTypes:T_tokenTypeSet=[]):T_bodyParts;
   VAR t,p:P_token;
       bracketLevel,i:longint;
       partLength:longint=-1;
@@ -129,8 +128,8 @@ FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CO
       exit;
     end;
     while (t<>nil) and not((t^.tokType in acceptedClosers) and (bracketLevel=1)) do begin
-      if t^.tokType in C_openingBrackets then inc(bracketLevel)
-      else if t^.tokType in C_closingBrackets then dec(bracketLevel)
+      if      (t^.tokType in C_openingBrackets) and not(t^.tokType in ignoredTokenTypes) then inc(bracketLevel)
+      else if (t^.tokType in C_closingBrackets) and not(t^.tokType in ignoredTokenTypes) then dec(bracketLevel)
       else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
         if partLength=0 then context^.raiseError('Empty body part.',result[length(result)-1].first^.location);
         result[length(result)-1].last:=p; //end of body part is token before comma
@@ -324,21 +323,6 @@ FUNCTION T_token.singleTokenToString: ansistring;
     result:=toString(false,dummy);
     if tokType in [tt_operatorAnd,tt_operatorDivInt,tt_operatorIn,tt_operatorNotIn,tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorMod,tt_operatorOr,tt_operatorXor,tt_iifCheck,tt_iifElse,tt_operatorOrElse]
     then result:=trim(result);
-  end;
-
-FUNCTION T_token.getTokenOnBracketLevel(CONST types: T_tokenTypeSet; CONST onLevel: longint; CONST initialLevel: longint): P_token;
-  VAR level:longint=0;
-      t:P_token;
-  begin
-    level:=initialLevel;
-    t:=@self;
-    while (t<>nil) do begin
-      if t^.tokType      in C_openingBrackets then inc(level)
-      else if t^.tokType in C_closingBrackets then dec(level);
-      if (level=onLevel) and (t^.tokType in types) then exit(t);
-      t:=t^.next;
-    end;
-    result:=nil;
   end;
 
 {$ifdef fullVersion}

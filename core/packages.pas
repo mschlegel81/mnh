@@ -869,6 +869,26 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
                       nil);
     end;
 
+  FUNCTION findAssignmentToken:P_token;
+    VAR tok:P_token;
+    begin
+      tok:=statement.token.first;
+      while (tok<>nil) and (tok^.tokType<>tt_startOfPattern) do begin
+        case tok^.tokType of
+          tt_modifier, tt_identifier,tt_userRule,tt_intrinsicRule: begin end;
+          tt_assign,tt_declare: exit(tok);
+          else exit(nil);
+        end;
+        tok:=tok^.next;
+      end;
+      while (tok<>nil) do begin
+        if tok^.tokType in [tt_endOfPatternAssign,tt_endOfPatternDeclare]
+        then exit(tok);
+        tok:=tok^.next;
+      end;
+      exit(nil);
+    end;
+
   begin
     profile:=globals.primaryContext.messages^.isCollecting(mt_timing_info) and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
     if statement.token.first=nil then exit;
@@ -889,7 +909,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
     end;
 
     if usecase<>lu_usageScan then begin
-      assignmentToken:=statement.token.first^.getTokenOnBracketLevel([tt_endOfPatternAssign,tt_endOfPatternDeclare,tt_assign,tt_declare],0);
+      assignmentToken:=findAssignmentToken;
       if (assignmentToken<>nil) then begin
         if not(se_alterPackageState in globals.primaryContext.sideEffectWhitelist) then begin
           globals.primaryContext.messages^.raiseSimpleError('Rule declaration is not allowed here',assignmentToken^.location);

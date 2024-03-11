@@ -32,7 +32,10 @@ T_completionLogic=object
 end;
 
 IMPLEMENTATION
-USES strutils, mnh_messages;
+USES strutils, mnh_messages,
+     funcs_ftp,
+     func_queues,
+     funcs_interpolators;
 VAR intrinsicRulesForCompletion:T_setOfString;
     intrinsicRulesForCompletion_ready:boolean=false;
 PROCEDURE initIntrinsicRuleList;
@@ -57,6 +60,10 @@ PROCEDURE initIntrinsicRuleList;
       end;
     end;
     intrinsicRulesForCompletion.put(C_tokenDefaultId[tt_operatorNotIn]);
+    for id in INTERPOLATOR_TYPE_NAMES do intrinsicRulesForCompletion.put(id);
+    intrinsicRulesForCompletion.put(FTP_TYPE_STRING);
+    intrinsicRulesForCompletion.put(QUEUE_TYPE_NAME);
+
     for tt in T_tokenType do if isIdentifier(C_tokenDefaultId[tt],false) then
       intrinsicRulesForCompletion.put(ansiReplaceStr(C_tokenDefaultId[tt],ID_QUALIFY_CHARACTER,''))
     else if (copy(C_tokenDefaultId[tt],1,1)='.') and isIdentifier(copy(C_tokenDefaultId[tt],2,1000),false) then

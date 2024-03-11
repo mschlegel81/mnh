@@ -16,6 +16,7 @@ USES sysutils,lclintf,
      funcs,
      synsock;
 
+CONST FTP_TYPE_STRING='FTPconnection';
 IMPLEMENTATION
 USES ftpsend,subrules,fileWrappers;
 TYPE
@@ -50,7 +51,6 @@ FUNCTION T_ftpConnection.getEquivalentInlineExpression(CONST context: P_context;
     result:=nil;
   end;
 
-CONST FTP_TYPE_STRING='FTPconnection';
 CONSTRUCTOR T_ftpConnection.create(CONST host, port, user, pass: string; CONST context:P_context; CONST location:T_tokenLocation);
   VAR loginSuccessful:boolean;
   begin
