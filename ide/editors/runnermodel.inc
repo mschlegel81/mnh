@@ -128,8 +128,8 @@ PROCEDURE T_runnerModel.runExternally();
   begin
     callParameters:=externalRun.getCommandLineArgumentsArray;
     if workspace.autosaveBeforeEachExecution then workspace.postSaveRequest;
-    postIdeMessage('Starting evaluation using external executor '+externalRun.mnhExecutionOptions.executor+' '+join(callParameters,' '),false);
-    runCommandAsyncOrPipeless(externalRun.mnhExecutionOptions.executor,callParameters,true,pid,executionDir(workspace.currentEditor));
+    postIdeMessage('Starting evaluation using external executor '+paramStr(0)+' '+join(callParameters,' '),false);
+    runCommandAsyncOrPipeless(paramStr(0),callParameters,true,pid,executionDir(workspace.currentEditor));
   end;
 
 PROCEDURE T_runnerModel.ensureEditScripts;

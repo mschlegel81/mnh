@@ -85,7 +85,7 @@ FUNCTION T_ftpConnection.evaluate(CONST location: T_tokenLocation; CONST context
     enterCriticalSection(connectionCs);
     if connection=nil
     then result.literal:=newVoidLiteral
-    else result.literal:=recycler^.newStringLiteral('ftp://'+connection.TargetHost+':'+connection.TargetPort+'/');
+    else result.literal:=recycler^.newStringLiteral('ftp://'+connection.TargetHost+':'+connection.TargetPort);
     result.reasonForStop:=rr_ok;
     leaveCriticalSection(connectionCs);
   end;

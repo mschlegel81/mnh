@@ -27,7 +27,6 @@ TYPE
     customLogLocationLength:longint;
     customDateFormat:string;
     flags:set of T_cmdLineFlag;
-    executor:string;
     deferredAdapterCreations:array of T_textFileAdapterSpecification;
     sideEffectProfile,cpuCount:longint;
     CONSTRUCTOR create;
@@ -167,7 +166,6 @@ PROCEDURE T_mnhExecutionOptions.clear;
     verbosityString:=DEF_VERBOSITY_STRING;
     setLength(deferredAdapterCreations,0);
     flags:=[];
-    executor:=paramStr(0);
     customDateFormat:='';
     customLogLocationLength:=maxLongint;
   end;
@@ -213,7 +211,6 @@ PROCEDURE T_mnhExecutionOptions.copyFrom(CONST other: T_mnhExecutionOptions);
   begin
     clear;
     flags:=other.flags;
-    executor:=other.executor;
     verbosityString:=other.verbosityString;
     customLogLocationLength:=other.customLogLocationLength;
     customDateFormat:=other.customDateFormat;
@@ -509,7 +506,6 @@ PROCEDURE T_mnhExecutionOptions.initFromShebang(CONST shebangLine: string; CONST
     clear;
     if shebangLine<>'' then begin
       parameters:=splitCommandLine(copy(shebangLine,3,length(shebangLine)-2));
-      executor:=parameters[0];
       for k:=1 to length(parameters)-1 do parseSingleMnhParameter(parameters[k],parsingState);
     end;
 
@@ -521,7 +517,7 @@ PROCEDURE T_mnhExecutionOptions.initFromShebang(CONST shebangLine: string; CONST
 FUNCTION T_mnhExecutionOptions.getShebang: ansistring;
   VAR s:string;
   begin
-    result:='#!'+executor;
+    result:='#!'+paramStr(0);
     for s in getCommandLineArgumentsArray do begin
       if (pos(' ',s)>=1) or (length(s)=0)
       then result+=' "'+s+'"'
