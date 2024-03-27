@@ -1382,7 +1382,7 @@ FUNCTION T_inlineExpression.containsReturnToken: boolean;
 
 FUNCTION T_inlineExpression.inspect(CONST literalRecycler:P_literalRecycler): P_mapLiteral;
   begin
-    result:=newMapLiteral(0);
+    result:=literalRecycler^.newMapLiteral(0);
     P_mapLiteral(result)^.put(literalRecycler,'pattern' ,pattern.toString)^
                          .put(literalRecycler,'location',getLocation     )^
                          .put(literalRecycler,'type'    ,C_expressionTypeString[typ]);
@@ -1524,7 +1524,7 @@ PROCEDURE T_subruleExpression.fillCallInfos(CONST infos: P_callAndIdInfos);
 FUNCTION T_ruleMetaData.getAttributesLiteral(CONST literalRecycler:P_literalRecycler): P_mapLiteral;
   VAR i:longint;
   begin
-    result:=newMapLiteral(0);
+    result:=literalRecycler^.newMapLiteral(0);
     for i:=0 to length(attributes)-1 do result^.put(literalRecycler,attributes[i].key,attributes[i].value);
   end;
 

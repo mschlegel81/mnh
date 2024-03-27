@@ -751,7 +751,7 @@ PROCEDURE T_ruleMap.resolveRuleIds(CONST messages: P_messages; CONST resolveIdCo
 FUNCTION T_ruleMap.inspect(CONST context:P_context; CONST recycler:P_recycler; CONST includeFunctionPointer:boolean) : P_mapLiteral;
   VAR entry:T_ruleMapEntry;
   begin
-    result:=newMapLiteral(size);
+    result:=recycler^.newMapLiteral(size);
     for entry in valueSet do if not(entry.isImportedOrDelegateWithoutLocal) then case entry.entryType of
       tt_userRule:
         result^.put(recycler,entry.value^.getId,P_rule(entry.value)^.inspect(includeFunctionPointer,context,recycler),false);
@@ -1451,7 +1451,7 @@ FUNCTION T_datastore.getValue(CONST context:P_context; CONST recycler:P_recycler
 
 FUNCTION T_rule.inspect(CONST includeFunctionPointer:boolean; CONST context:P_context; CONST recycler:P_recycler):P_mapLiteral;
   begin
-    result:=newMapLiteral(3)^
+    result:=recycler^.newMapLiteral(3)^
       .put(recycler,'type'    ,recycler^.newStringLiteral(C_ruleTypeText[getRuleType]),false)^
       .put(recycler,'location',recycler^.newStringLiteral(getLocation                ),false);
   end;
@@ -1490,7 +1490,7 @@ FUNCTION T_typeCastRule.inspect(CONST includeFunctionPointer:boolean; CONST cont
     VAR sub:P_subruleExpression;
     begin
       result:=recycler^.newListLiteral(length(subrules)+1);
-      result^.append(recycler,newMapLiteral(5)^
+      result^.append(recycler,recycler^.newMapLiteral(5)^
         .put(recycler,'pattern'   ,'()'           )^
         .put(recycler,'location'  ,getLocation    )^
         .put(recycler,'type'      ,privateOrPublic)^
@@ -1514,7 +1514,7 @@ FUNCTION T_variable.inspect(CONST includeFunctionPointer: boolean; CONST context
     end;
 
   begin
-    result:=newMapLiteral(4)^
+    result:=recycler^.newMapLiteral(4)^
       .put(recycler,'type'      ,recycler^.newStringLiteral(privateOrPublic+' '+C_varTypeText[varType]),false)^
       .put(recycler,'location'  ,recycler^.newStringLiteral(getLocation ),false)^
       .put(recycler,'comment'   ,recycler^.newStringLiteral(meta.comment),false)^

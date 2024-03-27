@@ -548,7 +548,7 @@ FUNCTION prepareDiff(CONST literalRecycler:P_literalRecycler; CONST A,B:P_litera
     diff.execute(aHashes,bHashes,aLen,bLen);
     freeMem(aHashes,aLen*sizeOf(integer));
     freeMem(bHashes,bLen*sizeOf(integer));
-    result:=newMapLiteral(4)^
+    result:=literalRecycler^.newMapLiteral(4)^
             .put(literalRecycler,'adds'    ,diff.DiffStats.adds    )^
             .put(literalRecycler,'deletes' ,diff.DiffStats.deletes )^
             .put(literalRecycler,'matches' ,diff.DiffStats.matches )^

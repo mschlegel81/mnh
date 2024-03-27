@@ -1348,7 +1348,7 @@ FUNCTION T_package.inspect(CONST includeRulePointer: boolean; CONST context: P_a
     end;
     {$endif}
 
-    result:=newMapLiteral(7)^
+    result:=recycler^.newMapLiteral(7)^
         .put(recycler, 'id'      ,getId)^
         .put(recycler, 'path'    ,getPath)^
         .put(recycler, 'source'  ,join(getCodeProvider^.getLines,C_lineBreakChar))^

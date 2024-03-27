@@ -180,10 +180,26 @@ FUNCTION toSet_imp intFuncSignature;
   end;
 
 FUNCTION toMap_imp intFuncSignature;
+  VAR iterator: P_expressionLiteral;
+      valueToAppend: P_literal;
   begin
     result:=nil;
-    if (params<>nil) and (params^.size=1) and (arg0^.literalType in C_compoundTypes) then begin
-      result:=compound0^.toMap(recycler,tokenLocation,context);
+    if (params<>nil) and (params^.size=1) then begin
+      if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
+        iterator:=P_expressionLiteral(arg0);
+        result:=recycler^.newMapLiteral(1);
+        valueToAppend:=iterator^.evaluate(tokenLocation,context,recycler).literal;
+        while (valueToAppend<>nil) and (valueToAppend^.literalType<>lt_void) and (context^.continueEvaluation) do begin
+          if (valueToAppend^.literalType in C_listTypes) and (P_listLiteral(valueToAppend)^.size=2) then begin
+            mapResult^.put(recycler,P_listLiteral(valueToAppend)^.value[0],P_listLiteral(valueToAppend)^.value[1],true);
+          end else context^.raiseError('Literal of type '+valueToAppend^.typeString+' cannot be interpreted as key-value-pair',tokenLocation);
+          recycler^.disposeLiteral(valueToAppend);
+          valueToAppend:=iterator^.evaluate(tokenLocation,context,recycler).literal;
+        end;
+      end else
+      if arg0^.literalType in C_scalarTypes
+      then result:=nil
+      else result:=compound0^.toMap(recycler,tokenLocation,context);
     end;
   end;
 

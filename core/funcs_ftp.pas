@@ -205,10 +205,11 @@ FUNCTION ftp_listing_impl intFuncSignature;
       if not list(str1^.value,false) then begin
         context^.messages^.postTextMessage(mt_el2_warning,tokenLocation,'FTP directory listing failed with status code '+intToStr(ResultCode));
       end else for k:=0 to FtpList.count -1 do  begin
-        tmpMap:=newMapLiteral(4)^.put(recycler,'filename' ,FtpList[k].fileName)
-                                ^.put(recycler,'directory',FtpList[k].directory)
-                                ^.put(recycler,'size'     ,FtpList[k].filesize)
-                                ^.put(recycler,'time'     ,FtpList[k].FileTime);
+        tmpMap:=recycler^.newMapLiteral(4)
+                  ^.put(recycler,'filename' ,FtpList[k].fileName)
+                  ^.put(recycler,'directory',FtpList[k].directory)
+                  ^.put(recycler,'size'     ,FtpList[k].filesize)
+                  ^.put(recycler,'time'     ,FtpList[k].FileTime);
         listResult^.append(recycler,tmpMap,false);
       end;
       leaveCriticalSection(FTP^.connectionCs);

@@ -96,7 +96,7 @@ FUNCTION driveInfo_imp intFuncSignature;
       driveType:=GetDriveType(PChar(DriveLetter));
       if not(driveType in [DRIVE_REMOVABLE,DRIVE_FIXED,DRIVE_REMOTE,DRIVE_CDROM,DRIVE_RAMDISK])
       then exit(nil);
-      infoMap:=newMapLiteral(5);
+      infoMap:=recycler^.newMapLiteral(5);
       case driveType of
         DRIVE_REMOVABLE: infoMap^.put(recycler,'type','removable');
         DRIVE_FIXED:     infoMap^.put(recycler,'type','fixed'    );
@@ -125,7 +125,7 @@ FUNCTION driveInfo_imp intFuncSignature;
     if not(context^.checkSideEffects('driveInfo',tokenLocation,[se_executingExternal])) then exit(nil);
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      result:=newMapLiteral(4);
+      result:=recycler^.newMapLiteral(4);
       for c:='A' to 'Z' do begin
         info:=infoForLetter(c);
         if info<>nil then mapResult^.put(recycler,c,info,false);
@@ -150,7 +150,7 @@ FUNCTION getEnv_impl intFuncSignature;
     if not(context^.checkSideEffects('getEnv',tokenLocation,[se_executingExternal])) then exit(nil);
     result:=nil;
     if (params=nil) or (params^.size=0) then begin
-      result:=newMapLiteral(30);
+      result:=recycler^.newMapLiteral(30);
       for envString in getEnvironment do begin
         envTuple:=split(envString,'=');
         envKey:=envTuple[0];
@@ -207,7 +207,7 @@ FUNCTION time_imp intFuncSignature;
       context^.callStackPop(nil);
       {$endif}
       if res<>nil then begin
-        result:=newMapLiteral(3)
+        result:=recycler^.newMapLiteral(3)
           ^.put(recycler,'expression',arg0^.toString(100))
           ^.put(recycler,'time',t );
         if res^.literalType<>lt_void then P_mapLiteral(result)^.put(recycler,'result',res,false)
@@ -285,7 +285,7 @@ FUNCTION getTaskInfo_impl intFuncSignature;
     if not(context^.checkSideEffects('getTaskInfo',tokenLocation,[se_executingExternal])) then exit(nil);
     info:=mySys.getTaskInfo;
     result:=recycler^.newListLiteral(length(info));
-    for i in info do listResult^.append(recycler,newMapLiteral(6)
+    for i in info do listResult^.append(recycler,recycler^.newMapLiteral(6)
       ^.put(recycler,'caption',i.caption)
       ^.put(recycler,'commandLine',i.commandLine)
       ^.put(recycler,'PID',i.pid)
