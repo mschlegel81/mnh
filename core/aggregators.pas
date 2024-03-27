@@ -12,7 +12,8 @@ TYPE
   T_aggregator=object
   private
     resultLiteral:P_literal;
-    hasReturnLiteral:boolean;
+    hasReturnLiteral,
+    hasClosedSignal:boolean;
   public
     CONSTRUCTOR create(CONST initialValue:P_literal);
     PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
@@ -21,7 +22,6 @@ TYPE
     FUNCTION earlyAbort:boolean; virtual;
     FUNCTION getResult(CONST literalRecycler:P_literalRecycler):P_literal; virtual;
     PROPERTY hasReturn:boolean read hasReturnLiteral;
-    FUNCTION isEarlyAbortingAggregator:boolean; virtual;
   end;
 
   T_listAggregator=object(T_aggregator)
@@ -44,7 +44,6 @@ TYPE
     PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler); virtual;
     FUNCTION earlyAbort:boolean; virtual;
     FUNCTION getResult(CONST literalRecycler:P_literalRecycler):P_literal; virtual;
-    FUNCTION isEarlyAbortingAggregator:boolean; virtual;
   end;
 
   T_minAggregator=object(T_aggregator)
@@ -70,7 +69,6 @@ TYPE
       PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler); virtual;
       FUNCTION earlyAbort:boolean; virtual;
       FUNCTION getResult(CONST literalRecycler:P_literalRecycler):P_literal; virtual;
-      FUNCTION isEarlyAbortingAggregator:boolean; virtual;
   end;
 
   T_orAggregator=object(T_aggregator)
@@ -81,7 +79,6 @@ TYPE
       PROCEDURE addToAggregation(er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler); virtual;
       FUNCTION earlyAbort:boolean; virtual;
       FUNCTION getResult(CONST literalRecycler:P_literalRecycler):P_literal; virtual;
-      FUNCTION isEarlyAbortingAggregator:boolean; virtual;
   end;
 
   T_opAggregator=object(T_aggregator)
@@ -196,7 +193,7 @@ FUNCTION newCustomAggregator(CONST ex:P_expressionLiteral; CONST tokenLocation:T
     end;
   end;
 
-CONSTRUCTOR T_aggregator.create(CONST initialValue:P_literal); begin hasReturnLiteral:=false; resultLiteral:=initialValue; end;
+CONSTRUCTOR T_aggregator.create(CONST initialValue:P_literal); begin hasClosedSignal:=false; hasReturnLiteral:=false; resultLiteral:=initialValue; end;
 CONSTRUCTOR T_listAggregator     .create(CONST literalRecycler:P_literalRecycler); begin inherited create(literalRecycler^.newListLiteral); end;
 CONSTRUCTOR T_concatAggregator   .create(CONST literalRecycler:P_literalRecycler); begin inherited create(literalRecycler^.newListLiteral); end;
 CONSTRUCTOR T_concatAltAggregator.create(CONST literalRecycler:P_literalRecycler); begin inherited create(literalRecycler^.newListLiteral); end;
@@ -248,6 +245,7 @@ PROCEDURE T_binaryExpressionAggregator.cleanup(CONST literalRecycler:P_literalRe
 
 {$MACRO ON}
 {$define aggregationDefaultHandling:=if (er.literal=nil) then exit;
+if er.literal^.literalType=lt_generatorClosed then hasClosedSignal:=true;
 if earlyAbort then begin
   recycler^.disposeLiteral(er.literal);
   exit;
@@ -292,7 +290,7 @@ FUNCTION T_elementFrequencyAggregator.getResult(CONST literalRecycler:P_literalR
     then begin
       result:=resultLiteral^.rereferenced
     end else begin
-      result:=newMapLiteral(counterMap.fill);
+      result:=literalRecycler^.newMapLiteral(counterMap.fill);
       for entry in counterMap.keyValueList do begin
         mapEntry.key:=entry.key^.rereferenced;
         mapEntry.value:=literalRecycler^.newIntLiteral(entry.value);
@@ -447,7 +445,7 @@ PROCEDURE T_binaryExpressionAggregator.addToAggregation(er:T_evaluationResult; C
     else if resultLiteral^.literalType=lt_void then begin
       recycler^.disposeLiteral(resultLiteral);
       resultLiteral:=er.literal^.rereferenced;
-    end else if er.literal^.literalType<>lt_void then begin
+    end else if not(er.literal^.literalType in [lt_void,lt_generatorClosed]) then begin
       inc(context^.callDepth,8); //higher priorization of aggregation : enter
       newValue:=evaluteExpression(aggregator,location,context,recycler,resultLiteral,er.literal).literal;
       dec(context^.callDepth,8); //higher priorization of aggregation : exit
@@ -465,7 +463,7 @@ PROCEDURE T_unaryExpressionAggregator.addToAggregation(er:T_evaluationResult; CO
   VAR newValue:P_literal;
   begin
     aggregationDefaultHandling;
-    if er.literal^.literalType<>lt_void then begin
+    if not(er.literal^.literalType in [lt_void,lt_generatorClosed]) then begin
       inc(context^.callDepth,8); //higher priorization of aggregation : enter
       newValue:=evaluteExpression(aggregator,location,context,recycler,er.literal).literal;
       dec(context^.callDepth,8); //higher priorization of aggregation : exit
@@ -475,22 +473,18 @@ PROCEDURE T_unaryExpressionAggregator.addToAggregation(er:T_evaluationResult; CO
     if doDispose then recycler^.disposeLiteral(er.literal);
   end;
 
-FUNCTION T_aggregator.isEarlyAbortingAggregator:boolean; begin result:=false; end;
-FUNCTION T_aggregator.earlyAbort:boolean; begin result:=hasReturnLiteral; end;
-FUNCTION T_headAggregator.isEarlyAbortingAggregator:boolean; begin result:=true; end;
+FUNCTION T_aggregator.earlyAbort:boolean; begin result:=hasReturnLiteral or hasClosedSignal; end;
 FUNCTION T_headAggregator.earlyAbort: boolean;
   begin
-    result:=hasReturnLiteral or (resultLiteral<>nil) and (resultLiteral^.literalType<>lt_void);
+    result:=hasClosedSignal or hasReturnLiteral or (resultLiteral<>nil) and (resultLiteral^.literalType<>lt_void);
   end;
-FUNCTION T_andAggregator.isEarlyAbortingAggregator:boolean; begin result:=true; end;
 FUNCTION T_andAggregator.earlyAbort: boolean;
   begin
-    result:=hasReturnLiteral or not(boolResult);
+    result:=hasClosedSignal or hasReturnLiteral or not(boolResult);
   end;
-FUNCTION T_orAggregator.isEarlyAbortingAggregator:boolean; begin result:=true; end;
 FUNCTION T_orAggregator.earlyAbort: boolean;
   begin
-    result:=hasReturnLiteral or boolResult;
+    result:=hasClosedSignal or hasReturnLiteral or boolResult;
   end;
 
 FUNCTION T_aggregator.getResult(CONST literalRecycler:P_literalRecycler): P_literal;
