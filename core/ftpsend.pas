@@ -21,14 +21,14 @@
 | specific prior written Permission.                                           |
 |                                                                              |
 | THIS SOFTWARE is PROVIDED by THE COPYRIGHT HOLDERS and CONTRIBUTORS "as is"  |
-| and ANY EXPRESS or IMPLIED WARRANTIES, INCLUDING, BUT not limited to, THE    |
+| and any EXPRESS or IMPLIED WARRANTIES, INCLUDING, BUT not limited to, THE    |
 | IMPLIED WARRANTIES of MERCHANTABILITY and FITNESS for A PARTICULAR PURPOSE   |
 | ARE DISCLAIMED. in NO EVENT SHALL THE REGENTS or CONTRIBUTORS be LIABLE for  |
-| ANY direct, INDIRECT, INCIDENTAL, Special, EXEMPLARY, or CONSEQUENTIAL       |
+| any direct, INDIRECT, INCIDENTAL, Special, EXEMPLARY, or CONSEQUENTIAL       |
 | DAMAGES (INCLUDING, BUT not limited to, PROCUREMENT of SUBSTITUTE GOODS or   |
 | SERVICES; LOSS of use, data, or PROFITS; or BUSINESS INTERRUPTION) HOWEVER   |
-| CAUSED and on ANY THEORY of LIABILITY, WHETHER in CONTRACT, STRICT           |
-| LIABILITY, or TORT (INCLUDING NEGLIGENCE or OTHERWISE) ARISING in ANY WAY    |
+| CAUSED and on any THEORY of LIABILITY, WHETHER in CONTRACT, STRICT           |
+| LIABILITY, or TORT (INCLUDING NEGLIGENCE or OTHERWISE) ARISING in any WAY    |
 | OUT of THE use of THIS SOFTWARE, EVEN if ADVISED of THE POSSIBILITY of SUCH  |
 | DAMAGE.                                                                      |
 |==============================================================================|
@@ -111,7 +111,7 @@ TYPE
     PROPERTY Readable: boolean read FReadable write FReadable;
     {:size of file in bytes}
     PROPERTY filesize: int64 read FFileSize write FFileSize;
-    {:date and time of file. local server timezone is used. Any timezone
+    {:date and time of file. local server timezone is used. any timezone
      conversions was not done!}
     PROPERTY FileTime: TDateTime read FFileTime write FFileTime;
     {:original unparsed line}

@@ -36,7 +36,7 @@ FUNCTION parseJson_impl intFuncSignature;
                       end;
                     end;
         jtObject  : begin
-                      result:=newMapLiteral(TJSONObject(json).count);
+                      result:=recycler^.newMapLiteral(TJSONObject(json).count);
                       for i:=0 to TJSONObject(json).count-1 do begin
                         key     :=TJSONObject(json).names[i];
                         childLit:=jsonToLiteral(TJSONObject(json).elements[key]);

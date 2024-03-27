@@ -21,12 +21,12 @@ FUNCTION obtainXmlData(CONST literalRecycler:P_literalRecycler; VAR FDoc: TXMLDo
     begin
       if (node.NodeType=TEXT_NODE) or
          (node.NodeType=CDATA_SECTION_NODE) then exit(literalRecycler^.newStringLiteral(UTF16ToUTF8(node.NodeValue)));
-      result:=newMapLiteral(3);
+      result:=literalRecycler^.newMapLiteral(3);
       P_mapLiteral(result)^.put(literalRecycler,'name',UTF16ToUTF8(node.NodeName));
       if node.NodeType<>ELEMENT_NODE then P_mapLiteral(result)^.put(literalRecycler,'type',node.NodeType);
       if node.NodeType<>ELEMENT_NODE then P_mapLiteral(result)^.put(literalRecycler,'value',UTF16ToUTF8(node.NodeValue));
       if Assigned(node.attributes) and (node.attributes.length>0) then begin
-        attributesMap:=newMapLiteral(node.attributes.length);
+        attributesMap:=literalRecycler^.newMapLiteral(node.attributes.length);
         for j:=0 to node.attributes.length-1 do
          attributesMap^.put(literalRecycler,
                             UTF16ToUTF8(node.attributes[j].NodeName),

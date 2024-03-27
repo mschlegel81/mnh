@@ -2516,7 +2516,7 @@ FUNCTION T_compoundLiteral.toMap(CONST literalRecycler:P_literalRecycler; CONST 
   begin
     if literalType in C_mapTypes then exit(P_mapLiteral(rereferenced));
     iter:=P_collectionLiteral(@self)^.tempIteratableList;
-    result:=newMapLiteral(length(iter));
+    result:=literalRecycler^.newMapLiteral(length(iter));
     for pair in iter do if (pair^.literalType in C_listTypes) and (P_listLiteral(pair)^.isKeyValuePair) then begin
       result^.put(literalRecycler,
                   P_listLiteral(pair)^.value[0],
@@ -2527,7 +2527,7 @@ FUNCTION T_compoundLiteral.toMap(CONST literalRecycler:P_literalRecycler; CONST 
       result:=nil;
       break;
     end;
-    if result=nil then result:=newMapLiteral(0);
+    if result=nil then result:=literalRecycler^.newMapLiteral(0);
   end;
 
 FUNCTION T_listLiteral.appendConstructing(CONST literalRecycler:P_literalRecycler; CONST L: P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST doRangeAppend:boolean):P_compoundLiteral;

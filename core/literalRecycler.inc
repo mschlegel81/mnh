@@ -13,6 +13,7 @@
     FUNCTION listLiteralOf   (CONST a:P_literal;
                               CONST b:P_literal=nil)      : P_listLiteral;
     FUNCTION newSetLiteral(CONST expectedSize:longint)    : P_setLiteral; virtual; abstract;
+    FUNCTION newMapLiteral(CONST expectedSize:longint)    : P_mapLiteral; virtual; abstract;
   end;
 
   T_globalLiteralRecycler=object(T_literalRecycler)
@@ -23,6 +24,7 @@
       stringLiterals  :record cs:TRTLCriticalSection; dat:array of P_stringLiteral;   fill:longint; end;
       listLiterals    :record cs:TRTLCriticalSection; dat:array of P_listLiteral;     fill:longint; end;
       setLiterals     :record cs:TRTLCriticalSection; dat:array of P_setLiteral;      fill:longint; end;
+      mapLiterals     :record cs:TRTLCriticalSection; dat:array of P_mapLiteral;      fill:longint; end;
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
     public
@@ -35,6 +37,7 @@
       FUNCTION newRealLiteral  (CONST value: T_myFloat     ): P_realLiteral; virtual;
       FUNCTION newListLiteral  (CONST initialSize:longint=2): P_listLiteral; virtual;
       FUNCTION newSetLiteral(CONST expectedSize:longint)    : P_setLiteral; virtual;
+      FUNCTION newMapLiteral(CONST expectedSize:longint)    : P_mapLiteral; virtual;
     end;
 
   T_localLiteralRecycler=object(T_literalRecycler)
@@ -45,6 +48,7 @@
       stringLiterals  :record dat:array of P_stringLiteral;   fill,request:longint; end;
       listLiterals    :record dat:array of P_listLiteral;     fill,request:longint; end;
       setLiterals     :record dat:array of P_setLiteral;      fill,request:longint; end;
+      mapLiterals     :record dat:array of P_mapLiteral;      fill,request:longint; end;
     public
       PROCEDURE freeMemory(CONST hard:boolean); virtual;
       CONSTRUCTOR create;
@@ -57,13 +61,13 @@
       FUNCTION newRealLiteral  (CONST value: T_myFloat     ): P_realLiteral; virtual;
       FUNCTION newListLiteral  (CONST initialSize:longint=2): P_listLiteral; virtual;
       FUNCTION newSetLiteral(CONST expectedSize:longint)    : P_setLiteral; virtual;
+      FUNCTION newMapLiteral(CONST expectedSize:longint)    : P_mapLiteral; virtual;
       PROCEDURE exchangeLiterals(CONST pushOnly:boolean=false);
     end;
 
 FUNCTION newBoolLiteral  (CONST value: boolean       ): P_boolLiteral;
 FUNCTION newVoidLiteral                               : P_voidLiteral;
 FUNCTION newGeneratorClosedLiteral                    : P_generatorClosedLiteral;
-FUNCTION newMapLiteral(CONST expectedSize:longint)    : P_mapLiteral;
 VAR emptyStringSingleton: T_stringLiteral;
 CONST maxSingletonInt=1000;
 VAR boolLit       : array[false..true] of T_boolLiteral;
@@ -81,7 +85,6 @@ VAR boolLit       : array[false..true] of T_boolLiteral;
 FUNCTION newBoolLiteral(CONST value: boolean)      : P_boolLiteral;            begin result:=P_boolLiteral(boolLit[value].rereferenced); end;
 FUNCTION newVoidLiteral                            : P_voidLiteral;            begin result:=P_voidLiteral(voidLit       .rereferenced); end;
 FUNCTION newGeneratorClosedLiteral                 : P_generatorClosedLiteral; begin result:=P_generatorClosedLiteral(generatorClosedLit.rereferenced); end;
-FUNCTION newMapLiteral (CONST expectedSize: longint): P_mapLiteral;            begin new(result,create(expectedSize)); end;
 
 PROCEDURE T_globalLiteralRecycler.freeMemory(CONST hard:boolean);
   VAR threshold:longint;
@@ -92,6 +95,7 @@ PROCEDURE T_globalLiteralRecycler.freeMemory(CONST hard:boolean);
     with stringLiterals   do begin enterCriticalSection(cs); if hard then threshold:=0 else threshold:=fill div 2; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill<=threshold); setLength(dat,threshold); leaveCriticalSection(cs); end;
     with listLiterals     do begin enterCriticalSection(cs); if hard then threshold:=0 else threshold:=fill div 2; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill<=threshold); setLength(dat,threshold); leaveCriticalSection(cs); end;
     with setLiterals      do begin enterCriticalSection(cs); if hard then threshold:=0 else threshold:=fill div 2; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill<=threshold); setLength(dat,threshold); leaveCriticalSection(cs); end;
+    with mapLiterals      do begin enterCriticalSection(cs); if hard then threshold:=0 else threshold:=fill div 2; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill<=threshold); setLength(dat,threshold); leaveCriticalSection(cs); end;
   end;
 
 PROCEDURE T_localLiteralRecycler.freeMemory(CONST hard:boolean);
@@ -104,6 +108,7 @@ PROCEDURE T_localLiteralRecycler.freeMemory(CONST hard:boolean);
     with stringLiterals   do begin if hard then threshold:=0 else threshold:=fill shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
     with listLiterals     do begin if hard then threshold:=0 else threshold:=fill shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
     with setLiterals      do begin if hard then threshold:=0 else threshold:=fill shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
+    with mapLiterals      do begin if hard then threshold:=0 else threshold:=fill shr 1; while fill>threshold do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; setLength(dat,fill); end;
   end;
 
 CONSTRUCTOR T_globalLiteralRecycler.create;
@@ -114,6 +119,7 @@ CONSTRUCTOR T_globalLiteralRecycler.create;
     with stringLiterals   do begin fill:=0; setLength(dat,0); initCriticalSection(cs); end;
     with listLiterals     do begin fill:=0; setLength(dat,0); initCriticalSection(cs); end;
     with setLiterals      do begin fill:=0; setLength(dat,0); initCriticalSection(cs); end;
+    with mapLiterals      do begin fill:=0; setLength(dat,0); initCriticalSection(cs); end;
   end;
 
 CONSTRUCTOR T_localLiteralRecycler.create;
@@ -124,6 +130,7 @@ CONSTRUCTOR T_localLiteralRecycler.create;
     with stringLiterals   do begin fill:=0; request:=16; setLength(dat,0); end;
     with listLiterals     do begin fill:=0; request:=16; setLength(dat,0); end;
     with setLiterals      do begin fill:=0; request:=16; setLength(dat,0); end;
+    with mapLiterals      do begin fill:=0; request:=16; setLength(dat,0); end;
   end;
 
 DESTRUCTOR T_globalLiteralRecycler.destroy;
@@ -134,6 +141,7 @@ DESTRUCTOR T_globalLiteralRecycler.destroy;
     with stringLiterals   do begin while fill>0 do begin dec(fill); {$ifndef debugMode} try {$endif} dispose(dat[fill],destroy); {$ifndef debugMode}except dat[fill]:=nil; end;{$endif} end; setLength(dat,0); doneCriticalSection(cs); end;
     with listLiterals     do begin while fill>0 do begin dec(fill); {$ifndef debugMode} try {$endif} dispose(dat[fill],destroy); {$ifndef debugMode}except dat[fill]:=nil; end;{$endif} end; setLength(dat,0); doneCriticalSection(cs); end;
     with setLiterals      do begin while fill>0 do begin dec(fill); {$ifndef debugMode} try {$endif} dispose(dat[fill],destroy); {$ifndef debugMode}except dat[fill]:=nil; end;{$endif} end; setLength(dat,0); doneCriticalSection(cs); end;
+    with mapLiterals      do begin while fill>0 do begin dec(fill); {$ifndef debugMode} try {$endif} dispose(dat[fill],destroy); {$ifndef debugMode}except dat[fill]:=nil; end;{$endif} end; setLength(dat,0); doneCriticalSection(cs); end;
   end;
 
 DESTRUCTOR T_localLiteralRecycler.destroy;
@@ -144,6 +152,7 @@ DESTRUCTOR T_localLiteralRecycler.destroy;
     with stringLiterals   do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); end;
     with listLiterals     do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); end;
     with setLiterals      do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); end;
+    with mapLiterals      do begin while fill>0 do begin dec(fill); try dispose(dat[fill],destroy); except dat[fill]:=nil; end; end; assert(fill=0); setLength(dat,0); end;
   end;
 
 PROCEDURE T_globalLiteralRecycler.disposeLiteral(VAR l: P_literal);
@@ -234,6 +243,21 @@ PROCEDURE T_globalLiteralRecycler.disposeLiteral(VAR l: P_literal);
             leaveCriticalSection(cs);
           end;
         end;
+      lt_map, lt_emptyMap:
+        with mapLiterals do begin
+          l^.cleanup(@self);
+          if tryEnterCriticalsection(cs)=0 then dispose(l,destroy) else try
+            if (fill>=length(dat)) then begin
+              if length(dat)=0
+              then setLength(dat,32)
+              else setLength(dat,length(dat)*2);
+            end;
+            dat[fill]:=P_mapLiteral(l);
+            inc(fill);
+          finally
+            leaveCriticalSection(cs);
+          end;
+        end;
       else begin l^.cleanup(@self); dispose(l,destroy); end;
     end;
     l:=nil;
@@ -311,6 +335,18 @@ PROCEDURE T_localLiteralRecycler.disposeLiteral(VAR l: P_literal);
             else setLength(dat,length(dat)*2);
           end;
           dat[fill]:=P_setLiteral(l);
+          inc(fill);
+        end;
+      lt_map, lt_emptyMap:
+        with mapLiterals do begin
+          dec(request);
+          l^.cleanup(@self);
+          if (fill>=length(dat)) then begin
+            if length(dat)=0
+            then setLength(dat,32)
+            else setLength(dat,length(dat)*2);
+          end;
+          dat[fill]:=P_mapLiteral(l);
           inc(fill);
         end;
       else begin l^.cleanup(@self); dispose(l,destroy); end;
@@ -647,6 +683,37 @@ FUNCTION T_localLiteralRecycler.newSetLiteral(CONST expectedSize:longint)    : P
     end;
   end;
 
+FUNCTION T_globalLiteralRecycler.newMapLiteral(CONST expectedSize:longint)    : P_mapLiteral;
+  begin
+    with mapLiterals do if tryEnterCriticalsection(cs)=0 then new(result,create(expectedSize)) else try
+      if (fill>0) then begin
+        dec(fill);
+        result:=dat[fill];
+        result^.numberOfReferences:=1;
+        result^.dat.prepareForSize(expectedSize);
+      end else begin
+        new(result,create(expectedSize));
+      end;
+    finally
+      leaveCriticalSection(cs);
+    end;
+  end;
+
+FUNCTION T_localLiteralRecycler.newMapLiteral(CONST expectedSize:longint)    : P_mapLiteral;
+  begin
+    with mapLiterals do begin
+      if (fill>0) then begin
+        dec(fill);
+        result:=dat[fill];
+        result^.numberOfReferences:=1;
+        result^.dat.prepareForSize(expectedSize);
+      end else begin
+        new(result,create(expectedSize));
+      end;
+      inc(request);
+    end;
+  end;
+
 FUNCTION T_literalRecycler.listLiteralOf(CONST a: P_literal; CONST b: P_literal): P_listLiteral;
   VAR initialSize:longint=2;
   begin
@@ -709,6 +776,9 @@ PROCEDURE T_localLiteralRecycler.exchangeLiterals(CONST pushOnly:boolean=false);
   {$define key:=setLiterals}
   PROCEDURE pushSet;      push_macro;
   PROCEDURE pullSet;      pull_macro;
+  {$define key:=mapLiterals}
+  PROCEDURE pushMap;      push_macro;
+  PROCEDURE pullMap;      pull_macro;
   {$undef push_macro}
   {$undef pull_macro}
   {$undef key}
@@ -719,6 +789,7 @@ PROCEDURE T_localLiteralRecycler.exchangeLiterals(CONST pushOnly:boolean=false);
     if (stringLiterals  .request>32) and not(pushOnly) then pullString   else if (stringLiterals  .request<-32) then pushString;
     if (listLiterals    .request>32) and not(pushOnly) then pullList     else if (listLiterals    .request<-32) then pushList;
     if (setLiterals     .request>32) and not(pushOnly) then pullSet      else if (setLiterals     .request<-32) then pushSet;
+    if (mapLiterals     .request>32) and not(pushOnly) then pullMap      else if (mapLiterals     .request<-32) then pushMap;
   end;
 
 {$endif}

@@ -147,7 +147,7 @@ FUNCTION T_literalDeserializer.getLiteral: P_literal;
       lt_string   : result:=globalLiteralRecycler.newStringLiteral(streamWrapper^.readAnsiString,customTypeName<>'');
       lt_emptyList: result:=globalLiteralRecycler.newListLiteral;
       lt_emptySet : result:=globalLiteralRecycler.newSetLiteral(0);
-      lt_emptyMap : result:=newMapLiteral(0);
+      lt_emptyMap : result:=globalLiteralRecycler.newMapLiteral(0);
       lt_void     : result:=newVoidLiteral;
       lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList,
       lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet: begin
@@ -170,7 +170,7 @@ FUNCTION T_literalDeserializer.getLiteral: P_literal;
         if P_collectionLiteral(result)^.size<>listSize then raiseError('Invalid collection. Expected size of '+intToStr(listSize)+' but got '+result^.typeString);
       end;
       lt_map: begin
-        result:=newMapLiteral(0);
+        result:=globalLiteralRecycler.newMapLiteral(0);
         listSize:=streamWrapper^.readNaturalNumber;
         for i:=0 to listSize-1 do if streamWrapper^.allOkay then begin
           mapKey  :=getLiteral();

@@ -816,7 +816,7 @@ FUNCTION addAnimFrame_impl intFuncSignature;
         {$endif}
         sleep(round(1000*sleepInSeconds));
       end;
-      result:=newMapLiteral(2)^.put(recycler,'sleep',sleepInSeconds)^.put(recycler,'frameCount',framesQueued);
+      result:=recycler^.newMapLiteral(2)^.put(recycler,'sleep',sleepInSeconds)^.put(recycler,'frameCount',framesQueued);
     end else result:=nil;
   end;
 

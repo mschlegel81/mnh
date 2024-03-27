@@ -150,7 +150,7 @@ FUNCTION ord_imp intFuncSignature;
 FUNCTION mnhInfo_imp intFuncSignature;
   begin
     if (params=nil) or (params^.size=0) then
-    result:=newMapLiteral(17)^
+    result:=recycler^.newMapLiteral(17)^
       .put(recycler,'isFullVersion'  ,{$ifdef fullVersion}true{$else}false{$endif})^
       .put(recycler,'isDebugVersion' ,{$ifdef debugMode}  true{$else}false{$endif})^
       .put(recycler,'is64bit'        ,{$ifdef CPU64}      true{$else}false{$endif})^

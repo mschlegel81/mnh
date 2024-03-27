@@ -1530,7 +1530,7 @@ FUNCTION kMeans_impl intFuncSignature;
         updateCenters;
 
       until not(anyClassChanged) or not(context^.continueEvaluation) or (loopCount>=max_steps);
-      result:=newMapLiteral(2);
+      result:=recycler^.newMapLiteral(2);
       tempList:=recycler^.newListLiteral(length(raw_data));
       for i:=0 to length(raw_data)-1 do begin
         tempList^.appendInt(recycler,raw_data[i].c);

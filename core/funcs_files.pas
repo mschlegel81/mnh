@@ -489,7 +489,7 @@ FUNCTION fileInfo_imp intFuncSignature;
       begin
         a:=recycler^.newSetLiteral(4);
         for att in info.attributes do a^.appendString(recycler,C_fileAttribName[att]);
-        result:=newMapLiteral(4)^
+        result:=recycler^.newMapLiteral(4)^
                 .put(recycler,'path'      ,info.filePath)^
                 .put(recycler,'time'      ,info.time)^
                 .put(recycler,'size'      ,info.size)^
