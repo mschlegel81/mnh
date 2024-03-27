@@ -539,6 +539,7 @@ FUNCTION T_futureLiteral.toString(CONST lengthLimit:longint=maxLongint):string;
   end;
 
 FUNCTION T_futureLiteral.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: P_literalRecycler; CONST parameters: P_listLiteral=nil): T_evaluationResult;
+  VAR sleepTime:longint=1;
   begin
     enterCriticalSection(criticalSection);
     try
@@ -547,13 +548,20 @@ FUNCTION T_futureLiteral.evaluate(CONST location: T_tokenLocation; CONST context
         else while state<>fls_done do begin
           leaveCriticalSection(criticalSection);
           ThreadSwitch;
-          sleep(1);
+          sleep(sleepTime);
+          if sleepTime<100 then inc(sleepTime);
           enterCriticalSection(criticalSection);
         end;
       end;
-      result.reasonForStop:=rr_ok;
-      if resultValue=nil then result.literal:=newVoidLiteral
-                         else result.literal:=resultValue^.rereferenced;
+      if resultValue=nil then begin
+        if isBlocking
+        then result.reasonForStop:=rr_fail
+        else result.reasonForStop:=rr_ok;
+        result.literal:=newVoidLiteral
+      end else begin
+        result.reasonForStop:=rr_ok;
+        result.literal:=resultValue^.rereferenced;
+      end;
     finally
       leaveCriticalSection(criticalSection);
     end;
