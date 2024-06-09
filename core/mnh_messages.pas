@@ -167,7 +167,6 @@ CONST
 {mt_displayCustomForm}   (level:-1; mClass:mc_gui;     systemErrorLevel:0),
 {mt_ide_codeAssistanc...}(level:-1; mClass:mc_gui;     systemErrorLevel:0)
 {$endif});
-
   C_errorMessageTypes:array[1..4] of T_messageTypeSet=(
     [mt_el1_note,mt_el1_userNote],
     [mt_el2_warning,mt_el2_userWarning],
@@ -175,6 +174,25 @@ CONST
     [mt_el4_systemError]);
 
 TYPE
+  //T_tokenStyleModifier=(tsm_plain,tsm_bold,tsm_italic,tsm_underline);
+  //T_tokenStyleModifiers=set of T_tokenStyleModifier;
+  //T_tokenColor=(tc_default,tc_black,tc_red,tc_green,tc_yellow,tc_blue,
+  //              tc_magenta,tc_cyan ,tc_white,tc_bright_black,tc_bright_red,
+  //              tc_bright_green,tc_bright_yellow,tc_bright_blue,
+  //              tc_bright_magenta,tc_bright_cyan,tc_bright_white);
+  //T_tokenStyle=record
+  //  color,bg_color:T_tokenColor;
+  //  style:T_tokenStyleModifiers;
+  //end;
+  //
+  //T_styledToken=object
+  //  style:T_tokenStyle;
+  //  text:string;
+  //  FUNCTION ansiEscapedString:string;
+  //end;
+  //
+  //T_styledTokens=array of T_styledToken;
+
   P_storedMessage=^T_storedMessage;
   T_storedMessages=array of P_storedMessage;
 

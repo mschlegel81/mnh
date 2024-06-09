@@ -60,6 +60,7 @@ TYPE
       FUNCTION text:T_arrayOfString;
       FUNCTION location(CONST i:longint):T_searchTokenLocation;
       FUNCTION locations:T_searchTokenLocations;
+      PROCEDURE appendPrint(CONST message:string);
       PROCEDURE processDirectPrint(CONST chars:string);
       PROCEDURE cleanup;
   end;
@@ -199,6 +200,7 @@ FUNCTION T_messagesAndLocations.locations:T_searchTokenLocations;
 PROCEDURE T_messagesAndLocations.processDirectPrint(CONST chars: string);
   VAR c:char;
       lineIndex:longint;
+      state:(initial,read27,readingAnsiEscape)=initial;
   begin
     if directPrinting<0 then begin
       append('');
@@ -207,41 +209,91 @@ PROCEDURE T_messagesAndLocations.processDirectPrint(CONST chars: string);
     if fill>=maxSize
     then lineIndex:=(offset+maxSize-1) mod maxSize
     else lineIndex:=fill-1;
-    for c in chars do case c of
-      #8 ://backspace
-        if directPrinting>=1 then begin
-          dat[lineIndex].message:=copy(dat[lineIndex].message,1,directPrinting-1)
-                                 +copy(dat[lineIndex].message,directPrinting+1,length(dat[lineIndex].message));
-          //e.g.: directPrinting=2
-          //123456789
-          // ^
-          //13456789
+    for c in chars do case state of
+      initial: case c of
+        #27: state:=read27;
+        #8 ://backspace
+          if directPrinting>=1 then begin
+            dat[lineIndex].message:=copy(dat[lineIndex].message,1,directPrinting-1)
+                                   +copy(dat[lineIndex].message,directPrinting+1,length(dat[lineIndex].message));
+            //e.g.: directPrinting=2
+            //123456789
+            // ^
+            //13456789
 
-          //Finally: move cursor left
-          dec(directPrinting);
-        end;
-      #13: //carriage-return
-        directPrinting:=0;
-      #10: //new line
-        begin
-          append('');
+            //Finally: move cursor left
+            dec(directPrinting);
+          end;
+        #13: //carriage-return
           directPrinting:=0;
-          if fill>=maxSize
-          then lineIndex:=(offset+maxSize-1) mod maxSize
-          else lineIndex:=fill-1;
-        end
-      else begin
-        if directPrinting>=length(dat[lineIndex].message)
-        then dat[lineIndex].message+=c
-        else dat[lineIndex].message[directPrinting+1]:=c;
-        inc(directPrinting);
+        #10: //new line
+          begin
+            append('');
+            directPrinting:=0;
+            if fill>=maxSize
+            then lineIndex:=(offset+maxSize-1) mod maxSize
+            else lineIndex:=fill-1;
+          end
+        else begin
+          if directPrinting>=length(dat[lineIndex].message)
+          then dat[lineIndex].message+=c
+          else dat[lineIndex].message[directPrinting+1]:=c;
+          inc(directPrinting);
+        end;
       end;
+      read27: case c of
+        '[': state:=readingAnsiEscape;
+        else state:=initial;
+      end;
+      readingAnsiEscape: if c=';' then state:=initial;
     end;
   end;
 
 DESTRUCTOR T_messagesAndLocations.destroy;
   begin
     setLength(dat,0);
+  end;
+
+PROCEDURE T_messagesAndLocations.appendPrint(CONST message:string);
+  CONST noLocation:T_searchTokenLocation=(fileName:'';line:-1; column:-1);
+  VAR cleanedUp:string;
+      c: char;
+      state:(init,read27,reading_escape)=init;
+  begin
+    //TODO: Process and remove ansi escapes
+    // Ansi escape: \e[...m , e.g. \e[0m Reset colors
+    // 0: Reset
+    // 1: Bold
+    // 3: Italic
+    // 4: Underline
+    // Foreground Background
+    // 30 	40 	Black     12, 12, 12
+    // 31 	41 	Red 	  197, 15, 31
+    // 32 	42 	Green 	  0, 166, 0
+    // 33 	43 	Yellow 	  193, 156, 0
+    // 34 	44 	Blue      0, 55, 218
+    // 35 	45 	Magenta   136, 23, 152
+    // 36 	46 	Cyan      58, 150, 221
+    // 37 	47 	White 	  191, 191, 191
+    // 90 	100 	Bright Black (Gray) 	102, 102, 102
+    // 91 	101 	Bright Red 	231, 72, 86
+    // 92 	102 	Bright Green 	22, 198, 12
+    // 93 	103 	Bright Yellow 	249, 241, 165
+    // 94 	104 	Bright Blue 	59, 142, 234
+    // 95 	105 	Bright Magenta  190,0,190
+    // 96 	106 	Bright Cyan     97,214,214
+    // 97 	107 	Bright White    242,242,242
+    //              \e[...[A..H,J,K,S,T,f,m,i,n]
+    //  A: cursor n up
+    //  B: cursor n down
+    //  C: cursor forward
+    //  D: cursor back
+    //  E: cursor next line
+    //  F: cursor previous line
+    //  H: curosr position (n;m)
+    //  K: Erase in line
+
+    append(message,noLocation);
   end;
 
 PROCEDURE T_messagesAndLocations.append(CONST message: string);
@@ -550,7 +602,8 @@ PROCEDURE T_guiFormatter.formatMessageAndLocation(CONST message: P_storedMessage
           for i:=0 to length(stacktrace)-1 do
             messagesAndLocations.append(marker+formatLocation(stacktrace[i].location)+' call '+stacktrace[i].callee+' with '+stacktrace[i].parameters,stacktrace[i].location);
         end;
-      end
+      end;
+      mc_print: for s in P_storedMessageWithText(message)^.txt do messagesAndLocations.appendPrint(s);
       else begin
         for s in P_storedMessageWithText(message)^.txt do messagesAndLocations.append(s);
       end;
