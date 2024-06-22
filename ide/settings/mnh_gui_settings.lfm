@@ -1,14 +1,15 @@
 object SettingsForm: TSettingsForm
-  Left = 881
-  Height = 245
-  Top = 287
-  Width = 362
+  Left = 1125
+  Height = 306
+  Top = 191
+  Width = 427
   AutoSize = True
   BorderIcons = [biSystemMenu]
   Caption = 'MNH - Settings'
-  ClientHeight = 245
-  ClientWidth = 362
-  Constraints.MinWidth = 233
+  ClientHeight = 306
+  ClientWidth = 427
+  Constraints.MinWidth = 291
+  DesignTimePPI = 120
   FormStyle = fsStayOnTop
   OnCreate = FormCreate
   OnDestroy = FormDestroy
@@ -17,49 +18,49 @@ object SettingsForm: TSettingsForm
   LCLVersion = '3.0.0.3'
   object PageControl: TPageControl
     Left = 0
-    Height = 235
+    Height = 296
     Top = 0
-    Width = 362
-    ActivePage = TabSheet_install
+    Width = 427
+    ActivePage = TabSheet_display
     Align = alClient
     ParentFont = False
-    TabIndex = 3
+    TabIndex = 0
     TabOrder = 0
     OnChange = PageControlChange
     Options = [nboKeyboardTabSwitch]
     object TabSheet_display: TTabSheet
       Caption = 'display'
-      ClientHeight = 207
-      ClientWidth = 354
+      ClientHeight = 263
+      ClientWidth = 419
       ParentFont = False
       object Label2: TLabel
         AnchorSideLeft.Control = TabSheet_display
         AnchorSideTop.Control = EditorFontButton
-        Left = 3
-        Height = 15
-        Top = 3
-        Width = 61
+        Left = 4
+        Height = 20
+        Top = 4
+        Width = 76
         Align = alCustom
-        BorderSpacing.Left = 3
+        BorderSpacing.Left = 4
         Caption = 'Editor Font:'
         ParentColor = False
         ParentFont = False
       end
       object EditorFontButton: TButton
-        AnchorSideLeft.Control = Label7
+        AnchorSideLeft.Control = Label8
         AnchorSideLeft.Side = asrBottom
         AnchorSideTop.Control = TabSheet_display
         AnchorSideRight.Control = TabSheet_display
         AnchorSideRight.Side = asrBottom
-        Left = 96
-        Height = 25
-        Top = 3
-        Width = 258
+        Left = 129
+        Height = 30
+        Top = 4
+        Width = 290
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
         AutoSize = True
-        BorderSpacing.Left = 3
-        BorderSpacing.Top = 3
+        BorderSpacing.Left = 4
+        BorderSpacing.Top = 4
         Caption = 'EditorFontButton'
         ParentFont = False
         TabOrder = 0
@@ -68,29 +69,29 @@ object SettingsForm: TSettingsForm
       object Label7: TLabel
         AnchorSideLeft.Control = Label2
         AnchorSideTop.Control = outputSizeLimit
-        Left = 3
-        Height = 15
-        Top = 78
-        Width = 90
+        Left = 4
+        Height = 20
+        Top = 94
+        Width = 112
         Align = alCustom
         Caption = 'Output size limit:'
         ParentColor = False
         ParentFont = False
       end
       object outputSizeLimit: TEdit
-        AnchorSideLeft.Control = Label7
+        AnchorSideLeft.Control = Label8
         AnchorSideLeft.Side = asrBottom
         AnchorSideTop.Control = GeneralFontButton
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = TabSheet_display
         AnchorSideRight.Side = asrBottom
-        Left = 96
-        Height = 23
-        Top = 78
-        Width = 258
+        Left = 129
+        Height = 28
+        Top = 94
+        Width = 290
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
-        BorderSpacing.Left = 3
+        BorderSpacing.Left = 4
         NumbersOnly = True
         ParentFont = False
         TabOrder = 3
@@ -100,30 +101,30 @@ object SettingsForm: TSettingsForm
       object Label3: TLabel
         AnchorSideLeft.Control = Label2
         AnchorSideTop.Control = GeneralFontButton
-        Left = 3
-        Height = 15
-        Top = 53
-        Width = 70
+        Left = 4
+        Height = 20
+        Top = 64
+        Width = 87
         Align = alCustom
         Caption = 'General Font:'
         ParentColor = False
         ParentFont = False
       end
       object TableFontButton: TButton
-        AnchorSideLeft.Control = Label7
+        AnchorSideLeft.Control = Label8
         AnchorSideLeft.Side = asrBottom
         AnchorSideTop.Control = EditorFontButton
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = TabSheet_display
         AnchorSideRight.Side = asrBottom
-        Left = 96
-        Height = 25
-        Top = 28
-        Width = 258
+        Left = 129
+        Height = 30
+        Top = 34
+        Width = 290
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
         AutoSize = True
-        BorderSpacing.Left = 3
+        BorderSpacing.Left = 4
         Caption = 'TableFontButton'
         ParentFont = False
         TabOrder = 1
@@ -132,30 +133,30 @@ object SettingsForm: TSettingsForm
       object Label5: TLabel
         AnchorSideLeft.Control = Label2
         AnchorSideTop.Control = TableFontButton
-        Left = 3
-        Height = 15
-        Top = 28
-        Width = 57
+        Left = 4
+        Height = 20
+        Top = 34
+        Width = 71
         Align = alCustom
         Caption = 'Table Font:'
         ParentColor = False
         ParentFont = False
       end
       object GeneralFontButton: TButton
-        AnchorSideLeft.Control = Label7
+        AnchorSideLeft.Control = Label8
         AnchorSideLeft.Side = asrBottom
         AnchorSideTop.Control = TableFontButton
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = TabSheet_display
         AnchorSideRight.Side = asrBottom
-        Left = 96
-        Height = 25
-        Top = 53
-        Width = 258
+        Left = 129
+        Height = 30
+        Top = 64
+        Width = 290
         Align = alCustom
         Anchors = [akTop, akLeft, akRight]
         AutoSize = True
-        BorderSpacing.Left = 3
+        BorderSpacing.Left = 4
         Caption = 'GeneralFontButton'
         ParentFont = False
         TabOrder = 2
@@ -163,41 +164,87 @@ object SettingsForm: TSettingsForm
       end
       object cbCopyAsHtml: TCheckBox
         AnchorSideLeft.Control = Label7
-        AnchorSideTop.Control = outputSizeLimit
+        AnchorSideTop.Control = cbForceFullLiteralOutput
         AnchorSideTop.Side = asrBottom
-        Left = 3
-        Height = 19
-        Top = 101
-        Width = 109
+        Left = 4
+        Height = 24
+        Top = 174
+        Width = 134
         Align = alCustom
         Caption = 'copy text as html'
         ParentFont = False
         TabOrder = 4
         OnChange = cbCopyAsHtmlChange
       end
+      object outputSizeLimit1: TEdit
+        AnchorSideLeft.Control = Label8
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = outputSizeLimit
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = TabSheet_display
+        AnchorSideRight.Side = asrBottom
+        Left = 129
+        Height = 28
+        Top = 122
+        Width = 290
+        Align = alCustom
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Left = 4
+        NumbersOnly = True
+        ParentFont = False
+        TabOrder = 5
+        Text = 'outputSizeLimit1'
+        OnEditingDone = outputSizeLimit1EditingDone
+      end
+      object Label8: TLabel
+        AnchorSideLeft.Control = Label2
+        AnchorSideTop.Control = outputSizeLimit1
+        Left = 4
+        Height = 20
+        Top = 122
+        Width = 121
+        Align = alCustom
+        Caption = '...per output value:'
+        ParentColor = False
+        ParentFont = False
+      end
+      object cbForceFullLiteralOutput: TCheckBox
+        AnchorSideLeft.Control = Label7
+        AnchorSideTop.Control = outputSizeLimit1
+        AnchorSideTop.Side = asrBottom
+        Left = 4
+        Height = 24
+        Top = 150
+        Width = 170
+        Align = alCustom
+        Caption = 'force full literal output'
+        ParentFont = False
+        TabOrder = 6
+        OnChange = cbForceFullLiteralOutputChange
+      end
     end
     object TabSheet_lineEnding: TTabSheet
       Caption = 'line ending'
-      ClientHeight = 207
-      ClientWidth = 354
+      ClientHeight = 263
+      ClientWidth = 419
       ParentFont = False
       object GroupBox1: TGroupBox
         Left = 0
-        Height = 77
+        Height = 97
         Top = 0
-        Width = 354
+        Width = 419
         Align = alTop
         AutoSize = True
         Caption = 'new files'
-        ClientHeight = 57
-        ClientWidth = 350
+        ClientHeight = 72
+        ClientWidth = 415
         ParentFont = False
         TabOrder = 0
         object rb_saveNewDefault: TRadioButton
           Left = 0
-          Height = 19
+          Height = 24
           Top = 0
-          Width = 350
+          Width = 415
           Align = alTop
           Caption = 'System default'
           Checked = True
@@ -208,9 +255,9 @@ object SettingsForm: TSettingsForm
         end
         object rb_saveNewLinux: TRadioButton
           Left = 0
-          Height = 19
-          Top = 19
-          Width = 350
+          Height = 24
+          Top = 24
+          Width = 415
           Align = alTop
           Caption = 'Linux'
           ParentFont = False
@@ -219,9 +266,9 @@ object SettingsForm: TSettingsForm
         end
         object rb_saveNewWindows: TRadioButton
           Left = 0
-          Height = 19
-          Top = 38
-          Width = 350
+          Height = 24
+          Top = 48
+          Width = 415
           Align = alTop
           Caption = 'Windows'
           ParentFont = False
@@ -231,21 +278,21 @@ object SettingsForm: TSettingsForm
       end
       object GroupBox2: TGroupBox
         Left = 0
-        Height = 96
-        Top = 77
-        Width = 354
+        Height = 121
+        Top = 97
+        Width = 419
         Align = alTop
         AutoSize = True
         Caption = 'existing files'
-        ClientHeight = 76
-        ClientWidth = 350
+        ClientHeight = 96
+        ClientWidth = 415
         ParentFont = False
         TabOrder = 1
         object rb_saveDefault: TRadioButton
           Left = 0
-          Height = 19
-          Top = 19
-          Width = 350
+          Height = 24
+          Top = 24
+          Width = 415
           Align = alTop
           Caption = 'System defult'
           ParentFont = False
@@ -254,9 +301,9 @@ object SettingsForm: TSettingsForm
         end
         object rb_saveLinux: TRadioButton
           Left = 0
-          Height = 19
-          Top = 38
-          Width = 350
+          Height = 24
+          Top = 48
+          Width = 415
           Align = alTop
           Caption = 'Linux'
           ParentFont = False
@@ -265,9 +312,9 @@ object SettingsForm: TSettingsForm
         end
         object rb_saveWindows: TRadioButton
           Left = 0
-          Height = 19
-          Top = 57
-          Width = 350
+          Height = 24
+          Top = 72
+          Width = 415
           Align = alTop
           Caption = 'Windows'
           ParentFont = False
@@ -276,9 +323,9 @@ object SettingsForm: TSettingsForm
         end
         object rb_saveNoChange: TRadioButton
           Left = 0
-          Height = 19
+          Height = 24
           Top = 0
-          Width = 350
+          Width = 415
           Align = alTop
           Caption = 'Don''t change'
           Checked = True
@@ -291,36 +338,36 @@ object SettingsForm: TSettingsForm
     end
     object TabSheet_global: TTabSheet
       Caption = 'global'
-      ClientHeight = 207
-      ClientWidth = 354
+      ClientHeight = 263
+      ClientWidth = 419
       ParentFont = False
       object Panel1: TPanel
         Left = 0
-        Height = 23
+        Height = 28
         Top = 0
-        Width = 354
+        Width = 419
         Align = alTop
         AutoSize = True
         BevelOuter = bvNone
-        ClientHeight = 23
-        ClientWidth = 354
+        ClientHeight = 28
+        ClientWidth = 419
         ParentFont = False
         TabOrder = 0
         object Label1: TLabel
           Left = 0
-          Height = 23
+          Height = 28
           Top = 0
-          Width = 31
+          Width = 36
           Align = alLeft
           Caption = 'CPUs:'
           ParentColor = False
           ParentFont = False
         end
         object workerThreadCountEdit: TEdit
-          Left = 31
-          Height = 23
+          Left = 36
+          Height = 28
           Top = 0
-          Width = 323
+          Width = 383
           Align = alClient
           NumbersOnly = True
           ParentFont = False
@@ -331,32 +378,32 @@ object SettingsForm: TSettingsForm
       end
       object Panel2: TPanel
         Left = 0
-        Height = 23
-        Top = 23
-        Width = 354
+        Height = 28
+        Top = 28
+        Width = 419
         Align = alTop
         AutoSize = True
         BevelOuter = bvNone
-        ClientHeight = 23
-        ClientWidth = 354
+        ClientHeight = 28
+        ClientWidth = 419
         ParentFont = False
         TabOrder = 1
         object Label6: TLabel
           Left = 0
-          Height = 23
+          Height = 28
           Top = 0
-          Width = 107
+          Width = 131
           Align = alLeft
           Caption = 'Memory Limit (MB):'
           ParentColor = False
           ParentFont = False
         end
         object memLimitEdit: TEdit
-          Left = 107
-          Height = 23
+          Left = 131
+          Height = 28
           Hint = 'This is a soft limit;'#13#10'If exceeded MNH tries to minmize '#13#10'memory usage while using more CPU.'
           Top = 0
-          Width = 247
+          Width = 288
           Align = alClient
           NumbersOnly = True
           ParentFont = False
@@ -369,33 +416,33 @@ object SettingsForm: TSettingsForm
       end
       object Panel3: TPanel
         Left = 0
-        Height = 23
-        Top = 46
-        Width = 354
+        Height = 28
+        Top = 56
+        Width = 419
         Align = alTop
         AutoSize = True
         BevelOuter = bvNone
-        ClientHeight = 23
-        ClientWidth = 354
+        ClientHeight = 28
+        ClientWidth = 419
         ParentFont = False
         TabOrder = 2
         object Label4: TLabel
           Left = 0
-          Height = 23
+          Height = 28
           Top = 0
-          Width = 52
+          Width = 64
           Align = alLeft
           Caption = 'Autosave:'
           ParentColor = False
           ParentFont = False
         end
         object autosaveComboBox: TComboBox
-          Left = 52
-          Height = 23
+          Left = 64
+          Height = 28
           Top = 0
-          Width = 302
+          Width = 355
           Align = alClient
-          ItemHeight = 15
+          ItemHeight = 20
           ParentFont = False
           Style = csDropDownList
           TabOrder = 0
@@ -404,9 +451,9 @@ object SettingsForm: TSettingsForm
       end
       object miSaveBeforeRun: TCheckBox
         Left = 0
-        Height = 19
-        Top = 69
-        Width = 354
+        Height = 24
+        Top = 84
+        Width = 419
         Align = alTop
         Caption = 'Autosave on execution'
         ParentFont = False
@@ -416,14 +463,14 @@ object SettingsForm: TSettingsForm
     end
     object TabSheet_install: TTabSheet
       Caption = 'installation'
-      ClientHeight = 207
-      ClientWidth = 354
+      ClientHeight = 263
+      ClientWidth = 419
       ParentFont = False
       object uninstallButton: TButton
         Left = 0
-        Height = 25
-        Top = 89
-        Width = 354
+        Height = 30
+        Top = 99
+        Width = 419
         Align = alTop
         AutoSize = True
         Caption = 'Uninstall and quit immediately'
@@ -433,9 +480,9 @@ object SettingsForm: TSettingsForm
       end
       object restorePacksAndDemosButton: TButton
         Left = 0
-        Height = 25
-        Top = 114
-        Width = 354
+        Height = 30
+        Top = 129
+        Width = 419
         Align = alTop
         AutoSize = True
         Caption = 'Restore default packages and demos'
@@ -445,9 +492,9 @@ object SettingsForm: TSettingsForm
       end
       object togglePortableButton: TButton
         Left = 0
-        Height = 25
-        Top = 164
-        Width = 354
+        Height = 31
+        Top = 189
+        Width = 419
         Align = alTop
         Caption = 'togglePortableButton'
         ParentFont = False
@@ -456,9 +503,9 @@ object SettingsForm: TSettingsForm
       end
       object clearFileHistoryButton: TButton
         Left = 0
-        Height = 25
-        Top = 139
-        Width = 354
+        Height = 30
+        Top = 159
+        Width = 419
         Align = alTop
         AutoSize = True
         Caption = 'Clear file/folder history'
@@ -468,22 +515,22 @@ object SettingsForm: TSettingsForm
       end
       object fileAssociationGroupBox: TGroupBox
         Left = 0
-        Height = 89
+        Height = 99
         Top = 0
-        Width = 354
+        Width = 419
         Align = alTop
         AutoSize = True
         Caption = 'File associations'
-        ClientHeight = 69
-        ClientWidth = 350
+        ClientHeight = 74
+        ClientWidth = 415
         ParentFont = False
         TabOrder = 4
         object rbAssociateFull: TRadioButton
           Left = 0
-          Height = 19
+          Height = 24
           Hint = 'Full version can interpret all scripts but the startup time is higher. '
           Top = 0
-          Width = 350
+          Width = 415
           Align = alTop
           Caption = 'associate mnh files with full version'
           ParentFont = False
@@ -493,10 +540,10 @@ object SettingsForm: TSettingsForm
         end
         object rbAssociateNone: TRadioButton
           Left = 0
-          Height = 19
+          Height = 24
           Hint = 'Remove file associations.'
-          Top = 19
-          Width = 350
+          Top = 24
+          Width = 415
           Align = alTop
           Caption = 'no association of mnh files'
           Checked = True
@@ -511,10 +558,10 @@ object SettingsForm: TSettingsForm
           AnchorSideRight.Side = asrBottom
           AnchorSideBottom.Control = fileAssociationGroupBox
           AnchorSideBottom.Side = asrBottom
-          Left = 293
-          Height = 25
+          Left = 350
+          Height = 30
           Top = 42
-          Width = 55
+          Width = 63
           Align = alCustom
           Anchors = [akRight, akBottom]
           AutoSize = True
@@ -531,8 +578,8 @@ object SettingsForm: TSettingsForm
   object closeButton: TButton
     Left = 0
     Height = 10
-    Top = 235
-    Width = 362
+    Top = 296
+    Width = 427
     Align = alBottom
     AutoSize = True
     Cancel = True
@@ -547,7 +594,7 @@ object SettingsForm: TSettingsForm
     MinFontSize = 0
     MaxFontSize = 0
     Options = [fdFixedPitchOnly, fdForceFontExist, fdNoFaceSel, fdNoSizeSel, fdWysiwyg]
-    Left = 77
-    Top = 224
+    Left = 96
+    Top = 280
   end
 end

@@ -43,6 +43,8 @@ TYPE
       FUNCTION isDoneFlushing:boolean; virtual;
       PROPERTY wrapEcho:boolean read messageFormatter.wrapEcho write messageFormatter.wrapEcho;
       PROPERTY preferredLineLength:longint read messageFormatter.preferredLineLength write messageFormatter.preferredLineLength;
+      PROPERTY maxLinesPerLiteral:longint read messageFormatter.maxLinesPerLiteral write messageFormatter.maxLinesPerLiteral;
+      PROPERTY forceFullLiterals:boolean read messageFormatter.forceFullLiteralOutput write messageFormatter.forceFullLiteralOutput;
       FUNCTION getLocationAtLine(CONST lineIndex:longint):T_searchTokenLocation;
   end;
 

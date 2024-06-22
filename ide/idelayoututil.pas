@@ -152,6 +152,8 @@ TYPE
     outputBehavior,
     quickOutputBehavior: T_ideMessageConfig;
     outputLinesLimit:longint;
+    outputLinesLimitPerLiteral:longint;
+    forceFullLiterals:boolean;
 
     outlineSettings:T_outlineSettings;
 
@@ -991,7 +993,7 @@ CONSTRUCTOR T_ideSettings.create;
 
 FUNCTION T_ideSettings.getSerialVersion: dword;
   begin
-    result:=24823584;
+    result:=24823585;
   end;
 
 FUNCTION T_ideSettings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper): boolean;
@@ -1001,10 +1003,16 @@ FUNCTION T_ideSettings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper):
       cp:T_componentParent;
       ic:T_ideComponent;
       i:longint;
+      serial: dword;
 
   begin
+    serial:=stream.readDWord;
+    //TODO: Remove code for backwards compatibility after Version 3.2.0
+    if (serial<>24823584) and (serial<>getSerialVersion) then begin
+      stream.logWrongTypeError;
+      cleanExit;
+    end;
     result:=true;
-    if not(inherited loadFromStream(stream)) then cleanExit;
     for c:=low(Font) to high(Font) do with Font[c] do begin
       fontSize:=stream.readLongint;
       style   :=stream.readByte([0..3]);
@@ -1017,6 +1025,11 @@ FUNCTION T_ideSettings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper):
     quickOutputBehavior.loadFromStream(stream);
     outputLinesLimit:=stream.readLongint;
     if outputLinesLimit<0 then stream.logWrongTypeError;
+    if (serial<>24823584) then begin
+      outputLinesLimitPerLiteral:=stream.readLongint;
+      if outputLinesLimitPerLiteral<0 then stream.logWrongTypeError;
+      forceFullLiterals:=stream.readBoolean;
+    end;
     outlineSettings.loadFromStream(stream);
     currentWorkspace:=stream.readAnsiString;
     i:=stream.readNaturalNumber;
@@ -1075,6 +1088,8 @@ PROCEDURE T_ideSettings.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
     outputBehavior.saveToStream(stream);
     quickOutputBehavior.saveToStream(stream);
     stream.writeLongint(outputLinesLimit);
+    stream.writeLongint(outputLinesLimitPerLiteral);
+    stream.writeBoolean(forceFullLiterals);
     outlineSettings.saveToStream(stream);
     stream.writeAnsiString(currentWorkspace);
     if length(workspaceHistory)>MAX_WORKSPACE_HISTORY_SIZE then setLength(workspaceHistory,MAX_WORKSPACE_HISTORY_SIZE);
@@ -1117,6 +1132,8 @@ PROCEDURE T_ideSettings.initDefaults;
     quickOutputBehavior.reset;
     outputLinesLimit:=maxLongint;
     currentWorkspace:='';
+    forceFullLiterals:=false;
+    outputLinesLimitPerLiteral:=maxLongint;
     setLength(workspaceHistory,0);
   end;
 
