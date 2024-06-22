@@ -40,6 +40,7 @@ TYPE
     SaveTableDialog: TSaveDialog;
     tableMenu: TMainMenu;
     StringGrid: TStringGrid;
+    PROCEDURE FormActivate(Sender: TObject);
     PROCEDURE FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
     PROCEDURE FormCreate(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
@@ -49,7 +50,9 @@ TYPE
     PROCEDURE mi_commaClick(Sender: TObject);
     PROCEDURE mi_exportCsvSemicolonClick(Sender: TObject);
     PROCEDURE mi_exportCsvTabClick(Sender: TObject);
+    PROCEDURE mi_exportIncHeaderClick(Sender: TObject);
     PROCEDURE mi_exportTextClick(Sender: TObject);
+    PROCEDURE mi_exportToAnsiClick(Sender: TObject);
     PROCEDURE mi_exportToClipboardClick(Sender: TObject);
     PROCEDURE mi_transposeClick(Sender: TObject);
     PROCEDURE stringGridHeaderClick(Sender: TObject; IsColumn: boolean; index: integer);
@@ -76,6 +79,7 @@ TYPE
                    alignRight:boolean;
                    txt:string;
                  end;
+    table_filled_with_comma_separator:boolean;
   public
     { public declarations }
     PROCEDURE initWithLiteral(CONST L:P_listLiteral; CONST newCaption:string; CONST fixedRows_,fixedColumns_:longint; CONST adapter_:P_tableAdapter);
@@ -103,6 +107,9 @@ TYPE
 
 IMPLEMENTATION
 USES myStringUtil,strutils,math,LCLType,LConvEncoding;
+VAR comma_as_decimalSeparator:boolean=false;
+    include_header_in_export :boolean=true;
+    export_to_ansi           :boolean=false;
 {$R *.lfm}
 
 FUNCTION showTable_impl(CONST params: P_listLiteral; CONST tokenLocation: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler): P_literal;
@@ -220,11 +227,22 @@ PROCEDURE TtableForm.FormCreate(Sender: TObject);
     registerFontControl(StringGrid,ctTable);
     initDockMenuItems(tableMenu,miDockInMain);
     initDockMenuItems(PopupMenu1,nil);
+    mi_comma          .checked:=comma_as_decimalSeparator;
+    mi_exportIncHeader.checked:=include_header_in_export;
+    mi_exportToAnsi   .checked:=export_to_ansi;
   end;
 
 PROCEDURE TtableForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
   begin
     CloseAction:=caFree;
+  end;
+
+PROCEDURE TtableForm.FormActivate(Sender: TObject);
+  begin
+    mi_comma          .checked:=comma_as_decimalSeparator;
+    mi_exportIncHeader.checked:=include_header_in_export;
+    mi_exportToAnsi   .checked:=export_to_ansi;
+    if comma_as_decimalSeparator<>table_filled_with_comma_separator then fillTable(false);
   end;
 
 PROCEDURE TtableForm.FormDestroy(Sender: TObject);
@@ -258,6 +276,7 @@ PROCEDURE TtableForm.miIncreaseFontSizeClick(Sender: TObject);
 PROCEDURE TtableForm.mi_commaClick(Sender: TObject);
   begin
     mi_comma.checked:=not(mi_comma.checked);
+    comma_as_decimalSeparator:=mi_comma.checked;
     fillTable(false);
   end;
 
@@ -332,6 +351,12 @@ PROCEDURE TtableForm.mi_exportCsvTabClick(Sender: TObject);
     exportToCsv(C_tabChar);
   end;
 
+PROCEDURE TtableForm.mi_exportIncHeaderClick(Sender: TObject);
+  begin
+    mi_exportIncHeader.checked:=not(mi_exportIncHeader.checked);
+    include_header_in_export:=mi_exportIncHeader.checked;
+  end;
+
 PROCEDURE TtableForm.mi_exportTextClick(Sender: TObject);
   VAR i0:longint=1;
       i,j:longint;
@@ -349,6 +374,12 @@ PROCEDURE TtableForm.mi_exportTextClick(Sender: TObject);
       content:=formatTabs(content);
       writeFileLines(SaveTableDialog.fileName,formatTabs(content),LineEnding,false);
     end;
+  end;
+
+PROCEDURE TtableForm.mi_exportToAnsiClick(Sender: TObject);
+  begin
+    mi_exportToAnsi.checked:=not(mi_exportToAnsi.checked);
+    export_to_ansi:=mi_exportToAnsi.checked;
   end;
 
 PROCEDURE TtableForm.mi_exportToClipboardClick(Sender: TObject);
@@ -546,6 +577,7 @@ PROCEDURE TtableForm.fillTable(CONST firstFill:boolean; CONST suppressMarker:boo
     if additionalHeaderRow=1 then for j:=0 to dataColumns-1 do StringGrid.Cells[j,0]:=excelStyleColumnIndex(j-fixedColumns);
     for j:=0 to StringGrid.colCount-1 do StringGrid.Cells[j,0]:=sortMarker(StringGrid.Cells[j,0],j);
     if firstFill then StringGrid.AutoSizeColumns;
+    table_filled_with_comma_separator:=mi_comma.checked;
   end;
 
 INITIALIZATION
