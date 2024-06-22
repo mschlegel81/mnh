@@ -850,6 +850,7 @@ PROCEDURE T_workerThread.execute;
       recycler:P_recycler;
       idleSince:double;
   begin
+    idleSince:=now;
     recycler:=newRecycler;
     with globals^ do begin
       repeat
@@ -886,7 +887,7 @@ CONSTRUCTOR T_workerThread.create(evaluationGlobals:P_evaluationGlobals);
   begin
     globals:=evaluationGlobals;
     interLockedIncrement(globals^.taskQueue.poolThreadsRunning);
-    memoryCleaner.registerObjectForCleanup(2,@Terminate);
+    memoryCleaner.registerObjectForCleanup(4,@Terminate);
     inherited create();
   end;
 
