@@ -122,8 +122,10 @@ FUNCTION T_lazyInitializedOutAdapter.ensureOutputForm: TOutputForm;
       dockNewForm(outputForm);
       outputForm.updateAfterSettingsRestore;
       outputForm.showComponent(false);
-      preferredLineLength:=outputForm.OutputSynEdit.charsInWindow;
     end;
+    preferredLineLength:=outputForm.OutputSynEdit.charsInWindow;
+    maxLinesPerLiteral :=ideSettings.outputLinesLimitPerLiteral;
+    forceFullLiterals  :=ideSettings.forceFullLiterals;
     result:=outputForm;
   end;
 

@@ -14,6 +14,7 @@ USES
   ideLayoutUtil;
 
 CONST MINIMUM_OUTPUT_LINES=16;
+      MINIMUM_OUTPUT_LINES_PER_LITERAL=3;
       PORTABLE_BUTTON_CAPTION:array[false..true] of string=
         ('Convert to normal (non-portable) version',
          'Convert to portable version');
@@ -24,10 +25,13 @@ TYPE
   TSettingsForm = class(TForm)
     buttonApplyAssociations: TButton;
     cbCopyAsHtml: TCheckBox;
+    cbForceFullLiteralOutput: TCheckBox;
     CloseButton: TButton;
     fileAssociationGroupBox: TGroupBox;
+    Label8: TLabel;
     miSaveBeforeRun: TCheckBox;
     clearFileHistoryButton: TButton;
+    outputSizeLimit1: TEdit;
     rbAssociateFull: TRadioButton;
     rbAssociateNone: TRadioButton;
     TableFontButton: TButton;
@@ -67,10 +71,12 @@ TYPE
     autosaveComboBox: TComboBox;
     PROCEDURE buttonApplyAssociationsClick(Sender: TObject);
     PROCEDURE cbCopyAsHtmlChange(Sender: TObject);
+    PROCEDURE cbForceFullLiteralOutputChange(Sender: TObject);
     PROCEDURE clearFileHistoryButtonClick(Sender: TObject);
     PROCEDURE FormDestroy(Sender: TObject);
     PROCEDURE GeneralFontButtonClick(Sender: TObject);
     PROCEDURE miSaveBeforeRunChange(Sender: TObject);
+    PROCEDURE outputSizeLimit1EditingDone(Sender: TObject);
     PROCEDURE PageControlChange(Sender: TObject);
     PROCEDURE rb_saveDefaultChange(Sender: TObject);
     PROCEDURE rb_saveNewDefaultChange(Sender: TObject);
@@ -86,8 +92,9 @@ TYPE
     PROCEDURE workerThreadCountEditEditingDone(Sender: TObject);
     PROCEDURE autosaveComboBoxChange(Sender: TObject);
   private
-    FUNCTION  getOutputLimit: longint;
-    PROCEDURE setOutputLimit(CONST value: longint);
+    FUNCTION getOutputLimit(CONST s: string): longint;
+    PROCEDURE setOutputLimit (CONST value: longint);
+    PROCEDURE setOutputLimit1(CONST value: longint);
   public
     FUNCTION  getFontSize(CONST c:T_controlType): longint;
     PROCEDURE setFontSize(CONST c:T_controlType; CONST value: longint);
@@ -131,7 +138,9 @@ PROCEDURE TSettingsForm.FormCreate(Sender: TObject);
     propagateFont(TableFontButton  .Font,ctTable);
     propagateFont(GeneralFontButton.Font,ctGeneral);
 
-    setOutputLimit(ideSettings.outputLinesLimit);
+    setOutputLimit (ideSettings.outputLinesLimit);
+    setOutputLimit1(ideSettings.outputLinesLimitPerLiteral);
+    cbForceFullLiteralOutput.checked:=ideSettings.forceFullLiterals;
     workerThreadCountEdit.text:=intToStr(settings.cpuCount);
     memLimitEdit.text:=intToStr(settings.memoryLimit shr 20);
 
@@ -215,6 +224,11 @@ PROCEDURE TSettingsForm.cbCopyAsHtmlChange(Sender: TObject);
     ideSettings.copyTextAsHtml:=cbCopyAsHtml.checked;
   end;
 
+PROCEDURE TSettingsForm.cbForceFullLiteralOutputChange(Sender: TObject);
+  begin
+    ideSettings.forceFullLiterals:=cbForceFullLiteralOutput.checked;
+  end;
+
 PROCEDURE TSettingsForm.buttonApplyAssociationsClick(Sender: TObject);
   begin
     if      rbAssociateFull .checked then begin sandbox^.runInstallScript;   ideSettings.registeredAssociation:=raFullVersion;   end
@@ -224,6 +238,11 @@ PROCEDURE TSettingsForm.buttonApplyAssociationsClick(Sender: TObject);
 PROCEDURE TSettingsForm.miSaveBeforeRunChange(Sender: TObject);
   begin
     workspace.autosaveBeforeEachExecution:=miSaveBeforeRun.checked;
+  end;
+
+PROCEDURE TSettingsForm.outputSizeLimit1EditingDone(Sender: TObject);
+  begin
+    setOutputLimit1(getOutputLimit(outputSizeLimit1.text));
   end;
 
 PROCEDURE TSettingsForm.PageControlChange(Sender: TObject);
@@ -284,7 +303,7 @@ PROCEDURE TSettingsForm.memLimitEditEditingDone(Sender: TObject);
 
 PROCEDURE TSettingsForm.outputSizeLimitEditingDone(Sender: TObject);
   begin
-    setOutputLimit(getOutputLimit);
+    setOutputLimit(getOutputLimit(outputSizeLimit.text));
   end;
 
 PROCEDURE TSettingsForm.TableFontButtonClick(Sender: TObject);
@@ -377,9 +396,9 @@ PROCEDURE TSettingsForm.setFontSize(CONST c:T_controlType; CONST value: longint)
     end;
   end;
 
-FUNCTION TSettingsForm.getOutputLimit: longint;
+FUNCTION TSettingsForm.getOutputLimit(CONST s:string): longint;
   begin
-    result := strToIntDef(trim(outputSizeLimit.text), maxLongint);
+    result := strToIntDef(trim(s), maxLongint);
     if result<MINIMUM_OUTPUT_LINES then result:=MINIMUM_OUTPUT_LINES;
   end;
 
@@ -390,6 +409,16 @@ PROCEDURE TSettingsForm.setOutputLimit(CONST value: longint);
     else begin
       outputSizeLimit.text := intToStr(value);
       ideSettings.outputLinesLimit:=value;
+    end;
+  end;
+
+PROCEDURE TSettingsForm.setOutputLimit1(CONST value: longint);
+  begin
+    if value<MINIMUM_OUTPUT_LINES_PER_LITERAL
+    then setOutputLimit1(MINIMUM_OUTPUT_LINES_PER_LITERAL)
+    else begin
+      outputSizeLimit1.text := intToStr(value);
+      ideSettings.outputLinesLimitPerLiteral:=value;
     end;
   end;
 

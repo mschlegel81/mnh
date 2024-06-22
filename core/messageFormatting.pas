@@ -69,8 +69,8 @@ TYPE
     private
       formatterForDemos:boolean;
     public
-      wrapEcho:boolean;
-      preferredLineLength:longint;
+      wrapEcho,forceFullLiteralOutput:boolean;
+      preferredLineLength,maxLinesPerLiteral:longint;
       CONSTRUCTOR create(CONST forDemos:boolean);
       FUNCTION getClonedInstance:P_messageFormatProvider; virtual;
       DESTRUCTOR destroy; virtual;
@@ -458,6 +458,8 @@ CONSTRUCTOR T_guiFormatter.create(CONST forDemos: boolean);
     formatterForDemos:=forDemos;
     preferredLineLength:=maxLongint;
     wrapEcho:=false;
+    forceFullLiteralOutput:=false;
+    maxLinesPerLiteral:=16;
   end;
 
 DESTRUCTOR T_guiFormatter.destroy; begin inherited; end;
@@ -516,7 +518,7 @@ PROCEDURE T_guiFormatter.formatMessageAndLocation(CONST message: P_storedMessage
         end;
         mt_echo_output: begin
           if wrapEcho
-          then echo:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,false,preferredLineLength-C_echoPrefixLength,preferredLineLength*50)
+          then echo:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,forceFullLiteralOutput,preferredLineLength-C_echoPrefixLength,preferredLineLength*maxLinesPerLiteral)
           else echo:=P_echoOutMessage(message)^.literal^.toString();
 
           if length(echo) >0 then echo[  0]:=marker+C_echoOutInfix+echo[0];
@@ -561,7 +563,10 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
       nextLine    :string='';
       s           :string;
       i           :longint=0;
+      limitPerLiteral:int64;
   begin
+    limitPerLiteral:=int64(maxLinesPerLiteral)*int64(preferredLineLength);
+    if (limitPerLiteral>maxLongint) or forceFullLiteralOutput then limitPerLiteral:=maxLongint;
     if (message=nil) or (not(message^.isTextMessage) and (message^.messageType<>mt_echo_output))  then exit(C_EMPTY_STRING_ARRAY);
     if not(formatterForDemos)
     then locationPart:=formatLocation(message^.getLocation)+' ';
@@ -590,7 +595,7 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
         end;
         mt_echo_output: begin
           if wrapEcho
-          then result:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,false,preferredLineLength-C_echoPrefixLength,preferredLineLength*50)
+          then result:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,forceFullLiteralOutput,preferredLineLength-C_echoPrefixLength,limitPerLiteral)
           else result:=P_echoOutMessage(message)^.literal^.toString();
           if length(result)>0 then result[0]:=marker+C_echoOutInfix+result[0];
           for i:=1 to length(result)-1 do
@@ -635,6 +640,7 @@ FUNCTION T_defaultConsoleFormatter.formatLocation(CONST location:T_searchTokenLo
   end;
 
 FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOfString;
+  //TODO: Determine console width dynamically (maybe on flush?)
   CONST CONSOLE_OUT_WIDTH=100;
   VAR locationPart:string='';
       nextLine    :string='';
