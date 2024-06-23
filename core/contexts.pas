@@ -895,6 +895,9 @@ DESTRUCTOR T_workerThread.destroy;
   begin
     interlockedDecrement(globals^.taskQueue.poolThreadsRunning);
     memoryCleaner.unregisterObjectForCleanup(@Terminate);
+    {$ifdef fullVersion}
+    postIdeMessage('Worker thread stopped (total: '+intToStr(globals^.taskQueue.poolThreadsRunning)+'/'+intToStr(getGlobalThreads)+')',false);
+    {$endif}
     inherited destroy;
   end;
 
@@ -1031,20 +1034,20 @@ FUNCTION T_subQueue.dequeue(OUT isEmptyAfter: boolean): P_queueTask;
   end;
 
 PROCEDURE T_taskQueue.ensurePoolThreads;
-  {$ifdef fullVersion} {$ifdef debugMode}
+  {$ifdef fullVersion}
   VAR spawnCount:longint=0;
-  {$endif} {$endif}
+  {$endif}
   begin
     while (poolThreadsRunning<settings.cpuCount-1) and //one main thread is active!
           (getGlobalThreads<GLOBAL_THREAD_LIMIT) do begin
-      {$ifdef fullVersion} {$ifdef debugMode}
+      {$ifdef fullVersion}
       spawnCount+=1;
-      {$endif} {$endif}
+      {$endif}
       T_workerThread.create(parent);
     end;
-    {$ifdef fullVersion} {$ifdef debugMode}
-    if spawnCount>0 then postIdeMessage('Spawned '+intToStr(spawnCount)+' new worker thread(s) (total: '+intToStr(getGlobalRunningThreads)+'/'+intToStr(getGlobalThreads)+')',false);
-    {$endif} {$endif}
+    {$ifdef fullVersion}
+    if spawnCount>0 then postIdeMessage('Spawned '+intToStr(spawnCount)+' new worker thread(s) (total: '+intToStr(poolThreadsRunning)+'/'+intToStr(getGlobalThreads)+')',false);
+    {$endif}
   end;
 
 PROCEDURE T_taskQueue.enqueue(CONST task:P_queueTask; CONST context:P_context);
