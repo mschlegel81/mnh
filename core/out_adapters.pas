@@ -1144,6 +1144,18 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
       clearFirst:boolean=false;
 
   {$ifdef Windows}
+  PROCEDURE updateScreenSize;
+    VAR
+      hStdOut: handle;
+      csbi:TCONSOLESCREENBUFFERINFO;
+      width: dword;
+    begin
+      hStdOut:=GetStdHandle(STD_OUTPUT_HANDLE);
+      if not GetConsoleScreenBufferInfo(hStdOut,csbi) then exit;
+      width:=dword(csbi.dwSize.x);
+      if (width>=50) and (width<1000) then messageFormatProvider^.preferredLineLength:=width;
+    end;
+
   PROCEDURE directOutput;
     CONST origin: COORD=(x:0;y:0);
     VAR
@@ -1168,6 +1180,9 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
 
   begin
     result:=mySys.showConsole and (message^.messageType in messageTypesToInclude);
+    {$ifdef Windows}
+    updateScreenSize;
+    {$endif}
     if result then begin
       enterCriticalSection(adapterCs);
       try
