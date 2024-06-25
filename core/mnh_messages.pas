@@ -223,6 +223,7 @@ TYPE
 
   P_messageFormatProvider=^T_messageFormatProvider;
   T_messageFormatProvider=object
+    preferredLineLength:longint;
     CONSTRUCTOR create;
     FUNCTION getClonedInstance:P_messageFormatProvider; virtual; abstract;
     DESTRUCTOR destroy; virtual;
@@ -295,7 +296,10 @@ PROCEDURE disposeMessage_(message:P_storedMessage);
   end;
 
 //------------------------------------------------------------------------------
-CONSTRUCTOR T_messageFormatProvider.create; begin end;
+CONSTRUCTOR T_messageFormatProvider.create; begin
+  preferredLineLength:=80;
+end;
+
 DESTRUCTOR T_messageFormatProvider.destroy; begin end;
 FUNCTION T_messageFormatProvider.formatMessage(CONST message: P_storedMessage): T_arrayOfString;
   begin

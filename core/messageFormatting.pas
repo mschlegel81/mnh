@@ -71,7 +71,7 @@ TYPE
       formatterForDemos:boolean;
     public
       wrapEcho,forceFullLiteralOutput:boolean;
-      preferredLineLength,maxLinesPerLiteral:longint;
+      maxLinesPerLiteral:longint;
       CONSTRUCTOR create(CONST forDemos:boolean);
       FUNCTION getClonedInstance:P_messageFormatProvider; virtual;
       DESTRUCTOR destroy; virtual;
@@ -124,7 +124,6 @@ VAR defaultConsoleFormatter:T_defaultConsoleFormatter;
 FUNCTION newEchoMessage(CONST value: P_literal; CONST loc: T_searchTokenLocation):P_echoOutMessage;
 IMPLEMENTATION
 USES sysutils,LazFileUtils{$ifdef fullVersion},myStringUtil{$endif},recyclers;
-//CONST lvlColor:array[
 
 FUNCTION newEchoMessage(CONST value: P_literal; CONST loc: T_searchTokenLocation):P_echoOutMessage;
   begin
@@ -541,6 +540,7 @@ PROCEDURE T_guiFormatter.formatMessageAndLocation(CONST message: P_storedMessage
       i           :longint=0;
       messageLoc  :T_searchTokenLocation;
       echo        :T_arrayOfString;
+      limitPerLiteral: int64;
   begin
     if (message=nil) or (not(message^.isTextMessage) and (message^.messageType<>mt_echo_output))  then exit;
     messageLoc:=message^.getLocation;
@@ -569,8 +569,14 @@ PROCEDURE T_guiFormatter.formatMessageAndLocation(CONST message: P_storedMessage
           messagesAndLocations.append(marker+trimRight(nextLine),messageLoc);
         end;
         mt_echo_output: begin
+          limitPerLiteral:=int64(maxLinesPerLiteral)*int64(preferredLineLength);
+          if (limitPerLiteral>maxLongint) or forceFullLiteralOutput then limitPerLiteral:=maxLongint;
           if wrapEcho
-          then echo:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,forceFullLiteralOutput,preferredLineLength-C_echoPrefixLength,preferredLineLength*maxLinesPerLiteral)
+          then echo:=serializeToStringList(P_echoOutMessage(message)^.literal,
+                                           C_nilSearchTokenLocation,nil,
+                                           forceFullLiteralOutput,
+                                           preferredLineLength-C_echoPrefixLength,
+                                           limitPerLiteral)
           else echo:=P_echoOutMessage(message)^.literal^.toString();
 
           if length(echo) >0 then echo[  0]:=marker+C_echoOutInfix+echo[0];
@@ -618,8 +624,6 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
       i           :longint=0;
       limitPerLiteral:int64;
   begin
-    limitPerLiteral:=int64(maxLinesPerLiteral)*int64(preferredLineLength);
-    if (limitPerLiteral>maxLongint) or forceFullLiteralOutput then limitPerLiteral:=maxLongint;
     if (message=nil) or (not(message^.isTextMessage) and (message^.messageType<>mt_echo_output))  then exit(C_EMPTY_STRING_ARRAY);
     if not(formatterForDemos)
     then locationPart:=formatLocation(message^.getLocation)+' ';
@@ -647,8 +651,14 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
           append(result,marker+trimRight(nextLine));
         end;
         mt_echo_output: begin
+          limitPerLiteral:=int64(maxLinesPerLiteral)*int64(preferredLineLength);
+          if (limitPerLiteral>maxLongint) or forceFullLiteralOutput then limitPerLiteral:=maxLongint;
           if wrapEcho
-          then result:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,forceFullLiteralOutput,preferredLineLength-C_echoPrefixLength,limitPerLiteral)
+          then result:=serializeToStringList(P_echoOutMessage(message)^.literal,
+                                             C_nilSearchTokenLocation,nil,
+                                             forceFullLiteralOutput,
+                                             preferredLineLength-C_echoPrefixLength,
+                                             limitPerLiteral)
           else result:=P_echoOutMessage(message)^.literal^.toString();
           if length(result)>0 then result[0]:=marker+C_echoOutInfix+result[0];
           for i:=1 to length(result)-1 do
@@ -693,12 +703,11 @@ FUNCTION T_defaultConsoleFormatter.formatLocation(CONST location:T_searchTokenLo
   end;
 
 FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOfString;
-  //TODO: Determine console width dynamically (maybe on flush?)
-  CONST CONSOLE_OUT_WIDTH=100;
   VAR locationPart:string='';
       nextLine    :string='';
       s           :string;
       i           :longint;
+      limitPerLiteral: int64;
 
   begin
     if (message=nil) or (not(message^.isTextMessage) and not(message^.messageType in [mt_echo_output{$ifdef fullVersion},mt_profile_call_info{$endif}]))  then exit(C_EMPTY_STRING_ARRAY);
@@ -718,7 +727,7 @@ FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage)
           then nextLine:=C_echoInInfix  +C_messageClassMeta[mc_echo].levelColor
           else nextLine:=C_echoDeclInfix+C_messageClassMeta[mc_echo].levelColor;
           for s in P_storedMessageWithText(message)^.txt do begin
-            if (length(nextLine)>10) and (length(nextLine)+length(s)>CONSOLE_OUT_WIDTH)
+            if (length(nextLine)>10) and (length(nextLine)+length(s)>preferredLineLength)
             then begin
               append(result,trimRight(nextLine)+C_ANSI_CODE_RESET);
               nextLine:=C_echoContdInfix+C_messageClassMeta[mc_echo].levelColor+trimLeft(s);
@@ -727,9 +736,16 @@ FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage)
           append(result,trimRight(nextLine)+C_ANSI_CODE_RESET);
         end;
         mt_echo_output: begin
+          limitPerLiteral:=200*int64(preferredLineLength);
+          if (limitPerLiteral>maxLongint) then limitPerLiteral:=maxLongint;
+
           if P_echoOutMessage(message)^.literal=nil
           then result:=''
-          else result:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,false,CONSOLE_OUT_WIDTH-C_echoPrefixLength,CONSOLE_OUT_WIDTH*50);
+          else result:=serializeToStringList(P_echoOutMessage(message)^.literal,
+                                             C_nilSearchTokenLocation,nil,
+                                             false,
+                                             preferredLineLength-C_echoPrefixLength,
+                                             limitPerLiteral);
           if length(result)>0 then result[  0]:=C_echoOutInfix+C_messageClassMeta[mc_echo].levelColor+result[0]+C_ANSI_CODE_RESET;
           for i:=1 to length(result)-1 do
             result[i]:=C_echoContdInfix+C_messageClassMeta[mc_echo].levelColor+result[i]+C_ANSI_CODE_RESET;
