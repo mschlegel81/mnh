@@ -110,15 +110,27 @@ plotBackground(y0:Numeric,c0:NumericList(3),
   .each(box,addPlot([[-big,box[1]],[big,box[2]]],box[0]));
 end;
 
-approxBoundingSphereCenter(P:Vector3DList)->begin
-  local x:=P.min;
-  local y:=P[euklideanNorm((P.transpose-x).transpose).argMax];
-        (y+P[euklideanNorm((P.transpose-y).transpose).argMax])*0.5;
+private BSB:=[[[1,0,0],[0,1,0],[0,0,1]],[[0.56758398869893267,0.5812881746257792,0.58305443469099816],[-0.80203393725723049,0.23039997403607523,0.55105119131696],[0.1859838145115722,-0.78039727703548878,0.59698417963570838]],[[0.6133835632501391,0.007494142448045344,0.78974960725759857],[0.6195055144408625,-0.62479595508732977,-0.4752293468251657],[0.4898709237257555,0.7807521068402441,-0.38788223180830966]],[[0.00057322480732512559,0.6837940878464745,0.72967480211360469],[-0.7023534163842524,-0.51912795301446257,0.48703782901575804],[0.7118281744260263,-0.5127687722796912,0.47996753668148123]],[[0.820738298011894,0.5683854639679302,0.057676776318552295],[0.07572731264128969,-0.008168883246102145,-0.9970951025186313],[-0.5662632076134455,0.8227218446695532,-0.0497468190627277]],[[0.87617428242462869,0.25238441012283247,0.41063455327655624],[0.1268452505379606,0.7011799231203348,-0.701610289141289],[-0.46500420345804294,0.6668199344200135,0.5823420522566097]],[[0.3397029390337272,0.891933492717754,0.29842345380374513],[-0.82126539521557118,0.4359392776419923,-0.36807621062816526],[-0.4583940050145283,-0.12004828519094354,0.880603966258076]],[[0.2853785871187046,0.34169218138026908,0.89543593584227188],[0.48434960448991149,-0.85761983387485707,0.17289789233801806],[0.8270214765316547,0.38436268514003263,-0.41024480938501329]]];
+boundingSphere(v:Vector3DList)->begin
+  local centerOfMass:=v.agg(+)/v.size;
+  local vt:=v.transpose-centerOfMass;
+
+  local center:=
+  BSB.pEach(base,begin
+    local e0:=(base[0]*vt).agg(+); e0:=0.5*(e0.min+e0.max);
+    local e1:=(base[1]*vt).agg(+); e1:=0.5*(e1.min+e1.max);
+    local e2:=(base[2]*vt).agg(+); e2:=0.5*(e2.min+e2.max);
+    e0*base[0]+
+    e1*base[1]+
+    e2*base[2];
+  end,+)/BSB.size+centerOfMass;
+
+  [center,(center-v.transpose).transpose.euklideanNorm.max];
 end;
 
 @SuppressUnusedWarning
 //*Projects a raw vector list wihtout illumination
-projectOnly(L:Vector3DList,perspectivity>=0.0)->projectOnly(L,approxBoundingSphereCenter(L),perspectivity);
+projectOnly(L:Vector3DList,perspectivity>=0.0)->projectOnly(L,boundingSphere(L)[0],perspectivity);
 projectOnly(L:Vector3DList,boundingSphereCenter:Vector3D,perspectivity>=0.0)->begin
   local radius:=L.pEach(p,euklideanNorm(p-boundingSphereCenter),max);
   //Normalize all points, so that they lie within unit sphere
@@ -141,6 +153,9 @@ end;
 
 //*Illuminate, project and plot geometry
 illuminateAndProject(geometry:Geometry3D, lightDirection:Vector3D, perspectivity>=0.0, firstItem:Boolean, outputShift:NumericList(2))->begin
+  local options:=getOptions;
+save;
+
   //1. split geometry in separate items, illuminate and and determine bounding sphere
   local normalizedLight:=lightDirection/euklideanNorm(lightDirection);
   local allPoints:=[];
@@ -153,8 +168,8 @@ illuminateAndProject(geometry:Geometry3D, lightDirection:Vector3D, perspectivity
     geometryItem[1].each(a,
       [[pointIndexOffset+a,material.illuminate((normalizedLight*consensusNormal(points[a])).agg(+))]],|);
   end,|);
-  local center:=approxBoundingSphereCenter(allPoints);
-  local radius:=allPoints.pEach(p,euklideanNorm(p-center),max);
+  local center:=boundingSphere(allPoints);
+  local radius:=center[1]; center:=center[0];
   //Normalize all points, so that they lie within unit sphere
   local zOffset:=(perspectivity=0
                   ? [0,0,0]
@@ -184,19 +199,18 @@ illuminateAndProject(geometry:Geometry3D, lightDirection:Vector3D, perspectivity
   local y0:=outputShift[1]-1;
   local y1:=outputShift[1]+1;
   firstItem
-  ? void
-  : begin
-      local o:=getOptions;
-      x0:=min(x0,o['x0']);
-      x1:=max(x1,o['x1']);
-      y0:=min(y0,o['y0']);
-      y1:=max(y1,o['y1']);
-    end;
-  setOptions(['axisStyleX'=>0,'axisStyleY'=>0,
+  ? options:=['axisStyleX'=>0,'axisStyleY'=>0,
               'logscaleX'=>false,'logscaleY'=>false  ,
               'autoscaleX'=>false,'autoscaleY'=>false,
               'x0'=>x0,'x1'=>x1,
-              'y0'=>y0,'y1'=>y1]);
+              'y0'=>y0,'y1'=>y1].toMap
+  : begin
+      options['x0']:=x0:=min(x0,options['x0']);
+      options['x1']:=x1:=max(x1,options['x1']);
+      options['y0']:=y0:=min(y0,options['y0']);
+      options['y1']:=y1:=max(y1,options['y1']);
+    end;
+  setOptions(options);
   polygons.each(poly,begin
     local faceColor:=poly[1,0];
     local lineColor:=poly[1,1];
