@@ -102,7 +102,10 @@ TYPE
 
 PROCEDURE initLists;
 IMPLEMENTATION
-USES sysutils;
+USES sysutils,
+     funcs_ftp,
+     func_queues,
+     funcs_interpolators;
 VAR listsAreInitialized:boolean=false;
     tokenTypeMap:specialize G_stringKeyMap<T_tokenKind>;
     builtinRules:T_setOfString;
@@ -621,12 +624,18 @@ PROCEDURE initLists;
       tc:T_typeCheck;
       md:T_modifier;
       i:longint;
+      id: string;
   begin
     if listsAreInitialized then exit;
     tokenTypeMap.create();
     for tt:=low(T_tokenType) to high(T_tokenType) do put(C_tokenDoc[tt].reservedWordClass,C_tokenDefaultId[tt]);
     for i:=0 to high(C_specialWordInfo) do with C_specialWordInfo[i] do put(reservedWordClass,txt);
     for tc in T_typeCheck do put(rwc_type,C_typeCheckInfo[tc].name);
+
+    for id in INTERPOLATOR_TYPE_NAMES do put(rwc_type,id);
+    put(rwc_type,FTP_TYPE_STRING);
+    put(rwc_type,QUEUE_TYPE_NAME);
+
     for md in T_modifier do put(rwc_modifier,C_modifierInfo[md].name);
     builtinRules.create;
     builtinRules.put(builtinFunctionMap.getAllIds);
