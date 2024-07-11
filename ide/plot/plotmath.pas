@@ -195,9 +195,6 @@ FUNCTION boundingBoxOf(CONST x0,y0,x1,y1:double):T_boundingBox;
   end;
 
 TYPE P_lineBuilder=^T_lineBuilder;
-
-     { T_lineBuilder }
-
      T_lineBuilder=object
        row:T_rowToPaintArr;
        rowFill:longint;
@@ -212,9 +209,6 @@ TYPE P_lineBuilder=^T_lineBuilder;
      end;
 
      P_bSplineBuilder=^T_bSplineBuilder;
-
-     { T_bSplineBuilder }
-
      T_bSplineBuilder=object(T_lineBuilder)
        toApproximate:array of T_point;
        approxFill   :longint;
@@ -229,9 +223,6 @@ TYPE P_lineBuilder=^T_lineBuilder;
      end;
 
      P_cSplineBuilder=^T_cSplineBuilder;
-
-     { T_cSplineBuilder }
-
      T_cSplineBuilder=object(T_lineBuilder)
        toInterpolate:array of T_point;
        interpFill:longint;
@@ -246,9 +237,6 @@ TYPE P_lineBuilder=^T_lineBuilder;
      end;
 
      P_tubeBuilder=^T_tubeBuilder;
-
-     { T_tubeBuilder }
-
      T_tubeBuilder=object(T_lineBuilder)
        builders:array [0..1] of P_lineBuilder;
        tgt:byte;
@@ -572,7 +560,6 @@ PROCEDURE T_cSplineBuilder.flush;
     end;
 
   begin
-    //TODO: add only points if not "too close"
     if interpFill =1
     then inherited add(toInterpolate[0])
     else if interpFill=2 then begin
