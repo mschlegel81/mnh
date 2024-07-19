@@ -94,7 +94,7 @@ TYPE
 
       FUNCTION getHelpOnMain:ansistring;
       PROCEDURE finalize(CONST context:P_context; CONST recycler:P_recycler);
-      PROCEDURE resolveId(VAR token:T_token; CONST messagesOrNil:P_messages); virtual;
+      FUNCTION resolveId(VAR token:T_token; CONST messagesOrNil:P_messages):boolean; virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
       FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_recycler):string; virtual;
       FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral; virtual;
@@ -1384,21 +1384,22 @@ FUNCTION T_package.getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; C
   end;
 {$endif}
 
-PROCEDURE T_package.resolveId(VAR token: T_token; CONST messagesOrNil:P_messages);
+FUNCTION T_package.resolveId(VAR token: T_token; CONST messagesOrNil:P_messages):boolean;
   VAR intrinsicFuncPtr:P_intFuncCallback;
       entry:T_ruleMapEntry;
   begin
     if ruleMap.containsKey(token.txt,entry) then begin
       token.tokType:=entry.entryType;
       token.data   :=entry.value;
-      exit;
+      exit(true);
     end;
     if builtinFunctionMap.containsFunctionForId(token.txt,intrinsicFuncPtr) then begin
       token.tokType:=tt_intrinsicRule;
       token.data:=intrinsicFuncPtr;
-      exit;
+      exit(true);
     end;
     if messagesOrNil<>nil then messagesOrNil^.raiseSimpleError('Cannot resolve ID "'+token.txt+'"',token.location);
+    result:=false;
   end;
 
 {$ifdef fullVersion}
