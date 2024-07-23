@@ -829,6 +829,7 @@ TYPE
       end;
       outputQueue : specialize G_queue<P_literal>;
       myQueuedTasks:longint;
+      lastQueued   :longint;
       slowProducer :boolean;
       FUNCTION canAggregate(CONST forceAggregate:boolean; CONST context:P_context; CONST recycler:P_recycler):longint;
       FUNCTION doEnqueueTasks(CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean;
@@ -867,6 +868,7 @@ CONSTRUCTOR T_parallelMapGenerator.create(CONST source, mapEx: P_expressionLiter
     firstToAggregate:=nil;
     lastToAggregate:=nil;
     myQueuedTasks:=0;
+    lastQueued:=0;
   end;
 
 CONSTRUCTOR T_parallelFilterGenerator.create(CONST source, filterEx: P_expressionLiteral; CONST loc: T_tokenLocation);
@@ -952,11 +954,16 @@ FUNCTION T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; CONST
       doneQueuing :boolean=false;
       taskChain   :T_taskChain;
       startTime   :double;
-      tasksToQueue:longint;
+      tasksToQueue,temp:longint;
   begin
     result:=false;
     canAggregate(doneFetching,context,recycler);
-    tasksToQueue:=TASKS_TO_QUEUE_PER_CPU*settings.cpuCount-myQueuedTasks;
+
+    tasksToQueue:=lastQueued+lastQueued shr 2+1;
+    temp:=TASKS_TO_QUEUE_PER_CPU*settings.cpuCount-myQueuedTasks;
+    if temp>tasksToQueue
+    then tasksToQueue:=temp
+    else if tasksToQueue>FUTURE_RECYCLER_MAX_SIZE then tasksToQueue:=FUTURE_RECYCLER_MAX_SIZE;
 
     if doneFetching or (tasksToQueue<=0) or not(context^.continueEvaluation) then exit;
     taskChain.create(tasksToQueue,context^);
@@ -979,6 +986,7 @@ FUNCTION T_parallelMapGenerator.doEnqueueTasks(CONST loc: T_tokenLocation; CONST
         end;
       end;
     until doneFetching or doneQueuing or not(context^.continueEvaluation);
+    lastQueued:=tasksToQueue;
     taskChain.destroy;
   end;
 
