@@ -1663,11 +1663,13 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
 
   VAR nextToken:P_token;
       n:array[1..3] of P_token;
+      id:string;
   begin
     nextToken:=fetch(messages,recycler);
     if nextToken=nil then exit(false);
     while nextToken<>nil do case nextToken^.tokType of
       tt_iifElse: begin
+        // : may be part of # ? # : # or part of a pattern like (x:Type)
         n[1]:=fetch(messages,recycler);
         if n[1]<>nil then begin
           if (n[1]^.tokType=tt_identifier) and (associatedPackage<>nil)
@@ -1695,12 +1697,22 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
           if (n[1]<>nil) and (n[1]^.tokType=tt_ponFlipper) then begin
             n[2]:=fetch(messages,recycler);
             if (n[2]<>nil) and (n[2]^.tokType=tt_identifier) then begin
+              id:=nextToken^.txt;
               nextToken^.txt:=nextToken^.txt+ID_QUALIFY_CHARACTER+n[2]^.txt;
-              associatedPackage^.resolveId(nextToken^,nil);
-              recycler^.disposeToken(n[1]);
-              recycler^.disposeToken(n[2]);
-              appendToken(nextToken);
-              nextToken:=nil;
+              if associatedPackage^.resolveId(nextToken^,nil) then begin
+                recycler^.disposeToken(n[1]);
+                recycler^.disposeToken(n[2]);
+                appendToken(nextToken);
+                nextToken:=nil;
+              end else begin
+                //Could not interpret A.B as qualified identifier - interpreting as "PON" instead
+                nextToken^.txt:=id;
+                associatedPackage^.resolveId(nextToken^,nil);
+                appendToken(nextToken);
+                appendToken(n[1]);
+                nextToken:=n[2];
+                //=> repeat case distinction
+              end;
             end else begin
               associatedPackage^.resolveId(nextToken^,nil);
               appendToken(nextToken);
@@ -1750,6 +1762,10 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
         appendToken(nextToken);
         nextToken:=nil;
       end;
+      // while <x> do <y>         <end_of_scope or semicolon> -> while(<x>,<y>)
+      // repeat <x> until <y>     <end_of_scope or semicolon> -> repeat(<x>,<y>)
+      // if <x> then <y>          <end_of_scope or semicolon> -> <x> ? <y> : void
+      // if <x> then <y> else <z> <end_of_scope or semicolon> -> <x> ? <y> : <z>
       tt_braceClose: begin
         n[1]:=fetch(messages,recycler);
         if (n[1]<>nil) then begin
