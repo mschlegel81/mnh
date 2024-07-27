@@ -3,7 +3,7 @@ LOG_FILE_NAME:=changeFileExt(myPath,'.log');
 EXIT_CODE:=156; //For Linux, exit codes must be in range 0..255
 main->begin
   deleteFile(LOG_FILE_NAME);
-  local code:=executor.exec([myPath,'out']).trailing;
+  code:=executor.exec([myPath,'out']).trailing;
   fileLines(LOG_FILE_NAME).map(::print);
   deleteFile(LOG_FILE_NAME);
   code==EXIT_CODE

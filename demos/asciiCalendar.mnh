@@ -12,12 +12,12 @@ private bigDigit:=
  [' ### ','#   #',' ####','    #',' ### ']];
 
 private getWeeks(year,month)->begin
-  local firstDayOfMonth:=parseTime('dd.mm.yyyy',format('01.%2.2d.%4.4d',month,year)).round;
-  local lastDayOfMonth :=parseTime('dd.mm.yyyy',month=12 ? format('01.%2.2d.%4.4d',      1,year+1)
+  firstDayOfMonth:=parseTime('dd.mm.yyyy',format('01.%2.2d.%4.4d',month,year)).round;
+  lastDayOfMonth :=parseTime('dd.mm.yyyy',month=12 ? format('01.%2.2d.%4.4d',      1,year+1)
                                                          : format('01.%2.2d.%4.4d',month+1,year  )).round-1;
-  local startingMonday :=firstDayOfMonth;
+  startingMonday :=firstDayOfMonth;
   while(formatTime('ddd',startingMonday).copy(0,2)!='Mo',startingMonday-=1);
-  local daysOnTab:=[startingMonday..lastDayOfMonth]-firstDayOfMonth+1;
+  daysOnTab:=[startingMonday..lastDayOfMonth]-firstDayOfMonth+1;
   daysOnTab
   .group([0..size(daysOnTab)-1] div 7)
   .getInner(1)
@@ -26,17 +26,17 @@ private getWeeks(year,month)->begin
 end;
 
 private printCalendar(year)->begin
-  local digitIndexes:=toString(year).chars.softCast;
-  local bigYear:=[0..4].each(i,bigDigit[digitIndexes].getInner(i).join(' '));
+  digitIndexes:=toString(year).chars.softCast;
+  bigYear:=[0..4].each(i,bigDigit[digitIndexes].getInner(i).join(' '));
   bigYear:=repeat(' ',(91-bigYear[0].length) div 2)&bigYear;
   print('+',repeat('-',91),'+');
   printf('|%-91s|',bigYear);
 
-  local weeks:=[1..12].each(month,getWeeks(year,month));
-  local lineFormat:='| %-20s | %-20s | %-20s | %-20s |';
-  local splitLine:='+'&repeat(repeat('-',22)&'+',4);
-  local nameOfMonth:=['Januar','Februar','Maerz','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
-  local weekDays:='Mo Di Mi Do Fr Sa So';
+  weeks:=[1..12].each(month,getWeeks(year,month));
+  lineFormat:='| %-20s | %-20s | %-20s | %-20s |';
+  splitLine:='+'&repeat(repeat('-',22)&'+',4);
+  nameOfMonth:=['Januar','Februar','Maerz','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  weekDays:='Mo Di Mi Do Fr Sa So';
   ([0..2]*4).each(leftMonth,
     print(splitLine),
     printf@(lineFormat | nameOfMonth[[leftMonth..leftMonth+3]]),

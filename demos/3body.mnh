@@ -22,14 +22,14 @@ private F:={begin
 
 @SuppressUnusedWarning
 private asymmetryOf(x:List(6))->begin
-  local A:=[sqr(x[0]-x[2]).agg(+),
-            sqr(x[4]-x[2]).agg(+),
-            sqr(x[0]-x[4]).agg(+)];
+  A:=[sqr(x[0]-x[2]).agg(+),
+      sqr(x[4]-x[2]).agg(+),
+      sqr(x[0]-x[4]).agg(+)];
   max(A)-min(A);
 end;
 
 private newTrailPlotter(style)->{begin
-  local trace:=[];
+  trace:=[];
 save;
   trace:=trailing(trace|[$x],300);
   addPlot([$x],style&' .');
@@ -41,13 +41,13 @@ private timeStepSize:=2E-2;
 @demo_for=plotting, animation
 main->begin
   plot.setOptions([['axisStyleX',3],['axisStyleY',3],['autoscaleX',true],['autoscaleY',true]]);
-  local state:=initialState;
-  local plotter:=[newTrailPlotter('red'),
-                  newTrailPlotter('green'),
-                  newTrailPlotter('blue')];
+  state:=initialState;
+  plotter:=[newTrailPlotter('red'),
+            newTrailPlotter('green'),
+            newTrailPlotter('blue')];
 
-  local stepForward:=integrator(CASH_KARP,F,timeStepSize,1E-8);
-  local stepCounter:=-1;
+  stepForward:=integrator(CASH_KARP,F,timeStepSize,1E-8);
+  stepCounter:=-1;
   clearAnimation(true);
   postDisplay;
   while(!plotClosed,begin

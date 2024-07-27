@@ -1,9 +1,9 @@
 //*Returns a "broken" random number generator, returning deterministic (and easily predictable) values
 private myRandomGenerator(seed:Int)->{
   begin
-    local residue:=seed;
+    residue:=seed;
   save;
-    local result:=residue mod $k;
+    result:=residue mod $k;
     residue:=residue div $k;
     result;
   end};
@@ -12,11 +12,11 @@ private myRandomGenerator(seed:Int)->{
 //*Returns a booleanList(2): [win without switching, win with switching]
 @demo_for=stateful expressions
 private montyHallCustomRun(rand:Expression(1))->begin
-  local doors:=rand(3)=[0..2];
-  local firstPick:=rand(3);
-  local goatDoors:=indexOf(!doors and !([0..2]=firstPick));
-  local goatDoorToOpen:=goatDoors[rand(goatDoors.size)];
-  local option:=[0..2].filter({firstPick<>$k<>goatDoorToOpen}).head;
+  doors:=rand(3)=[0..2];
+  firstPick:=rand(3);
+  goatDoors:=indexOf(!doors and !([0..2]=firstPick));
+  goatDoorToOpen:=goatDoors[rand(goatDoors.size)];
+  option:=[0..2].filter({firstPick<>$k<>goatDoorToOpen}).head;
   doors[[firstPick,option]];
 end;
 

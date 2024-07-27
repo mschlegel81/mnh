@@ -15,7 +15,7 @@ mutable balls:=[newBall];
 private plotState->begin
   //plot pins
   [0..6].each(i,[0..i].each(j,[j*2-i,12-i]),|).plot('. 3 red');
-  local fillFactor:=5/max(50,collected.getInner(1).max);
+  fillFactor:=5/max(50,collected.getInner(1).max);
   //plot aggregation columns
   collected.sort.each(i,[2*i[0],i[1]*fillFactor]).addPlot('bar fs blue');
   //plot balls

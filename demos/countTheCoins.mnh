@@ -1,8 +1,8 @@
 @demo_for=memoization
 private memoized change(amount>0,set)->
 begin
-  local restSet:=set.get(set<=amount); //only work with coins >= amount
-  local coin:=head(restSet); //the current coin is the first (i.e. largest) of the remaining coins
+  restSet:=set.get(set<=amount); //only work with coins >= amount
+  coin:=head(restSet); //the current coin is the first (i.e. largest) of the remaining coins
   size(restSet)=0 ? 0 :
   size(restSet)=1
     ? (amount mod coin = 0 ? 1 : 0)

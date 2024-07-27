@@ -4,16 +4,16 @@ private isEven(i:Int)->(i and 1) = 0;
 
 ethiopianMultiplication(a_>=1,b_>=1)->ethiopianMultiplication(a_,b_,false);
 ethiopianMultiplication(a_>=1,b_>=1,doPrint:Boolean)->begin
-  local a:=a_;
-  local b:=b_;
-  local aColumn:=[a];
-  local bColumn:=[b];
+  a:=a_;
+  b:=b_;
+  aColumn:=[a];
+  bColumn:=[b];
   while(a>1,begin
     aColumn|=(a:=halve(a));
     bColumn|=(b:=double(b));
   end);
-  local strikeOut:=aColumn.each(v,isEven(v));
-  local result:=bColumn[!strikeOut].agg(+);
+  strikeOut:=aColumn.each(v,isEven(v));
+  result:=bColumn[!strikeOut].agg(+);
 
   doPrint ? begin
     //Pretty printing:

@@ -2,8 +2,8 @@
 @SuppressUnusedWarning=all
 timingOutGenerator(sourceGenerator:IteratableExpression,runForSeconds:Numeric)->
 {begin
-   local gen:=sourceGenerator;
-   local timeout:=scriptTime+runForSeconds;
+   gen:=sourceGenerator;
+   timeout:=scriptTime+runForSeconds;
  save;
    scriptTime<timeout
    ? gen()
@@ -12,8 +12,8 @@ timingOutGenerator(sourceGenerator:IteratableExpression,runForSeconds:Numeric)->
 
 //*Returns a list of all integer pairs [a,b] with initialSum<=(a+b)<=finalSum and a,b>=minElementValue, ordered by (a+b)
 pairGenerator(initialSum,finalSum,minElementValue<=initialSum)->{begin
-  local k:=initialSum;
-  local i:=minElementValue-1;
+  k:=initialSum;
+  i:=minElementValue-1;
 save;
   (k-i<=minElementValue) ? begin k+=1; i:=minElementValue-1; end : void;
   k<=finalSum ? [i+=1,k-i] : void;
@@ -27,7 +27,7 @@ private subsetMapping(elements,basePerElement)->begin
   assert(elements.isList);
   assert(basePerElement.isList(elements.size));
   {begin
-     local k:=[$0];
+     k:=[$0];
      [elements,basePerElement.each(b,k:=divMod(k[0],b)).getInner(1)].transpose.each(V,V[1]=0 ? void : [1..V[1]].each(i,V[0]),|);
    end};
 end;
@@ -35,14 +35,14 @@ end;
 //*Returns an iterator over all distinct subsets of C
 subSetIterator(C:Collection)->
 begin
-  local elements:=C.elementFrequency.sort;
-  local basePerElement:=elements.getInner(1)+1;
+  elements:=C.elementFrequency.sort;
+  basePerElement:=elements.getInner(1)+1;
   rangeGenerator(0,basePerElement.agg(*)-1).pMap(subsetMapping(elements.getInner(0),basePerElement));
 end;
 
 //*Returns the count of iteratable expression i
 count(i:IteratableExpression)->begin
-  local result:=0;
+  result:=0;
   while(!isVoid(i()),result+=1);
   result;
 end;
@@ -54,28 +54,28 @@ count(i)->i.size;
 //*Behaves mostly like pMap but returns the elements in the order
 //*  their calculation is finished, not in enqueue-order.
 outOfOrderMap(parameters:Collection,f:Expression(1))->{begin
-  local pending:=map(parameters,(parameter)->future(f,[parameter]));
+  pending:=map(parameters,(parameter)->future(f,[parameter]));
 save;
   pending.size=0
   ? return void
   : void;
-  local firstDone:=void;
-  local sleepTime:=1E-4;
+  firstDone:=void;
+  sleepTime:=1E-4;
   while(firstDone.isVoid,
     firstDone:=pending.each(task,task.peekFuture
                                  ? index
                                  : void,orElse)
     orElse sleep(sleepTime:=min(sleepTime*1.2,1))); //sleep not longer than one second
-  local result:=pending[firstDone]();
+  result:=pending[firstDone]();
   pending[firstDone]:=void;
   result;
 end}.toIteratableExpression;
 
 //*Wraps iterator in a new IteratableExpression which removes duplicates
 deduplicate(iterator:IteratableExpression)->{begin
-  local seen:=[].toSet;
+  seen:=[].toSet;
 save;
-  local next:=iterator();
+  next:=iterator();
   while(!next.isVoid AND next in seen,next:=iterator());
   seen||=next;
   next;
@@ -84,10 +84,10 @@ end}.toIteratableExpression;
 //*Wraps iterator in a new IteratableExpression which removes duplicates
 //*Terminates when more than maxDuplicates duplicates have been encountered or the underlying iterator terminates
 deduplicate(iterator:IteratableExpression,maxDuplicates>=1)->{begin
-  local seen:=[].toSet;
-  local duplicatesCounted:=0;
+  seen:=[].toSet;
+  duplicatesCounted:=0;
 save;
-  local next:=iterator();
+  next:=iterator();
   while(!next.isVoid AND next in seen AND (duplicatesCounted+=1)<=maxDuplicates,next:=iterator());
   seen||=next;
   duplicatesCounted>maxDuplicates
@@ -100,10 +100,10 @@ end}.toIteratableExpression;
 //*  dovetail(rangeGenerator(1),rangeGenerator(1))
 //*  .filter((i)->i.agg(<) AND gcd@i=1);
 dovetail(g1:IteratableExpression,g2:IteratableExpression)->{begin
-  local l1:=[g1()];
-  local l2:=[g2()];
-  local k:=0;
-  local i:=-1;
+  l1:=[g1()];
+  l2:=[g2()];
+  k:=0;
+  i:=-1;
 save;
   while(true,begin
     (k-i<=0)
@@ -116,23 +116,23 @@ save;
         : i:=-1;
       end
     : void;
-    local a:=l1[i+=1];
-    local b:=l2[k-i];
+    a:=l1[i+=1];
+    b:=l2[k-i];
     a.isVoid OR b.isVoid ? void : return [a,b];
   end);
 end}.toIteratableExpression;
 
 //*Returns a window iterator, effectively returning all consecutive sub-lists of the given width/size
 window(I:Iteratable,width>1)->{begin
-  local gen:=I.toIteratableExpression;
-  local window:=[];
+  gen:=I.toIteratableExpression;
+  window:=[];
   begin
-    local next:=void;
+    next:=void;
     while(window.size<width AND !isVoid(next:=gen()),
           window||=next);
   end;
 save;
-  local out:=window;
+  out:=window;
   window:=window.tail;
   window||=gen();
   out.size=width ? out : void;
@@ -140,9 +140,9 @@ end}.toIteratableExpression;
 
 //*Returns a dynamic concatenation of all given iteratables
 concat(A:Iteratable,...)->toIteratableExpression(()->begin
-  local remainingGenerators:=map($params,::toIteratableExpression);
+  remainingGenerators:=map($params,::toIteratableExpression);
 save;
-  local nextOutput:=(remainingGenerators[0] orElse {void})();
+  nextOutput:=(remainingGenerators[0] orElse {void})();
   while(remainingGenerators.size>0 AND nextOutput.isVoid,begin
     remainingGenerators:=remainingGenerators.tail;
     nextOutput:=(remainingGenerators[0] orElse {void})();

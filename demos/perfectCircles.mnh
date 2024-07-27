@@ -11,8 +11,8 @@ private errorFunc(k)->
 USE downhillSimplex;
 private datastore CONFIG_OF_K:=[[2,downhillSimplex(errorFunc(2),[2.89,2.23],0.001,1E-15)[1]]].toMap;
 findSolution(forK>=2)->CONFIG_OF_K[forK] orElse begin
-  local maxK:=CONFIG_OF_K.getInner(0).max;
-  local par:=CONFIG_OF_K[maxK];
+  maxK:=CONFIG_OF_K.getInner(0).max;
+  par:=CONFIG_OF_K[maxK];
   [maxK+1..forK].each(k,begin
     (k-[99..1]/100).each(subK,par:=downhillSimplex(errorFunc(subK),par,0.001,1E-10,DEFAULT_DOWNHILL_SIMPLEX_OPTIONS.withStepLimit(10) )[1]);
                               par:=downhillSimplex(errorFunc(k   ),par,0.001,1E-15)[1];
@@ -30,15 +30,15 @@ plotCircles(k,circleStyle:String,gridStyle:String,zoom,rotate)->begin
   setOptions([['x0',-1],['x1',1],['autoscaleX',false],['axisStyleX',0],['logscaleX',false],
               ['y0',-1],['y1',1],['autoscaleY',false],['axisStyleY',0],['logscaleY',false],
               ['preserveAspect',true]]);
-  local par:=findSolution(k);
+  par:=findSolution(k);
   par[0]<1 ? par[0]:=1/par[0] : void;
-  local I:=[floor(ln(1E-3/zoom)/ln(par[0]))..
-            ceil (ln(3        )/ln(par[0]))];
+  I:=[floor(ln(1E-3/zoom)/ln(par[0]))..
+      ceil (ln(3        )/ln(par[0]))];
 
-  local scale  :=par[0]^I*zoom;
-  local radii  :=rad0(par)*scale;
-  local centers:=[scale*cos(par[1]*I-rotate),
-                  scale*sin(par[1]*I-rotate)].transpose;
+  scale  :=par[0]^I*zoom;
+  radii  :=rad0(par)*scale;
+  centers:=[scale*cos(par[1]*I-rotate),
+            scale*sin(par[1]*I-rotate)].transpose;
   plot();
   circleStyle==''
   ? void
@@ -64,10 +64,10 @@ end;
 @demo_for=animation, datastores, math, numerics/optimization
 main(anim in ['zoomin','zoomout'],K)->
 begin
-  local k:=K.toInt;
+  k:=K.toInt;
   clearAnimation;
-  local z:=      findSolution(k)[0]^((2*k+1) /50);
-  local p:=(pi*4-findSolution(k)[1]* (2*k+1))/50;
+  z:=      findSolution(k)[0]^((2*k+1) /50);
+  p:=(pi*4-findSolution(k)[1]* (2*k+1))/50;
   (anim=='zoomin' ? [0..49] : [49..0])
   .each(i,plotCircles(k,'orange ellipse 1 f','black',z^i,p*i),
                  addAnimationFrame,

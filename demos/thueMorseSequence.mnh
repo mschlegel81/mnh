@@ -1,5 +1,5 @@
 thueMorseSequence(targetLength:Int)->begin
-  local result:=[false];
+  result:=[false];
   while(result.size<targetLength,result|=!result);
   head(result,targetLength);
 end;

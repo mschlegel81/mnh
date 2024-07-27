@@ -13,8 +13,8 @@ unrank(n:Int)->n.digits(2).tail.join.split('0').length;
 
 //*See http://rosettacode.org/wiki/Index_finite_lists_of_positive_integers
 main->begin
-  print('List    : ',local x:=[1,6,1,4597,0]);
-  print('Rank    : ',local r:=x.rank);
+  print('List    : ',x:=[1,6,1,4597,0]);
+  print('Rank    : ',r:=x.rank);
   print('Unranked: ',r.unrank);
   print;
   printf("%s\t->\t%s\t->\t%s",[0..10],[0..10].map(::unrank),[0..10].map(::unrank).map(::rank));

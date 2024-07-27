@@ -27,7 +27,7 @@ plain datastore previousInput:='';
 
 @demo_for=custom forms
 main->begin
-  local inputText:=previousInput;
+  inputText:=previousInput;
   showDialog('Calculator',
     [newInputEditor('mnh')
       .bind(::inputText),

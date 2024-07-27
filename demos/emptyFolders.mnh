@@ -1,8 +1,8 @@
 @demo_for=file processing
 emptyFolders(root)->begin
-  local subFolders:=folders(root&'/*');
-  local subFiles  :=files  (root&'/*');
-  local result:=subFolders.pEach(folder,folder.emptyFolders).flatten;
+  subFolders:=folders(root&'/*');
+  subFiles  :=files  (root&'/*');
+  result:=subFolders.pEach(folder,folder.emptyFolders).flatten;
   result|(subFiles==[] AND subFolders.minus(result)==[]
           ? root
           : void);

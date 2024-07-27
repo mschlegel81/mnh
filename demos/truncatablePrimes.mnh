@@ -21,8 +21,8 @@ rightTruncatablePrimes(maxPrime>10)->
 @demo_for=list processing
 //*See http://rosettacode.org/wiki/Truncatable_primes
 main->begin
-  local ltp:=leftTruncatablePrimes (1000000);
-  local rtp:=rightTruncatablePrimes(1000000);
+  ltp:=leftTruncatablePrimes (1000000);
+  rtp:=rightTruncatablePrimes(1000000);
   print('There are ',ltp.size, ' left truncatable primes, the largest of which is ',ltp.max);
   print('There are ',rtp.size,' right truncatable primes, the largest of which is ',rtp.max);
   print('The largest prime which is both left- and right truncatable is ',ltp.intersect(rtp).max);

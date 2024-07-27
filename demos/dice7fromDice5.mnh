@@ -6,7 +6,7 @@
 //*Optimized version with vectorization
 @demo_for=vectorization, statistics
 private rand7of5(count:Int)->begin
-  local r:=intRandom(5,count)*5+intRandom(5,count);
+  r:=intRandom(5,count)*5+intRandom(5,count);
   r:=r[r<21] mod 7;
   r.size<count
   ? r | rand7of5(count-r.size)

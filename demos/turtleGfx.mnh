@@ -3,12 +3,12 @@ private removeRedundantSequences(s,s)->s;
 private removeRedundantSequences(s,prev)->removeRedundantSequences(replace(s,['+-','-+','[]','[+]','[-]'],''),s);
 
 private cleanString(drawChars:String, input:String, allowShortening:Boolean)->begin
-  local ignorables:=('~'|input.chars).minus(['+','-','F','[',']']);
+  ignorables:=('~'|input.chars).minus(['+','-','F','[',']']);
   local clean:=replace(replace(input,
-                               copy(drawChars,[0..length(drawChars)-1],1),
-                               'F'),
-                       ignorables,
-                       '');
+                         copy(drawChars,[0..length(drawChars)-1],1),
+                         'F'),
+                 ignorables,
+                 '');
 
   replace(
     removeRedundantSequences(clean,''),
@@ -18,37 +18,37 @@ end;
 
 turtle(startAngle:Numeric,rotAngleInDegrees:Numeric,drawChars:String,s:String)->turtle(startAngle,rotAngleInDegrees,drawChars,s,true);
 turtle(startAngle:Numeric,rotAngleInDegrees:Numeric,drawChars:String,s:String,allowShortening:Boolean)->begin
-  local cleanInput:=cleanString(drawChars,s,allowShortening);
+  cleanInput:=cleanString(drawChars,s,allowShortening);
   //init State variables
-  local turtlePos:=[0,0];
-  local turtleDir:=startAngle*degToRad;
-  local posStack:=[];
-  local dirStack:=[];
-  local rotAngle:=rotAngleInDegrees*degToRad;
-  local OP:=toMap([['0', {begin local oldPos:=turtlePos; turtlePos+=    [cos(turtleDir),sin(turtleDir)]; oldPos; end}],
-                   ['+', {begin turtleDir-=rotAngle; void; end}],
-                   ['-', {begin turtleDir+=rotAngle; void; end}],
-                   ['[', {begin
-                           posStack|=[turtlePos];
-                           dirStack|=turtleDir;
-                           void;
-                         end}],
-                   [']', {begin
-                           turtlePos:=trailing(posStack);
-                           posStack := leading(posStack);
-                           turtleDir:=trailing(dirStack);
-                           dirStack := leading(dirStack);
-                           [[Nan,Nan]] | turtlePos;
-                         end}],
-                   ['1', {begin local oldPos:=turtlePos; turtlePos+=  2*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
-                   ['2', {begin local oldPos:=turtlePos; turtlePos+=  4*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
-                   ['3', {begin local oldPos:=turtlePos; turtlePos+=  8*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
-                   ['4', {begin local oldPos:=turtlePos; turtlePos+= 16*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
-                   ['5', {begin local oldPos:=turtlePos; turtlePos+= 32*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
-                   ['6', {begin local oldPos:=turtlePos; turtlePos+= 64*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
-                   ['7', {begin local oldPos:=turtlePos; turtlePos+=128*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
-                   ['8', {begin local oldPos:=turtlePos; turtlePos+=256*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
-                   ['9', {begin local oldPos:=turtlePos; turtlePos+=512*[cos(turtleDir),sin(turtleDir)]; oldPos; end}]]);
+  turtlePos:=[0,0];
+  turtleDir:=startAngle*degToRad;
+  posStack:=[];
+  dirStack:=[];
+  rotAngle:=rotAngleInDegrees*degToRad;
+  OP:=toMap([['0', {begin local oldPos:=turtlePos; turtlePos+=    [cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+             ['+', {begin turtleDir-=rotAngle; void; end}],
+             ['-', {begin turtleDir+=rotAngle; void; end}],
+             ['[', {begin
+                     posStack|=[turtlePos];
+                     dirStack|=turtleDir;
+                     void;
+                   end}],
+             [']', {begin
+                     turtlePos:=trailing(posStack);
+                     posStack := leading(posStack);
+                     turtleDir:=trailing(dirStack);
+                     dirStack := leading(dirStack);
+                     [[Nan,Nan]] | turtlePos;
+                   end}],
+             ['1', {begin oldPos:=turtlePos; turtlePos+=  2*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+             ['2', {begin oldPos:=turtlePos; turtlePos+=  4*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+             ['3', {begin oldPos:=turtlePos; turtlePos+=  8*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+             ['4', {begin oldPos:=turtlePos; turtlePos+= 16*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+             ['5', {begin oldPos:=turtlePos; turtlePos+= 32*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+             ['6', {begin oldPos:=turtlePos; turtlePos+= 64*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+             ['7', {begin oldPos:=turtlePos; turtlePos+=128*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+             ['8', {begin oldPos:=turtlePos; turtlePos+=256*[cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+             ['9', {begin oldPos:=turtlePos; turtlePos+=512*[cos(turtleDir),sin(turtleDir)]; oldPos; end}]]);
   cleanInput.chars.each(c,OP[c]()) | [turtlePos];
 end;
 

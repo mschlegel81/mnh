@@ -13,14 +13,14 @@ removeDoubleBlanks(s:StringList)->s.trimRight.join("\n").replace("\n\n\n","\n\n"
 sortLines(s:StringList)->s.unique.sort;
 
 unifiedDiff(aName:String,bName:String,aLines:StringList,bLines:StringList,additionalLines>=0)->begin
-  local edit:=diff(aLines,bLines,true)['edit'].pEach(e,e[0]='+' ? [e[0],e[1]+1,e[2]+1,bLines[e[2]]]
-                                                                : [e[0],e[1]+1,e[2]+1,aLines[e[1]]]);
-  local runs:=
+  edit:=diff(aLines,bLines,true)['edit'].pEach(e,e[0]='+' ? [e[0],e[1]+1,e[2]+1,bLines[e[2]]]
+                                                          : [e[0],e[1]+1,e[2]+1,aLines[e[1]]]);
+  runs:=
   begin
-    local indexes:=edit.pEach(e,e[0]<>' ' ? [index-additionalLines..index+additionalLines] : void,|) //add additional lines to each run and concatenate all
-                       .unique //remove duplicate lines and sort
-                       .each(i,i>=edit.size or i<0 ? void : i);
-    local splits:=(indexes.tail<>indexes.leading+1);
+    indexes:=edit.pEach(e,e[0]<>' ' ? [index-additionalLines..index+additionalLines] : void,|) //add additional lines to each run and concatenate all
+                 .unique //remove duplicate lines and sort
+                 .each(i,i>=edit.size or i<0 ? void : i);
+    splits:=(indexes.tail<>indexes.leading+1);
     [indexes[true|splits],indexes[splits|true]].transpose;
   end;
   ['--- '&aName,'+++ '&bName]|
@@ -35,7 +35,7 @@ end;
 @newEdit
 @language=diff
 editDiff(editorFile:String)->begin
-  local compareWith:=ask("Pick tab to compare with",editors.each(e,e=editorFile ? void : e));
+  compareWith:=ask("Pick tab to compare with",editors.each(e,e=editorFile ? void : e));
   unifiedDiff(compareWith,editorFile,editorContent(compareWith),editorContent(editorFile),2);
 end;
 
@@ -49,7 +49,7 @@ private printFileLink(filename:String)->printFileLink(filename,0,0);
 @utility=search/find in all open files
 @SuppressUnusedParameterWarning
 findInAll(editorFile:String)->begin
-  local searchRegex:=ask('Please enter regex for search.');
+  searchRegex:=ask('Please enter regex for search.');
   searchRegex<>''
   ? editors.each(editor,editor.editorContent.each(line,line.matches(searchRegex) ? printFileLink('@',editor,':',index+1,',',1) : void))
   : print('No regex given - search cancelled');
@@ -61,11 +61,11 @@ end;
 @language=diff
 @SuppressUnusedParameterWarning
 compareFolders(editorFile:String)->begin
-  local folder1:=ask('Please enter folder 1').expandedFileName;
-  local filesIn1:=folder1.allFiles.replaceOne(folder1,'');
-  local folder2:=ask('Please enter folder 2').expandedFileName;
-  local filesIn2:=folder2.allFiles.replaceOne(folder2,'');
-  local toCompare:=filesIn1.intersect(filesIn2)
+  folder1:=ask('Please enter folder 1').expandedFileName;
+  filesIn1:=folder1.allFiles.replaceOne(folder1,'');
+  folder2:=ask('Please enter folder 2').expandedFileName;
+  filesIn2:=folder2.allFiles.replaceOne(folder2,'');
+  toCompare:=filesIn1.intersect(filesIn2)
                   .each(file,fileContents(folder1&file)==fileContents(folder2&file) ? void : file)
                   .union(filesIn1.minus(filesIn2),
                          filesIn2.minus(filesIn1));
@@ -116,8 +116,9 @@ editDiff2(editorFile:String)->
 @utility=Check for updates
 @SuppressUnusedParameterWarning
 checkForUpdates(editorFile:String)->begin
-  local availableDownloads:=
-  httpGet(local downloadPage:='http://schlegel.bplaced.net/mnh/downloads.html')['body']
+//TODO: Update with github address
+  availableDownloads:=
+  httpGet(downloadPage:='http://schlegel.bplaced.net/mnh/downloads.html')['body']
   .split("\n")
   .matchComposite('a href="mnh5_.*\.zip"')
   .flatten

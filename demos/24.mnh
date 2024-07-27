@@ -20,17 +20,17 @@ private getRiddle->rangeGenerator(0,1000).each(i,
 private errPrint(...)->print@(...) orElse false;
 
 private isCorrectSolution(set:IntList(4),text:String)->text.trim=="" ? false : begin
-  local valids:=((set&"") | OPLIST | ['','(',')']).toSet;
-  local invalids:=text.tokenSplit.trim.each(tok,tok in valids ? void : tok);
+  valids:=((set&"") | OPLIST | ['','(',')']).toSet;
+  invalids:=text.tokenSplit.trim.each(tok,tok in valids ? void : tok);
   invalids==[]
   ? void
   : return errPrint('The input contains invalid token(s): ',invalids);
-  local usedNumbers:=text.tokenSplit.softCast.filter(::isInt).sort;
+  usedNumbers:=text.tokenSplit.softCast.filter(::isInt).sort;
   usedNumbers==set
   ? void
   : return errPrint("The input does not use the given numbers.\n  got     : ",usedNumbers
                                                             ,"\n  expected: ",set);
-  local expressionResult:=try({interpret(text)},{$0});
+  expressionResult:=try({interpret(text)},{$0});
   !(expressionResult==24)
   ? return errPrint('The input does not evaluate to 24 but to ',expressionResult,'.')
   : print('The solution is valid.');
@@ -39,10 +39,10 @@ end;
 
 private playARound->begin
   print('-------------------------------------------------------------------');
-  local set:=getRiddle;
-  local answer:=ask('Find an expression to calculate 24 from the numbers '&toString(set).unbrace&'.');
-  local retrying:=true;
-  local solutionOk:=false;
+  set:=getRiddle;
+  answer:=ask('Find an expression to calculate 24 from the numbers '&toString(set).unbrace&'.');
+  retrying:=true;
+  solutionOk:=false;
   while(retrying and !(solutionOk:=isCorrectSolution(set,answer)),
   begin
     retrying:=ask('Retry?',['yes','no'])='yes';

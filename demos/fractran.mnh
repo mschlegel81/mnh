@@ -10,10 +10,10 @@ private niceRational(L:IntList(BASE.size))->
 //*This routine transforms a rational number to the corresponding prime factor powers
 //*e.g. rational(15,4)->[-2,1,1,0,0,0,0,0,0,0] - read as 15/4 = 2^(-2)*3^1*5^1*7^0*...
 private rational(enumerator:Int,denominator:Int)->begin
-  local en:=enumerator;
-  local de:=denominator;
+  en:=enumerator;
+  de:=denominator;
   BASE.each(b,begin
-    local k:=0;
+    k:=0;
     while(en mod b=0,begin k+=1; en:=en div b; end);
     while(de mod b=0,begin k-=1; de:=de div b; end);
     k;
@@ -32,8 +32,8 @@ private parseFractions(s:String)->
 
 //*The core algorithm;
 private Fractran(out:Expression(2),fractions,k,steplimit)->begin
-  local state:=k;
-  local terminated:=false;
+  state:=k;
+  terminated:=false;
   out(0,state);
   [1..steplimit].each(step,terminated ? void :
     begin

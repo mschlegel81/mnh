@@ -1,6 +1,6 @@
 @demo_for=expressions/stateful, custom types
 main->begin
-  local Q:=newQueue;
+  Q:=newQueue;
   [1..100].each(i,Q.put(i),(i and 1)=1 ? Q() : void);
   print('The next element is ',Q());
   Q.closeQueue;

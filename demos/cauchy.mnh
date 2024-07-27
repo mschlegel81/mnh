@@ -1,5 +1,5 @@
 private runningSum(L:NumericList)->begin
-  local sum:=0;
+  sum:=0;
   L.each(x,sum+=x);
 end;
 
@@ -18,16 +18,16 @@ private guessLimit(samples:NumericList)->(samples.trailing(4)*[1..4]*0.1).agg(+)
 
 @demo_for=UTF-8 output, numerics
 private guessEpsilons(samples:NumericList)->begin
-  local Max:=
-  local Min:=samples.trailing;
-  local spreads:=samples.reverseList.each(s,begin
+  Max:=
+  Min:=samples.trailing;
+  spreads:=samples.reverseList.each(s,begin
     Max:=max(Max,s);
     Min:=min(Min,s);
     Max-Min;
   end).reverseList;
-  local epsilonList:=
+  epsilonList:=
   EPSILONS.each(epsilon,begin
-    local N:=indexOf(spreads>epsilon).trailing;
+    N:=indexOf(spreads>epsilon).trailing;
     isNumeric(N) ? void : N:=0;
     N<spreads.size*0.9 ? format("N=\v%s\tε=\v%s",N,epsilon) : void;
   end);

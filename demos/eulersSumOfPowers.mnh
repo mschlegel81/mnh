@@ -1,6 +1,6 @@
 asTwoPowersOfFive(i:Int)->begin
-  local P:=[1..floor(i^(1/5))]^5;
-  local r:=intersect(i-P,P);
+  P:=[1..floor(i^(1/5))]^5;
+  r:=intersect(i-P,P);
   r.size=0 ? fail : begin
     r:=r.toList.head;
     round([i-r,r]^(1/5));
@@ -9,8 +9,8 @@ end;
 
 asFourPowersOfFive(i:Int)->begin
   //First construct powers of 5 in the relevant range
-  local P:=([1..floor(i^(1/5))]^5).toSet;
-  local r:=intersect(P:=P+P,i-P);
+  P:=([1..floor(i^(1/5))]^5).toSet;
+  r:=intersect(P:=P+P,i-P);
   r.size=0 ? void : begin
     r:=r.toList.head;
     sort(asTwoPowersOfFive(i-r) | asTwoPowersOfFive(r) | round(i^(1/5)));

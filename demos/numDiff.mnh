@@ -34,7 +34,7 @@ macLaurinExpansion(f:Expression(1),h>0.0,termCount>=1)->taylorExpansion(f,0,h,te
 
 //*For regression test
 main->begin
-  local F:={$t^(1+sin($t))};
-  local tF:=F.taylorExpansion(1,1E-12,6);
+  F:={$t^(1+sin($t))};
+  tF:=F.taylorExpansion(1,1E-12,6);
   print('The approximate taylor expansion of ',F," around 1 is \n  ",tF);
 end;

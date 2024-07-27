@@ -5,9 +5,4 @@ squareEndsWith269696(n:Int)->n          //take the input
                             = 269696;
 
 //*See http://rosettacode.org/wiki/Babbage_problem
-main->begin
-  local intToCheck:=1;
-  while(!squareEndsWith269696(intToCheck),
-    intToCheck+=1);
-  print(intToCheck);
-end;
+main->rangeGenerator(1).filter(::squareEndsWith269696)().print;

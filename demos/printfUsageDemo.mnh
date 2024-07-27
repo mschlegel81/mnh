@@ -25,7 +25,7 @@ print('Note, that you cannot access function/each parameters by string interpola
 print('Insteaf of %{...}s you can write {...}');
 printf("  pi={pi}");
 print('You can use curly brackets or percent signs in formats by escaping them');
-printf('  I am {3/4}%% sure that \{ and \} can be escaped');
+printf('  I am {300/4}%% sure that \{ and \} can be escaped');
 
 print('Decimal format: %d (note the fallback for strings');
 printf('  %d',[integer,real,string]);
@@ -68,3 +68,6 @@ printf('  %x',integer);
 
 print('Hexadecimal form: %6.4x (6 chars width minimum, 4 digits guaranteed even if zero)');
 printf('  %6.4x',integer);
+
+print('Finally... you can use f"<some format string" instead of format("<some format string>")');
+print(f'pi={pi}');

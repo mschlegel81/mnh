@@ -6,10 +6,10 @@ private makeSquare(n:Int)->
 (n and 2)==2 ? LUXSquare((n-2) div 4) :
 fail('makeSquare must be called with an odd integer; ',n,' is even') :
 begin
-  local S:=[1..n].map({[1..n]*0});
+  S:=[1..n].map({[1..n]*0});
   S[0,n div 2]:=1;
-  local i:=n-1;
-  local j:=n div 2+1;
+  i:=n-1;
+  j:=n div 2+1;
   [2..n^2].each(k,begin
     S[i,j]:=k;
     i:=k mod n=0 ? (i+1) mod n : (i+n-1) mod n;
@@ -20,8 +20,8 @@ end;
 
 //*Conway's LUX method
 private LUXSquare(n:Int)->begin
-  local tab:=[[['L',[4,1]],['U',[1,4]],['X',[1,4]]].toMap,
-              [['L',[2,3]],['U',[2,3]],['X',[3,2]]].toMap];
+  tab:=[[['L',[4,1]],['U',[1,4]],['X',[1,4]]].toMap,
+        [['L',[2,3]],['U',[2,3]],['X',[3,2]]].toMap];
   [0..2*n]
     .each(i,i<n   ? [0..2*n].each(j,       'L'      ) :
             i=n   ? [0..2*n].each(j,j==n ? 'U' : 'L') :
