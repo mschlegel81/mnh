@@ -443,8 +443,8 @@ pos(',',['Hello','Test','1,2,3']);
 
 pos(['a','b'],'cdb');
 
-repeat('-',10);
-#S repeat(s:String,k:Int);
+repeatString('-',10);
+#S repeatString(s:String,k:Int);
 #C Returns a string containing s repeated k times
 
 //Simple test for correct bracketing:

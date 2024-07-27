@@ -359,7 +359,7 @@ FUNCTION replace_one_or_all(CONST literalRecycler:P_literalRecycler; CONST param
 FUNCTION replaceOne_impl intFuncSignature; begin result:=replace_one_or_all(recycler,params,false); end;
 FUNCTION replace_impl    intFuncSignature; begin result:=replace_one_or_all(recycler,params,true);  end;
 
-FUNCTION repeat_impl intFuncSignature;
+FUNCTION repeatString_impl intFuncSignature;
   VAR sub,res:ansistring;
       i:longint;
   begin
@@ -902,7 +902,7 @@ INITIALIZATION
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE,'escapeJava'    ,@escapeJava_imp    ,ak_unary     );
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE,'replaceOne'    ,@replaceOne_impl   ,ak_ternary   );
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE,'replace'       ,@replace_impl      ,ak_ternary   );
-  builtinFunctionMap.registerRule(STRINGS_NAMESPACE,'repeat'        ,@repeat_impl       ,ak_binary    );
+  builtinFunctionMap.registerRule(STRINGS_NAMESPACE,'repeatString'  ,@repeatString_impl ,ak_binary    );
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE,'reverseString' ,@reverseString_impl,ak_unary     );
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE,'diff'          ,@diff_impl         ,ak_variadic_2);
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE,'diffStats'     ,@diffStats_impl    ,ak_binary    );

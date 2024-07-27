@@ -1,5 +1,5 @@
 #!/usr/bin/mnh_light
-USE '..\packages\guiScripts.mnh',test_config,'..\make_config.mnh','..\packages\formattingUtils.mnh','..\packages\statistics.mnh';
+USE '..\packages\guiScripts.mnh',test_config,'..\make_config.mnh','..\packages\formattingUtils.mnh';
 private plain datastore expectations:=[].toMap;
 private datastore runTimes:=[].toMap;
 
@@ -117,7 +117,7 @@ private checkExpectation(script:String,testRunOutput:StringList)->begin
   : expectation==outputToCheck
     ? true
     : begin
-        TEST_FAILURE_LOG.appendFileLines(unifiedDiff('expected for '&script&'/'&myFlavour,'output',expectation,outputToCheck,2)|repeat('/',100));
+        TEST_FAILURE_LOG.appendFileLines(unifiedDiff('expected for '&script&'/'&myFlavour,'output',expectation,outputToCheck,2)|repeatString('/',100));
         failedTests|=script;
         false;
       end;

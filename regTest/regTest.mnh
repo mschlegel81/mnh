@@ -4,7 +4,7 @@ USE testExpectation,test_config;
 private mutable longestCaseText:=0;
 private printCase(s:String)->begin
   longestCaseText:=max(longestCaseText,s.length);
-  printDirect("\r",s,repeat(' ',longestCaseText-length(s)));
+  printDirect("\r",s,repeatString(' ',longestCaseText-length(s)));
   s=='' ? void : note("Testcase: ",s,"\n",'%{$1/1024²}0.3fMB used (%{$1/$0*100}.1f%%)'.format@(mnhInfo.getAll(['configured_mem','used_mem'])));
 end;
 
@@ -110,8 +110,8 @@ testAll(logging:Boolean, forceRun:Boolean)->begin
     allDemos.size+1-toRun.size-ord(runExamples),
                     toRun.size+ord(runExamples),
     getFailedTests.size);
-  allPassed ? print(#27"[92mAll tests ok     ",repeat(' ',50))
-            : print(#27"[91;5mSome tests failed:",repeat(' ',50),"\n",join(#27"[91;5m    "&getFailedTests,"\n")) orElse setExitCode(99);
+  allPassed ? print(#27"[92mAll tests ok     ",repeatString(' ',50))
+            : print(#27"[91;5mSome tests failed:",repeatString(' ',50),"\n",join(#27"[91;5m    "&getFailedTests,"\n")) orElse setExitCode(99);
   print(#27'[0m');
   showTestTimeInfo;
 end;
@@ -150,8 +150,8 @@ main('only',case)->begin
     allDemos.size+1-toRun.size-ord(runExamples),
                     toRun.size+ord(runExamples),
     getFailedTests.size);
-  allPassed ? print("All tests ok     ",repeat(' ',50))
-            : print("Some tests failed:",repeat(' ',50),"\n",join("    "&getFailedTests,"\n")) orElse setExitCode(99);
+  allPassed ? print("All tests ok     ",repeatString(' ',50))
+            : print("Some tests failed:",repeatString(' ',50),"\n",join("    "&getFailedTests,"\n")) orElse setExitCode(99);
   showTestTimeInfo;
 end;
 

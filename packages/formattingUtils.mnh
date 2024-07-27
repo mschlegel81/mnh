@@ -25,7 +25,7 @@ formatTable(L:List)->begin
   .join("\n")
   .formatTabs;
   columnCount:=txt.length.max;
-  txt.each(line,index=1 ? line.replace([' ','┃'],['━','╋'])&repeat('━',columnCount-line.length) : line);
+  txt.each(line,index=1 ? line.replace([' ','┃'],['━','╋'])&repeatString('━',columnCount-line.length) : line);
 end;
 
 //*Formats a list as a table for printout. The result is a stringList

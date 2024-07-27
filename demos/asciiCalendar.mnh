@@ -28,13 +28,13 @@ end;
 private printCalendar(year)->begin
   digitIndexes:=toString(year).chars.softCast;
   bigYear:=[0..4].each(i,bigDigit[digitIndexes].getInner(i).join(' '));
-  bigYear:=repeat(' ',(91-bigYear[0].length) div 2)&bigYear;
-  print('+',repeat('-',91),'+');
+  bigYear:=repeatString(' ',(91-bigYear[0].length) div 2)&bigYear;
+  print('+',repeatString('-',91),'+');
   printf('|%-91s|',bigYear);
 
   weeks:=[1..12].each(month,getWeeks(year,month));
   lineFormat:='| %-20s | %-20s | %-20s | %-20s |';
-  splitLine:='+'&repeat(repeat('-',22)&'+',4);
+  splitLine:='+'&repeatString(repeatString('-',22)&'+',4);
   nameOfMonth:=['Januar','Februar','Maerz','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
   weekDays:='Mo Di Mi Do Fr Sa So';
   ([0..2]*4).each(leftMonth,
