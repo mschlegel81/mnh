@@ -769,13 +769,16 @@ FUNCTION T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasErrors
 PROCEDURE finalizeCodeAssistance;
   VAR i:longint;
       response:P_codeAssistanceResponse;
-      folderForUsageScan:ansistring;
       assistanceRequest:P_codeAssistanceRequest;
   begin
     enterCriticalSection(codeAssistanceCs);
     shuttingDown:=true;
     for i:=0 to 99 do if codeAssistantIsRunning then begin
-      codeAssistanceThread.Terminate;
+      try
+        codeAssistanceThread.Terminate;
+      except
+        //There is nothing we can do here...
+      end;
       leaveCriticalSection(codeAssistanceCs);
       sleep(1); ThreadSwitch;
       enterCriticalSection(codeAssistanceCs);
@@ -783,10 +786,12 @@ PROCEDURE finalizeCodeAssistance;
     while pendingRequests.canGetNext(assistanceRequest) do dispose(assistanceRequest,destroy);
 
     if not(codeAssistantIsRunning)
-    then doneCriticalSection(codeAssistanceCs);
-    pendingRequests.destroy;
-    while preparedResponses.canGetNext(response) do disposeMessage(response);
-    preparedResponses.destroy;
+    then begin
+      doneCriticalSection(codeAssistanceCs);
+      pendingRequests.destroy;
+      while preparedResponses.canGetNext(response) do disposeMessage(response);
+      preparedResponses.destroy;
+    end;
     isFinalized:=true;
   end;
 
