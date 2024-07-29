@@ -60,6 +60,7 @@ CONST
   LITERAL_NAN_TEXT     = 'Nan';
   LITERAL_INF_TEXT     = 'Inf';
   LITERAL_BOOL_TEXT: array[boolean] of string = ('false', 'true');
+  ALTERNATIVE_NOT_TEXT = 'not';
 
   ONE_SECOND                    =1/(24*60*60);
   ONE_MINUTE                    =1/(24*60);

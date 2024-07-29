@@ -1577,6 +1577,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
           else if result^.txt=LITERAL_INF_TEXT         then begin result^.tokType:=tt_literal; result^.data:=recycler^.newRealLiteral(infinity); end
           else if result^.txt=LITERAL_TEXT_VOID        then begin result^.tokType:=tt_literal; result^.data:=newVoidLiteral;                 end
           else if result^.txt=LITERAL_TEXT_END_OF_GENERATOR then begin result^.tokType:=tt_literal; result^.data:=newGeneratorClosedLiteral; end
+          else if result^.txt=ALTERNATIVE_NOT_TEXT          then result^.tokType:=tt_unaryOpNegate
           else begin
             result^.data:=associatedPackage;
             for tc in T_typeCheck do if result^.txt=C_typeCheckInfo[tc].name then begin

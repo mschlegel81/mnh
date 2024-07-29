@@ -285,7 +285,7 @@ PROCEDURE TAbstractSynMnhSyn.handleId(CONST id:string; CONST line:longint; VAR c
     then begin
       if builtinRules.contains(id)
       then fTokenId:=tkBultinRule
-      else if (id='not') and (fLine[col]=' ') and (fLine[col+1]='i') and (fLine[col+2]='n') then begin fTokenId:=tkOperator; inc(col,3); end
+      else if (id='not') then fTokenId:=tkOperator
       else fTokenId:=tkDefault;
     end;
   end;
@@ -297,7 +297,7 @@ PROCEDURE TMnhInputSyn.handleId(CONST id:string; CONST line:longint; VAR col:lon
     else if highlightingData.isUserRule(id)          then fTokenId:=tkUserRule
     else if highlightingData.isLocalId (id,line,col) then fTokenId:=tkLocalVar
     else if builtinRules    .contains  (id)          then fTokenId:=tkBultinRule
-    else if (id='not') and (fLine[col]=' ') and (fLine[col+1]='i') and (fLine[col+2]='n') then begin fTokenId:=tkOperator; inc(col,3); end
+    else if (id='not') then fTokenId:=tkOperator
     else                                                  fTokenId:=tkDefault;
   end;
 
