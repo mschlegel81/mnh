@@ -674,7 +674,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
         tt_braceClose,tt_expBraceClose,tt_listBraceClose,tt_iifElse,tt_do,tt_until,
         tt_endOfPatternDeclare,tt_endOfPatternAssign,tt_semicolon:
           localIdStack.scopePop(messages,tok^.location,tok,true);
-        tt_each,tt_parallelEach:begin
+        tt_each,tt_parallelEach,tt_for:begin
           localIdStack.scopePush(tok,sc_each);
           localIdStack.addId(EACH_INDEX_IDENTIFIER,tok^.location,tt_eachIndex);
           localIdStack.addId(tok^.txt             ,tok^.location,tt_eachParameter);
@@ -817,7 +817,6 @@ PROCEDURE T_idStack.scopePush(CONST openToken:P_token; CONST scopeType:T_scopeTy
 
 PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLocation; CONST closeToken:P_token; CONST warnAboutUnused:boolean);
   VAR topIdx:longint;
-      i:longint;
   PROCEDURE raiseMismatchError;
     VAR message:string;
     begin
@@ -840,9 +839,9 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
       setLength(scope,topIdx);
     end;
 
-  PROCEDURE popWhileIfPresent;
+  PROCEDURE popSpecialIfPresent;
     begin
-      if scope[topIdx].scopeStartToken^.tokType=tt_while then performPop;
+      if scope[topIdx].scopeStartToken^.tokType in [tt_while,tt_for] then performPop;
     end;
 
   begin
@@ -853,7 +852,7 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
     end;
     if closeToken<>nil then case closeToken^.tokType of
       tt_semicolon: begin
-        popWhileIfPresent;
+        popSpecialIfPresent;
         exit;
       end;
       tt_braceClose: begin
@@ -878,15 +877,16 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
         then raiseMismatchError;
       end;
       tt_endBlock: begin
-        popWhileIfPresent;
+        popSpecialIfPresent;
         if scope[topIdx].scopeStartToken^.tokType<>tt_beginBlock
         then raiseMismatchError;
       end;
       tt_do: begin
         if scope[topIdx].scopeStartToken^.tokType=tt_for then begin
+          exit; //This is not a pop...
 
           //for <id> in ... do ...
-          //TODO: fix/remove the "in" token; attach "id" to "for"; handle "id" as part of context.
+
         end else
         if scope[topIdx].scopeStartToken^.tokType<>tt_while // while ... do ...
         then raiseMismatchError;
@@ -1320,7 +1320,7 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
       tt_blockLocalVariable ,
       tt_customTypeCheck    ,
       tt_eachParameter,
-      tt_each,tt_parallelEach: if references<>referencedLocation then exit(false);
+      tt_each,tt_parallelEach,tt_for: if references<>referencedLocation then exit(false);
       else exit(false);
     end;
     {$WARN 5092 OFF}
@@ -1374,7 +1374,7 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
     result.startLoc     :=token^.location;
     result.endLoc       :=token^.location;
     result.endLoc.column:=endsAtColumn;
-    result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_userRule,tt_globalVariable,tt_customType,tt_blockLocalVariable,tt_customTypeCheck,tt_eachParameter,tt_each,tt_parallelEach];
+    result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_userRule,tt_globalVariable,tt_customType,tt_blockLocalVariable,tt_customTypeCheck,tt_eachParameter,tt_each,tt_for,tt_parallelEach];
     result.tokenText:=safeTokenToString(token);
     if result.canRename then begin
       case token^.tokType of
@@ -1791,6 +1791,7 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
         end else messages^.raiseSimpleError('Invalid for construct. Syntax is: for <id> in <iterable> do [parallel] ...',nextToken^.location);
         recycler^.disposeToken(n[1]);
         recycler^.disposeToken(n[2]);
+        nextToken^.data:=nil;
         appendToken(nextToken);
         nextToken:=nil;
       end;

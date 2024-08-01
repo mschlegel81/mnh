@@ -267,6 +267,10 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       tt_eachIndex,
       tt_eachParameter,
       tt_blank: result:=txt;
+      tt_for: begin
+         result:='for '+txt+' in ';
+         if data<>nil then result:=result+P_literal(data)^.toString(limit-length(result))+',';
+      end;
       tt_attributeComment:result:=ATTRIBUTE_PREFIX+txt;
       tt_docComment      :result:=COMMENT_PREFIX+txt;
       tt_functionPattern :result:=patternToString(data);
