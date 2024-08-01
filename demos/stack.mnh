@@ -38,10 +38,10 @@ main->begin
   local s:=newStack;
   //push the primes below 10 to the stack
   primes(10).map((p)->s.push(210/p));
-  while(s.depth>0,begin
+  while s.depth>0 do begin
     //Print out the top element of the stack (string extrapolation)
     printf('Stack top: {s.top} (depth={s.depth})');
     s.pop;
-  end);
+  end;
   s.pop;
 end;

@@ -13,10 +13,11 @@ private bigDigit:=
 
 private getWeeks(year,month)->begin
   firstDayOfMonth:=parseTime('dd.mm.yyyy',format('01.%2.2d.%4.4d',month,year)).round;
-  lastDayOfMonth :=parseTime('dd.mm.yyyy',month=12 ? format('01.%2.2d.%4.4d',      1,year+1)
-                                                         : format('01.%2.2d.%4.4d',month+1,year  )).round-1;
+  lastDayOfMonth :=parseTime('dd.mm.yyyy',month=12
+                   ? format('01.%2.2d.%4.4d',      1,year+1)
+                   : format('01.%2.2d.%4.4d',month+1,year  )).round-1;
   startingMonday :=firstDayOfMonth;
-  while(formatTime('ddd',startingMonday).copy(0,2)!='Mo',startingMonday-=1);
+  while startingMonday mod 7 <> 2 do startingMonday-=1;
   daysOnTab:=[startingMonday..lastDayOfMonth]-firstDayOfMonth+1;
   daysOnTab
   .group([0..size(daysOnTab)-1] div 7)

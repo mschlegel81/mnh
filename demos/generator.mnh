@@ -10,11 +10,11 @@ squareButNotCubic->{begin
   nextSquare:=squares();
 save;
   nextSquare:=squares();
-  while(nextCube==nextSquare,begin
+  while nextCube==nextSquare do begin
     nextCube:=cubes();
     nextSquare:=squares();
-  end);
-  while(nextSquare>nextCube,nextCube:=cubes());
+  end;
+  while nextSquare>nextCube do nextCube:=cubes();
   nextSquare;
 end}.toIteratableExpression;
 

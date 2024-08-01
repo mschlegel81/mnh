@@ -8,10 +8,10 @@ ethiopianMultiplication(a_>=1,b_>=1,doPrint:Boolean)->begin
   b:=b_;
   aColumn:=[a];
   bColumn:=[b];
-  while(a>1,begin
+  while a>1 do begin
     aColumn|=(a:=halve(a));
     bColumn|=(b:=double(b));
-  end);
+  end;
   strikeOut:=aColumn.each(v,isEven(v));
   result:=bColumn[!strikeOut].agg(+);
 

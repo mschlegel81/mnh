@@ -18,7 +18,7 @@ ancestors(4)->[];
 ancestors(n)->begin
   r:=[];
   x:=n;
-  while(!x.isPrime,r|=(x:=x.factorize.agg(+)));
+  while !x.isPrime do r|=(x:=x.factorize.agg(+));
   r;
 end;
 

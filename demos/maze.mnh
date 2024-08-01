@@ -27,7 +27,7 @@ begin
   position:=randomUnvisitedCell(width,height,visited);
   stack:=steps(width,height,position[0],position[1]);
 
-  while(stack.size>0,begin
+  while stack.size>0 do begin
     next:=stack.trailing; stack:=stack.leading;
     next[1] in visited
     ? void
@@ -36,7 +36,7 @@ begin
         visited|=next;
         stack|=steps(width,height,next[1,0],next[1,1]);
       end;
-  end);
+  end;
 
   connectionsAroundDot:={
     ['┼───','┬───','┴───','────',

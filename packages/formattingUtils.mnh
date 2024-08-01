@@ -76,10 +76,10 @@ align(items:StringList,splitters:StringCollection)->begin
     begin
       local mergePath:=distances[0];
       local current:=mergePath.trailing;
-      while(mergePath.size<items.size,begin
+      while mergePath.size<items.size do begin
         local step:=distances.filter((d)->d[0]=current and d[1] not in mergePath).head;
         mergePath|=current:=step[1];
-      end);
+      end;
       [mergePath.leading,mergePath.tail].transpose;
     end.each(pair,begin
          local i0:=pair[0]; local new0:=[];

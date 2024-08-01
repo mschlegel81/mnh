@@ -39,7 +39,7 @@ private
 solve(B)->begin
   local needRun:=isValid(B);
   local Board:=B;
-  while(needRun,
+  while needRun do
   begin
     needRun:=false;
     //intsOnly are the fixed/solved cells
@@ -66,7 +66,7 @@ solve(B)->begin
               : void;
             end,head) orElse newList;
         end);
-  end);
+  end;
   Board;
 end;
 
@@ -83,11 +83,11 @@ end;
 randomSolution->begin
   local foundSolution:=false;
   local Board:=void;
-  while(!foundSolution,begin
+  repeat
     Board:=initialBoard.restrictRandom.solve;
-    while(isValid(Board) AND !(Board.isSolved),Board:=Board.restrictRandom.solve);
+    while isValid(Board) AND !(Board.isSolved) do Board:=Board.restrictRandom.solve;
     foundSolution:=Board.isSolved;
-  end);
+  until foundSolution;
   Board;
 end;
 
