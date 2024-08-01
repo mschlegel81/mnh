@@ -530,7 +530,6 @@ DESTRUCTOR T_abstractLexer.destroy;
 
 PROCEDURE predigest(VAR first: P_token; CONST inPackage: P_abstractPackage; CONST context: P_context; CONST recycler: P_recycler{$ifdef fullVersion};CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
   VAR t:P_token;
-      rule:P_abstractRule;
       pattern:P_pattern;
   PROCEDURE prepareLambdaBody;
     VAR parameterId: T_patternElementLocation;
@@ -670,15 +669,15 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
           localIdStack.scopePush(tok,sc_block);
         tt_endBlock:
           localIdStack.scopePop(messages,tok^.location,tok,true);
-        tt_braceOpen,tt_expBraceOpen,tt_listBraceOpen,tt_iifCheck:
+        tt_braceOpen,tt_expBraceOpen,tt_listBraceOpen,tt_iifCheck,tt_while,tt_repeat:
           localIdStack.scopePush(tok,sc_bracketOnly);
-        tt_braceClose,tt_expBraceClose,tt_listBraceClose,tt_iifElse,
-        tt_endOfPatternDeclare,tt_endOfPatternAssign:
+        tt_braceClose,tt_expBraceClose,tt_listBraceClose,tt_iifElse,tt_do,tt_until,
+        tt_endOfPatternDeclare,tt_endOfPatternAssign,tt_semicolon:
           localIdStack.scopePop(messages,tok^.location,tok,true);
         tt_each,tt_parallelEach:begin
           localIdStack.scopePush(tok,sc_each);
           localIdStack.addId(EACH_INDEX_IDENTIFIER,tok^.location,tt_eachIndex);
-          localIdStack.addId(tok^.txt           ,tok^.location,tt_eachParameter);
+          localIdStack.addId(tok^.txt             ,tok^.location,tt_eachParameter);
         end;
         tt_assign: begin
           if (nextStatement.token.last<>nil) and (nextStatement.token.last^.tokType=tt_identifier) and localIdStack.hasBeginItem
@@ -828,6 +827,24 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
       adapters^.raiseSimpleError(message,                               location);
     end;
 
+  PROCEDURE performPop;
+    VAR i:longint;
+    begin
+      with scope[topIdx] do for i:=0 to length(ids)-1 do begin
+        if warnAboutUnused and not(ids[i].used) and (adapters<>nil) and not(arrContains(suppressUnusedWarningInLines,ids[i].location.line)) then adapters^.postTextMessage(mt_el2_warning,ids[i].location,'Unused local variable '+ids[i].name);
+        {$ifdef fullVersion}
+        if localIdInfos<>nil then localIdInfos^.addLocalIdInfo(ids[i].name,ids[i].location,location,ids[i].idType);
+        {$endif}
+      end;
+      setLength(scope[topIdx].ids,0);
+      setLength(scope,topIdx);
+    end;
+
+  PROCEDURE popWhileIfPresent;
+    begin
+      if scope[topIdx].scopeStartToken^.tokType=tt_while then performPop;
+    end;
+
   begin
     topIdx:=length(scope)-1;
     if topIdx<0 then begin
@@ -835,6 +852,10 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
       exit;
     end;
     if closeToken<>nil then case closeToken^.tokType of
+      tt_semicolon: begin
+        popWhileIfPresent;
+        exit;
+      end;
       tt_braceClose: begin
         if not(scope[topIdx].scopeStartToken^.tokType in [tt_each,tt_parallelEach,tt_braceOpen])
         then raiseMismatchError;
@@ -854,22 +875,29 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
       end;
       tt_iifElse: begin
         if scope[topIdx].scopeStartToken^.tokType<>tt_iifCheck
-        then exit;
+        then raiseMismatchError;
       end;
       tt_endBlock: begin
+        popWhileIfPresent;
         if scope[topIdx].scopeStartToken^.tokType<>tt_beginBlock
+        then raiseMismatchError;
+      end;
+      tt_do: begin
+        if scope[topIdx].scopeStartToken^.tokType=tt_for then begin
+
+          //for <id> in ... do ...
+          //TODO: fix/remove the "in" token; attach "id" to "for"; handle "id" as part of context.
+        end else
+        if scope[topIdx].scopeStartToken^.tokType<>tt_while // while ... do ...
+        then raiseMismatchError;
+      end;
+      tt_until: begin
+        if scope[topIdx].scopeStartToken^.tokType<>tt_repeat
         then raiseMismatchError;
       end;
       else raise Exception.create('Unexpected closing token '+getEnumName(TypeInfo(closeToken^.tokType),ord(closeToken^.tokType)));
     end;
-    with scope[topIdx] do for i:=0 to length(ids)-1 do begin
-      if warnAboutUnused and not(ids[i].used) and (adapters<>nil) and not(arrContains(suppressUnusedWarningInLines,ids[i].location.line)) then adapters^.postTextMessage(mt_el2_warning,ids[i].location,'Unused local variable '+ids[i].name);
-      {$ifdef fullVersion}
-      if localIdInfos<>nil then localIdInfos^.addLocalIdInfo(ids[i].name,ids[i].location,location,ids[i].idType);
-      {$endif}
-    end;
-    setLength(scope[topIdx].ids,0);
-    setLength(scope,topIdx);
+    performPop;
   end;
 
 {$ifdef fullVersion}
@@ -1752,6 +1780,20 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
         appendToken(nextToken);
         nextToken:=nil;
       end;
+      tt_for:begin
+        n[1]:=fetch(messages,recycler);
+        n[2]:=fetch(messages,recycler);
+        if (n[1]<>nil) and (n[1]^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule]) and
+           (n[2]<>nil) and (n[2]^.tokType = tt_operatorIn)
+        then begin
+          nextToken^.txt:=n[1]^.txt;
+          nextToken^.data:=nil;
+        end else messages^.raiseSimpleError('Invalid for construct. Syntax is: for <id> in <iterable> do [parallel] ...',nextToken^.location);
+        recycler^.disposeToken(n[1]);
+        recycler^.disposeToken(n[2]);
+        appendToken(nextToken);
+        nextToken:=nil;
+      end;
       tt_agg: begin
         n[1]:=fetch(messages,recycler);
         if (n[1]<>nil) and (n[1]^.tokType=tt_braceOpen) then begin
@@ -1763,6 +1805,7 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
         appendToken(nextToken);
         nextToken:=nil;
       end;
+
       // while <x> do <y>         <end_of_scope or semicolon> -> while(<x>,<y>)
       // repeat <x> until <y>     <end_of_scope or semicolon> -> repeat(<x>,<y>)
       // if <x> then <y>          <end_of_scope or semicolon> -> <x> ? <y> : void

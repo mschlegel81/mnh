@@ -275,34 +275,67 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
     end;
 
   PROCEDURE resolveWhile;
-    VAR bracketClosingWhile:P_token=nil;
-        headRule:P_inlineExpression=nil;
+    VAR headRule:P_inlineExpression=nil;
         bodyRule:P_inlineExpression=nil;
 
     FUNCTION parseBodyOk:boolean;
-      VAR i:longint;
-          bodyParts:T_bodyParts;
+      VAR bracketLevel:longint=0;
+          firstTokenOfCondition,
+          firstTokenOfBody,
+          lastTokenOfCondition:P_token;
+
+          p,prev:P_token;
       begin
         result:=false;
-        //first token is <while>-Token
-        //find closing bracket and body parts
-        bodyParts:=getBodyParts(first,1,context,bracketClosingWhile);
-        if bracketClosingWhile=nil then exit(false);
-        if (length(bodyParts)>2) or (length(bodyParts)<1) then begin
+        firstTokenOfCondition:=first^.next;
+        firstTokenOfBody     :=nil;
+        prev:=first;
+        p:=firstTokenOfCondition;
+        //Error case: while do ...
+        if p^.tokType=tt_do then begin
           context^.raiseError('Invalid while-construct; One or two arguments (head only or head + body) are expected.',errorLocation);
           exit(false);
         end;
 
-        for i:=0 to length(bodyParts)-1 do begin
-          if bodyParts[i].last^.next<>bracketClosingWhile then recycler^.disposeToken(bodyParts[i].last^.next);
-          bodyParts[i].last^.next:=nil;
+        while (p<>nil) and not((p^.tokType in [tt_do,tt_semicolon]) and (bracketLevel=0)) do begin
+          if      (p^.tokType in C_openingBrackets) then inc(bracketLevel)
+          else if (p^.tokType in C_closingBrackets) then dec(bracketLevel);
+          prev:=p;
+          p:=p^.next;
         end;
 
-        //create head/body rules------------------------------------------------
-        new(headRule,createForWhile(bodyParts[0].first,bodyParts[0].first^.location,context,recycler));
-        if length(bodyParts)=2 then
-        new(bodyRule,createForWhile(bodyParts[1].first,bodyParts[1].first^.location,context,recycler));
-        //------------------------------------------------create head/body rules
+        if (p<>nil) and (p^.tokType=tt_do) then begin
+          //"normal" case: while <condition> do ...
+          lastTokenOfCondition:=prev;
+          p:=p^.next;
+          firstTokenOfBody:=p;
+          while (p<>nil) and not((p^.tokType = tt_semicolon) and (bracketLevel=0)) do begin
+            if      (p^.tokType in C_openingBrackets) then inc(bracketLevel)
+            else if (p^.tokType in C_closingBrackets) then dec(bracketLevel);
+            prev:=p;
+            p:=p^.next;
+          end;
+        end else if (p<>nil) and (p^.tokType=tt_semicolon) then begin
+          //short case: while <condition> ;
+          lastTokenOfCondition:=prev;
+        end else begin
+          context^.raiseError('Invalid while-construct; One or two arguments (head only or head + body) are expected.',errorLocation);
+          exit(false);
+        end;
+
+        if firstTokenOfBody<>nil then begin
+          //dipose do:
+          lastTokenOfCondition^.next:=recycler^.disposeToken(lastTokenOfCondition^.next);
+          prev^.next:=nil;
+          new(bodyRule,createForWhile(firstTokenOfBody,firstTokenOfBody^.location,context,recycler));
+        end;
+        //Unlink head:
+        assert(p<>nil);
+        assert(p^.tokType=tt_semicolon);
+        first^.next:=p;
+        lastTokenOfCondition^.next:=nil;
+        new(headRule,createForWhile(firstTokenOfCondition,firstTokenOfCondition^.location,context,recycler));
+
         result:=true;
       end;
 
@@ -323,21 +356,17 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
     begin
       returnValue:=NIL_EVAL_RESULT;
       whileLocation:=first^.location;
-      if context^.callDepth>STACK_DEPTH_LIMIT then begin
-        context^.raiseError('Stack overflow in while construct.',whileLocation,mt_el4_systemError);
-        exit;
-      end;
+      if not(parseBodyOk) then exit;
+
       {$ifdef fullVersion}
       if tco_stackTrace in context^.threadOptions then context^.callStackPush(whileLocation,'while',stepForward(whileLocation,6),nil);
       {$endif}
-      if not(parseBodyOk) then exit;
       while (returnValue.reasonForStop=rr_ok)
             and evaluateToBoolean_strict(headRule,headRule^.getLocation,context,recycler)
             and (context^.continueEvaluation) do evaluateBody;
       first^.txt:='';
       first^.tokType:=tt_literal;
       first^.data:=newVoidLiteral;
-      first^.next:=recycler^.disposeToken(bracketClosingWhile);
 
       //cleanup----------------------------------------------------------------------
       headRule^.cleanup(recycler);
@@ -1326,10 +1355,7 @@ end}
           tt_braceClose,tt_listBraceClose,tt_separatorMapItem..tt_operatorConcatAlt,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
           tt_ponFlipper, tt_each,tt_parallelEach,tt_pow2,tt_pow3: applyRule(nil,first^.next);
         end;
-{cT[0]=}tt_while: if (cTokType[1]=tt_braceOpen) then begin
-          first^.next:=recycler^.disposeToken(first^.next);
-          resolveWhile;
-        end;
+{cT[0]=}tt_while: resolveWhile;
 {cT[0]=}tt_iifCheck: if (cTokType[-1]=tt_literal) then begin
           if (P_literal(stack.top^.data)^.literalType=lt_boolean)
           then resolveInlineIf(P_boolLiteral(stack.top^.data)^.value)

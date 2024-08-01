@@ -87,13 +87,14 @@ private fixLpiFile(lpiPath:String,fullVersion:Boolean,buildNr:Int,version:IntLis
     local nextLine:=lpiPath.fileLineIterator;
     local newLines:=[];
     local currLine:=void;
-    while(!isVoid(currLine:=nextLine()),
+    while !isVoid(currLine:=nextLine()) do begin
       currLine.trim=='<VersionInfo>'
       ? begin
           newLines|=versionInfoTag;
-          while(!isVoid(currLine:=nextLine()) AND !(currLine.trim=='</VersionInfo>'));
+          while !isVoid(currLine:=nextLine()) AND !(currLine.trim=='</VersionInfo>');
         end
-      : newLines|=currLine);
+      : newLines|=currLine;
+    end;
     nextLine:=void; //close iterator
     lpiPath.writeFileLines(newLines).assert;
   end;
