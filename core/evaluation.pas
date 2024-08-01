@@ -274,6 +274,18 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       didSubstitution:=context^.continueEvaluation;
     end;
 
+  PROCEDURE resolveFor;
+    begin
+      //first   = for
+      // next   = literal
+      //  next  = do
+      //   next = body...
+
+      //
+
+      //TODO: Implement me...
+    end;
+
   PROCEDURE resolveRepeat;
     VAR bodyRule:P_inlineExpression=nil;
         conditionRule:P_inlineExpression=nil;
@@ -1205,6 +1217,10 @@ end}
         end;
         tt_formatString: resolveFormatString;
 {cT[0]=}tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
+          tt_for: if cTokType[1]=tt_do then begin
+            stack.popLink(first);
+            resolveFor;
+          end;
  {cT[-1]=}tt_separatorMapItem: case cTokType[1] of
             tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_EOL,tt_semicolon,tt_expBraceClose,tt_listBraceClose: processEntryConstructor;
             COMMON_CASES;
@@ -1467,6 +1483,10 @@ end}
         end;
 {cT[0]=}tt_while: resolveWhile;
 {cT[0]=}tt_repeat: resolveRepeat;
+        tt_for: if (cTokType[1]=tt_literal) and (cTokType[2]=tt_do) then resolveFor else begin
+          stack.push(first);
+          didSubstitution:=true;
+        end;
 {cT[0]=}tt_iifCheck: if (cTokType[-1]=tt_literal) then begin
           if (P_literal(stack.top^.data)^.literalType=lt_boolean)
           then resolveInlineIf(P_boolLiteral(stack.top^.data)^.value)
