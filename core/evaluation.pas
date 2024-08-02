@@ -348,12 +348,12 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
         result:=true;
       end;
 
-    VAR whileLocation:T_tokenLocation;
+    VAR repeatLocation:T_tokenLocation;
         returnValue:T_evaluationResult;
     PROCEDURE evaluateBody;
       VAR toReduce:T_tokenRange;
       begin
-        if (bodyRule<>nil) and bodyRule^.matchesPatternAndReplaces(nil,whileLocation,toReduce,context,recycler) then begin
+        if (bodyRule<>nil) and bodyRule^.matchesPatternAndReplaces(nil,repeatLocation,toReduce,context,recycler) then begin
           if reduceExpression(toReduce.first,context,recycler)=rr_okWithReturn then begin
             returnValue.literal:=P_literal(toReduce.first^.data)^.rereferenced;
             returnValue.reasonForStop:=rr_okWithReturn;
@@ -364,11 +364,10 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
 
     begin
       returnValue:=NIL_EVAL_RESULT;
-      whileLocation:=first^.location;
+      repeatLocation:=first^.location;
       if not(parseBodyOk) then exit;
-
       {$ifdef fullVersion}
-      if tco_stackTrace in context^.threadOptions then context^.callStackPush(whileLocation,'while',stepForward(whileLocation,6),nil);
+      if tco_stackTrace in context^.threadOptions then context^.callStackPush(repeatLocation,'while',stepForward(repeatLocation,6),nil);
       {$endif}
       repeat evaluateBody
       until (returnValue.reasonForStop<>rr_ok) or
@@ -378,6 +377,9 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       first^.txt:='';
       first^.tokType:=tt_literal;
       first^.data:=newVoidLiteral;
+      while (first^.next      <>nil) and (first^.next^      .tokType=tt_semicolon) and
+            (first^.next^.next<>nil) and (first^.next^.next^.tokType=tt_semicolon)
+      do first^.next:=recycler^.disposeToken(first^.next);
 
       //cleanup----------------------------------------------------------------------
       bodyRule^.cleanup(recycler);      dispose(bodyRule,destroy);
@@ -452,8 +454,6 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
           new(bodyRule,createForWhile(firstTokenOfBody,firstTokenOfBody^.location,context,recycler));
         end;
         //Unlink head:
-        assert(p<>nil);
-        assert(p^.tokType=tt_semicolon);
         first^.next:=p;
         lastTokenOfCondition^.next:=nil;
         new(headRule,createForWhile(firstTokenOfCondition,firstTokenOfCondition^.location,context,recycler));
@@ -479,7 +479,6 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       returnValue:=NIL_EVAL_RESULT;
       whileLocation:=first^.location;
       if not(parseBodyOk) then exit;
-
       {$ifdef fullVersion}
       if tco_stackTrace in context^.threadOptions then context^.callStackPush(whileLocation,'while',stepForward(whileLocation,6),nil);
       {$endif}

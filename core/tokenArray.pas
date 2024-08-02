@@ -841,12 +841,13 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
 
   PROCEDURE popSpecialIfPresent;
     begin
-      if (length(scope)>0) and (scope[length(scope)-1].scopeStartToken^.tokType in [tt_while,tt_for]) then performPop;
+      topIdx:=length(scope)-1;
+      if (topIdx>=0) and (scope[topIdx].scopeStartToken^.tokType in [tt_while,tt_for]) then performPop;
     end;
 
   begin
     if (closeToken<>nil) and (closeToken^.tokType in [tt_semicolon,tt_endBlock]) then popSpecialIfPresent;
-    if closeToken^.tokType=tt_semicolon then exit;
+    if (closeToken=nil) or (closeToken^.tokType=tt_semicolon) then exit;
     topIdx:=length(scope)-1;
     if topIdx<0 then begin
       if adapters<>nil then adapters^.raiseSimpleError('Missing opening bracket for closing bracket',location);
