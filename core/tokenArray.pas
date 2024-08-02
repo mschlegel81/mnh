@@ -744,7 +744,6 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
       then nextStatement.token.first     :=tok
       else nextStatement.token.last^.next:=tok;
       nextStatement.token.last :=tok;
-
     end;
 
   VAR nextToProcess:P_token=nil;
@@ -1685,6 +1684,9 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
           (tok^.data=pointer(BUILTIN_WRITE_ALL_DATA_STORES)) or
           (tok^.data=pointer(BUILTIN_WRITE_DATA_STORES)))
       then tok^.location.package:=associatedPackage;
+      {$ifdef fullVersion}
+      if  callAndIdInfos<>nil then callAndIdInfos^.add(tok);
+      {$endif}
       tokenQueue.append(tok);
     end;
 
