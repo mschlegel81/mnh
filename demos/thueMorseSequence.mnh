@@ -1,6 +1,6 @@
 thueMorseSequence(targetLength:Int)->begin
   result:=[false];
-  while(result.size<targetLength,result|=!result);
+  while result.size<targetLength do result|=!result;
   head(result,targetLength);
 end;
 //*See http://rosettacode.org/wiki/Thue-Morse

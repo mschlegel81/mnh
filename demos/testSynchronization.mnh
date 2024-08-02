@@ -33,7 +33,7 @@ end;
 assertOk((PAR_ASYNC),(PAYLOAD_MUTABLE))->begin
   reset;
   [1..1000].map((i)->async(::addToSum,[i]))
-            .map((task)->while(task().isVoid,sleep(1E-3)));
+            .map((task)->while task().isVoid do sleep(1E-3));
   assert(sum==500500,sum);
 end;
 
@@ -52,7 +52,7 @@ end;
 assertOk((PAR_ASYNC),(PAYLOAD_STATEFUL))->begin
   local A:=newAggregator;
   [1..1000].map((i)->localAsync(A,[i]))
-            .map((task)->while(task().isVoid,sleep(1E-3)));
+           .map((task)->while task().isVoid do sleep(1E-3));
   assert(A(0)==500500,A(0));
 end;
 

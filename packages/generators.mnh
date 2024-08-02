@@ -43,7 +43,7 @@ end;
 //*Returns the count of iteratable expression i
 count(i:IteratableExpression)->begin
   result:=0;
-  while(!isVoid(i()),result+=1);
+  while !isVoid(i()) do result+=1;
   result;
 end;
 
@@ -61,11 +61,11 @@ save;
   : void;
   firstDone:=void;
   sleepTime:=1E-4;
-  while(firstDone.isVoid,
+  while firstDone.isVoid do
     firstDone:=pending.each(task,task.peekFuture
                                  ? index
                                  : void,orElse)
-    orElse sleep(sleepTime:=min(sleepTime*1.2,1))); //sleep not longer than one second
+    orElse sleep(sleepTime:=min(sleepTime*1.2,1)); //sleep not longer than one second
   result:=pending[firstDone]();
   pending[firstDone]:=void;
   result;
@@ -76,7 +76,7 @@ deduplicate(iterator:IteratableExpression)->{begin
   seen:=[].toSet;
 save;
   next:=iterator();
-  while(!next.isVoid AND next in seen,next:=iterator());
+  while !next.isVoid AND next in seen do next:=iterator();
   seen||=next;
   next;
 end}.toIteratableExpression;
@@ -88,7 +88,7 @@ deduplicate(iterator:IteratableExpression,maxDuplicates>=1)->{begin
   duplicatesCounted:=0;
 save;
   next:=iterator();
-  while(!next.isVoid AND next in seen AND (duplicatesCounted+=1)<=maxDuplicates,next:=iterator());
+  while !next.isVoid AND next in seen AND (duplicatesCounted+=1)<=maxDuplicates do next:=iterator();
   seen||=next;
   duplicatesCounted>maxDuplicates
   ? void
@@ -105,7 +105,7 @@ dovetail(g1:IteratableExpression,g2:IteratableExpression)->{begin
   k:=0;
   i:=-1;
 save;
-  while(true,begin
+  while true do begin
     (k-i<=0)
     ? begin
         k+=1;
@@ -119,7 +119,7 @@ save;
     a:=l1[i+=1];
     b:=l2[k-i];
     a.isVoid OR b.isVoid ? void : return [a,b];
-  end);
+  end;
 end}.toIteratableExpression;
 
 //*Returns a window iterator, effectively returning all consecutive sub-lists of the given width/size
@@ -128,8 +128,8 @@ window(I:Iteratable,width>1)->{begin
   window:=[];
   begin
     next:=void;
-    while(window.size<width AND !isVoid(next:=gen()),
-          window||=next);
+    while window.size<width AND !isVoid(next:=gen())
+       do window||=next;
   end;
 save;
   out:=window;
@@ -143,9 +143,9 @@ concat(A:Iteratable,...)->toIteratableExpression(()->begin
   remainingGenerators:=map($params,::toIteratableExpression);
 save;
   nextOutput:=(remainingGenerators[0] orElse {void})();
-  while(remainingGenerators.size>0 AND nextOutput.isVoid,begin
+  while remainingGenerators.size>0 AND nextOutput.isVoid do begin
     remainingGenerators:=remainingGenerators.tail;
     nextOutput:=(remainingGenerators[0] orElse {void})();
-  end);
+  end;
   nextOutput;
 end);

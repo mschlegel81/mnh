@@ -81,15 +81,15 @@ private restrictRandom(B)->begin
 end;
 
 randomSolution->begin
-  local foundSolution:=false;
-  local Board:=void;
+  Board:=void;
   repeat
     Board:=initialBoard.restrictRandom.solve;
-    while isValid(Board) AND !(Board.isSolved) do Board:=Board.restrictRandom.solve;
-    foundSolution:=Board.isSolved;
-  until foundSolution;
+    while isValid(Board) AND not Board.isSolved do Board:=Board.restrictRandom.solve;
+  until Board.isSolved;
   Board;
 end;
+
+randomSolution;
 
 randomRiddle->begin
   local riddle:=randomSolution;
