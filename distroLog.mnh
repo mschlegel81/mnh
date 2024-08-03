@@ -1,15 +1,7 @@
 private plain datastore LOG;
-private plain datastore versionInfo;
+private plain datastore versionInfo:=['MajorVersionNr'=>0,'MinorVersionNr'=>0,'RevisionNr'=>0].toMap;
 
 maxLoggedBuildNumber->try({max(LOG.getInner(1).getInner(0))},0);
-
-@SuppressUnusedWarning
-private ensureVersionInfo:=versionInfo.isVoid ? begin
-  versionInfo:=['MajorVersionNr'=>0,
-                'MinorVersionNr'=>0,
-                'RevisionNr'=>0].toMap;
-end : void;
-
 
 @SuppressUnusedWarning
 getVersionInfoTag(fullVersion:Boolean,buildNr:Int,version:IntList(3))->begin
