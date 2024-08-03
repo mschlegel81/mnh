@@ -5,14 +5,14 @@ regulaFalsi(F:Expression(1),x0input:Numeric,x1input<>x0input,epsilonF>0.0,epsilo
   x1:=x1input;
   f1:=F(x1);
   counter:=1000;
-  while(abs(f0)>epsilonF<abs(f1) AND abs(x1-x0)>epsilonX AND (counter-=1)>0,begin
+  while abs(f0)>epsilonF<abs(f1) AND abs(x1-x0)>epsilonX AND (counter-=1)>0 do begin
     xm:=x1-f1*(x0-x1)/(f0-f1);
     fm:=F(xm);
     fm=f1 OR fm=f0 ? counter:=0 : void;
     f0*fm>0
     ? begin f0:=fm; x0:=xm; end
     : begin f1:=fm; x1:=xm; f0*=0.5; end;
-  end);
+  end;
   f0=0 ? x0 :
   f1=0 ? x1 :
   x1-f1*(x0-x1)/(f0-f1);

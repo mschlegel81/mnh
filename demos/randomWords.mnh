@@ -16,8 +16,8 @@ private followerTable:=words.pEach(word,word.length<2 ? void : word.copy([0..len
                                      .toMap;
 
 private randomFromTable(T:List)->begin
-  index:=intRandom(T.size);
-  while(T[index,0]<random,index:=intRandom(T.size));
+  index:=void;
+  repeat index:=intRandom(T.size) until T[index,0]>=random;
   T[index,1];
 end;
 

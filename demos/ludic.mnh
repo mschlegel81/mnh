@@ -1,7 +1,7 @@
 LudicSieve->begin
   candidates:=[2..21511];
   L:=[1];
-  while(!(candidates==[]),begin
+  while !(candidates==[]) do begin
     next:=head(candidates);
     next>candidates.size
     ? return L|candidates
@@ -9,7 +9,7 @@ LudicSieve->begin
         candidates:=candidates[[0..candidates.size-1] mod next<>0];
         L|=next;
       end;
-  end);
+  end;
   L;
 end;
 
@@ -23,7 +23,7 @@ ludicGenerator->
     return curr:=1;
   save;
     curr+=1;
-    while(R.each(k,(R[index]-=1)=0 ? begin R[index]:=L[index]; true; end : false,OR),curr+=1);
+    while R.each(k,(R[index]-=1)=0 ? begin R[index]:=L[index]; true; end : false,OR) do curr+=1;
     L|=curr;
     R|=curr;
     curr;

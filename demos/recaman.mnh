@@ -16,12 +16,12 @@ recamanDuplicatesGenerator->{begin
   i:= 0;
   k:=-1;
 save;
-  while(true,begin
+  while true do begin
     k+=1;
     (i_:=i-k)>0 AND i_ not in visited ? i:=i_ : i+=k;
     i in visited ? return i : void;
     visited|=i;
-  end);
+  end;
 end}.toIteratableExpression;
 
 

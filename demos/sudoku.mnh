@@ -27,19 +27,36 @@ initialBoard->begin
   [0..80].each(i,i in indexes ? values[indexes=i,0] : [1..9]);
 end;
 
+BOARD_FORMAT_STRING:=
+//!~
+╔═══╤═══╤═══╦═══╤═══╤═══╦═══╤═══╤═══╗
+║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
+╟───┼───┼───╫───┼───┼───╫───┼───┼───╢
+║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
+╟───┼───┼───╫───┼───┼───╫───┼───┼───╢
+║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
+╠═══╪═══╪═══╬═══╪═══╪═══╬═══╪═══╪═══║
+║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
+╟───┼───┼───╫───┼───┼───╫───┼───┼───╢
+║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
+╟───┼───┼───╫───┼───┼───╫───┼───┼───╢
+║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
+╠═══╪═══╪═══╬═══╪═══╪═══╬═══╪═══╪═══║
+║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
+╟───┼───┼───╫───┼───┼───╫───┼───┼───╢
+║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
+╟───┼───┼───╫───┼───┼───╫───┼───┼───╢
+║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
+╚═══╧═══╧═══╩═══╧═══╧═══╩═══╧═══╧═══╝~.replace('x','%s');
+
 private
-printBoard(B)->[0..8].each(row,print(row in [3,6] ? "---------+---------+---------\n" : '',
-               [0..8].each(col,begin
-                 local i:=col+9*row;
-                 (col in [3,6] ? '|' : '')&
-                 " "&(B[i].isInt ? B[i] : " ")&" ";
-               end,&)))|B;
+printBoard(B)->BOARD_FORMAT_STRING.printf@(B.map((x)->x.isInt ? x : ' '));
 
 private
 solve(B)->begin
   local needRun:=isValid(B);
   local Board:=B;
-  while(needRun,
+  while needRun do
   begin
     needRun:=false;
     //intsOnly are the fixed/solved cells
@@ -66,7 +83,7 @@ solve(B)->begin
               : void;
             end,head) orElse newList;
         end);
-  end);
+  end;
   Board;
 end;
 
@@ -81,13 +98,15 @@ private restrictRandom(B)->begin
 end;
 
 randomSolution->begin
-  local foundSolution:=false;
-  local Board:=void;
-  while(!foundSolution,begin
+  Board:=void;
+  repeat
     Board:=initialBoard.restrictRandom.solve;
-    while(isValid(Board) AND !(Board.isSolved),Board:=Board.restrictRandom.solve);
-    foundSolution:=Board.isSolved;
-  end);
+    while isValid(Board) AND not Board.isSolved
+    do begin
+      Board:=Board.restrictRandom;
+      Board:=Board.solve;
+    end;
+  until Board.isSolved;
   Board;
 end;
 

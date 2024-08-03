@@ -4,10 +4,10 @@ private classify(n:Int)->
   begin
     local seq:=[n];
     local k:=sumOfProperDividers(n);
-    while(size(seq)<=16 and !(k in seq),begin
+    while size(seq)<=16 and !(k in seq) do begin
       seq|=k;
       k:=sumOfProperDividers(k);
-    end);
+    end;
     [n,
      k=head(seq)
      ? (size(seq)=1 ? "perfect" :

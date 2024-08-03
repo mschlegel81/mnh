@@ -14,14 +14,14 @@ private evolve(mutationFalloff,offspringCount,generationLimit)->begin
   local parent:=[0..length(target)-1].each(i,randomCharacter,&);
   local generationCount:=0;
   local mutationRate:=1;
-  while(parent<>target AND generationCount<generationLimit,
+  while parent<>target AND generationCount<generationLimit do
   begin
     parent:=multiplyAndSelect(parent,offspringCount,mutationRate);
     mutationRate:=max(0.05,mutationRate*mutationFalloff);
     (generationCount+=1) mod 20 = 0
     ? printf('%4d %s (%3d)',generationCount,parent,fitness(parent))
     : void;
-  end);
+  end;
   printf('%4d %s',generationCount,parent);
 end;
 

@@ -1,8 +1,8 @@
 @demo_for=math, numerics/integration
 main->
   [[{$x³} ,0,1  ,1000],
-   [{1/$x},1,100,1000],
-   [{$x},0,5000 ,1000],
+   [{1/$x},1,100,1000,1E-20],
+   [{$x},0,5000 ,1000,1E-6],
    [{$x},0,6000 ,1000]]
   .each(task,['integral of ',task[0].toString.unbrace,' in [',task[1],',',task[2],']= ',integrate@task].join("\v"))
   .join("\n")

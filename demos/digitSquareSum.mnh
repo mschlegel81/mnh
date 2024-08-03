@@ -3,14 +3,14 @@ count89(x0>200)->begin
   result:=0;
   DSS:=[1..x0].map((x)->x=>x.digits.sqr.agg(+)).toMap;
   x:=DSS.getInner(1).elementFrequency;
-  while(x.size>0,begin
+  while x.size>0 do begin
     //Work with a map of frequencies: [value,count]
     result+=x[89] orElse 0;
     x[89]:=void;
     x[ 1]:=void;
     t:=x.transpose;
     x:=t[1].group(t[0].map((k)->(DSS[k] orElse DSS[k]:=k.digits.sqr.agg(+)) ),::+);
-  end);
+  end;
   result;
 end;
 

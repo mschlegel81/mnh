@@ -1,11 +1,9 @@
-USE '../packages/generators.mnh';
-
 BITS:=2^[4..0];
 binary(i:Int)->ord((i and BITS)>0).join&'_2';
 
 ternary(i:Int)->begin
   local r:=i.digits(3);
-  while(r.size<5,r:=0|r);
+  while r.size<5 do r:=0|r;
   r.join&'_3';
 end;
 

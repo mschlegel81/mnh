@@ -5,10 +5,10 @@ sieve(maxToCheck>2)->begin
     prim[k]  //if k is marked as prime
     ? begin  //mark multiples of k as not prime
         i:=k*k;
-        while(i<=maxToCheck,begin
+        while i<=maxToCheck do begin
           prim[i]:=false;
           i+=k;
-        end);
+        end;
       end
     : void);
   indexOf(prim);

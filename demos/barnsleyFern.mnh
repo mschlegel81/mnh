@@ -1,7 +1,7 @@
 private barnsleyFern(sampleCount)->begin
   x:=random(1);
   y:=random(1);
-  while (size(x)<=sampleCount, begin
+  while size(x)<=sampleCount do begin
     p1:=random(size(x))<0.02;
     p2:=random(size(x))<0.17;
     x1:=x[p1]; y1:=y[p1];
@@ -9,7 +9,7 @@ private barnsleyFern(sampleCount)->begin
     xNew:=flatten(   0*x1, 0.85*x+0.04*y    ,0.20*x2-0.26*y2    ,-0.15*x2+0.28*y2     );
     y:=   flatten(0.16*y1,-0.04*x+0.85*y+1.6,0.23*x2+0.22*y2+1.6, 0.26*x2+0.24*y2+0.44);
     x:=xNew;
-  end);
+  end;
   transpose([x,y]);
 end;
 

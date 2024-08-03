@@ -63,9 +63,9 @@ nextSecond->sleep(1-formatTime('0.zzz',systime).toReal);
 
 //*Displays a clock, updating every minute
 main->begin
-  async({while(true,begin (fancyTime(systime-floor(systime),0)|'Press Enter to quit').printOnce;
+  async({while true do begin (fancyTime(systime-floor(systime),0)|'Press Enter to quit').printOnce;
   exec('cmd',['/C','title',formatTime('c',systime)]);
-  nextSecond; end)});
+  nextSecond; end});
   ask('Press enter to cancel',['Quit'],false);
 end;
 
@@ -82,7 +82,7 @@ AFTER_METHOD:=[['-lock'    ,{execPipeless('rundll32.exe',['User32.dll,LockWorkSt
                ['-suspend' ,{execPipeless('rundll32.exe',['powrprof.dll,SetSuspendState','0,1,0'])}],
                ['-restart' ,{execPipeless('Shutdown.exe',['-r','-t','00'])}],
                ['-shutdown',{execPipeless('Shutdown.exe',['-s','-t','00'])}],
-               ['-beep'    ,{while(true,begin beep; sleep(1); end)}],
+               ['-beep'    ,{while true do begin beep; sleep(1); end}],
                ['-none'    ,{begin void; end}]].toMap;
 
 //*As with time or interval but with custom action when timer is done
@@ -95,12 +95,12 @@ AFTER_METHOD:=[['-lock'    ,{execPipeless('rundll32.exe',['User32.dll,LockWorkSt
 main(timeOrInterval,after in (AFTER_METHOD.getInner(0)))->begin
   async({begin
     endTime:=guessTimeOrInterval(timeOrInterval);
-    while(systime<endTime,begin
+    while systime<endTime do begin
       ((fancyTime(systime-floor(systime),1)&
         fancyTime(formatTimeNoDate(endTime-systime),2))|
        ['Action: '&after,'Press Enter to cancel']).printOnce;
       nextSecond;
-    end);
+    end;
     AFTER_METHOD[after]();
     halt;
   end});

@@ -14,8 +14,8 @@ private rational(enumerator:Int,denominator:Int)->begin
   de:=denominator;
   BASE.each(b,begin
     k:=0;
-    while(en mod b=0,begin k+=1; en:=en div b; end);
-    while(de mod b=0,begin k-=1; de:=de div b; end);
+    while en mod b=0 do begin k+=1; en:=en div b; end;
+    while de mod b=0 do begin k-=1; de:=de div b; end;
     k;
   end);
 end;
