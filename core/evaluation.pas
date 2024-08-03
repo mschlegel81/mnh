@@ -488,6 +488,9 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       first^.txt:='';
       first^.tokType:=tt_literal;
       first^.data:=newVoidLiteral;
+      while (first^.next      <>nil) and (first^.next^      .tokType=tt_semicolon) and
+            (first^.next^.next<>nil) and (first^.next^.next^.tokType=tt_semicolon)
+      do first^.next:=recycler^.disposeToken(first^.next);
 
       //cleanup----------------------------------------------------------------------
       headRule^.cleanup(recycler);
@@ -618,7 +621,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
     end;
 
   PROCEDURE resolveInlineIf(CONST conditionLit:boolean);
-    VAR p,prev,tokenBeforeElse,lastThen:P_token;
+    VAR p,prev:P_token;
         bracketLevel:longint=0;
     begin
       prev:=first;
