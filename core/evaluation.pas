@@ -275,15 +275,82 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
     end;
 
   PROCEDURE resolveFor;
+    VAR aggregator: P_aggregator=nil;
+        closingToken:P_token;
+    PROCEDURE finalizeAggregation;
+      begin
+        first^.data:=aggregator^.getResult(recycler);
+        first^.txt:='';
+        first^.next:=closingToken;
+        if aggregator^.hasReturn then processReturnStatement;
+        aggregator^.cleanup(recycler);
+        dispose(aggregator,destroy);
+      end;
+
+    VAR sourceLiteral:P_literal;
+        bodyRule:T_expressionList;
+        p, bodyRuleStart, prev:P_token;
+        bracketLevel:longint=0;
+        i: integer;
     begin
+      sourceLiteral:=first^.next^.data;
       //first   = for
       // next   = literal
-      //  next  = do
+      //  next  = do        - disposed at (**)
       //   next = body...
+      setLength(bodyRule,0);
 
-      //
+      prev:=first^.next;
+      p:=   prev^.next;
+      assert(p^.tokType=tt_do); //ensured by condition before call
+      prev^.next:=nil;
+      repeat
+        p:=recycler^.disposeToken(p); (**)
+        bodyRuleStart:=p;
+        while (p<>nil) and (bracketLevel>=0) and not((p^.tokType in [tt_do,tt_aggregatorConstructor,tt_aggregatorExpressionLiteral]) and (bracketLevel=0)) do begin
+          if      (p^.tokType in C_openingBrackets) then inc(bracketLevel)
+          else if (p^.tokType in C_closingBrackets) then dec(bracketLevel);
+          prev:=p;
+          p:=p^.next;
+        end;
+        closingToken:=p;
+        prev^.next:=nil;
+        setLength(bodyRule,length(bodyRule)+1);
+        new(P_inlineExpression(bodyRule[length(bodyRule)-1]),createForEachBody(first^.txt,bodyRuleStart,first^.location,context,recycler));
+      until (p=nil) or (p^.tokType<>tt_do);
 
-      //TODO: Implement me...
+      if (p<>nil) and (p^.tokType=tt_aggregatorConstructor) then begin
+        bodyRuleStart:=p;
+        while (p<>nil) and (bracketLevel>=0) do begin
+          if      (p^.tokType in C_openingBrackets) then inc(bracketLevel)
+          else if (p^.tokType in C_closingBrackets) then dec(bracketLevel);
+          prev:=p;
+          p:=p^.next;
+        end;
+        closingToken:=p;
+        prev^.next:=nil;
+        reduceExpression(bodyRuleStart,context,recycler);
+        p:=bodyRuleStart;
+      end;
+      if not context^.continueEvaluation then exit;
+
+      if (p<>nil) and (p^.tokType=tt_aggregatorExpressionLiteral)
+      then aggregator:=newCustomAggregator(P_expressionLiteral(p^.data),p^.location,context)
+      else aggregator:=newListAggregator(recycler);
+
+      //TODO: Implement call to processListParallel
+      // Syntax: for ... in ... do parallel ... ?
+      processListSerial  (sourceLiteral,bodyRule,aggregator,first^.location,context,recycler);
+
+      //cleanup----------------------------------------------------------------------
+      first:=recycler^.disposeToken(first);
+      finalizeAggregation;
+      recycler^.disposeLiteral(sourceLiteral);
+      for i:=0 to length(bodyRule)-1 do begin
+        bodyRule[i]^.cleanup(recycler);
+        dispose(bodyRule[i],destroy);
+      end;
+      //----------------------------------------------------------------------cleanup
     end;
 
   PROCEDURE resolveRepeat;
@@ -555,7 +622,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
             replace.first:=recycler^.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
             replace.last:=replace.first;
           end else begin
-            context^.raiseError('Aggregators can only be constructed from expression(2) literals!',errorLocation);
+            context^.raiseError('Aggregators can only be constructed from expression literals!',errorLocation);
             exit;
           end;
         end;
