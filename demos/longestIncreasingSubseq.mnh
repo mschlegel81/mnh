@@ -1,8 +1,8 @@
 private longestIncreasingSubsequence(prev,rest)->begin
-  local gRest:=rest.filter({$x>prev});
-  local longestRest:=gRest==[] ? [] :
+  gRest:=rest.filter({$x>prev});
+  longestRest:=gRest==[] ? [] :
   [0..gRest.size-1].pEach(tailLength,begin
-    local T:=gRest.tail(tailLength);
+    T:=gRest.tail(tailLength);
     longestIncreasingSubsequence(T.head,T.tail);
   end,aggregator((x,y)->x.size>=y.size?x:y));
   prev|longestRest;

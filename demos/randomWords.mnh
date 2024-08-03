@@ -3,8 +3,8 @@ USE inputs;
 private words:=dict.fileLines.trim;
 
 private relativeFrequency(L:List)->begin
-  local Freq:=L.elementFrequency.sort;
-  local f:=1/Freq.getInner(1).max;
+  Freq:=L.elementFrequency.sort;
+  f:=1/Freq.getInner(1).max;
   Freq.each(t,[t[1]*f,t[0]]);
 end;
 
@@ -16,17 +16,17 @@ private followerTable:=words.pEach(word,word.length<2 ? void : word.copy([0..len
                                      .toMap;
 
 private randomFromTable(T:List)->begin
-  local index:=intRandom(T.size);
-  while(T[index,0]<random,index:=intRandom(T.size));
+  index:=void;
+  repeat index:=intRandom(T.size) until T[index,0]>=random;
   T[index,1];
 end;
 
 randomWord->begin
-  local len:=lengthTable.randomFromTable;
-  local result:=firstTable.randomFromTable;
-  local lastChar:=result;
+  len:=lengthTable.randomFromTable;
+  result:=firstTable.randomFromTable;
+  lastChar:=result;
   [2..len].each(i,begin
-    local nextChar:=followerTable[lastChar].randomFromTable;
+    nextChar:=followerTable[lastChar].randomFromTable;
     result&=nextChar;
     lastChar:=nextChar;
   end);
@@ -35,7 +35,7 @@ end;
 
 @demo_for=memoization, map operations, strings
 main(count)->begin
-  local cnt:=toInt(count);
+  cnt:=toInt(count);
   assert(cnt>0,'count must be >0');
   [1..cnt].map(()->print(randomWord));
 end;

@@ -18,11 +18,11 @@ OPERATOR_OR (a:TriBool,b:TriBool)->[max(a.head,b.head)].toTriBool;
 OPERATOR_AND(a:TriBool,b:TriBool)->[min(a.head,b.head)].toTriBool;
 @Override
 OPERATOR_XOR(a:TriBool,b:TriBool)->a and b or not(a) and not(b);
-not(a:TriBool)->toTriBool([1-a.head]);
+OPERATOR_NEGATE_LOGICAL(a:TriBool)->toTriBool([1-a.head]);
 
 //*See http://rosettacode.org/wiki/Ternary_logic
 main->TRI_VALUES
-      .map({format("not(%s)\t=\t%s",$x,not($x))})
+      .map({format("not(%s)\t=\t%s",$x,!$x)})
       .join("\n")
       .print orElse
       cross(['and','or','xor'],TRI_VALUES,TRI_VALUES)

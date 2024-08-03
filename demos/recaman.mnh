@@ -1,33 +1,33 @@
 @OEIS=A005132
 recamanGenerator->{begin
-  local visited:=[].toSet;
-  local i:= 0;
-  local k:=-1;
+  visited:=[].toSet;
+  i:= 0;
+  k:=-1;
 save;
   k+=1;
-  (local i_:=i-k)>0 AND i_ not in visited ? i:=i_ : i+=k;
+  (i_:=i-k)>0 AND i_ not in visited ? i:=i_ : i+=k;
   visited|=i;
   i;
 end}.toIteratableExpression;
 
 @SuppressUnusedWarning=all
 recamanDuplicatesGenerator->{begin
-  local visited:=[].toSet;
-  local i:= 0;
-  local k:=-1;
+  visited:=[].toSet;
+  i:= 0;
+  k:=-1;
 save;
-  while(true,begin
+  while true do begin
     k+=1;
-    (local i_:=i-k)>0 AND i_ not in visited ? i:=i_ : i+=k;
+    (i_:=i-k)>0 AND i_ not in visited ? i:=i_ : i+=k;
     i in visited ? return i : void;
     visited|=i;
-  end);
+  end;
 end}.toIteratableExpression;
 
 
 stepsNeededToContainAllIntegersUpTo(k:Int)->
 begin
-  local rest:=[0..k].toSet;
+  rest:=[0..k].toSet;
   recamanGenerator.each(n,begin
     rest>>n;
     rest.size=0

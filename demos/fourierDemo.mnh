@@ -1,6 +1,6 @@
 formatFourierCoefficients(c:List)->begin
-  local threeDigits:=(x)->begin
-    local d:=ceil(2+ln(abs(x))/ln(0.1));
+  threeDigits:=(x)->begin
+    d:=ceil(2+ln(abs(x))/ln(0.1));
     format('%0.'&d&'f',x);
   end;
 
@@ -11,25 +11,25 @@ formatFourierCoefficients(c:List)->begin
 end;
 
 main->begin
-  local C:=[[0,0],
-            [0,1],
-            [-0.5,0],
-            [0,0],
-            [0,0],
-            [0,0.1]];
-  local T:=random(1000).sort*2*pi;
+  C:=[[0,0],
+      [0,1],
+      [-0.5,0],
+      [0,0],
+      [0,0],
+      [0,0.1]];
+  T:=random(1000).sort*2*pi;
   //Construct X from the series + Noise
-  local X:=newFourierSeries(C)(T)+0.1*(random(1000)-0.5);
+  X:=newFourierSeries(C)(T)+0.1*(random(1000)-0.5);
 
   //The linear interpolator is the baseline for comparison
-  local F0   :=newLinearInterpolator([T,X].transpose);
+  F0   :=newLinearInterpolator([T,X].transpose);
   //We can calculate many fourier coefficients, but more than input size/2 does not make any sense
-  local coeff:=calculateFourierCoefficients([T,X].transpose,X.size div 2);
+  coeff:=calculateFourierCoefficients([T,X].transpose,X.size div 2);
 
   //Now we try to minimize the square error by selecting the right number of coefficients
-  local bestCoeffCount:=
+  bestCoeffCount:=
   [1..coeff.size].pEach(h,begin
-    local G:=head(coeff,h).newFourierSeries;
+    G:=head(coeff,h).newFourierSeries;
     [integrate((x)->sqr(G(x)-F0(x)), 0,2*pi,1000),h];
   end,min)[1];
 

@@ -1,14 +1,14 @@
 sieve(maxToCheck>2)->begin
   //initialize boolean array, marking 0 and 1 as "not prime"
-  local prim:=[0..maxToCheck]>=2;
+  prim:=[0..maxToCheck]>=2;
   [0..maxToCheck.sqrt.ceil].each(k,
     prim[k]  //if k is marked as prime
     ? begin  //mark multiples of k as not prime
-        local i:=k*k;
-        while(i<=maxToCheck,begin
+        i:=k*k;
+        while i<=maxToCheck do begin
           prim[i]:=false;
           i+=k;
-        end);
+        end;
       end
     : void);
   indexOf(prim);

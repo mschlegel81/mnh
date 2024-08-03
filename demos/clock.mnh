@@ -14,19 +14,19 @@ GLYPHS:=//!~
 █ █  █  █▀▀  ▀█ ▀▀█  ▀█ █▀█  █  █▀█ ▀▀█ #
 ▀▀▀ ▀▀▀ ▀▀▀ ▀▀▀   ▀ ▀▀▀ ▀▀▀  ▀  ▀▀▀ ▀▀▀ #~
 .split("\n").{begin
-  local S0:=$L[[1..7]].map((l)->l.copy([0..9]*9,9)).transpose;
-  local S1:=$L[[8..11]].map((l)->l.copy([0..9]*6,6)).transpose;
-  local S2:=$L[[12..14]].map((l)->l.copy([0..9]*4,4)).transpose;
+  S0:=$L[[ 1.. 7]].map((l)->l.copy([0..9]*9,9)).transpose;
+  S1:=$L[[ 8..11]].map((l)->l.copy([0..9]*6,6)).transpose;
+  S2:=$L[[12..14]].map((l)->l.copy([0..9]*4,4)).transpose;
   [S0,S1,S2];
 end};
 
 fancyTime(t:Numeric,mode in [0,1,2])->fancyTime(formatTime('hhnnss',t),mode);
 fancyTime(s:String,mode in [0,1,2])->begin
-  local n:=s.chars.ord-ord('0');
-  local hh:=[GLYPHS[0,n[0]],GLYPHS[0,n[1]]].transpose.map(::join);
-  local mm:=[GLYPHS[1,n[2]],GLYPHS[1,n[3]]].transpose.map(::join);
-  local ss:=[GLYPHS[2,n[4]],GLYPHS[2,n[5]]].transpose.map(::join);
-  local hhmm:=[hh,mm].transpose.map(::join);
+  n:=s.chars.ord-ord('0');
+  hh:=[GLYPHS[0,n[0]],GLYPHS[0,n[1]]].transpose.map(::join);
+  mm:=[GLYPHS[1,n[2]],GLYPHS[1,n[3]]].transpose.map(::join);
+  ss:=[GLYPHS[2,n[4]],GLYPHS[2,n[5]]].transpose.map(::join);
+  hhmm:=[hh,mm].transpose.map(::join);
   hhmm[hhmm.size-3]&='    '&ss[ss.size-3];
   hhmm[hhmm.size-2]&='    '&ss[ss.size-2];
   hhmm[hhmm.size-1]&='    '&ss[ss.size-1];
@@ -40,9 +40,9 @@ memoized printOnce(s:StringList)->clearPrint orElse printf('%s',s);
 formatTimeNoDate(t<1)->formatTime('hhnnss',t);
 formatTimeNoDate(t<100/24)->begin
   local rest:=t*24;
-  rest:=(rest-(local hours  :=floor(rest)))*60;
-  rest:=(rest-(local minutes:=floor(rest)))*60;
-               local seconds:=floor(rest);
+  rest:=(rest-(hours  :=floor(rest)))*60;
+  rest:=(rest-(minutes:=floor(rest)))*60;
+               seconds:=floor(rest);
   format('%2.2d%2.2d%2.2d',hours,minutes,seconds);
 end;
 formatTimeNoDate(t)->'995959';
@@ -63,9 +63,9 @@ nextSecond->sleep(1-formatTime('0.zzz',systime).toReal);
 
 //*Displays a clock, updating every minute
 main->begin
-  async({while(true,begin (fancyTime(systime-floor(systime),0)|'Press Enter to quit').printOnce;
+  async({while true do begin (fancyTime(systime-floor(systime),0)|'Press Enter to quit').printOnce;
   exec('cmd',['/C','title',formatTime('c',systime)]);
-  nextSecond; end)});
+  nextSecond; end});
   ask('Press enter to cancel',['Quit'],false);
 end;
 
@@ -82,7 +82,7 @@ AFTER_METHOD:=[['-lock'    ,{execPipeless('rundll32.exe',['User32.dll,LockWorkSt
                ['-suspend' ,{execPipeless('rundll32.exe',['powrprof.dll,SetSuspendState','0,1,0'])}],
                ['-restart' ,{execPipeless('Shutdown.exe',['-r','-t','00'])}],
                ['-shutdown',{execPipeless('Shutdown.exe',['-s','-t','00'])}],
-               ['-beep'    ,{while(true,begin beep; sleep(1); end)}],
+               ['-beep'    ,{while true do begin beep; sleep(1); end}],
                ['-none'    ,{begin void; end}]].toMap;
 
 //*As with time or interval but with custom action when timer is done
@@ -94,13 +94,13 @@ AFTER_METHOD:=[['-lock'    ,{execPipeless('rundll32.exe',['User32.dll,LockWorkSt
 //*              -none (default)
 main(timeOrInterval,after in (AFTER_METHOD.getInner(0)))->begin
   async({begin
-    local endTime:=guessTimeOrInterval(timeOrInterval);
-    while(systime<endTime,begin
+    endTime:=guessTimeOrInterval(timeOrInterval);
+    while systime<endTime do begin
       ((fancyTime(systime-floor(systime),1)&
         fancyTime(formatTimeNoDate(endTime-systime),2))|
        ['Action: '&after,'Press Enter to cancel']).printOnce;
       nextSecond;
-    end);
+    end;
     AFTER_METHOD[after]();
     halt;
   end});

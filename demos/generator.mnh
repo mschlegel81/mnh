@@ -4,17 +4,17 @@ powerGen(power:Int)->rangeGenerator(1)^power;
 
 //*Generates a series of values which are square numbers but not cubic numbers
 squareButNotCubic->{begin
-  local cubes  :=powerGen(3);
-  local squares:=powerGen(2);
-  local nextCube:=cubes();
-  local nextSquare:=squares();
+  cubes  :=powerGen(3);
+  squares:=powerGen(2);
+  nextCube:=cubes();
+  nextSquare:=squares();
 save;
   nextSquare:=squares();
-  while(nextCube==nextSquare,begin
+  while nextCube==nextSquare do begin
     nextCube:=cubes();
     nextSquare:=squares();
-  end);
-  while(nextSquare>nextCube,nextCube:=cubes());
+  end;
+  while nextSquare>nextCube do nextCube:=cubes();
   nextSquare;
 end}.toIteratableExpression;
 

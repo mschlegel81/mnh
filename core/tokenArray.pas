@@ -321,7 +321,7 @@ T_idStack=object
   PROCEDURE suppressUnusedWarningInLine(CONST lineIndex:longint);
 
   PROCEDURE scopePush(CONST openToken:P_token; CONST scopeType: T_scopeType);
-  PROCEDURE scopePop(CONST adapters:P_messages; CONST location:T_tokenLocation; CONST closeToken:P_token; CONST warnAboutUnused:boolean);
+  PROCEDURE scopePop(CONST adapters:P_messages; CONST location:T_tokenLocation; CONST recycler:P_recycler; VAR workingIn:T_enhancedStatement; CONST closeToken:P_token; CONST warnAboutUnused:boolean; CONST forcePop:boolean=false);
   {$ifdef fullVersion}
   PROCEDURE popRemaining(CONST lastLocation: T_tokenLocation);
   {$endif}
@@ -530,7 +530,6 @@ DESTRUCTOR T_abstractLexer.destroy;
 
 PROCEDURE predigest(VAR first: P_token; CONST inPackage: P_abstractPackage; CONST context: P_context; CONST recycler: P_recycler{$ifdef fullVersion};CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
   VAR t:P_token;
-      rule:P_abstractRule;
       pattern:P_pattern;
   PROCEDURE prepareLambdaBody;
     VAR parameterId: T_patternElementLocation;
@@ -571,6 +570,8 @@ PROCEDURE predigest(VAR first: P_token; CONST inPackage: P_abstractPackage; CONS
     end;
 
   begin
+    //remove leading blanks:
+    while (first<>nil) and (first^.tokType=tt_blank) do first:=recycler^.disposeToken(first);
     t:=first;
     while t<>nil do begin
       case t^.tokType of
@@ -617,7 +618,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
       result:=earlierSuppressedUnusedAttribute;
     end;
 
-  PROCEDURE appendTokenToResult(tok:P_token);
+  FUNCTION appendTokenToResultYieldsClosingSemicolon(tok:P_token):boolean;
     VAR
       air: T_addIdResult;
       idType: T_tokenType;
@@ -634,6 +635,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
       end;
 
     begin
+      result:=false;
       case tok^.tokType of
         tt_attributeComment: begin
           if (tok^.txt<>'') and attributeSectionBeforeBody then myGenerics.append(nextStatement.attributes,tok^.txt);
@@ -669,16 +671,21 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
         tt_beginBlock:
           localIdStack.scopePush(tok,sc_block);
         tt_endBlock:
-          localIdStack.scopePop(messages,tok^.location,tok,true);
-        tt_braceOpen,tt_expBraceOpen,tt_listBraceOpen,tt_iifCheck:
+          localIdStack.scopePop(messages,tok^.location,recycler,nextStatement,tok,true);
+        tt_braceOpen,tt_expBraceOpen,tt_listBraceOpen,tt_iifCheck,tt_while,tt_repeat,tt_if:
           localIdStack.scopePush(tok,sc_bracketOnly);
-        tt_braceClose,tt_expBraceClose,tt_listBraceClose,tt_iifElse,
+        tt_braceClose,tt_expBraceClose,tt_listBraceClose,tt_iifElse,tt_do,tt_until,tt_then,tt_else,
         tt_endOfPatternDeclare,tt_endOfPatternAssign:
-          localIdStack.scopePop(messages,tok^.location,tok,true);
-        tt_each,tt_parallelEach:begin
+          localIdStack.scopePop(messages,tok^.location,recycler,nextStatement,tok,true);
+        tt_semicolon:
+          begin
+            localIdStack.scopePop(messages,tok^.location,recycler,nextStatement,tok,true);
+            if localIdStack.scopeBottom then exit(true);
+          end;
+        tt_each,tt_parallelEach,tt_for:begin
           localIdStack.scopePush(tok,sc_each);
           localIdStack.addId(EACH_INDEX_IDENTIFIER,tok^.location,tt_eachIndex);
-          localIdStack.addId(tok^.txt           ,tok^.location,tt_eachParameter);
+          localIdStack.addId(tok^.txt             ,tok^.location,tt_eachParameter);
         end;
         tt_assign: begin
           if (nextStatement.token.last<>nil) and (nextStatement.token.last^.tokType=tt_identifier) and localIdStack.hasBeginItem
@@ -745,7 +752,6 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
       then nextStatement.token.first     :=tok
       else nextStatement.token.last^.next:=tok;
       nextStatement.token.last :=tok;
-
     end;
 
   VAR nextToProcess:P_token=nil;
@@ -756,7 +762,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
       nextToProcess:=tokenQueue.next;
       lastLocation:=nextToProcess^.location;
       if nextToProcess^.tokType=tt_semicolon then begin
-        if localIdStack.scopeBottom then begin
+        if localIdStack.scopeBottom or appendTokenToResultYieldsClosingSemicolon(nextToProcess) then begin
           if nextStatement.token.first=nil then messages^.raiseSimpleError('Empty statement!',nextToProcess^.location);
           recycler^.disposeToken(nextToProcess);
           result:=nextStatement;
@@ -764,8 +770,8 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
           resetTemp;
           localIdStack.destroy;
           exit;
-        end else appendTokenToResult(nextToProcess)
-      end else appendTokenToResult(nextToProcess);
+        end;// else appendTokenToResultYieldsClosingSemicolon(nextToProcess)
+      end else appendTokenToResultYieldsClosingSemicolon(nextToProcess);
     end;
     result:=nextStatement;
     if not(messages^.continueEvaluation) then begin
@@ -775,7 +781,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
       recycler^.cascadeDisposeToken(result.token.first);
     end;
     resetTemp;
-    while not(localIdStack.scopeBottom) do localIdStack.scopePop(messages,lastLocation,nil,not(hasSuppressedUnusedAttribute));
+    while not(localIdStack.scopeBottom) do localIdStack.scopePop(messages,lastLocation,recycler,nextStatement,nil,not(hasSuppressedUnusedAttribute),true);
     localIdStack.destroy;
   end;
 
@@ -816,9 +822,8 @@ PROCEDURE T_idStack.scopePush(CONST openToken:P_token; CONST scopeType:T_scopeTy
     scope[newTopIdx].scopeStartToken:=openToken;
   end;
 
-PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLocation; CONST closeToken:P_token; CONST warnAboutUnused:boolean);
+PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLocation; CONST recycler:P_recycler; VAR workingIn:T_enhancedStatement; CONST closeToken:P_token; CONST warnAboutUnused:boolean; CONST forcePop:boolean=false);
   VAR topIdx:longint;
-      i:longint;
   PROCEDURE raiseMismatchError;
     VAR message:string;
     begin
@@ -828,48 +833,112 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
       adapters^.raiseSimpleError(message,                               location);
     end;
 
+  PROCEDURE performPop;
+    VAR i:longint;
+    begin
+      with scope[topIdx] do for i:=0 to length(ids)-1 do begin
+        if warnAboutUnused and not(ids[i].used) and (adapters<>nil) and not(arrContains(suppressUnusedWarningInLines,ids[i].location.line)) then adapters^.postTextMessage(mt_el2_warning,ids[i].location,'Unused local variable '+ids[i].name);
+        {$ifdef fullVersion}
+        if localIdInfos<>nil then localIdInfos^.addLocalIdInfo(ids[i].name,ids[i].location,location,ids[i].idType);
+        {$endif}
+      end;
+      setLength(scope[topIdx].ids,0);
+      setLength(scope,topIdx);
+      dec(topIdx);
+    end;
+
+  PROCEDURE popSpecialIfPresent;
+    VAR t:P_token;
+    begin
+      topIdx:=length(scope)-1;
+      if (topIdx>=0) and (scope[topIdx].scopeStartToken^.tokType in [tt_while,tt_for,tt_then]) then begin
+        if scope[topIdx].scopeStartToken^.tokType = tt_then then begin
+          scope[topIdx].scopeStartToken^.tokType:=tt_iifCheck;
+          t:=workingIn.token.last;
+          t^.next:=recycler^.newToken(closeToken^.location,C_tokenDefaultId[tt_iifElse],tt_iifElse);
+          t:=t^.next;
+          t^.next:=recycler^.newToken(closeToken^.location,LITERAL_TEXT_VOID,tt_literal,newVoidLiteral);
+          workingIn.token.last:=t^.next;
+        end;
+        performPop;
+      end;
+    end;
+
+  FUNCTION stackIsEmpty:boolean;
+    begin
+      result:=topIdx<0;
+      if result and (adapters<>nil) then adapters^.raiseSimpleError('Missing opening bracket for closing bracket',location);
+    end;
+
   begin
-    topIdx:=length(scope)-1;
-    if topIdx<0 then begin
-      if adapters<>nil then adapters^.raiseSimpleError('Missing opening bracket for closing bracket',location);
+    if (closeToken<>nil) and (closeToken^.tokType=tt_semicolon) then begin
+      popSpecialIfPresent;
       exit;
     end;
+    if (closeToken=nil) and not forcePop then exit;
+    topIdx:=length(scope)-1;
+    if stackIsEmpty then exit;
     if closeToken<>nil then case closeToken^.tokType of
       tt_braceClose: begin
+        popSpecialIfPresent; if stackIsEmpty then exit;
         if not(scope[topIdx].scopeStartToken^.tokType in [tt_each,tt_parallelEach,tt_braceOpen])
         then raiseMismatchError;
       end;
       tt_listBraceClose: begin
+        popSpecialIfPresent; if stackIsEmpty then exit;
         if scope[topIdx].scopeStartToken^.tokType<>tt_listBraceOpen
         then raiseMismatchError;
       end;
-      tt_endOfPatternDeclare,tt_endOfPatternAssign: begin
+      tt_endOfPatternDeclare,tt_endOfPatternAssign:
         if   scope[topIdx].scopeStartToken^.tokType =tt_braceOpen
         then scope[topIdx].scopeStartToken^.tokType:=tt_startOfPattern
         else raiseMismatchError;
-      end;
       tt_expBraceClose: begin
+        popSpecialIfPresent; if stackIsEmpty then exit;
         if scope[topIdx].scopeStartToken^.tokType<>tt_expBraceOpen
         then raiseMismatchError;
       end;
+      tt_then:
+        if scope[topIdx].scopeStartToken^.tokType = tt_if
+        then begin
+          scope[topIdx].scopeStartToken^.tokType:=tt_blank;
+          scope[topIdx].scopeStartToken:=closeToken;
+          exit;
+        end
+        else raiseMismatchError;
+      tt_else:
+        if scope[topIdx].scopeStartToken^.tokType=tt_then
+        then begin
+          scope[topIdx].scopeStartToken^.tokType:=tt_iifCheck;
+          closeToken                   ^.tokType:=tt_iifElse;
+        end else raiseMismatchError;
       tt_iifElse: begin
+        popSpecialIfPresent; if stackIsEmpty then exit;
         if scope[topIdx].scopeStartToken^.tokType<>tt_iifCheck
-        then exit;
+        then raiseMismatchError;
       end;
       tt_endBlock: begin
+        popSpecialIfPresent; if stackIsEmpty then exit;
         if scope[topIdx].scopeStartToken^.tokType<>tt_beginBlock
+        then raiseMismatchError;
+      end;
+      tt_do: begin
+        if scope[topIdx].scopeStartToken^.tokType=tt_for then begin
+          exit; //This is not a pop...
+
+          //for <id> in ... do ...
+
+        end else
+        if scope[topIdx].scopeStartToken^.tokType<>tt_while // while ... do ...
+        then raiseMismatchError;
+      end;
+      tt_until: begin
+        if scope[topIdx].scopeStartToken^.tokType<>tt_repeat
         then raiseMismatchError;
       end;
       else raise Exception.create('Unexpected closing token '+getEnumName(TypeInfo(closeToken^.tokType),ord(closeToken^.tokType)));
     end;
-    with scope[topIdx] do for i:=0 to length(ids)-1 do begin
-      if warnAboutUnused and not(ids[i].used) and (adapters<>nil) and not(arrContains(suppressUnusedWarningInLines,ids[i].location.line)) then adapters^.postTextMessage(mt_el2_warning,ids[i].location,'Unused local variable '+ids[i].name);
-      {$ifdef fullVersion}
-      if localIdInfos<>nil then localIdInfos^.addLocalIdInfo(ids[i].name,ids[i].location,location,ids[i].idType);
-      {$endif}
-    end;
-    setLength(scope[topIdx].ids,0);
-    setLength(scope,topIdx);
+    performPop;
   end;
 
 {$ifdef fullVersion}
@@ -1292,7 +1361,7 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
       tt_blockLocalVariable ,
       tt_customTypeCheck    ,
       tt_eachParameter,
-      tt_each,tt_parallelEach: if references<>referencedLocation then exit(false);
+      tt_each,tt_parallelEach,tt_for: if references<>referencedLocation then exit(false);
       else exit(false);
     end;
     {$WARN 5092 OFF}
@@ -1346,7 +1415,7 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
     result.startLoc     :=token^.location;
     result.endLoc       :=token^.location;
     result.endLoc.column:=endsAtColumn;
-    result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_userRule,tt_globalVariable,tt_customType,tt_blockLocalVariable,tt_customTypeCheck,tt_eachParameter,tt_each,tt_parallelEach];
+    result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_userRule,tt_globalVariable,tt_customType,tt_blockLocalVariable,tt_customTypeCheck,tt_eachParameter,tt_each,tt_for,tt_parallelEach];
     result.tokenText:=safeTokenToString(token);
     if result.canRename then begin
       case token^.tokType of
@@ -1577,6 +1646,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
           else if result^.txt=LITERAL_INF_TEXT         then begin result^.tokType:=tt_literal; result^.data:=recycler^.newRealLiteral(infinity); end
           else if result^.txt=LITERAL_TEXT_VOID        then begin result^.tokType:=tt_literal; result^.data:=newVoidLiteral;                 end
           else if result^.txt=LITERAL_TEXT_END_OF_GENERATOR then begin result^.tokType:=tt_literal; result^.data:=newGeneratorClosedLiteral; end
+          else if result^.txt=ALTERNATIVE_NOT_TEXT          then result^.tokType:=tt_unaryOpNegate
           else begin
             result^.data:=associatedPackage;
             for tc in T_typeCheck do if result^.txt=C_typeCheckInfo[tc].name then begin
@@ -1658,16 +1728,21 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
           (tok^.data=pointer(BUILTIN_WRITE_ALL_DATA_STORES)) or
           (tok^.data=pointer(BUILTIN_WRITE_DATA_STORES)))
       then tok^.location.package:=associatedPackage;
+      {$ifdef fullVersion}
+      if  callAndIdInfos<>nil then callAndIdInfos^.add(tok);
+      {$endif}
       tokenQueue.append(tok);
     end;
 
   VAR nextToken:P_token;
       n:array[1..3] of P_token;
+      id:string;
   begin
     nextToken:=fetch(messages,recycler);
     if nextToken=nil then exit(false);
     while nextToken<>nil do case nextToken^.tokType of
       tt_iifElse: begin
+        // : may be part of # ? # : # or part of a pattern like (x:Type)
         n[1]:=fetch(messages,recycler);
         if n[1]<>nil then begin
           if (n[1]^.tokType=tt_identifier) and (associatedPackage<>nil)
@@ -1695,12 +1770,22 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
           if (n[1]<>nil) and (n[1]^.tokType=tt_ponFlipper) then begin
             n[2]:=fetch(messages,recycler);
             if (n[2]<>nil) and (n[2]^.tokType=tt_identifier) then begin
+              id:=nextToken^.txt;
               nextToken^.txt:=nextToken^.txt+ID_QUALIFY_CHARACTER+n[2]^.txt;
-              associatedPackage^.resolveId(nextToken^,nil);
-              recycler^.disposeToken(n[1]);
-              recycler^.disposeToken(n[2]);
-              appendToken(nextToken);
-              nextToken:=nil;
+              if associatedPackage^.resolveId(nextToken^,nil) then begin
+                recycler^.disposeToken(n[1]);
+                recycler^.disposeToken(n[2]);
+                appendToken(nextToken);
+                nextToken:=nil;
+              end else begin
+                //Could not interpret A.B as qualified identifier - interpreting as "PON" instead
+                nextToken^.txt:=id;
+                associatedPackage^.resolveId(nextToken^,nil);
+                appendToken(nextToken);
+                appendToken(n[1]);
+                nextToken:=n[2];
+                //=> repeat case distinction
+              end;
             end else begin
               associatedPackage^.resolveId(nextToken^,nil);
               appendToken(nextToken);
@@ -1739,6 +1824,21 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
         appendToken(nextToken);
         nextToken:=nil;
       end;
+      tt_for:begin
+        n[1]:=fetch(messages,recycler);
+        n[2]:=fetch(messages,recycler);
+        if (n[1]<>nil) and (n[1]^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule]) and
+           (n[2]<>nil) and (n[2]^.tokType = tt_operatorIn)
+        then begin
+          nextToken^.txt:=n[1]^.txt;
+          nextToken^.data:=nil;
+        end else messages^.raiseSimpleError('Invalid for construct. Syntax is: for <id> in <iterable> do [parallel] ...',nextToken^.location);
+        recycler^.disposeToken(n[1]);
+        recycler^.disposeToken(n[2]);
+        nextToken^.data:=nil;
+        appendToken(nextToken);
+        nextToken:=nil;
+      end;
       tt_agg: begin
         n[1]:=fetch(messages,recycler);
         if (n[1]<>nil) and (n[1]^.tokType=tt_braceOpen) then begin
@@ -1750,6 +1850,11 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
         appendToken(nextToken);
         nextToken:=nil;
       end;
+
+      // while <x> do <y>         <end_of_scope or semicolon> -> while(<x>,<y>)
+      // repeat <x> until <y>     <end_of_scope or semicolon> -> repeat(<x>,<y>)
+      // if <x> then <y>          <end_of_scope or semicolon> -> <x> ? <y> : void
+      // if <x> then <y> else <z> <end_of_scope or semicolon> -> <x> ? <y> : <z>
       tt_braceClose: begin
         n[1]:=fetch(messages,recycler);
         if (n[1]<>nil) then begin

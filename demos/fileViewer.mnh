@@ -15,11 +15,11 @@ fileFingerprint(filename)->fileInfo(filename).getAll(['time','size']);
 
 @demo_for=custom forms
 main(fileToOpen)->begin
-  local filename:='';
-  local lines   :='';
-  local hl      :='txt';
-  local fInfo   :=[];
-  local openFile:={fileExists($filename)
+  filename:='';
+  lines   :='';
+  hl      :='txt';
+  fInfo   :=[];
+  openFile:={fileExists($filename)
     ? begin
         logHlAssoc(filename,hl);
         filename:=$filename;

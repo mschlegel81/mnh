@@ -2,7 +2,7 @@
 @SuppressUnusedWarning
 memoized allRules->inspectAll.getInner(1).pEach(pack,
 begin
-  local prefix:=pack['id']&'.';
+  prefix:=pack['id']&'.';
   pack['declares'].map({[prefix&$rule[0], $rule[1]]});
 end,|).toMap;
 

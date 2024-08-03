@@ -1,5 +1,5 @@
 cfStringAndValue(continuedFraction:Expression(1))->begin
-  local e:='...'; local x:=1;
+  e:='...'; x:=1;
   e:=continuedFraction(0)[0]&'+'&[5..1].map(continuedFraction).each(p,e:=p[1]&"/("&p[0]&"+"&e ,trailing)&")))))\t=\t";
   x:=continuedFraction(0)[0] +[2000..1].map(continuedFraction).each(p,x:=p[1]  /(  p[0]  +  x),trailing);
   e&x;

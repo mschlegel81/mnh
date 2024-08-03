@@ -1,58 +1,9 @@
-private integrate1d(f,x0,f0,x1,f1,tolerance)->begin
-  local fm:=f(local xm:=(x0+x1)*0.5);
-  local M:=(x1-x0)*fm;          //approximate integral by midpoint rule
-  local T:=(x1-x0)*0.5*(f0+f1); //approximate integral by trapezoidal rule
-  abs(M-T)>tolerance
-  ? integrate1d(f,x0,f0,xm,fm,tolerance)+ //refine
-    integrate1d(f,xm,fm,x1,f1,tolerance)
-  : (T+M*2)/3; //return approximate integral by Simpson's rule
-end;
-
-private integrate2d(f,x0,x1,y0,y1,f00,f01,f10,f11,tolerance)->
-abs(x1-x0)<=abs(y1-y0)
-? begin //split along y-axis
-    local A0:=f(          (x0+x1)*0.5,
-                local ym:=(y0+y1)*0.5)*(x1-x0)*(y1-y0);
-    local A1:=(f00+f01+f10+f11)*0.25  *(x1-x0)*(y1-y0);
-    abs(A1-A0)>tolerance
-    ? integrate2d(f,x0,x1,y0,ym,f00,f01,local fm0:=f(x0,ym),local fm1:=f(x1,ym),tolerance)+
-      integrate2d(f,x0,x1,ym,y1,fm0,fm1,f10                ,f11                ,tolerance)
-    : (A0+A1*2)/3;
-  end
-: begin //split along x-axis
-    local A0:=f(local xm:=(x0+x1)*0.5,
-                          (y0+y1)*0.5)*(x1-x0)*(y1-y0);
-    local A1:=(f00+f01+f10+f11)*0.25*(x1-x0)*(y1-y0);                  #      |    |    |
-    abs(A1-A0)>tolerance                                               #
-    ? integrate2d(f,x0,xm,y0,y1,f00,local fm0:=f(xm,y0),f10,local fm1:=f(xm,y1),tolerance)+ //refine   #      x0   xm   x1
-      integrate2d(f,xm,x1,y0,y1,fm0,f01                ,fm1,f11                ,tolerance)
-    : (A0+A1*2)/3; //return approximate integral by Simpson's rule
-  end;
-
-//*Recursively Integrates f in Range [x0,x1] until tolerance is reached
-integrate(f:Expression(1),x0:Numeric,x1<>x0,tolerance>0.0)->
-integrate1d(f,x0,f(x0),x1,f(x1),tolerance*100);
-//*Recursively Integrates f in Range [x0,x1] x [y0,y1] until tolerance is reached
-integrate(f:Expression(2),x0:Numeric,x1<>x0,
-                          y0:Numeric,y1<>y0,tolerance>0.0)->
-integrate2d(f,x0,x1,y0,y1,f(x0,y0),f(x1,y0),f(x0,y1),f(x1,y1),tolerance*100);
-
-
-//*As above but with a minimum number of intervals
-integrate(f:Expression(1),x0:Numeric,x1<>x0,tolerance>0.0,minIntervals>=1)->
-begin
-  local X:=[0..minIntervals]/minIntervals*(x1-x0)+x0;
-  local Y:=X.map(f);
-  [0..minIntervals-1].each(i,
-    integrate1d(f,X[i],Y[i],X[i+1],Y[i+1],tolerance*100),+);
-end;
-
 @demo_for=math, numerics/integration
 main->
-  [[{$x³} ,0,1  ,1E-5],
-   [{1/$x},1,100,1E-5],
-   [{$x},0,5000 ,1E-5],
-   [{$x},0,6000 ,1E-5]]
+  [[{$x³} ,0,1  ,1000],
+   [{1/$x},1,100,1000,1E-20],
+   [{$x},0,5000 ,1000,1E-6],
+   [{$x},0,6000 ,1000]]
   .each(task,['integral of ',task[0].toString.unbrace,' in [',task[1],',',task[2],']= ',integrate@task].join("\v"))
   .join("\n")
   .print;

@@ -1,13 +1,13 @@
 main->begin
   //Sample sin(x) at 41 points in interval [-pi,pi]
-  local S:=map([-20..20]*pi/40,(x)->[sin(x),x]);
+  S:=map([-20..20]*pi/40,(x)->[sin(x),x]);
 
   //Create interpolators to obtain an approximation for the inverse function
-  local SLin:=newLinearInterpolator(S);
-  local SCub:=newSplineInterpolator(S);
-  local Sbsp:=newBSpline(S);
+  SLin:=newLinearInterpolator(S);
+  SCub:=newSplineInterpolator(S);
+  Sbsp:=newBSpline(S);
 
-  local rows:=['t','arcsin(t)','linear','Spline','BSpline'].join("\t")|
+  rows:=['t','arcsin(t)','linear','Spline','BSpline'].join("\t")|
   ([0..20]/20).each(t,
     begin
       local a:=arcsin(t);

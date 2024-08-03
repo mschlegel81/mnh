@@ -9,16 +9,16 @@ private getChildren(l       ,isMapEntry=true )->l.trailing;
 
 private treePrint(Tree,indent,isMapEntry:Boolean,last:Boolean)->begin
   print(indent,last ? '└──' : '├──',Tree.getName(isMapEntry));
-  local newIndent:=last
-                   ? indent+'   '
-                   : indent+'│  ';
-  local children:=Tree.getChildren(isMapEntry);
+  newIndent:=last
+             ? indent+'   '
+             : indent+'│  ';
+  children:=Tree.getChildren(isMapEntry);
   children.each(child,child.treePrint(newIndent,Tree.isMap,index=children.size-1));
 end;
 
 treePrint(Tree)->begin
   print(Tree.getName(false));
-  local children:=Tree.getChildren(false);
+  children:=Tree.getChildren(false);
   children.each(child,child.treePrint('',Tree.isMap,index=children.size-1));
 end;
 

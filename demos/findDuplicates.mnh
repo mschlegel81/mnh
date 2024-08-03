@@ -3,11 +3,11 @@ USE '..\packages\formattingUtils.mnh';
 main(rootFolder,...)->begin
   print('Root folder: ',rootFolder);
   //First find all files to check
-  local filesToCheck:=allFiles(rootFolder);
+  filesToCheck:=allFiles(rootFolder);
   print('Checking ',filesToCheck.size,' files');
   //group files by size
-  local ignoredFileCount:=0;
-  local sizeGroups:=group(filesToCheck,filesToCheck.pEach(file,file.fileInfo['size'] orElse warn('Cannot access ',file) orElse -1))
+  ignoredFileCount:=0;
+  sizeGroups:=group(filesToCheck,filesToCheck.pEach(file,file.fileInfo['size'] orElse warn('Cannot access ',file) orElse -1))
     .each(sizeGroup,
            size(sizeGroup[1])<=1 //filter out groups with only one element
            ? void
@@ -19,7 +19,7 @@ main(rootFolder,...)->begin
   sizeGroups.size>0
   ? print('Max. group size: ',sizeGroups.each(g,size(g[1]),aggregator(max)),' files')
   : void;
-  local findings:=
+  findings:=
   sizeGroups
   .pEach(sizeGroup,
         100*index/sizeGroups.size,
@@ -48,9 +48,9 @@ main(rootFolder,...)->begin
   print(findings.size,' Findings');
   findings.group(findings.extractFileDirectory)
           .each(entry,begin
-             local folder:=entry[0];
-             local allFilesInFolder:=files(folder&'/*').sort;
-             local duplicates:=entry[1].sort;
+             folder:=entry[0];
+             allFilesInFolder:=files(folder&'/*').sort;
+             duplicates:=entry[1].sort;
              allFilesInFolder==duplicates
              ? folder
              : void;

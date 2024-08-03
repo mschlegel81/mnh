@@ -274,35 +274,257 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       didSubstitution:=context^.continueEvaluation;
     end;
 
+  PROCEDURE resolveFor;
+    VAR aggregator: P_aggregator=nil;
+        closingToken:P_token;
+    PROCEDURE finalizeAggregation;
+      begin
+        first^.data:=aggregator^.getResult(recycler);
+        first^.txt:='';
+        first^.next:=closingToken;
+        if aggregator^.hasReturn then processReturnStatement;
+        aggregator^.cleanup(recycler);
+        dispose(aggregator,destroy);
+      end;
+
+    VAR sourceLiteral:P_literal;
+        bodyRule:T_expressionList;
+        p, bodyRuleStart, prev:P_token;
+        bracketLevel:longint=0;
+        i: integer;
+    begin
+      sourceLiteral:=first^.next^.data;
+      //first   = for
+      // next   = literal
+      //  next  = do        - disposed at (**)
+      //   next = body...
+      setLength(bodyRule,0);
+
+      prev:=first^.next;
+      p:=   prev^.next;
+      assert(p^.tokType=tt_do); //ensured by condition before call
+      prev^.next:=nil;
+      repeat
+        p:=recycler^.disposeToken(p); (**)
+        bodyRuleStart:=p;
+        while (p<>nil) and (bracketLevel>=0) and not((p^.tokType in [tt_do,tt_aggregatorConstructor,tt_aggregatorExpressionLiteral]) and (bracketLevel=0)) do begin
+          if      (p^.tokType in C_openingBrackets) then inc(bracketLevel)
+          else if (p^.tokType in C_closingBrackets) then dec(bracketLevel);
+          prev:=p;
+          p:=p^.next;
+        end;
+        closingToken:=p;
+        prev^.next:=nil;
+        setLength(bodyRule,length(bodyRule)+1);
+        new(P_inlineExpression(bodyRule[length(bodyRule)-1]),createForEachBody(first^.txt,bodyRuleStart,first^.location,context,recycler));
+      until (p=nil) or (p^.tokType<>tt_do);
+
+      if (p<>nil) and (p^.tokType=tt_aggregatorConstructor) then begin
+        bodyRuleStart:=p;
+        while (p<>nil) and (bracketLevel>=0) do begin
+          if      (p^.tokType in C_openingBrackets) then inc(bracketLevel)
+          else if (p^.tokType in C_closingBrackets) then dec(bracketLevel);
+          prev:=p;
+          p:=p^.next;
+        end;
+        closingToken:=p;
+        prev^.next:=nil;
+        reduceExpression(bodyRuleStart,context,recycler);
+        p:=bodyRuleStart;
+      end;
+      if not context^.continueEvaluation then exit;
+
+      if (p<>nil) and (p^.tokType=tt_aggregatorExpressionLiteral)
+      then aggregator:=newCustomAggregator(P_expressionLiteral(p^.data),p^.location,context)
+      else aggregator:=newListAggregator(recycler);
+
+      //TODO: Implement call to processListParallel
+      // Syntax: for ... in ... do parallel ... ?
+      processListSerial  (sourceLiteral,bodyRule,aggregator,first^.location,context,recycler);
+
+      //cleanup----------------------------------------------------------------------
+      first:=recycler^.disposeToken(first);
+      finalizeAggregation;
+      recycler^.disposeLiteral(sourceLiteral);
+      for i:=0 to length(bodyRule)-1 do begin
+        bodyRule[i]^.cleanup(recycler);
+        dispose(bodyRule[i],destroy);
+      end;
+      //----------------------------------------------------------------------cleanup
+    end;
+
+  PROCEDURE resolveRepeat;
+    VAR bodyRule:P_inlineExpression=nil;
+        conditionRule:P_inlineExpression=nil;
+
+    FUNCTION parseBodyOk:boolean;
+      VAR bracketLevel:longint=0;
+          firstTokenOfHead,
+          firstTokenOfCondition,
+          lastTokenOfHead:P_token;
+
+          p,prev:P_token;
+      begin
+        result:=false;
+        firstTokenOfHead:=first^.next;
+        firstTokenOfCondition     :=nil;
+        prev:=first;
+        p:=firstTokenOfHead;
+        //Error case: repeat until ...
+        if p^.tokType=tt_until then begin
+          context^.raiseError('Invalid repeat-construct.',errorLocation);
+          exit(false);
+        end;
+
+        while (p<>nil) and not((p^.tokType =tt_until) and (bracketLevel=0)) do begin
+          if      (p^.tokType in C_openingBrackets) then inc(bracketLevel)
+          else if (p^.tokType in C_closingBrackets) then dec(bracketLevel);
+          prev:=p;
+          p:=p^.next;
+        end;
+
+        if (p<>nil) and (p^.tokType=tt_until) then begin
+          //"normal" case: while <condition> do ...
+          lastTokenOfHead:=prev;
+          p:=p^.next;
+          firstTokenOfCondition:=p;
+          while (p<>nil) and not((p^.tokType = tt_semicolon) and (bracketLevel=0)) do begin
+            if      (p^.tokType in C_openingBrackets) then inc(bracketLevel)
+            else if (p^.tokType in C_closingBrackets) then dec(bracketLevel);
+            prev:=p;
+            p:=p^.next;
+          end;
+        end else begin
+          context^.raiseError('Invalid repeat-construct.',errorLocation);
+          exit(false);
+        end;
+
+        if firstTokenOfCondition<>nil then begin
+          //dipose do:
+          lastTokenOfHead^.next:=recycler^.disposeToken(lastTokenOfHead^.next);
+          prev^.next:=nil;
+          new(conditionRule,createForWhile(firstTokenOfCondition,firstTokenOfCondition^.location,context,recycler));
+        end;
+        //Unlink head:
+        assert(p<>nil);
+        assert(p^.tokType=tt_semicolon);
+        first^.next:=p;
+        lastTokenOfHead^.next:=nil;
+        new(bodyRule,createForWhile(firstTokenOfHead,firstTokenOfHead^.location,context,recycler));
+
+        result:=true;
+      end;
+
+    VAR repeatLocation:T_tokenLocation;
+        returnValue:T_evaluationResult;
+    PROCEDURE evaluateBody;
+      VAR toReduce:T_tokenRange;
+      begin
+        if (bodyRule<>nil) and bodyRule^.matchesPatternAndReplaces(nil,repeatLocation,toReduce,context,recycler) then begin
+          if reduceExpression(toReduce.first,context,recycler)=rr_okWithReturn then begin
+            returnValue.literal:=P_literal(toReduce.first^.data)^.rereferenced;
+            returnValue.reasonForStop:=rr_okWithReturn;
+          end;
+          recycler^.cascadeDisposeToken(toReduce.first);
+        end;
+      end;
+
+    begin
+      returnValue:=NIL_EVAL_RESULT;
+      repeatLocation:=first^.location;
+      if not(parseBodyOk) then exit;
+      {$ifdef fullVersion}
+      if tco_stackTrace in context^.threadOptions then context^.callStackPush(repeatLocation,'while',stepForward(repeatLocation,6),nil);
+      {$endif}
+      repeat evaluateBody
+      until (returnValue.reasonForStop<>rr_ok) or
+            evaluateToBoolean_strict(conditionRule,conditionRule^.getLocation,context,recycler) or
+            not(context^.continueEvaluation);
+
+      first^.txt:='';
+      first^.tokType:=tt_literal;
+      first^.data:=newVoidLiteral;
+      while (first^.next      <>nil) and (first^.next^      .tokType=tt_semicolon) and
+            (first^.next^.next<>nil) and (first^.next^.next^.tokType=tt_semicolon)
+      do first^.next:=recycler^.disposeToken(first^.next);
+
+      //cleanup----------------------------------------------------------------------
+      bodyRule^.cleanup(recycler);      dispose(bodyRule,destroy);
+      conditionRule^.cleanup(recycler); dispose(conditionRule,destroy);
+      //----------------------------------------------------------------------cleanup
+      if returnValue.reasonForStop=rr_okWithReturn then begin
+        recycler^.disposeLiteral(first^.data);
+        first^.data:=returnValue.literal;
+        processReturnStatement;
+      end;
+      {$ifdef fullVersion}
+      if tco_stackTrace in context^.threadOptions
+      then context^.callStackPop(nil);
+      {$endif}
+
+      didSubstitution:=true;
+    end;
+
   PROCEDURE resolveWhile;
-    VAR bracketClosingWhile:P_token=nil;
-        headRule:P_inlineExpression=nil;
+    VAR headRule:P_inlineExpression=nil;
         bodyRule:P_inlineExpression=nil;
 
     FUNCTION parseBodyOk:boolean;
-      VAR i:longint;
-          bodyParts:T_bodyParts;
+      VAR bracketLevel:longint=0;
+          firstTokenOfCondition,
+          firstTokenOfBody,
+          lastTokenOfCondition:P_token;
+
+          p,prev:P_token;
       begin
         result:=false;
-        //first token is <while>-Token
-        //find closing bracket and body parts
-        bodyParts:=getBodyParts(first,1,context,bracketClosingWhile);
-        if bracketClosingWhile=nil then exit(false);
-        if (length(bodyParts)>2) or (length(bodyParts)<1) then begin
+        firstTokenOfCondition:=first^.next;
+        firstTokenOfBody     :=nil;
+        prev:=first;
+        p:=firstTokenOfCondition;
+        //Error case: while do ...
+        if p^.tokType=tt_do then begin
           context^.raiseError('Invalid while-construct; One or two arguments (head only or head + body) are expected.',errorLocation);
           exit(false);
         end;
 
-        for i:=0 to length(bodyParts)-1 do begin
-          if bodyParts[i].last^.next<>bracketClosingWhile then recycler^.disposeToken(bodyParts[i].last^.next);
-          bodyParts[i].last^.next:=nil;
+        while (p<>nil) and not((p^.tokType in [tt_do,tt_semicolon]) and (bracketLevel=0)) do begin
+          if      (p^.tokType in C_openingBrackets) then inc(bracketLevel)
+          else if (p^.tokType in C_closingBrackets) then dec(bracketLevel);
+          prev:=p;
+          p:=p^.next;
         end;
 
-        //create head/body rules------------------------------------------------
-        new(headRule,createForWhile(bodyParts[0].first,bodyParts[0].first^.location,context,recycler));
-        if length(bodyParts)=2 then
-        new(bodyRule,createForWhile(bodyParts[1].first,bodyParts[1].first^.location,context,recycler));
-        //------------------------------------------------create head/body rules
+        if (p<>nil) and (p^.tokType=tt_do) then begin
+          //"normal" case: while <condition> do ...
+          lastTokenOfCondition:=prev;
+          p:=p^.next;
+          firstTokenOfBody:=p;
+          while (p<>nil) and not((p^.tokType = tt_semicolon) and (bracketLevel=0)) do begin
+            if      (p^.tokType in C_openingBrackets) then inc(bracketLevel)
+            else if (p^.tokType in C_closingBrackets) then dec(bracketLevel);
+            prev:=p;
+            p:=p^.next;
+          end;
+        end else if (p<>nil) and (p^.tokType=tt_semicolon) then begin
+          //short case: while <condition> ;
+          lastTokenOfCondition:=prev;
+        end else begin
+          context^.raiseError('Invalid while-construct; One or two arguments (head only or head + body) are expected.',errorLocation);
+          exit(false);
+        end;
+
+        if firstTokenOfBody<>nil then begin
+          //dipose do:
+          lastTokenOfCondition^.next:=recycler^.disposeToken(lastTokenOfCondition^.next);
+          prev^.next:=nil;
+          new(bodyRule,createForWhile(firstTokenOfBody,firstTokenOfBody^.location,context,recycler));
+        end;
+        //Unlink head:
+        first^.next:=p;
+        lastTokenOfCondition^.next:=nil;
+        new(headRule,createForWhile(firstTokenOfCondition,firstTokenOfCondition^.location,context,recycler));
+
         result:=true;
       end;
 
@@ -323,21 +545,19 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
     begin
       returnValue:=NIL_EVAL_RESULT;
       whileLocation:=first^.location;
-      if context^.callDepth>STACK_DEPTH_LIMIT then begin
-        context^.raiseError('Stack overflow in while construct.',whileLocation,mt_el4_systemError);
-        exit;
-      end;
+      if not(parseBodyOk) then exit;
       {$ifdef fullVersion}
       if tco_stackTrace in context^.threadOptions then context^.callStackPush(whileLocation,'while',stepForward(whileLocation,6),nil);
       {$endif}
-      if not(parseBodyOk) then exit;
       while (returnValue.reasonForStop=rr_ok)
             and evaluateToBoolean_strict(headRule,headRule^.getLocation,context,recycler)
             and (context^.continueEvaluation) do evaluateBody;
       first^.txt:='';
       first^.tokType:=tt_literal;
       first^.data:=newVoidLiteral;
-      first^.next:=recycler^.disposeToken(bracketClosingWhile);
+      while (first^.next      <>nil) and (first^.next^      .tokType=tt_semicolon) and
+            (first^.next^.next<>nil) and (first^.next^.next^.tokType=tt_semicolon)
+      do first^.next:=recycler^.disposeToken(first^.next);
 
       //cleanup----------------------------------------------------------------------
       headRule^.cleanup(recycler);
@@ -402,7 +622,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
             replace.first:=recycler^.newToken(first^.location,'',tt_aggregatorExpressionLiteral,newLiteral);
             replace.last:=replace.first;
           end else begin
-            context^.raiseError('Aggregators can only be constructed from expression(2) literals!',errorLocation);
+            context^.raiseError('Aggregators can only be constructed from expression literals!',errorLocation);
             exit;
           end;
         end;
@@ -468,50 +688,41 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
     end;
 
   PROCEDURE resolveInlineIf(CONST conditionLit:boolean);
-    VAR p,prev,tokenBeforeElse,lastThen:P_token;
+    VAR p,prev:P_token;
         bracketLevel:longint=0;
     begin
       prev:=first;
-      stack.push(first); //push "?"
-      p:=first;
-      while (p<>nil) and not((p^.tokType=tt_iifElse) and (bracketLevel=0)) do begin
-        if p^.tokType in      C_openingBrackets then inc(bracketLevel)
-        else if p^.tokType in C_closingBrackets then dec(bracketLevel);
-        prev:=p; p:=p^.next;
-      end;
-      if not((p<>nil) and (p^.tokType=tt_iifElse) and (bracketLevel=0)) then begin
-        stack.popLink(first);
-        context^.raiseError('Cannot evaluate inline-if; cannot locate then-marker',errorLocation);
-        exit;
-      end;
-      tokenBeforeElse:=prev;
-      while (p<>nil) and not((p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) do begin
-        if p^.tokType in      C_openingBrackets then inc(bracketLevel)
-        else if p^.tokType in C_closingBrackets then dec(bracketLevel);
-        prev:=p; p:=p^.next;
-      end;
-      if  not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) then begin
-        stack.popLink(first);
-        context^.raiseError('Cannot evaluate inline-if; cannot locate end of then-expression',errorLocation);
-        exit;
-      end;
-      lastThen:=prev;
-      if conditionLit then begin
-        //take then-subexpression -> drop else-subexpression
-        p:=tokenBeforeElse^.next;              //store tt_iifElse-token
-        tokenBeforeElse^.next:=lastThen^.next; //unlink else-expression (head)
-        lastThen^.next:=nil;                   //unlink else-expression (tail);
-        recycler^.cascadeDisposeToken(p);       //dispose else-expression
-      end else begin
-        //take else-subexpression -> drop then-subexpression
-        p:=first;
-        first:=tokenBeforeElse^.next^.next;
-        tokenBeforeElse^.next^.next:=nil;
-        recycler^.cascadeDisposeToken(p);
-      end;
-      stack.top:=recycler^.disposeToken(stack.top); //pop "?"
       stack.top:=recycler^.disposeToken(stack.top); //pop condition literal
-      didSubstitution:=true;
+      first:=recycler^.disposeToken(first); //dispose ?
+      if conditionLit then begin
+        //look up ":" and dispose everything after that
+
+        p:=first;
+        while (p<>nil) and (bracketLevel>=0) and not((p^.tokType=tt_iifElse) and (bracketLevel=0)) do begin
+          if p^.tokType in      C_openingBrackets then inc(bracketLevel)
+          else if p^.tokType in C_closingBrackets then dec(bracketLevel);
+          prev:=p; p:=p^.next;
+        end;
+        prev^.next:=nil;
+        //It is possible that there is no ":" as in : true ? 1;
+        if (p<>nil) and (p^.tokType=tt_iifElse) and (bracketLevel=0) then begin
+          while (p<>nil) and not((p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) do begin
+            if p^.tokType in      C_openingBrackets then inc(bracketLevel)
+            else if p^.tokType in C_closingBrackets then dec(bracketLevel);
+            p:=recycler^.disposeToken(p);
+          end;
+        end;
+        prev^.next:=p;
+        didSubstitution:=true;
+      end else begin
+        //dispose everything up to :
+        while (first<>nil) and (bracketLevel>=0) and not((p^.tokType=tt_iifElse) and (bracketLevel=0)) do begin
+          if first^.tokType in      C_openingBrackets then inc(bracketLevel)
+          else if first^.tokType in C_closingBrackets then dec(bracketLevel);
+          first:=recycler^.disposeToken(first);
+        end;
+        didSubstitution:=true;
+      end;
     end;
 
   PROCEDURE startOrPushParameterList;
@@ -1066,6 +1277,10 @@ end}
         end;
         tt_formatString: resolveFormatString;
 {cT[0]=}tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
+          tt_for: if cTokType[1]=tt_do then begin
+            stack.popLink(first);
+            resolveFor;
+          end;
  {cT[-1]=}tt_separatorMapItem: case cTokType[1] of
             tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_EOL,tt_semicolon,tt_expBraceClose,tt_listBraceClose: processEntryConstructor;
             COMMON_CASES;
@@ -1326,9 +1541,11 @@ end}
           tt_braceClose,tt_listBraceClose,tt_separatorMapItem..tt_operatorConcatAlt,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
           tt_ponFlipper, tt_each,tt_parallelEach,tt_pow2,tt_pow3: applyRule(nil,first^.next);
         end;
-{cT[0]=}tt_while: if (cTokType[1]=tt_braceOpen) then begin
-          first^.next:=recycler^.disposeToken(first^.next);
-          resolveWhile;
+{cT[0]=}tt_while: resolveWhile;
+{cT[0]=}tt_repeat: resolveRepeat;
+        tt_for: if (cTokType[1]=tt_literal) and (cTokType[2]=tt_do) then resolveFor else begin
+          stack.push(first);
+          didSubstitution:=true;
         end;
 {cT[0]=}tt_iifCheck: if (cTokType[-1]=tt_literal) then begin
           if (P_literal(stack.top^.data)^.literalType=lt_boolean)

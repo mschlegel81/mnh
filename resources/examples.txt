@@ -443,8 +443,8 @@ pos(',',['Hello','Test','1,2,3']);
 
 pos(['a','b'],'cdb');
 
-repeat('-',10);
-#S repeat(s:String,k:Int);
+repeatString('-',10);
+#S repeatString(s:String,k:Int);
 #C Returns a string containing s repeated k times
 
 //Simple test for correct bracketing:
@@ -2406,9 +2406,11 @@ iFFT([[10..0],[0..10]].transpose);
 //Use the function's output to feed math.newFourierSeries
 
 #I math.integrate
-#S integrate(f:Expression(1),x0,x1,pointCount>1);
+#S integrate(f:Expression(1),x0,x1,subIntervalCount>1);
 #C returns the numeric integral of f over interval [x0,x1]
-integrate((x)->sin(x)²,0,2,1000);
+#S integrate(f:Expression(1),x0,x1,subIntervalCount>1,errorTolerance>=0.0);
+#C As above, but with an early abort if the error tolerance is satisfied
+integrate((x)->sin(x)²,0,2,1000,1E-2);
 
 bitXor(5,213,10);
 #S bitXor(x:Int,y:Int,relevantBits in [1..32]);

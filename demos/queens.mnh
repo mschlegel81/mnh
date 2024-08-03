@@ -18,7 +18,7 @@ queens(numberOfQueens>1)->sort(queens([],[1..numberOfQueens]) orElse []);
 fmtSolution(solution:IntList)->solution.each(k,['A'..'Z'][index],k,' ',&);
 
 inform(numberOfQueens:Int,allSolutions:Boolean)->begin
-  local solutions:=queens(numberOfQueens);
+  solutions:=queens(numberOfQueens);
   print('The ',numberOfQueens,'-queens puzzle has ',solutions.size,' solutions');
   allSolutions
   ? solutions.each(s,print('  ',fmtSolution(s)))

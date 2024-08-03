@@ -17,9 +17,9 @@ end;
 
 sample(3)->begin
   setOptions(['axisStyleX'=>1,'axisStyleY'=>1,'autoscaleFactor'=>0.9]);
-  local samples:=[[0,0],[1,1],[1.5,2],[1.5,0],[2,0.5]];
+  samples:=[[0,0],[1,1],[1.5,2],[1.5,0],[2,0.5]];
   plot(samples);
-  local marks:=['A'..'E'];
+  marks:=['A'..'E'];
   samples.each(p,
     drawText(p[0],p[1],marks[index],10,'C','Courier New',[1,0,0],[1,1,1]));
   explainPlot(" \n \nUse setOptions to modify the general plot behavior\n"&
@@ -34,7 +34,7 @@ end;
 
 sample(4)->begin
   setOptions(['axisStyleX'=>3,'axisStyleY'=>3,'autoscaleFactor'=>0.99]);
-  local t:=[0..6]/6*2*pi;
+  t:=[0..6]/6*2*pi;
   plot(cos(t),sin(t),'2 . l red');
   explainPlot("plot can also handle two numeric lists as input\nModify your plot style by an additional string argument");
 end;
@@ -47,7 +47,7 @@ sample(5)->begin
 end;
 
 sample(6)->begin
-  local samples:=cos([0..6]*2);
+  samples:=cos([0..6]*2);
   plot   (samples,'. l black');
   addPlot(samples,'. b red');
   addPlot(samples,'. c blue');
@@ -75,7 +75,7 @@ sample(9)->begin
 end;
 
 sample(10)->begin
-  local data:=[0.5,2,1,2,-1,2];
+  data:=[0.5,2,1,2,-1,2];
   plot(data,'bar f blue');
   addPlot(data,'. l i red');
   explainPlot("You can easily create bar plots. Note that the last value is not shown in this style.\nYou can add impulses to any style");
@@ -83,7 +83,7 @@ end;
 
 sample(11)->begin
   setOptions(['logscaleX'=>true,'logscaleY'=>true]);
-  local data:=[0.5,2,1,2,-1,2];
+  data:=[0.5,2,1,2,-1,2];
   plot(data,'bar f blue');
   addPlot(data,'. l i red');
   explainPlot('Of course you can also plot in logarithmic scale');
@@ -105,9 +105,9 @@ end;
 
 
 sample(14)->begin
-  local h:=1/5;
-  local hue:=(x:Numeric)->begin
-    local w:=(x-floor(x))*6; w-=local k:=floor(w);
+  h:=1/5;
+  hue:=(x:Numeric)->begin
+    w:=(x-floor(x))*6; w-=k:=floor(w);
     [{[1,$h,0]},
      {[1-$h,1,0]},
      {[0,1,$h]},
@@ -116,8 +116,8 @@ sample(14)->begin
      {[1,0,1-$h]}][k](w);
   end;
 
-  local P:=[-20..20]/5;
-        P:=P.cross(P);
+  P:=[-20..20]/5;
+  P:=P.cross(P);
   plot();
   P.map({sin($x.sqr.agg(+).sqrt)})
    .map((y)->hue(y/2-0.5))
@@ -127,10 +127,10 @@ sample(14)->begin
 end;
 
 sample(15)->begin
-  local h:=1/5;
-  local P:=[-20..20]/5;
+  h:=1/5;
+  P:=[-20..20]/5;
   P:=P.cross(P);
-  local style:='TI0 box fs 0 HUE'&([-20..20]/40+0.5);
+  style:='TI0 box fs 0 HUE'&([-20..20]/40+0.5);
   plot();
   P.group(P.map({20+round(20*sin($x.sqr.agg(+).sqrt))}))
    .each(g,addPlot(g[1].each(x,x-h/2,x+h/2),style[g[0]]));

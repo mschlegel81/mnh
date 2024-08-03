@@ -1,15 +1,7 @@
 private plain datastore LOG;
-private plain datastore versionInfo;
+private plain datastore versionInfo:=['MajorVersionNr'=>0,'MinorVersionNr'=>0,'RevisionNr'=>0].toMap;
 
 maxLoggedBuildNumber->try({max(LOG.getInner(1).getInner(0))},0);
-
-@SuppressUnusedWarning
-private ensureVersionInfo:=versionInfo.isVoid ? begin
-  versionInfo:=['MajorVersionNr'=>0,
-                'MinorVersionNr'=>0,
-                'RevisionNr'=>0].toMap;
-end : void;
-
 
 @SuppressUnusedWarning
 getVersionInfoTag(fullVersion:Boolean,buildNr:Int,version:IntList(3))->begin
@@ -87,13 +79,14 @@ private fixLpiFile(lpiPath:String,fullVersion:Boolean,buildNr:Int,version:IntLis
     local nextLine:=lpiPath.fileLineIterator;
     local newLines:=[];
     local currLine:=void;
-    while(!isVoid(currLine:=nextLine()),
+    while !isVoid(currLine:=nextLine()) do begin
       currLine.trim=='<VersionInfo>'
       ? begin
           newLines|=versionInfoTag;
-          while(!isVoid(currLine:=nextLine()) AND !(currLine.trim=='</VersionInfo>'));
+          while !isVoid(currLine:=nextLine()) AND !(currLine.trim=='</VersionInfo>');
         end
-      : newLines|=currLine);
+      : newLines|=currLine;
+    end;
     nextLine:=void; //close iterator
     lpiPath.writeFileLines(newLines).assert;
   end;

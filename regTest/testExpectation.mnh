@@ -117,7 +117,7 @@ private checkExpectation(script:String,testRunOutput:StringList)->begin
   : expectation==outputToCheck
     ? true
     : begin
-        TEST_FAILURE_LOG.appendFileLines(unifiedDiff('expected for '&script&'/'&myFlavour,'output',expectation,outputToCheck,2)|repeat('/',100));
+        TEST_FAILURE_LOG.appendFileLines(unifiedDiff('expected for '&script&'/'&myFlavour,'output',expectation,outputToCheck,2)|repeatString('/',100));
         failedTests|=script;
         false;
       end;
@@ -149,7 +149,7 @@ showTestTimeInfo->timesOfThisRun.size=0 ? void : begin
     .getAll(timesOfThisRun.getInner(0))
     .map({[$x[myFlavour],$x[myFlavourGroup]]})
     .agg(+) orElse [thisRunTotalTime,thisRunTotalTime];
-  while(timesByFlavour.size<2,timesByFlavour|=thisRunTotalTime);
+  while timesByFlavour.size<2 do timesByFlavour|=thisRunTotalTime;
   print('Test time : ',thisRunTotalTime);
   printf('  compared to average (flavour): %6.2f%%',thisRunTotalTime/timesByFlavour[0]*100);
   printf('  compared to average (group  ): %6.2f%%',thisRunTotalTime/timesByFlavour[1]*100);
@@ -254,7 +254,7 @@ main('cleanup')->begin
   local droppedExtremes:=0;
   local droppedTotal:=0;
   local anyDropped:=true;
-  while(anyDropped,begin
+  repeat begin
     anyDropped:=false;
     runTimes.each(caseEntry,begin
       local case:=caseEntry[0];
@@ -278,7 +278,7 @@ main('cleanup')->begin
         void;
       end);
     end);
-  end);
+  end until not anyDropped;
   print('Dropped ',droppedExtremes,' extreme or negative timing values');
   print('Dropped ',droppedTotal   ,' values in total');
 

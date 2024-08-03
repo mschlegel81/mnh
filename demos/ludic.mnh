@@ -1,15 +1,15 @@
 LudicSieve->begin
-  local candidates:=[2..21511];
-  local L:=[1];
-  while(!(candidates==[]),begin
-    local next:=head(candidates);
+  candidates:=[2..21511];
+  L:=[1];
+  while !(candidates==[]) do begin
+    next:=head(candidates);
     next>candidates.size
     ? return L|candidates
     : begin
         candidates:=candidates[[0..candidates.size-1] mod next<>0];
         L|=next;
       end;
-  end);
+  end;
   L;
 end;
 
@@ -18,12 +18,12 @@ end;
 @OEIS=A003309
 ludicGenerator->
  {begin
-    local L:=[];
-    local R:=[];
-    return local curr:=1;
+    L:=[];
+    R:=[];
+    return curr:=1;
   save;
     curr+=1;
-    while(R.each(k,(R[index]-=1)=0 ? begin R[index]:=L[index]; true; end : false,OR),curr+=1);
+    while R.each(k,(R[index]-=1)=0 ? begin R[index]:=L[index]; true; end : false,OR) do curr+=1;
     L|=curr;
     R|=curr;
     curr;
@@ -33,8 +33,8 @@ ludicGenerator->
 //*See http://rosettacode.org/wiki/Ludic_numbers
 @demo_for=math, list construction
 main->begin
-  local LUDICS:=LudicSieve;
-  local triplets:=[0..250].intersect(LUDICS,LUDICS-2,LUDICS-6).sort;
+  LUDICS:=LudicSieve;
+  triplets:=[0..250].intersect(LUDICS,LUDICS-2,LUDICS-6).sort;
   print("Ludic Numbers",
       "\n  The first 25 are: ",LUDICS.head(25),'.',
       "\n  There are ",LUDICS[LUDICS<=1000].size,' lesser or equal to 1000.',

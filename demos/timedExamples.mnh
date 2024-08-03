@@ -34,14 +34,14 @@ test(f:Expression(1),input)->time(f,[input])['time'];
 
 @demo_for=list processing
 main->begin
-  local times:=[test(::fib0,22),test(::fib1,22),test(::fib2,22),test(::fib3,22)];
+  times:=[test(::fib0,22),test(::fib1,22),test(::fib2,22),test(::fib3,22)];
   print("Fibonacci\n  Source");
   ("    "&inspect['source'].split("\n").get([0..14])).join("\n").print;
   print;
   printf("  %s\t%s\t%s",['method','fib0','fib1','fib2','fib3'],
                          'time'|times,
                          'speedup factor'|(times.head/times));
-  local r:=random(2000);
+  r:=random(2000);
   times:=[test(::sineSum0,r),test(::sineSum1,r),test(::sineSum2,r),test(::sineSum3,r),test(::sineSum4,r)];
   print("\nSum of Sines\n  Source");
   ("    "&inspect['source'].split("\n").get([16..30])).join("\n").print;

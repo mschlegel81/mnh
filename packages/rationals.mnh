@@ -134,12 +134,12 @@ toRegularContinuedFraction(r:Real)->r.toRational.toRegularContinuedFraction;
 toRegularContinuedFraction(r:Rational)->begin
   local x:=r.toBuiltin;
   local cf:=[];
-  while(x[1]!=0,begin
+  while x[1]!=0 do begin
     local integerPart:=x[0] div x[1];
     x[0]-=x[1]*integerPart;
     x:=x.reverseList;
     cf|=integerPart;
-  end);
+  end;
   cf;
 end;
 
@@ -151,12 +151,12 @@ decimalForm(rat:Rational)->begin
   local first:=r[0]; r:=r[1]*10;
   local result:=[];
   local hist:=[];
-  while(!(r in hist) AND result.size<200,begin
+  while !(r in hist) AND result.size<200 do begin
     hist|=r;
     local q:=divMod(r,enum);
     r:=q[1]*10;
     result|=q[0];
-  end);
+  end;
   local h:=indexOf(hist=r)[0];
   h.isVoid
   ? first&'.'&result.join

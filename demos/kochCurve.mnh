@@ -1,7 +1,7 @@
 @demo for=local variables
 runningSum([])->[];
 runningSum(L)->begin
-  local sum:=L.head;
+  sum:=L.head;
   sum|L.tail.each(i,sum+=i);
 end;
 

@@ -6,27 +6,27 @@ datastore points;
 private getPoints->points orElse (points :=
 begin
   //Generate a list of points by dart-throwing
-  local P:=[random(2)];
-  local acceptAt:=1;
-  local tries:=0;
-  while(P.size<1000,begin
+  P:=[random(2)];
+  acceptAt:=1;
+  tries:=0;
+  while P.size<1000 do begin
     tries:=0;
-    local q:=random(2);
-    while(P.each(p,sqr(p-q).agg(+)<acceptAt,OR),begin
+    q:=random(2);
+    while P.each(p,sqr(p-q).agg(+)<acceptAt,OR) do begin
       q:=random(2);
       acceptAt:=acceptAt*0.999;
       tries+=1;
-    end);
+    end;
     P|=[q];
-  end);
+  end;
   resetRandom;
   P;
 end);
 
 //*Returns the length of path points in Euklidean norm
 private pathLength(points)->begin
-  local result:=0;
-  local lastPoint:=points.trailing;
+  result:=0;
+  lastPoint:=points.trailing;
   points.each(p,result:=result+euklideanNorm(lastPoint-p),lastPoint:=p);
   result;
 end;
@@ -36,19 +36,19 @@ private len4(a,b,c,d)->euklideanNorm(b-a)+euklideanNorm(c-b)+euklideanNorm(d-c);
 
 //*Sierpinski-Curve sorting
 scSort(L)->begin
-  local x:=L.getInner(0); local xr:=[min(x),max(x)];
-  local y:=L.getInner(1); local yr:=[min(y),max(y)];
-  local h:=max(xr.get(1)-xr.get(0),yr.get(1)-yr.get(0))/2;
+  x:=L.getInner(0); local xr:=[min(x),max(x)];
+  y:=L.getInner(1); local yr:=[min(y),max(y)];
+  h:=max(xr.get(1)-xr.get(0),yr.get(1)-yr.get(0))/2;
   xr:=(xr.get(1)+xr.get(0))*0.5;
   yr:=(yr.get(1)+yr.get(0))*0.5;
-  local x0:=xr-h;
-  local x1:=xr+h;
-  local y0:=yr-h;
-  local y1:=yr+h;
-  local mask:=sqr(x-x0)+sqr(y-y1)<
-              sqr(x-x1)+sqr(y-y0);
-  local result:=scSort_(x0,y0,x0,y1,x1,y1,x.get( mask),y.get( mask))|
-                scSort_(x1,y1,x1,y0,x0,y0,x.get(!mask),y.get(!mask));
+  x0:=xr-h;
+  x1:=xr+h;
+  y0:=yr-h;
+  y1:=yr+h;
+  mask:=sqr(x-x0)+sqr(y-y1)<
+        sqr(x-x1)+sqr(y-y0);
+  result:=scSort_(x0,y0,x0,y1,x1,y1,x.get( mask),y.get( mask))|
+          scSort_(x1,y1,x1,y0,x0,y0,x.get(!mask),y.get(!mask));
   print('Path length after construction is ',round(pathLength(result),3));
   result;
 end;
@@ -57,8 +57,8 @@ private scSort_(ax:Numeric,ay:Numeric,bx:Numeric,by:Numeric,cx:Numeric,cy:Numeri
   size(x)>1
   ? (sqr(ax-cx)+sqr(ay-cy)>1E-12
     ? begin
-        local mask:=sqr(x-ax)+sqr(y-ay) <
-                    sqr(x-cx)+sqr(y-cy);
+        mask:=sqr(x-ax)+sqr(y-ay) <
+              sqr(x-cx)+sqr(y-cy);
         scSort_(ax,ay,(ax+cx)/2,(ay+cy)/2,bx,by,x.get( mask),y.get( mask)) |
         scSort_(bx,by,(ax+cx)/2,(ay+cy)/2,cx,cy,x.get(!mask),y.get(!mask));
       end
@@ -73,24 +73,24 @@ private scSort_(ax:Numeric,ay:Numeric,bx:Numeric,by:Numeric,cx:Numeric,cy:Numeri
 private SWAP:=[0,2,1,3];
 //*Tries to reduce path length by swapping adjacent nodes
 polish(L)->begin
-  local result:=L;
-  local changing:=true;
-  while(changing,begin
+  result:=L;
+  changing:=true;
+  while changing do begin
     changing:=false;
     random(size(result)).sortPerm.each(i,begin
-      local J:=[i..i+3] mod size(result);
+      J:=[i..i+3] mod size(result);
       len4@(result.get(J[SWAP]))<
       len4@(result.get(J))
       ? begin
           changing:=true;
-          local tmp   :=result[J[1]];
+          tmp   :=result[J[1]];
           result[J[1]]:=result[J[2]];
           result[J[2]]:=tmp;
           void;
         end
       : void;
     end);
-  end);
+  end;
   print('Path length after polishing is    ',round(pathLength(result),3));
   result;
 end;
@@ -100,7 +100,7 @@ end;
 main->begin
   resetRandom;
   plot.setOptions([['axisStyleX',0],['axisStyleY',0]]);
-  local L:=polish(scSort(getPoints));
+  L:=polish(scSort(getPoints));
   plot(L|L.get([0]),'. l');
   plot.renderToFile(replace(myPath,'.mnh','.png'),768,768);
 end;

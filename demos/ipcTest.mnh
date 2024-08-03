@@ -9,7 +9,7 @@ private ensureServer->begin
   isIpcServerRunning(serverId)
   ? return void
   : executor.execAsync([myPath,'serve']);
-  while(!isIpcServerRunning(serverId),sleep(0.001));
+  while !isIpcServerRunning(serverId) do sleep(0.001);
 end;
 
 main('serve')->begin

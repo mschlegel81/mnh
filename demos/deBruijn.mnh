@@ -2,9 +2,9 @@
 //*containing all substrings of length n
 //*See: https://en.wikipedia.org/wiki/De_Bruijn_sequence
 deBruijn(base:Int,n:Int)->begin
-  local a:=[1..base*n]*0;
-  local sequence:=[];
-  local constructSequence:=((t,p)->begin
+  a:=[1..base*n]*0;
+  sequence:=[];
+  constructSequence:=((t,p)->begin
     t>n
     ? n mod p=0
       ? sequence|=a[[1..p]]

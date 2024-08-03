@@ -1,7 +1,7 @@
 private bruteForceShuffle(s:String)->begin
-  local c:=s.chars;
-  local minEq:=s.length;
-  local best:=s;
+  c:=s.chars;
+  minEq:=s.length;
+  best:=s;
   c.permutationIterator.each(p,begin
     local eq:=trueCount(p=c);
     eq<minEq
@@ -16,7 +16,7 @@ private bruteForceShuffle(s:String)->begin
 end;
 
 private shuffleInfo(s:String)->begin
-  local shuffled:=s.bruteForceShuffle;
+  shuffled:=s.bruteForceShuffle;
   format("%s\v,\t%s\v,\t(%d)",s,shuffled,trueCount(s.chars=shuffled.chars));
 end;
 

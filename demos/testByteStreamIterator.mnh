@@ -6,13 +6,13 @@ main->begin
   local x1:=gen1();
   local x2:=gen2();
   local chunkIndex:=0;
-  while(!isVoid(x1) OR !isVoid(x2),begin
+  while !isVoid(x1) OR !isVoid(x2) do begin
     assert(x1==x2,"Data from fileContents: \t",x1,
                 "\nData from byteStream: \t",x2,
                 "\nChunk index:\t",chunkIndex);
     x1:=gen1();
     x2:=gen2();
     chunkIndex+=1;
-  end);
+  end;
   print('o.k. (',chunkIndex,'kB compared)');
 end;

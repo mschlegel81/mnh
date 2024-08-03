@@ -7,7 +7,7 @@ USES sysutils,
      litVar,subrules,
      recyclers,
      aggregators,contexts;
-CONST FUTURE_RECYCLER_MAX_SIZE=64;
+CONST FUTURE_RECYCLER_MAX_SIZE=256;
 TYPE
   T_futureLiteralState=(fls_pending,fls_evaluating,fls_done);
 

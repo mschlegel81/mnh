@@ -5,7 +5,7 @@ private steps(width,height,x,y)->
    y<height-1 ? [[x,y],[x,y+1]] : void].{$L[$L.size.random.sortPerm]};
 
 private randomUnvisitedCell(width,height,visited)->begin
-  local L:=[0..width-1].cross([0..height-1]).minus(visited).toList;
+  L:=[0..width-1].cross([0..height-1]).minus(visited).toList;
   L.size=0 ? return [] :
   L[sortPerm(random(L.size))].each(p,
     [4-ord(p+[1,0] in visited)
@@ -16,19 +16,19 @@ end;
 
 private makeMaze(width,height)->
 begin
-  local visited:=
+  visited:=
     (map([-1..  width],{[$i   ,-1]})|
      map([-1.. height],{[width,$j]})|
      map([width..  -1],{[$i   ,height]})|
      map([height.. -1],{[-1   ,$j]}));
-  local visitPairs:=[visited,visited.tail(1)|visited.head(1)].transpose.map(::sort).toSet;
+  visitPairs:=[visited,visited.tail(1)|visited.head(1)].transpose.map(::sort).toSet;
   visited:=visited.toSet;
 
-  local position:=randomUnvisitedCell(width,height,visited);
-  local stack:=steps(width,height,position[0],position[1]);
+  position:=randomUnvisitedCell(width,height,visited);
+  stack:=steps(width,height,position[0],position[1]);
 
-  while(stack.size>0,begin
-    local next:=stack.trailing; stack:=stack.leading;
+  while stack.size>0 do begin
+    next:=stack.trailing; stack:=stack.leading;
     next[1] in visited
     ? void
     : begin
@@ -36,9 +36,9 @@ begin
         visited|=next;
         stack|=steps(width,height,next[1,0],next[1,1]);
       end;
-  end);
+  end;
 
-  local connectionsAroundDot:={
+  connectionsAroundDot:={
     ['┼───','┬───','┴───','────',
      '┤   ','┐   ','┘   ','─   ',
      '├───','┌───','└───','────',
@@ -47,7 +47,7 @@ begin
     ([[$i-1,$j  ],[$i  ,$j  ]] in visitPairs ? 2 : 0) +
     ([[$i  ,$j-1],[$i  ,$j  ]] in visitPairs ? 4 : 0) +
     ([[$i-1,$j-1],[$i-1,$j  ]] in visitPairs ? 8 : 0)]};
-  local horizontallyConnected:={[[$i-1,$j],[$i,$j]] in visitPairs};
+  horizontallyConnected:={[[$i-1,$j],[$i,$j]] in visitPairs};
 
   [0..height].each(j,
     [0..width].each(i,connectionsAroundDot (i,j),&).copy(0,width*4+1),   //wall [i,j]->[i,j-1];

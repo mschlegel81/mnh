@@ -60,6 +60,7 @@ CONST
   LITERAL_NAN_TEXT     = 'Nan';
   LITERAL_INF_TEXT     = 'Inf';
   LITERAL_BOOL_TEXT: array[boolean] of string = ('false', 'true');
+  ALTERNATIVE_NOT_TEXT = 'not';
 
   ONE_SECOND                    =1/(24*60*60);
   ONE_MINUTE                    =1/(24*60);
@@ -203,6 +204,13 @@ TYPE
     tt_endOfPatternAssign, //lexer interal
     tt_functionPattern,
     tt_formatString,
+    tt_do,     //while <statement> do <statement>
+    tt_for,    //for <id> in <iterable> do <statement> do <statement> aggregate <statement>
+    tt_repeat, //repeat <statement> until <statement>
+    tt_until,
+    tt_if,
+    tt_then,
+    tt_else,
     tt_blank);
 
   T_tokenTypeSet  =set of T_tokenType;
@@ -397,6 +405,13 @@ CONST
   {tt_endOfPatternAssign}         '):=',
   {tt_functionPattern}            '',
   {tt_formatString}               '',
+  {tt_do}                         'do',
+  {tt_for}                        'for',
+  {tt_repeat}                     'repeat',
+  {tt_until}                      'until',
+  {tt_if}                         'if',
+  {tt_then}                       'then',
+  {tt_else}                       'else',
   {tt_blank}                      '');
 {$ifdef fullVersion}
   C_tokenDoc:array[T_tokenType] of record
@@ -514,6 +529,13 @@ CONST
 {tt_endOfPatternAssign}         (reservedWordClass:rwc_not_reserved;     helpText:'End-of-pattern/assign'; helpLink:''),
 {tt_functionPattern}            (reservedWordClass:rwc_not_reserved;     helpText:'Function pattern'; helpLink:''),
 {tt_formatString}               (reservedWordClass:rwc_not_reserved;     helpText:'Format string'; helpLink:''),
+{tt_do}                         (reservedWordClass:rwc_specialConstruct; helpText:'Special construct: do#Used in "for" and "while" constructs'; helpLink:'/specials.html#while'),
+{tt_for}                        (reservedWordClass:rwc_specialConstruct; helpText:'Special construct: for ... in ... do [parallel] ... #Used in "for" construct'; helpLink:''),
+{tt_repeat}                     (reservedWordClass:rwc_specialConstruct; helpText:'Special construct: repeat ... until'; helpLink:''),
+{tt_until}                      (reservedWordClass:rwc_specialConstruct; helpText:'Special construct: repeat ... until'; helpLink:''),
+{tt_if}                         (reservedWordClass:rwc_specialConstruct; helpText:'Special construct: if ... then ... else'; helpLink:''),
+{tt_then}                       (reservedWordClass:rwc_specialConstruct; helpText:'Special construct: if ... then ... else'; helpLink:''),
+{tt_else}                       (reservedWordClass:rwc_specialConstruct; helpText:'Special construct: if ... then ... else'; helpLink:''),
 {tt_blank}                      (reservedWordClass:rwc_not_reserved;     helpText:'Blank#Helper token; May indicate a comment or whitespace'; helpLink:''));
 {$endif}
 TYPE

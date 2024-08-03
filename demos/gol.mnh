@@ -68,11 +68,11 @@ private playTheGame(S:WorldSize,stepLimit:Int,quitMethod:Expression(0),outputMet
   begin
     local W:=initWorld(S);
     local stepCounter:=0;
-    while(stepCounter<=stepLimit AND quitMethod().isVoid,begin
+    while stepCounter<=stepLimit AND quitMethod().isVoid do begin
       stepCounter+=1;
       outputMethod(W);
       W:=W.step;
-    end);
+    end;
   end;
 
 //*Conway's Game Of Life

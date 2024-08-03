@@ -3,8 +3,8 @@ private missingLetters(s:String)->['A'..'Z'].minus(s.charSet.upper);
 
 private memoized dictionary->dict.fileLines.trim.unique;
 private memoized letterMap->begin
-  local result:=[].toMap;
-  local t0:=scriptTime;
+  result:=[].toMap;
+  t0:=scriptTime;
   dictionary.each(word,word.charSet.upper.each(key,result[key]|=word));
   note('Lettermap initialized in ',scriptTime-t0,' seconds');
   result;
@@ -13,9 +13,9 @@ end;
 private randomWord->dictionary[dictionary.size.intRandom];
 private randomWord(missingLetters:StringCollection)->begin
   //Find all words containing at least one of the missing letters
-  local l:=letterMap.getAll(missingLetters).flatten.elementFrequency;
+  l:=letterMap.getAll(missingLetters).flatten.elementFrequency;
   //The best words are the ones occurring the most times (once for each missing letter)
-  local best:=l.getInner(1).max;
+  best:=l.getInner(1).max;
   //Filter the best ones and transform to list with length
   l:=l.filter({$x[1]=best}).map({[$x[0],length($x[0])]});
   //The best words are the shortest ones
@@ -27,8 +27,8 @@ private randomWord(missingLetters:StringCollection)->begin
 end;
 
 randomPangram->begin
-  local s:=randomWord;
-  local missing:=s.missingLetters;
+  s:=randomWord;
+  missing:=s.missingLetters;
   while(missing.size>0,begin
     s&=' '&randomWord(missing);
     missing:=s.missingLetters;
@@ -37,13 +37,13 @@ randomPangram->begin
 end;
 
 findShortRandomPangram->begin
-  local shortestLength:=2^63-1;
+  shortestLength:=2^63-1;
   async({begin
            ask('Press enter to stop.');
            halt;
          end});
   while(true,begin
-    local p:=randomPangram;
+    p:=randomPangram;
     p.length<shortestLength
     ? begin
         print('Length: ',shortestLength:=p.length);
@@ -54,7 +54,7 @@ findShortRandomPangram->begin
 end;
 
 checkForPangram(s:String)->begin
-  local missing:=s.missingLetters;
+  missing:=s.missingLetters;
   missing.size=0
   ? print(escape(s),' is a pangram')
   : print(escape(s),' is not a pangram. Missing letters are ',missing.join(","));

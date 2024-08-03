@@ -1051,6 +1051,7 @@ FUNCTION integrate_impl intFuncSignature;
       f:P_expressionLiteral;
       returnType:T_literalType=lt_error;
       pointsRemaining:longint;
+      errorTolerance:double=0;
   FUNCTION evalF(CONST x:double):T_arrayOfDouble; inline;
     VAR evResult:T_evaluationResult;
         parameterList:T_listLiteral;
@@ -1086,31 +1087,31 @@ FUNCTION integrate_impl intFuncSignature;
         for d in a do if isNan(d) or isInfinite(d) then exit(true);
         result:=false;
       end;
-    CONST highOrderWeights:array[0..31,0..4] of double=(( 0.07777777777777794, 0.35555555555555607, 0.13333333333333286, 0.3555555555555596 , 0.0777777777777775 ),
-                                                        ( 0                  , 0.66666666666666607,-0.3333333333333339 , 0.6666666666666665 , 0                  ),
-                                                        ( 0.16666666666666696, 0                  , 0.666666666666667  , 0                  , 0.16666666666666663),
-                                                        ( 0.6666666666666665 ,-1.333333333333333  , 1.6666666666666665 , 0                  , 0                  ),
-                                                        ( 0.05555555555555558, 0.44444444444444509, 0                  , 0.44444444444444375, 0.0555555555555558 ),
-                                                        ( 0.11111111111111138, 0.33333333333333348, 0                  , 0.55555555555555547, 0                  ),
-                                                        (-0.16666666666666674, 0.8888888888888888 , 0                  , 0                  , 0.27777777777777779),
+    CONST highOrderWeights:array[0..31,0..4] of double=(( 0.07777777777777777, 0.35555555555555555, 0.13333333333333333, 0.3555555555555555 , 0.07777777777777777),
+                                                        ( 0                  , 0.66666666666666666,-0.33333333333333333, 0.6666666666666666 , 0                  ),
+                                                        ( 0.16666666666666666, 0                  , 0.66666666666666666, 0                  , 0.16666666666666666),
+                                                        ( 0.66666666666666666,-1.33333333333333333, 1.66666666666666666, 0                  , 0                  ),
+                                                        ( 0.05555555555555555, 0.44444444444444444, 0                  , 0.44444444444444444, 0.05555555555555555),
+                                                        ( 0.11111111111111111, 0.33333333333333333, 0                  , 0.55555555555555555, 0                  ),
+                                                        (-0.16666666666666666, 0.88888888888888888, 0                  , 0                  , 0.27777777777777777),
                                                         (-1                  , 2                  , 0                  , 0                  , 0                  ),
-                                                        ( 0.16666666666666685, 0                  , 0.66666666666666607, 0                  , 0.16666666666666652),
-                                                        ( 0.22222222222222243, 0                  , 0.33333333333333348, 0.4444444444444442 , 0                  ),
-                                                        ( 0.16666666666666663, 0                  , 0.6666666666666667 , 0                  , 0.16666666666666663),
+                                                        ( 0.16666666666666666, 0                  , 0.66666666666666666, 0                  , 0.16666666666666666),
+                                                        ( 0.22222222222222222, 0                  , 0.33333333333333333, 0.44444444444444444, 0                  ),
+                                                        ( 0.16666666666666666, 0                  , 0.66666666666666666, 0                  , 0.16666666666666666),
                                                         ( 0                  , 0                  , 1                  , 0                  , 0                  ),
-                                                        ( 0.2777777777777779 , 0                  , 0                  , 0.8888888888888888 ,-0.16666666666666674),
-                                                        ( 0.33333333333333337, 0                  , 0                  , 0.6666666666666666 , 0                  ),
+                                                        ( 0.27777777777777777, 0                  , 0                  , 0.88888888888888888,-0.16666666666666666),
+                                                        ( 0.33333333333333333, 0                  , 0                  , 0.66666666666666666, 0                  ),
                                                         ( 0.5                , 0                  , 0                  , 0                  , 0.5                ),
                                                         ( 1                  , 0                  , 0                  , 0                  , 0                  ),
-                                                        ( 0                  , 0.666666666666667  ,-0.33333333333333215, 0.6666666666666678 , 0                  ),
-                                                        ( 0                  , 0.6666666666666665 ,-0.33333333333333304, 0.6666666666666665 , 0                  ),
-                                                        ( 0                  , 0.444444444444444  , 0.33333333333333348, 0                  , 0.22222222222222232),
+                                                        ( 0                  , 0.66666666666666666,-0.33333333333333333, 0.66666666666666666, 0                  ),
+                                                        ( 0                  , 0.66666666666666666,-0.33333333333333333, 0.66666666666666666, 0                  ),
+                                                        ( 0                  , 0.44444444444444444, 0.33333333333333333, 0                  , 0.22222222222222222),
                                                         ( 0                  , 0                  , 1                  , 0                  , 0                  ),
-                                                        ( 0                  , 0.55555555555555547, 0                  , 0.33333333333333348, 0.11111111111111116),
+                                                        ( 0                  , 0.55555555555555555, 0                  , 0.33333333333333333, 0.11111111111111111),
                                                         ( 0                  , 0.5                , 0                  , 0.5                , 0                  ),
-                                                        ( 0                  , 0.6666666666666666 , 0                  , 0                  , 0.3333333333333333 ),
+                                                        ( 0                  , 0.66666666666666666, 0                  , 0                  , 0.33333333333333333),
                                                         ( 0                  , 1                  , 0                  , 0                  , 0                  ),
-                                                        ( 0                  , 0                  , 1.6666666666666665 ,-1.333333333333333  , 0.6666666666666665 ),
+                                                        ( 0                  , 0                  , 1.66666666666666666,-1.33333333333333333, 0.66666666666666666),
                                                         ( 0                  , 0                  , 1                  , 0                  , 0                  ),
                                                         ( 0                  , 0                  , 1                  , 0                  , 0                  ),
                                                         ( 0                  , 0                  , 1                  , 0                  , 0                  ),
@@ -1118,7 +1119,7 @@ FUNCTION integrate_impl intFuncSignature;
                                                         ( 0                  , 0                  , 0                  , 1                  , 0                  ),
                                                         ( 0                  , 0                  , 0                  , 0                  , 1                  ),
                                                         ( 0                  , 0                  , 0                  , 0                  , 0                  ));
-    CONST lowOrderWeights:array[0..7,0..2] of double=((0.16666666666666663,0.6666666666666667,0.16666666666666663),
+    CONST lowOrderWeights:array[0..7,0..2] of double=((0.16666666666666666,0.6666666666666666,0.16666666666666666),
                                                       (0                  ,1                 ,0                  ),
                                                       (0.5                ,0                 ,0.5                ),
                                                       (1                  ,0                 ,0                  ),
@@ -1187,7 +1188,8 @@ FUNCTION integrate_impl intFuncSignature;
         i:longint;
     begin
       initialSubranges:=pointsRemaining shr 4;
-      if initialSubranges<1 then initialSubranges:=1;
+      if initialSubranges< 1 then initialSubranges:=1;
+      if initialSubranges>32 then initialSubranges:=32;
       subrangeHeap.createWithNumericPriority(nil); //priority will be explicitly passed to heap
       dx:=(x1-x0)/initialSubranges;
 
@@ -1200,7 +1202,7 @@ FUNCTION integrate_impl intFuncSignature;
           YStitch[(1+i) and 1]);         //YS[1]@  1 1 3 3 5 5 ...
       end;
 
-      while pointsRemaining>0 do begin
+      while (pointsRemaining>0) and (subrangeHeap.maxPrio>errorTolerance) do begin
         subrange:=subrangeHeap.extractHighestPrio;
         evaluatePart(subrange.x0                ,subrange.dx*0.5,subrange.y[0],subrange.y[1],subrange.y[2]);
         evaluatePart(subrange.x0+subrange.dx*0.5,subrange.dx*0.5,subrange.y[2],subrange.y[3],subrange.y[4]);
@@ -1219,12 +1221,14 @@ FUNCTION integrate_impl intFuncSignature;
   VAR floatResult:T_arrayOfDouble;
       k:longint;
   begin
-    if (params<>nil) and (params^.size=4) and
+    if (params<>nil) and (params^.size>=4) and (params^.size<=5) and
       (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.canApplyToNumberOfParameters(1)) and
       (arg1^.literalType in [lt_smallint,lt_bigint,lt_real]) and
       (arg2^.literalType in [lt_smallint,lt_bigint,lt_real]) and
-      (arg3^.literalType = lt_smallint) and (P_smallIntLiteral(arg3)^.value>0)
+      (arg3^.literalType = lt_smallint) and (P_smallIntLiteral(arg3)^.value>0) and
+      ((params^.size<=4) or (arg4^.literalType=lt_real) and (P_realLiteral(arg4)^.value>=0))
     then begin
+      if params^.size>4 then errorTolerance:=system.sqr(P_realLiteral(arg4)^.value); //Square the tolerance, because the errors are squared as well
       f :=       P_expressionLiteral(arg0);
       pointsRemaining:=int3^.intValue;
       floatResult:=performIntegration(P_numericLiteral(arg1)^.floatValue,
