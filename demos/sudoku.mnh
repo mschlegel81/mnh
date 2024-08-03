@@ -27,13 +27,30 @@ initialBoard->begin
   [0..80].each(i,i in indexes ? values[indexes=i,0] : [1..9]);
 end;
 
+BOARD_FORMAT_STRING:=
+//!~
+╔═══╤═══╤═══╦═══╤═══╤═══╦═══╤═══╤═══╗
+║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
+╟───┼───┼───╫───┼───┼───╫───┼───┼───╢
+║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
+╟───┼───┼───╫───┼───┼───╫───┼───┼───╢
+║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
+╠═══╪═══╪═══╬═══╪═══╪═══╬═══╪═══╪═══║
+║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
+╟───┼───┼───╫───┼───┼───╫───┼───┼───╢
+║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
+╟───┼───┼───╫───┼───┼───╫───┼───┼───╢
+║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
+╠═══╪═══╪═══╬═══╪═══╪═══╬═══╪═══╪═══║
+║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
+╟───┼───┼───╫───┼───┼───╫───┼───┼───╢
+║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
+╟───┼───┼───╫───┼───┼───╫───┼───┼───╢
+║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
+╚═══╧═══╧═══╩═══╧═══╧═══╩═══╧═══╧═══╝~.replace('x','%s');
+
 private
-printBoard(B)->[0..8].each(row,print(row in [3,6] ? "---------+---------+---------\n" : '',
-               [0..8].each(col,begin
-                 local i:=col+9*row;
-                 (col in [3,6] ? '|' : '')&
-                 " "&(B[i].isInt ? B[i] : " ")&" ";
-               end,&)))|B;
+printBoard(B)->BOARD_FORMAT_STRING.printf@(B.map((x)->x.isInt ? x : ' '));
 
 private
 solve(B)->begin
@@ -84,12 +101,14 @@ randomSolution->begin
   Board:=void;
   repeat
     Board:=initialBoard.restrictRandom.solve;
-    while isValid(Board) AND not Board.isSolved do Board:=Board.restrictRandom.solve;
+    while isValid(Board) AND not Board.isSolved
+    do begin
+      Board:=Board.restrictRandom;
+      Board:=Board.solve;
+    end;
   until Board.isSolved;
   Board;
 end;
-
-randomSolution;
 
 randomRiddle->begin
   local riddle:=randomSolution;
