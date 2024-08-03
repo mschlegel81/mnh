@@ -672,15 +672,18 @@ Declares a function, returning nothing.</td></tr>
 Declares a function and resolves the right-hand-side immediately, returning nothing.<br>
 It can also be used to assign a value to a mutable rule or a block-local variable, returning the value after assigning:
 <!--mnh-->
-  mutable last_x_in_f:=void;
-  f(x)->print('Last x was: ',last_x_in_f) and
-        print('This x is : ',last_x_in_f:=x);
+  begin
+    last_x_in_f:=void;
+    f(x)->print('Last x was: ',last_x_in_f) and
+          print('This x is : ',last_x_in_f:=x);
+  end;
 <!--end-->
 <br>
 This operator can also be employed to perform in-place modification of (potentially nested) lists and maps:
 <!--mnh-->
    begin
-     local x:=['a'..'f']; //returns x
+     x:=['a'..'f']; //returns x
+     y:=x;
      print(x);    //prints ['a','b','c','d','e','f']
      x[3]:='-';   //returns '-' after updating element No.3
      print(x);    //prints ['a','b','c','-','e','f']
@@ -688,8 +691,11 @@ This operator can also be employed to perform in-place modification of (potentia
      print(x);    //prints ['a','b','c','-','f']
      x[5]:='NEW'; //returns 'NEW' after adding a new element at index 5 (index 6 would result in an out-of-bounds error!)
      print(x);    //returns ['a','b','c','-','f','NEW']
+     print(y);    //returns ['a','b','c','d','e','f'], the initial value of x
    end;
 <!--end-->
+Under the hood this is not <i>really</i> an in-place modification, because for list, map and set types there is a copy-on-write mechanism that creates a copy
+of the underlying value if (and only if) it is referenced more than once.
 </td></tr>
 </table>
 
@@ -704,8 +710,8 @@ The following C-Style operators are supported: <ul>
   <li> <code>|=</code> Append the left-hand-side to the right-hand-side and returns the new value. </li>
   <li> <code>>></code> Drops a key (right-hand-side) from the map on the left-hand-side; drops a value from the set on the left-hand-side</li>
 </ul>
-While the first 4 of the above are just "syntactic sugar" and can be equivalently expressed with the operators given in the previous sections,
-the latter 3 additionally allow for specific optimizations, making e.g. the operation <code>L|=x;</code> faster than <code>L:=L|x;</code> (though they still are semantically equivalent).<br>
+All of these operators are more than just "syntactic sugar"; internally they behave quite differently, and allow e.g. for thread-safe incrementation or for
+specific optimizations, making e.g. the operation <code>L|=x;</code> faster than <code>L:=L|x;</code> (though they still are semantically equivalent).<br>
 As the assignment operator, the C-style operators can be employed for in-place modification.
 
 <h3><br><a name="funcToExp"> Function-to-Expression</a></h3>
@@ -1100,7 +1106,8 @@ It changes the representation of the persisted file to "plain text" to allow bet
 
 <h4><br><a name="localMod">local</a></h4>
 The <i>local modifier</i> ensures, that a variable is declared in the scope of the current <a href="#beginEnd">begin-end-blocks</a>.
-It is only allowed in this context. Local variables are always mutable.
+It is only allowed in this context. Local variables are always mutable. <br>
+In many cases - when it is clear, that there is no variable of the given name in the scope - the local modifier can be omitted.
 
 <h4><br><a name="typeMod">(duck)type</a></h4>
 The <i>type and ducktype modifier</i> allow the declaration of custom typechecks. These checks can then be used in function declaration headers as the built in type checks (see <a href="functions.html#restrictions">parameter restrictions</a>).<br>
@@ -1455,6 +1462,7 @@ For compound accesses there also is the getAll method, whose behavior is like th
   <li><h3><a href="functions.html">Functions</a></h3></li>
   <li><h3><a href="specials.html">Special constructs</a></h3></li>
 <ul>
+<li><h4><a href="#ifthenelese">if ... then ... else</a></h4></li>
 <li><h4><a href="#each">each and pEach</a></h4></li>
 <ul>
 <li><h5><a href="#syntax">Syntax</a></h5></li>
@@ -1464,7 +1472,9 @@ For compound accesses there also is the getAll method, whose behavior is like th
 <li><h5><a href="#parallelization">Parallelization</a></h5></li>
 </ul>
 <li><h4><a href="#aggregator">aggregator</a></h4></li>
-<li><h4><a href="#while">while</a></h4></li>
+<li><h4><a href="#for">for ... in ... do</a></h4></li>
+<li><h4><a href="#while">while ... do</a></h4></li>
+<li><h4><a href="#repeat">repeat ... until</a></h4></li>
 <li><h4><a href="#return">return</a></h4></li>
 <li><h4><a href="#nameof">nameOf</a></h4></li>
 </ul>
@@ -1475,7 +1485,18 @@ For compound accesses there also is the getAll method, whose behavior is like th
   </ul>
 </div>
 <div class="docContent">
-<h3><a name="each">each and pEach</a></h3>
+<h3><a name="ifthenelese">if ... then ... else</a></h3>
+The classical case distinction is mapped directly to the <a href=operators.html#iifOps>inline if</a> operator.<br>
+One peculiarity is that the "tail-less" form
+<!--mnh-->
+  if a then b;
+<!--end-->
+is mapped to
+<!--mnh-->
+  a ? b : void;
+<!--end-->
+
+<h3><br><a name="each">each and pEach</a></h3>
 <h4><a name="syntax">Syntax</a></h4>
 The general syntax is:
 <!--mnh-->
@@ -1612,20 +1633,41 @@ In each construct you should prefer passing a single operator as aggregator inst
 <!--end-->
 </code>
 
-<h3><br><a name="while">while</a></h3>
-The <code>while</code> construct can be used to construct head-controlled loops. The general syntax is:<code>
+<h3><br><a name="for">for ... in ... do</a></h3>
+The <code>for</code> construct is an alternative to list processing via the <a href="#each">each/pEach</a> construct. Which one is preferrable depends on
+readability only. Note that "old scool looping" by counting up (or down) a variable explicitly is not supported. The general syntax is:
 <!--mnh-->
-  while(condition,body);
+  for id in iterable do body;
 <!--end-->
-</code>
-Where <code>condition</code> is an expression returning a boolean value and body is one expression.<code>
+You can switch to parallel processing by replacing the (first) <code>do</code> by <code>do parallel</code>.
+<!--mnh-->
+  for id in iterable do parallel body;
+<!--end-->
+You can add multple bodies by adding more <code>do</code> clauses:
+<!--mnh-->
+  for id in iterable do body1 do body2;
+<!--end-->
+By default, a list-aggregator is used (i.e. all body evaluations are collected to a list). If you want to use an alternative aggregator you can use:
+<!--mnh-->
+  for id in iterable do body aggregator(...)
+<!--end-->
+For example:
+<!--mnh-->
+   in> for x in [1..100] do 1/x² aggregator(+);
+  out> 1.6349839001848923
+<!--end-->
+<h3><br><a name="while">while ... do</a></h3>
+The <code>while</code> construct can be used to construct head-controlled loops. The general syntax is:
+<!--mnh-->
+  while entry_condition do body;
+<!--end-->
+Where <code>entry_condition</code> is an expression returning a boolean value and body is one expression.<code>
 <!--mnh-->
  in> greatestCommonDivisor(xIn:Int,yIn:Int)->
        begin
          local x:=xIn;
          local y:=yIn;
-         while(
-           x!=0!=y,
+         while x!=0!=y do
            x>y ? x:=x mod y
                : y:=y mod x);
          max(x,y);
@@ -1634,6 +1676,12 @@ Where <code>condition</code> is an expression returning a boolean value and body
 out> 6
 <!--end-->
 </code>
+
+<h3><br><a name="repeat">repeat ... until</a></h3>
+The <code>repeat</code> construct can be used to construct tail-controlled loops. The general syntax is:
+<!--mnh-->
+  repeat body until exit_condition;
+<!--end-->
 
 <h3><br><a name="return">return</a></h3>
 The <code>return</code> construct can be used for early exit from a code block:<code>
