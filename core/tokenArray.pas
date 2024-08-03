@@ -867,7 +867,8 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
   FUNCTION stackIsEmpty:boolean;
     begin
       result:=topIdx<0;
-      if result and (adapters<>nil) then adapters^.raiseSimpleError('Missing opening bracket for closing bracket',location);
+      if result and (adapters<>nil)
+      then adapters^.raiseSimpleError('Missing opening bracket for closing bracket: '+safeTokenToString(closeToken),location);
     end;
 
   begin
@@ -915,23 +916,23 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
       tt_iifElse: begin
         popSpecialIfPresent; if stackIsEmpty then exit;
         if scope[topIdx].scopeStartToken^.tokType<>tt_iifCheck
-        then raiseMismatchError;
+        then begin
+          //TODO: This might be interpreted as a string-type, as in :FTPconnection - find out if a "raiseMismatchError" is appropriate
+          exit;
+        end;
       end;
       tt_endBlock: begin
         popSpecialIfPresent; if stackIsEmpty then exit;
         if scope[topIdx].scopeStartToken^.tokType<>tt_beginBlock
         then raiseMismatchError;
       end;
-      tt_do: begin
+      tt_do:
         if scope[topIdx].scopeStartToken^.tokType=tt_for then begin
+          if closeToken^.getDoType=dt_unknown then closeToken^.setDoType(dt_for_related_do);
           exit; //This is not a pop...
-
-          //for <id> in ... do ...
-
-        end else
-        if scope[topIdx].scopeStartToken^.tokType<>tt_while // while ... do ...
-        then raiseMismatchError;
-      end;
+        end else if scope[topIdx].scopeStartToken^.tokType=tt_while then begin
+          if closeToken^.getDoType=dt_unknown then closeToken^.setDoType(dt_while_related_do);
+        end else raiseMismatchError;
       tt_until: begin
         if scope[topIdx].scopeStartToken^.tokType<>tt_repeat
         then raiseMismatchError;
@@ -1524,6 +1525,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
   PROCEDURE apply(CONST len:longint; CONST t:T_tokenType); inline;
     begin
       result^.tokType:=t;
+      if t=tt_do then result^.setDoType(dt_unknown);
       parsedLength:=len;
     end;
 
@@ -1629,7 +1631,10 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
       end;
       'a'..'z','A'..'Z','_':
       if copy(line,inputLocation.column,length(C_tokenDefaultId[tt_operatorNotIn]))=C_tokenDefaultId[tt_operatorNotIn] then apply(tt_operatorNotIn)
-      else if isFormatString then begin
+      else if copy(line,inputLocation.column,length(DO_PARALLEL_TEXT)) = DO_PARALLEL_TEXT then begin
+        parsedLength:=                  length(DO_PARALLEL_TEXT);
+        result^.setDoType(dt_for_related_do_parallel);
+      end else if isFormatString then begin
         stringValue:=unescapeString(line,inputLocation.column+1,parsedLength);
         inc(parsedLength); //...because we added one more character before the string
         result^.tokType:=tt_formatString;

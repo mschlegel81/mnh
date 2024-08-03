@@ -292,6 +292,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
         p, bodyRuleStart, prev:P_token;
         bracketLevel:longint=0;
         i: integer;
+        parallel:boolean;
     begin
       sourceLiteral:=first^.next^.data;
       //first   = for
@@ -303,11 +304,12 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       prev:=first^.next;
       p:=   prev^.next;
       assert(p^.tokType=tt_do); //ensured by condition before call
+      parallel:=(p^.getDoType=dt_for_related_do_parallel);
       prev^.next:=nil;
       repeat
         p:=recycler^.disposeToken(p); (**)
         bodyRuleStart:=p;
-        while (p<>nil) and (bracketLevel>=0) and not((p^.tokType in [tt_do,tt_aggregatorConstructor,tt_aggregatorExpressionLiteral]) and (bracketLevel=0)) do begin
+        while (p<>nil) and (bracketLevel>=0) and not(((p^.tokType in [tt_aggregatorConstructor,tt_aggregatorExpressionLiteral]) or (p^.tokType=tt_do) and (p^.getDoType in [dt_for_related_do_parallel,dt_for_related_do])) and (bracketLevel=0)) do begin
           if      (p^.tokType in C_openingBrackets) then inc(bracketLevel)
           else if (p^.tokType in C_closingBrackets) then dec(bracketLevel);
           prev:=p;
@@ -317,7 +319,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
         prev^.next:=nil;
         setLength(bodyRule,length(bodyRule)+1);
         new(P_inlineExpression(bodyRule[length(bodyRule)-1]),createForEachBody(first^.txt,bodyRuleStart,first^.location,context,recycler));
-      until (p=nil) or (p^.tokType<>tt_do);
+      until (p=nil) or (p^.tokType<>tt_do) or not(p^.getDoType in [dt_for_related_do,dt_for_related_do_parallel]);
 
       if (p<>nil) and (p^.tokType=tt_aggregatorConstructor) then begin
         bodyRuleStart:=p;
@@ -338,9 +340,10 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       then aggregator:=newCustomAggregator(P_expressionLiteral(p^.data),p^.location,context)
       else aggregator:=newListAggregator(recycler);
 
-      //TODO: Implement call to processListParallel
       // Syntax: for ... in ... do parallel ... ?
-      processListSerial  (sourceLiteral,bodyRule,aggregator,first^.location,context,recycler);
+      if parallel
+      then processListParallel(sourceLiteral,bodyRule,aggregator,first^.location,context,recycler)
+      else processListSerial  (sourceLiteral,bodyRule,aggregator,first^.location,context,recycler);
 
       //cleanup----------------------------------------------------------------------
       first:=recycler^.disposeToken(first);
@@ -484,18 +487,18 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
         p:=firstTokenOfCondition;
         //Error case: while do ...
         if p^.tokType=tt_do then begin
-          context^.raiseError('Invalid while-construct; One or two arguments (head only or head + body) are expected.',errorLocation);
+          context^.raiseError('Invalid while-construct; Empty entry condition.',errorLocation);
           exit(false);
         end;
 
-        while (p<>nil) and not((p^.tokType in [tt_do,tt_semicolon]) and (bracketLevel=0)) do begin
+        while (p<>nil) and not(((p^.tokType=tt_do) and (p^.getDoType=dt_while_related_do) or (p^.tokType=tt_semicolon)) and (bracketLevel=0)) do begin
           if      (p^.tokType in C_openingBrackets) then inc(bracketLevel)
           else if (p^.tokType in C_closingBrackets) then dec(bracketLevel);
           prev:=p;
           p:=p^.next;
         end;
 
-        if (p<>nil) and (p^.tokType=tt_do) then begin
+        if (p<>nil) and (p^.tokType=tt_do) and (p^.getDoType=dt_while_related_do) then begin
           //"normal" case: while <condition> do ...
           lastTokenOfCondition:=prev;
           p:=p^.next;

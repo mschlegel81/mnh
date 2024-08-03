@@ -61,6 +61,7 @@ CONST
   LITERAL_INF_TEXT     = 'Inf';
   LITERAL_BOOL_TEXT: array[boolean] of string = ('false', 'true');
   ALTERNATIVE_NOT_TEXT = 'not';
+  DO_PARALLEL_TEXT = 'do parallel';
 
   ONE_SECOND                    =1/(24*60*60);
   ONE_MINUTE                    =1/(24*60);
@@ -218,6 +219,11 @@ TYPE
     reservedWordClass:T_reservedWordClass;
     info:ansistring;
   end;
+
+  T_doType = (dt_unknown,
+              dt_while_related_do,
+              dt_for_related_do,
+              dt_for_related_do_parallel);
 
 CONST
   C_operatorsForAggregators: T_tokenTypeSet=[tt_operatorAnd..tt_operatorPot,tt_operatorStrConcat,tt_operatorOrElse,tt_operatorConcat,tt_operatorConcatAlt];

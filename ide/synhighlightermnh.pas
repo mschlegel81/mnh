@@ -71,6 +71,7 @@ TYPE
 
     PROCEDURE handle194; virtual;
     PROCEDURE handleId(CONST id:string; CONST line:longint; VAR col:longint); virtual;
+    FUNCTION lineContinues(CONST head,full_part:string; CONST line:longint; VAR col:longint):boolean;
   end;
 
   TMnhInputSyn = class(TAbstractSynMnhSyn)
@@ -279,13 +280,25 @@ PROCEDURE TMnhDebugSyn.handle194;
     if fLine[run]<>#0 then inc(run);
   end;
 
+FUNCTION TAbstractSynMnhSyn.lineContinues(CONST head,full_part:string; CONST line:longint; VAR col:longint):boolean;
+  VAR offset:longint;
+      i:longint;
+  begin
+    offset:=length(head)+1;
+    result:=true;
+    for i:=0 to length(full_part)-offset-1 do
+      if fLine[col+i]<>full_part[offset+i] then exit(false);
+    inc(col,length(full_part)-length(head));
+  end;
+
 PROCEDURE TAbstractSynMnhSyn.handleId(CONST id:string; CONST line:longint; VAR col:longint);
   begin
+    if (id=C_tokenDefaultId[tt_do]) and lineContinues(id,DO_PARALLEL_TEXT,line,col) then fTokenId:=tkOperator else
     if not(tokenTypeMap.containsKey(id,fTokenId))
     then begin
       if builtinRules.contains(id)
       then fTokenId:=tkBultinRule
-      else if (id='not') then fTokenId:=tkOperator
+      else if (id=ALTERNATIVE_NOT_TEXT) then fTokenId:=tkOperator
       else fTokenId:=tkDefault;
     end;
   end;
@@ -293,11 +306,12 @@ PROCEDURE TAbstractSynMnhSyn.handleId(CONST id:string; CONST line:longint; VAR c
 PROCEDURE TMnhInputSyn.handleId(CONST id:string; CONST line:longint; VAR col:longint);
   begin
     if id=markedWord then fTokenId:=tkHighlightedItem
+    else if (id=C_tokenDefaultId[tt_do]) and lineContinues(id,DO_PARALLEL_TEXT,line,col) then fTokenId:=tkOperator
     else if tokenTypeMap.containsKey(id,fTokenId)    then begin end
     else if highlightingData.isUserRule(id)          then fTokenId:=tkUserRule
     else if highlightingData.isLocalId (id,line,col) then fTokenId:=tkLocalVar
     else if builtinRules    .contains  (id)          then fTokenId:=tkBultinRule
-    else if (id='not') then fTokenId:=tkOperator
+    else if (id=ALTERNATIVE_NOT_TEXT)                then fTokenId:=tkOperator
     else                                                  fTokenId:=tkDefault;
   end;
 

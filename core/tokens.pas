@@ -51,6 +51,8 @@ TYPE
     PROCEDURE setTypeCheck(CONST check:T_typeCheck);
     FUNCTION getModifier:T_modifier;
     PROCEDURE setModifier(CONST modifier:T_modifier);
+    FUNCTION getDoType:T_doType;
+    PROCEDURE setDoType(CONST doType:T_doType);
 
     FUNCTION serializeSingleToken(VAR dest:T_literalSerializer):boolean;
     PROCEDURE deserializeSingleToken(VAR deserializer:T_literalDeserializer);
@@ -271,6 +273,10 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
          result:='for '+txt+' in ';
          if data<>nil then result:=result+P_literal(data)^.toString(limit-length(result))+',';
       end;
+      tt_do:
+        if getDoType=dt_for_related_do_parallel
+        then result:=DO_PARALLEL_TEXT
+        else result:=C_tokenDefaultId[tokType];
       tt_attributeComment:result:=ATTRIBUTE_PREFIX+txt;
       tt_docComment      :result:=COMMENT_PREFIX+txt;
       tt_functionPattern :result:=patternToString(data);
@@ -280,7 +286,7 @@ FUNCTION T_token.toString(CONST lastWasIdLike: boolean; OUT idLike: boolean; CON
       idLike:=false; exit(result);
     end;
     if lastWasIdLike and (result[1] in ['$','a'..'z','A'..'Z','?',':','0'..'9'])
-      or (tokType in [tt_operatorAnd,tt_operatorDivInt,tt_operatorIn,tt_operatorNotIn,tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorMod,tt_operatorOr,tt_operatorXor,tt_operatorOrElse,tt_iifCheck,tt_iifElse])
+      or (tokType in [tt_operatorAnd,tt_operatorDivInt,tt_operatorIn,tt_operatorNotIn,tt_operatorLazyAnd,tt_operatorLazyOr,tt_operatorMod,tt_operatorOr,tt_operatorXor,tt_operatorOrElse,tt_do,tt_iifCheck,tt_iifElse])
     then result:=' '+result;
     idLike:=(result[length(result)] in ['a'..'z','A'..'Z','?',':','_']) or (tokType in [tt_separatorComma,tt_semicolon]);
   end;
@@ -388,6 +394,20 @@ PROCEDURE T_token.setModifier(CONST modifier: T_modifier);
   begin
     data:=pointer(PtrUInt(modifier));
     tokType:=tt_modifier;
+  end;
+
+FUNCTION T_token.getDoType:T_doType;
+  begin
+    {$ifdef debugMode}
+    if (tokType<>tt_do) then raise Exception.create('Call to getDoType is invalid by tokenType');
+    {$endif}
+    result:=T_doType(PtrUInt(data));
+  end;
+
+PROCEDURE T_token.setDoType(CONST doType:T_doType);
+  begin
+    data:=pointer(PtrUInt(doType));
+    tokType:=tt_do;
   end;
 
 FUNCTION T_token.serializeSingleToken(VAR dest:T_literalSerializer): boolean;
