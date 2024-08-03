@@ -321,7 +321,7 @@ T_idStack=object
   PROCEDURE suppressUnusedWarningInLine(CONST lineIndex:longint);
 
   PROCEDURE scopePush(CONST openToken:P_token; CONST scopeType: T_scopeType);
-  PROCEDURE scopePop(CONST adapters:P_messages; CONST location:T_tokenLocation; CONST closeToken:P_token; CONST warnAboutUnused:boolean);
+  PROCEDURE scopePop(CONST adapters:P_messages; CONST location:T_tokenLocation; CONST recycler:P_recycler; VAR workingIn:T_enhancedStatement; CONST closeToken:P_token; CONST warnAboutUnused:boolean; CONST forcePop:boolean=false);
   {$ifdef fullVersion}
   PROCEDURE popRemaining(CONST lastLocation: T_tokenLocation);
   {$endif}
@@ -570,6 +570,8 @@ PROCEDURE predigest(VAR first: P_token; CONST inPackage: P_abstractPackage; CONS
     end;
 
   begin
+    //remove leading blanks:
+    while (first<>nil) and (first^.tokType=tt_blank) do first:=recycler^.disposeToken(first);
     t:=first;
     while t<>nil do begin
       case t^.tokType of
@@ -616,7 +618,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
       result:=earlierSuppressedUnusedAttribute;
     end;
 
-  PROCEDURE appendTokenToResult(tok:P_token);
+  FUNCTION appendTokenToResultYieldsClosingSemicolon(tok:P_token):boolean;
     VAR
       air: T_addIdResult;
       idType: T_tokenType;
@@ -633,6 +635,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
       end;
 
     begin
+      result:=false;
       case tok^.tokType of
         tt_attributeComment: begin
           if (tok^.txt<>'') and attributeSectionBeforeBody then myGenerics.append(nextStatement.attributes,tok^.txt);
@@ -668,12 +671,17 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
         tt_beginBlock:
           localIdStack.scopePush(tok,sc_block);
         tt_endBlock:
-          localIdStack.scopePop(messages,tok^.location,tok,true);
-        tt_braceOpen,tt_expBraceOpen,tt_listBraceOpen,tt_iifCheck,tt_while,tt_repeat:
+          localIdStack.scopePop(messages,tok^.location,recycler,nextStatement,tok,true);
+        tt_braceOpen,tt_expBraceOpen,tt_listBraceOpen,tt_iifCheck,tt_while,tt_repeat,tt_if:
           localIdStack.scopePush(tok,sc_bracketOnly);
-        tt_braceClose,tt_expBraceClose,tt_listBraceClose,tt_iifElse,tt_do,tt_until,
-        tt_endOfPatternDeclare,tt_endOfPatternAssign,tt_semicolon:
-          localIdStack.scopePop(messages,tok^.location,tok,true);
+        tt_braceClose,tt_expBraceClose,tt_listBraceClose,tt_iifElse,tt_do,tt_until,tt_then,tt_else,
+        tt_endOfPatternDeclare,tt_endOfPatternAssign:
+          localIdStack.scopePop(messages,tok^.location,recycler,nextStatement,tok,true);
+        tt_semicolon:
+          begin
+            localIdStack.scopePop(messages,tok^.location,recycler,nextStatement,tok,true);
+            if localIdStack.scopeBottom then exit(true);
+          end;
         tt_each,tt_parallelEach,tt_for:begin
           localIdStack.scopePush(tok,sc_each);
           localIdStack.addId(EACH_INDEX_IDENTIFIER,tok^.location,tt_eachIndex);
@@ -754,7 +762,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
       nextToProcess:=tokenQueue.next;
       lastLocation:=nextToProcess^.location;
       if nextToProcess^.tokType=tt_semicolon then begin
-        if localIdStack.scopeBottom then begin
+        if localIdStack.scopeBottom or appendTokenToResultYieldsClosingSemicolon(nextToProcess) then begin
           if nextStatement.token.first=nil then messages^.raiseSimpleError('Empty statement!',nextToProcess^.location);
           recycler^.disposeToken(nextToProcess);
           result:=nextStatement;
@@ -762,8 +770,8 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
           resetTemp;
           localIdStack.destroy;
           exit;
-        end else appendTokenToResult(nextToProcess)
-      end else appendTokenToResult(nextToProcess);
+        end;// else appendTokenToResultYieldsClosingSemicolon(nextToProcess)
+      end else appendTokenToResultYieldsClosingSemicolon(nextToProcess);
     end;
     result:=nextStatement;
     if not(messages^.continueEvaluation) then begin
@@ -773,7 +781,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
       recycler^.cascadeDisposeToken(result.token.first);
     end;
     resetTemp;
-    while not(localIdStack.scopeBottom) do localIdStack.scopePop(messages,lastLocation,nil,not(hasSuppressedUnusedAttribute));
+    while not(localIdStack.scopeBottom) do localIdStack.scopePop(messages,lastLocation,recycler,nextStatement,nil,not(hasSuppressedUnusedAttribute),true);
     localIdStack.destroy;
   end;
 
@@ -814,7 +822,7 @@ PROCEDURE T_idStack.scopePush(CONST openToken:P_token; CONST scopeType:T_scopeTy
     scope[newTopIdx].scopeStartToken:=openToken;
   end;
 
-PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLocation; CONST closeToken:P_token; CONST warnAboutUnused:boolean);
+PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLocation; CONST recycler:P_recycler; VAR workingIn:T_enhancedStatement; CONST closeToken:P_token; CONST warnAboutUnused:boolean; CONST forcePop:boolean=false);
   VAR topIdx:longint;
   PROCEDURE raiseMismatchError;
     VAR message:string;
@@ -836,45 +844,81 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
       end;
       setLength(scope[topIdx].ids,0);
       setLength(scope,topIdx);
+      dec(topIdx);
     end;
 
   PROCEDURE popSpecialIfPresent;
+    VAR t:P_token;
     begin
       topIdx:=length(scope)-1;
-      if (topIdx>=0) and (scope[topIdx].scopeStartToken^.tokType in [tt_while,tt_for]) then performPop;
+      if (topIdx>=0) and (scope[topIdx].scopeStartToken^.tokType in [tt_while,tt_for,tt_then]) then begin
+        if scope[topIdx].scopeStartToken^.tokType = tt_then then begin
+          scope[topIdx].scopeStartToken^.tokType:=tt_iifCheck;
+          t:=workingIn.token.last;
+          t^.next:=recycler^.newToken(closeToken^.location,C_tokenDefaultId[tt_iifElse],tt_iifElse);
+          t:=t^.next;
+          t^.next:=recycler^.newToken(closeToken^.location,LITERAL_TEXT_VOID,tt_literal,newVoidLiteral);
+          workingIn.token.last:=t^.next;
+        end;
+        performPop;
+      end;
+    end;
+
+  FUNCTION stackIsEmpty:boolean;
+    begin
+      result:=topIdx<0;
+      if result and (adapters<>nil) then adapters^.raiseSimpleError('Missing opening bracket for closing bracket',location);
     end;
 
   begin
-    if (closeToken<>nil) and (closeToken^.tokType in [tt_semicolon,tt_endBlock]) then popSpecialIfPresent;
-    if (closeToken=nil) or (closeToken^.tokType=tt_semicolon) then exit;
-    topIdx:=length(scope)-1;
-    if topIdx<0 then begin
-      if adapters<>nil then adapters^.raiseSimpleError('Missing opening bracket for closing bracket',location);
+    if (closeToken<>nil) and (closeToken^.tokType=tt_semicolon) then begin
+      popSpecialIfPresent;
       exit;
     end;
+    if (closeToken=nil) and not forcePop then exit;
+    topIdx:=length(scope)-1;
+    if stackIsEmpty then exit;
     if closeToken<>nil then case closeToken^.tokType of
       tt_braceClose: begin
+        popSpecialIfPresent; if stackIsEmpty then exit;
         if not(scope[topIdx].scopeStartToken^.tokType in [tt_each,tt_parallelEach,tt_braceOpen])
         then raiseMismatchError;
       end;
       tt_listBraceClose: begin
+        popSpecialIfPresent; if stackIsEmpty then exit;
         if scope[topIdx].scopeStartToken^.tokType<>tt_listBraceOpen
         then raiseMismatchError;
       end;
-      tt_endOfPatternDeclare,tt_endOfPatternAssign: begin
+      tt_endOfPatternDeclare,tt_endOfPatternAssign:
         if   scope[topIdx].scopeStartToken^.tokType =tt_braceOpen
         then scope[topIdx].scopeStartToken^.tokType:=tt_startOfPattern
         else raiseMismatchError;
-      end;
       tt_expBraceClose: begin
+        popSpecialIfPresent; if stackIsEmpty then exit;
         if scope[topIdx].scopeStartToken^.tokType<>tt_expBraceOpen
         then raiseMismatchError;
       end;
+      tt_then:
+        if scope[topIdx].scopeStartToken^.tokType = tt_if
+        then begin
+          scope[topIdx].scopeStartToken^.tokType:=tt_blank;
+          scope[topIdx].scopeStartToken:=closeToken;
+          exit;
+        end
+        else raiseMismatchError;
+      tt_else:
+        if scope[topIdx].scopeStartToken^.tokType=tt_then
+        then begin
+          scope[topIdx].scopeStartToken^.tokType:=tt_iifCheck;
+          closeToken                   ^.tokType:=tt_iifElse;
+        end else raiseMismatchError;
       tt_iifElse: begin
+        popSpecialIfPresent; if stackIsEmpty then exit;
         if scope[topIdx].scopeStartToken^.tokType<>tt_iifCheck
         then raiseMismatchError;
       end;
       tt_endBlock: begin
+        popSpecialIfPresent; if stackIsEmpty then exit;
         if scope[topIdx].scopeStartToken^.tokType<>tt_beginBlock
         then raiseMismatchError;
       end;
