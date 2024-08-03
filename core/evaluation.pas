@@ -622,46 +622,37 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
         bracketLevel:longint=0;
     begin
       prev:=first;
-      stack.push(first); //push "?"
-      p:=first;
-      while (p<>nil) and not((p^.tokType=tt_iifElse) and (bracketLevel=0)) do begin
-        if p^.tokType in      C_openingBrackets then inc(bracketLevel)
-        else if p^.tokType in C_closingBrackets then dec(bracketLevel);
-        prev:=p; p:=p^.next;
-      end;
-      if not((p<>nil) and (p^.tokType=tt_iifElse) and (bracketLevel=0)) then begin
-        stack.popLink(first);
-        context^.raiseError('Cannot evaluate inline-if; cannot locate then-marker',errorLocation);
-        exit;
-      end;
-      tokenBeforeElse:=prev;
-      while (p<>nil) and not((p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) do begin
-        if p^.tokType in      C_openingBrackets then inc(bracketLevel)
-        else if p^.tokType in C_closingBrackets then dec(bracketLevel);
-        prev:=p; p:=p^.next;
-      end;
-      if  not((p=nil) or (p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) then begin
-        stack.popLink(first);
-        context^.raiseError('Cannot evaluate inline-if; cannot locate end of then-expression',errorLocation);
-        exit;
-      end;
-      lastThen:=prev;
-      if conditionLit then begin
-        //take then-subexpression -> drop else-subexpression
-        p:=tokenBeforeElse^.next;              //store tt_iifElse-token
-        tokenBeforeElse^.next:=lastThen^.next; //unlink else-expression (head)
-        lastThen^.next:=nil;                   //unlink else-expression (tail);
-        recycler^.cascadeDisposeToken(p);       //dispose else-expression
-      end else begin
-        //take else-subexpression -> drop then-subexpression
-        p:=first;
-        first:=tokenBeforeElse^.next^.next;
-        tokenBeforeElse^.next^.next:=nil;
-        recycler^.cascadeDisposeToken(p);
-      end;
-      stack.top:=recycler^.disposeToken(stack.top); //pop "?"
       stack.top:=recycler^.disposeToken(stack.top); //pop condition literal
-      didSubstitution:=true;
+      first:=recycler^.disposeToken(first); //dispose ?
+      if conditionLit then begin
+        //look up ":" and dispose everything after that
+
+        p:=first;
+        while (p<>nil) and (bracketLevel>=0) and not((p^.tokType=tt_iifElse) and (bracketLevel=0)) do begin
+          if p^.tokType in      C_openingBrackets then inc(bracketLevel)
+          else if p^.tokType in C_closingBrackets then dec(bracketLevel);
+          prev:=p; p:=p^.next;
+        end;
+        prev^.next:=nil;
+        //It is possible that there is no ":" as in : true ? 1;
+        if (p<>nil) and (p^.tokType=tt_iifElse) and (bracketLevel=0) then begin
+          while (p<>nil) and not((p^.tokType in [tt_braceClose,tt_listBraceClose,tt_separatorCnt,tt_separatorComma,tt_semicolon]) and (bracketLevel=-1)) do begin
+            if p^.tokType in      C_openingBrackets then inc(bracketLevel)
+            else if p^.tokType in C_closingBrackets then dec(bracketLevel);
+            p:=recycler^.disposeToken(p);
+          end;
+        end;
+        prev^.next:=p;
+        didSubstitution:=true;
+      end else begin
+        //dispose everything up to :
+        while (first<>nil) and (bracketLevel>=0) and not((p^.tokType=tt_iifElse) and (bracketLevel=0)) do begin
+          if first^.tokType in      C_openingBrackets then inc(bracketLevel)
+          else if first^.tokType in C_closingBrackets then dec(bracketLevel);
+          first:=recycler^.disposeToken(first);
+        end;
+        didSubstitution:=true;
+      end;
     end;
 
   PROCEDURE startOrPushParameterList;
