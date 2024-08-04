@@ -17,6 +17,11 @@
 #I COMPARATOR_EQ
 #S COMPARATOR_EQ(x,y);
 #C Wrapper function for =
+3=3.0;
+
+{$x}=3; //Used with expressions the result will be a new expression
+
+[1,2,3]=[3,1,3]; //= compares element by element
 
 arity({3});
 #S arity(e:Expression);
@@ -1309,9 +1314,6 @@ parseHex('DeadBeef');
 //Filtering a generator/iterator results in a new generator/iterator
 rangeGenerator(1,20).filter({$x mod 2<>0<>$x mod 3});
 
-#I lists.map
-['a'..'f'].map(::upper);
-
 #I lists.pMap
 ['a'..'f'].pMap(::upper);
 
@@ -1354,8 +1356,16 @@ primeGenerator.head(10);
 permutationIterator([3,1,2]).map(::print).toList;
 
 #I lists.map
+#S map(L,f:Expression(1));
+#C Returns a list with f(x) for each x in L
+#C L may be a generator
+#S map(L,f:Expression(0));
+#C Returns a list by applying f. The input L is ignored (apart from its size)
+['a'..'f'].map(::upper);
+#I lists.map
 //The result of <generator>.map(<f>) is a new generator
 rangeGenerator(1,100).map({$x^2});
+#I lists.map
 //You can use functions with more parameters if the input matches:
 zip([1..10],[10..1]*2).map((x,y)->x+y).toList;
 
@@ -1617,6 +1627,8 @@ systemSpecificFilename('..\test/filename.txt');
 stringIterator(['a','b','c'],1,3).head(10);
 
 #I vanDerCorputGenerator
+#S vanDerCorputGenerator(base>=2);
+#C returns a Van der Corput generator for the given base
 vanDerCorputGenerator(2).head(10);
 
 #I primeGenerator
@@ -1636,7 +1648,6 @@ divMod(10,7);
 #S hasPrefix(s,prefix);
 #C Returns true if s starts with prefix
 
-
 isPrime(47531677974672740279381824573269878221106369761817);
 #S isPrime(i:Int);
 #C Returns true if i is a prime, false otherwise.
@@ -1647,15 +1658,6 @@ isPrime(47531677974672740279381824573269878221106369761817);
 
 #I mnh.COMPARATOR_LISTEQ
 [1,2,3]==[3,1,3]; //== always returns a scalar boolean
-
-#I COMPARATOR_EQ
-3=3.0;
-
-#I COMPARATOR_EQ
-{$x}=3; //Used with expressions the result will be a new expression
-
-#I COMPARATOR_EQ
-[1,2,3]=[3,1,3]; //= compares element by element
 
 #I COMPARATOR_LEQ
 3<=3.0;
@@ -1987,13 +1989,6 @@ formatTime('hh:nn dd.mm.yyyy',systime);
 #S permutationIterator(c:collection);
 #C returns a generator generating permutationf of c
 
-#I map
-#S map(L,f:Expression(1));
-#C Returns a list with f(x) for each x in L
-#C L may be a generator
-#S map(L,f:Expression(0));
-#C Returns a list by applying f. The input L is ignored (apart from its size)
-
 #I chunkMap
 #S chunkMap(L,chunkSize>0,f:Expression(1));
 #C joins L in chunks of the specified size and applies f
@@ -2050,10 +2045,6 @@ formatTime('hh:nn dd.mm.yyyy',systime);
 #C returns an ISAAC generator generating pseudo random integers in range [0,range)
 #H See <a href="www.burtleburtle.net/bob/rand/isaacafa.html">www.burtleburtle.net/bob/rand/isaacafa.html</a>
 #C The range of the returned generator can be changed by calling it with an integer argument.
-
-#I vanDerCorputGenerator
-#S vanDerCorputGenerator(base>=2);
-#C returns a Van der Corput generator for the given base
 
 #I ask
 #S ask(q:string);
