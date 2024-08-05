@@ -571,7 +571,6 @@ PROCEDURE predigest(VAR first: P_token; CONST inPackage: P_abstractPackage; CONS
 
   begin
     //remove leading blanks:
-    while (first<>nil) and (first^.tokType=tt_blank) do first:=recycler^.disposeToken(first);
     t:=first;
     while t<>nil do begin
       case t^.tokType of
@@ -600,7 +599,6 @@ PROCEDURE predigest(VAR first: P_token; CONST inPackage: P_abstractPackage; CONS
         else if callAndIdInfos<>nil then callAndIdInfos^.add(t);
         {$endif}
       end;
-      while (t^.next<>nil) and (t^.next^.tokType=tt_blank) do t^.next:=recycler^.disposeToken(t^.next);
       t:=t^.next;
     end;
   end;
@@ -902,7 +900,7 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
       tt_then:
         if scope[topIdx].scopeStartToken^.tokType = tt_if
         then begin
-          scope[topIdx].scopeStartToken^.tokType:=tt_blank;
+          scope[topIdx].scopeStartToken:=recycler^.disposeToken(scope[topIdx].scopeStartToken);
           scope[topIdx].scopeStartToken:=closeToken;
           exit;
         end
