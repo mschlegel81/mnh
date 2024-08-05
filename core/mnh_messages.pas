@@ -23,6 +23,7 @@ TYPE
                   mc_fatal
                   {$ifdef fullVersion},
                   mc_plot   ,
+                  mc_image,
                   mc_gui
                   {$endif});
 CONST
@@ -51,6 +52,7 @@ CONST
     {mc_fatal  } (guiMarker:ERROR_MARKER;   levelTxt:'Fatal'; levelColor:#27'[91;5m'; triggeredFlags:[FlagFatalError])
     {$ifdef fullVersion},
     {mc_plot   } (guiMarker:''; levelTxt:''; levelColor:''; triggeredFlags:[]),
+                 (guiMarker:''; levelTxt:''; levelColor:''; triggeredFlags:[]),
     {mc_gui}     (guiMarker:''; levelTxt:''; levelColor:''; triggeredFlags:[])
     {$endif});
 
@@ -93,6 +95,13 @@ TYPE
     mt_plot_postDisplay,
     mt_guiEdit_done,
     mt_guiEditScriptsLoaded,
+    mt_image_postDisplay,     //signal
+    mt_image_load,            //dedicated type
+    mt_image_replaceImage,    //dedicated type
+    mt_image_close,           //signal
+    mt_image_obtainImageData, //dedicated type
+    mt_image_queryClosedByUser,
+    mt_image_obtainDimensions,//dedicated type
     mt_displayVariableTree,
     mt_displayCustomForm,
     mt_ide_codeAssistanceResponse
@@ -163,6 +172,13 @@ CONST
 {mt_plot_postDisplay}    (level:-1; mClass:mc_plot;    systemErrorLevel:0),
 {mt_guiEdit_done}        (level:-1; mClass:mc_gui;     systemErrorLevel:0),
 {mt_guiEditScriptsLoaded}(level:-1; mClass:mc_gui;     systemErrorLevel:0),
+{mt_image_postDisplay}   (level:-1; mClass:mc_image;   systemErrorLevel:0),
+{mt_image_load}          (level:-1; mClass:mc_image;   systemErrorLevel:0),
+{mt_image_replaceImage}  (level:-1; mClass:mc_image;   systemErrorLevel:0),
+{mt_image_close}         (level:-1; mClass:mc_image;   systemErrorLevel:0),
+{mt_image_obtainImage...}(level:-1; mClass:mc_image;   systemErrorLevel:0),
+{mt_image_queryClosed...}(level:-1; mClass:mc_image;   systemErrorLevel:0),
+{mt_image_obtainDim...}  (level:-1; mClass:mc_image;   systemErrorLevel:0),
 {mt_displayVariableTree} (level:-1; mClass:mc_gui;     systemErrorLevel:0),
 {mt_displayCustomForm}   (level:-1; mClass:mc_gui;     systemErrorLevel:0),
 {mt_ide_codeAssistanc...}(level:-1; mClass:mc_gui;     systemErrorLevel:0)

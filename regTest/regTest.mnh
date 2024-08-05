@@ -162,7 +162,7 @@ main('makebat',exeName)->begin
   allDemos.filter({!skipFile($f)})
           .map(::extractFileNameOnly)
           .|(EXAMPLES_LOG_NAME)
-          .each(d,exeName&' regTest\regTest.mnh only '&d&' 2> test_'&index&'_'&d&'.log',
+          .each(d,exeName&' regTest\regTest.mnh only '&d&f' 2> test_%{index}3.3d_{d}.log',
                   d.matches('oeis') ? '@demos\oeis.mnh stopServer' : void);
   writeFileLines(batname,batLines,"\r\n");
   print(batname,' created');
@@ -170,7 +170,7 @@ main('makebat',exeName)->begin
   batname:=myPath.extractFileDirectory.extractFileDirectory&'/test_noValidate.bat';
   batLines:=
   allDemos.filter({!skipFile($f)})
-          .each(d,exeName&' '&join(d|testParameters(d),' ')&' 2> test_'&index&'_'&extractFileNameOnly(d)&'.log',
+          .each(d,exeName&' '&join(d|testParameters(d),' ')&f' 2> test_%{index}3.3d_{extractFileNameOnly(d)}.log',
                   d.matches('oeis') ? '@demos\oeis.mnh stopServer' : void);
   writeFileLines(batname,batLines,"\r\n");
   print(batname,' created');

@@ -1,1 +1,7 @@
-main->void;
+main->begin
+  local source:='target\Win64\mnh.exe';
+  local target:='C:\bin\mnh.exe';
+  source.fileExists
+  ? print('Copy ',source,'=>',target,' ',copyFile(source,target) ? 'o.k' : 'failed')
+  : void;
+end;

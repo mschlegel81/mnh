@@ -1,7 +1,7 @@
 object askForm: TaskForm
-  Left = 887
+  Left = 423
   Height = 581
-  Top = 194
+  Top = 121
   Width = 428
   AutoSize = True
   BorderIcons = [biSystemMenu, biMaximize]

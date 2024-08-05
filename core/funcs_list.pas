@@ -13,9 +13,10 @@ USES sysutils,
      funcs,
      aggregators;
 VAR BUILTIN_HEAD,BUILTIN_GET,BUILTIN_TAIL,BUILTIN_TRAILING,BUILTIN_ELEMENT_FREQUENCY:P_intFuncCallback;
-
-IMPLEMENTATION
 {$i func_defines.inc}
+
+FUNCTION flatten_imp intFuncSignature;
+IMPLEMENTATION
 USES func_queues;
 {$define SUB_LIST_IMPL:=
 begin

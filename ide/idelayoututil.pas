@@ -20,6 +20,7 @@ TYPE
                   icDebuggerVariables,
                   icDebuggerBreakpoints,
                   icPlot,
+                  icImage,
                   icCustomForm,
                   icTable,
                   icVariableView,
@@ -34,8 +35,9 @@ TYPE
                      cpPageControl4);
 VAR COMPONENT_SHORTCUT:array [T_ideComponent] of string;
 CONST
-  COMPONENT_CAPTION :array [T_ideComponent] of string=('Outline','Help','Assistance','Output','Quick evaluation','Debugger','Debugger - Variables','Breakpoints','Plot','Custom Form',
-                                                       'Table','Variable','Profiling output','Events');
+  COMPONENT_CAPTION :array [T_ideComponent] of string=('Outline','Help','Assistance','Output','Quick evaluation','Debugger','Debugger - Variables','Breakpoints','Plot',
+                                                       'Image',
+                                                       'Custom Form','Table','Variable','Profiling output','Events');
   PAGES:set of T_componentParent=[cpPageControl1..cpPageControl4];
 TYPE
   T_windowPosition=record
@@ -218,6 +220,7 @@ CONST C_defaultDock:T_dockSetup
     {icDebuggerVari}cpPageControl1,
     {icDebuggerBrea}cpPageControl1,
     {icPlot}        cpPageControl1,
+                    cpPageControl1,
     {icCustomForm}  cpPageControl1,
     {icTable}       cpPageControl1,
     {icVariableView}cpPageControl1,
@@ -234,6 +237,7 @@ VAR lastDockLocationFor:T_dockSetup
     {icDebuggerVari}cpPageControl1,
     {icDebuggerBrea}cpPageControl1,
     {icPlot}        cpPageControl1,
+                    cpPageControl1,
     {icCustomForm}  cpPageControl1,
     {icTable}       cpPageControl1,
     {icVariableView}cpPageControl1,
@@ -1044,7 +1048,7 @@ FUNCTION T_ideSettings.loadFromStream(VAR stream: T_bufferedInputStreamWrapper):
       for cp in PAGES do stream.readWord;
     end;
     activeComponents:=[];
-    for ic in T_ideComponent do begin
+    for ic in T_ideComponent do if ic<>icImage then begin
       lastDockLocationFor[ic]:=T_componentParent(stream.readByte);
       ideComponentSize   [ic]:=loadWindowPositionFromStream(stream);
       if stream.readBoolean then include(activeComponents,ic);
@@ -1100,7 +1104,7 @@ PROCEDURE T_ideSettings.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
 
     for cp in PAGES do stream.writeWord(mainForm.dockSites[cp]^.relativeSize);
 
-    for ic in T_ideComponent do begin
+    for ic in T_ideComponent do if ic<>icImage then begin
       stream.writeByte(byte(lastDockLocationFor[ic]));
       saveWindowPositionToSream(stream,ideComponentSize[ic]);
       stream.writeBoolean(hasFormOfType(ic));

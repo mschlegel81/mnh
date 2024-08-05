@@ -16,6 +16,7 @@ USES sysutils,Classes,
      cmdLineInterpretation,
      recyclers,
      mnh_plotForm, mnh_plotData,
+     mnh_imig_form,
      synOutAdapter,
      variableTreeViews,
      mnh_tables,
@@ -128,6 +129,7 @@ USES mnh_constants,
      tokenArray,
      mySys,
      profilingView,
+     mnh_imig,
      mnh_settings,
      messageFormatting,
      eventsComponent;
@@ -135,6 +137,12 @@ FUNCTION newPlotAdapter      (CONST caption:string; CONST headlessMode:boolean=f
   begin
     if headlessMode then new(P_plotSystem   (result),create(nil,false))
                     else new(P_guiPlotSystem(result),create(caption));
+  end;
+FUNCTION newImigAdapter      (CONST caption:string; CONST headlessMode:boolean=false):P_imageSystem  ;
+  begin
+    if headlessMode then new(P_imageSystem   (result),create(nil))
+                    else new(P_guiImageSystem(result),create(caption));
+
   end;
 FUNCTION newTableAdapter     (CONST caption:string      ):P_tableAdapter;       begin new(result,create(caption)); end;
 FUNCTION newTreeAdapter      (CONST caption:string      ):P_treeAdapter;        begin new(result,create(caption)); end;
@@ -187,6 +195,7 @@ CONSTRUCTOR T_standardEvaluation.create(CONST mainForm:T_mnhIdeForm);
     plot:=P_guiPlotSystem(newPlotAdapter      (''));
     messages.addOutAdapter(newCustomFormAdapter(           plot),true);
     messages.addOutAdapter(                                plot ,true);
+    messages.addOutAdapter(newImigAdapter      ('MNH image')    ,true);
     messages.addOutAdapter(newTableAdapter     ('MNH table')    ,true);
     messages.addOutAdapter(newTreeAdapter      ('MNH tree view'),true);
     messages.addOutAdapter(newGuiEventsAdapter (mainForm)       ,true);
@@ -204,6 +213,7 @@ CONSTRUCTOR T_quickEvaluation.create(CONST quickStdout:P_eagerInitializedOutAdap
     plot:=P_guiPlotSystem(newPlotAdapter      ('Quick plot'));
     messages.addOutAdapter(newCustomFormAdapter(                  plot),true);
     messages.addOutAdapter(                                       plot ,true);
+    messages.addOutAdapter(newImigAdapter      ('Quick image')         ,true);
     messages.addOutAdapter(newTableAdapter     ('Quick table')         ,true);
     messages.addOutAdapter(newTreeAdapter      ('Quick tree view')     ,true);
   end;
@@ -244,12 +254,14 @@ CONSTRUCTOR T_reevaluationWithGui.create();
     end;
     if (clf_HEADLESS in commandLine.mnhExecutionOptions.flags) then begin
       messages.addOutAdapter(newPlotAdapter('-',true),true);
+      messages.addOutAdapter(newImigAdapter('-',true),true);
     end else begin
       plot:=P_guiPlotSystem (newPlotAdapter      ('MNH plot: '+commandLine.scriptName));
       messages.addOutAdapter(newCustomFormAdapter(           plot),true);
       messages.addOutAdapter(newTableAdapter     ('MNH table: '+commandLine.scriptName)    ,true);
       messages.addOutAdapter(newTreeAdapter      ('MNH tree view: '+commandLine.scriptName),true);
       messages.addOutAdapter(                                plot ,true);
+      messages.addOutAdapter(newImigAdapter      ('MNH image'),true);
     end;
     messages.addOutAdapter(newProfilingAdapter (false)          ,true);
     system.enterCriticalSection(evaluationCs);

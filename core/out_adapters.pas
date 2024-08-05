@@ -12,6 +12,7 @@ TYPE
                  at_guiSynOutput,
                  at_guiEventsCollector,
                  at_plot,
+                 at_imig,
                  at_table,
                  at_treeView,
                  at_customForm,
@@ -31,6 +32,7 @@ CONST
     {at_guiSyn...}[mt_startOfEvaluation,mt_clearConsole..mt_el4_systemError,mt_timing_info,mt_endOfEvaluation],
     {at_guiEve...}[mt_startOfEvaluation,mt_endOfEvaluation,mt_debugger_breakpoint,mt_guiEdit_done,mt_guiEditScriptsLoaded],
     {at_plot}     [mt_startOfEvaluation,mt_plot_addText..mt_plot_postDisplay,mt_endOfEvaluation],
+    {at_imig}     [mt_startOfEvaluation,mt_image_postDisplay..mt_image_obtainDimensions],
     {at_table}    [mt_startOfEvaluation,mt_displayTable],
     {at_treeView} [mt_startOfEvaluation,mt_displayVariableTree],
     {at_custom...}[                     mt_displayCustomForm,mt_endOfEvaluation],
@@ -589,6 +591,7 @@ FUNCTION T_guiMessagesDistributor.flushToGui: T_messageTypeSet;
      at_guiEventsCollector,
      at_customForm,
      at_plot,
+     at_imig,
      at_table,
      at_treeView,
      at_profilingView] then result+=P_abstractGuiOutAdapter(a.adapter)^.flushToGui(false);

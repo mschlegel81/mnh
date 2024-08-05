@@ -117,7 +117,8 @@ TYPE
                FTP_NAMESPACE            ,
                IPC_NAMESPACE            ,
                PLOT_NAMESPACE           ,
-               GUI_NAMESPACE);
+               GUI_NAMESPACE, IMIG_NAMESPACE);
+
 CONST
   C_namespaceString:array[T_namespace] of string=(
     'mnh',
@@ -132,7 +133,7 @@ CONST
     'ftp',
     'ipc',
     'plot',
-    'gui');
+    'gui','imig');
 TYPE
   T_tokenType = (tt_literal, tt_aggregatorExpressionLiteral,
     //identifier and resolved identifiers

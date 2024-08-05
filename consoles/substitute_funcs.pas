@@ -38,4 +38,23 @@ INITIALIZATION
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'resetOptions',     @requireFullVersion ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'setOptions',       @requireFullVersion ,ak_variadic);
   builtinFunctionMap.registerRule(PLOT_NAMESPACE,'renderToRawData',  @requireFullVersion ,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'calculateThumbnail'      ,@requireFullVersion,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'closeImage'              ,@requireFullVersion,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'displayImage'            ,@requireFullVersion,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'executeWorkflow'         ,@requireFullVersion,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'getScreenSize'           ,@requireFullVersion,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageJpgRawData'         ,@requireFullVersion,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageSize'               ,@requireFullVersion,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'listManipulations'       ,@requireFullVersion,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageDisplaySize'        ,@requireFullVersion,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageDisplayClosedByUser',@requireFullVersion,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'loadImage'               ,@requireFullVersion,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'randomIfs'               ,@requireFullVersion,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'renderPlotToCurrentImage',@requireFullVersion,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'resizeImage'             ,@requireFullVersion,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'saveImage'               ,@requireFullVersion,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'validateWorkflow'        ,@requireFullVersion,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'expandImageGeneration'   ,@requireFullVersion,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'executeTodo'             ,@requireFullVersion,ak_variadic);
+  builtinFunctionMap.registerRule(IMIG_NAMESPACE,'imageRawData'            ,@requireFullVersion,ak_variadic);
 end.

@@ -6,7 +6,7 @@ USES sysutils,
      mnh_constants,
      fileWrappers,
      mnh_messages,
-     out_adapters,{$ifdef fullVersion}mnh_plotData,mnh_doc,{$endif}mnh_settings,
+     out_adapters,{$ifdef fullVersion}mnh_plotData,mnh_doc,mnh_imig,{$endif}mnh_settings,
      funcs_mnh,
      contexts,
      packages,
@@ -15,6 +15,7 @@ USES sysutils,
 
 FUNCTION wantMainLoopAfterParseCmdLine:boolean;
 CONST CMD_LINE_PSEUDO_FILENAME='<cmd_line>';
+    imigAdapters:P_abstractOutAdapter=nil;
 
 VAR commandLine:T_commandLineParameters;
 IMPLEMENTATION
@@ -53,8 +54,11 @@ FUNCTION wantMainLoopAfterParseCmdLine:boolean;
     begin
       recycler:=newRecycler;
       globals.create(@consoleAdapters);
-      {$ifdef fullVersion} consoleAdapters.addOutAdapter(newPlotSystemWithoutDisplay,true); {$endif}
-      globals.resetForEvaluation({$ifdef fullVersion}package,nil,{$endif}commandLine.mnhExecutionOptions.allowedSideEffects,{$ifdef fullVersion}contextType[clf_PROFILE in commandLine.mnhExecutionOptions.flags]{$else}ect_normal{$endif},commandLine.mainParameters,recycler);
+      {$ifdef fullVersion}
+      consoleAdapters.addOutAdapter(newPlotSystemWithoutDisplay,true);
+      consoleAdapters.addOutAdapter(newImigSystemWithoutDisplay,true);
+      {$endif}
+      globals.resetForEvaluation({$ifdef fullVersion}package,nil,{$endif}commandLine.mnhExecutionOptions.allowedSideEffects,{$ifdef fullVersion}contextType[clf_PROFILE in commandLine.mnhExecutionOptions.flags]{$else}ect_normal{$endif},commandLine.mainParameters,@recycler);
       if clf_SHOW_HELP in commandLine.mnhExecutionOptions.flags then begin
         package^.load(lu_forCodeAssistance,globals,recycler,C_EMPTY_STRING_ARRAY);
         consoleAdapters.postTextMessage(mt_printline,C_nilSearchTokenLocation,package^.getHelpOnMain);
