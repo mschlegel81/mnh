@@ -869,6 +869,7 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
       then adapters^.raiseSimpleError('Missing opening bracket for closing bracket: '+safeTokenToString(closeToken),location);
     end;
 
+  VAR pre:P_token;
   begin
     if (closeToken<>nil) and (closeToken^.tokType=tt_semicolon) then begin
       popSpecialIfPresent;
@@ -900,7 +901,9 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
       tt_then:
         if scope[topIdx].scopeStartToken^.tokType = tt_if
         then begin
-          scope[topIdx].scopeStartToken:=recycler^.disposeToken(scope[topIdx].scopeStartToken);
+          pre:=workingIn.token.first;
+          while (pre<>nil) and (pre^.next<>scope[topIdx].scopeStartToken) do pre:=pre^.next;
+          pre^.next:=recycler^.disposeToken(scope[topIdx].scopeStartToken);
           scope[topIdx].scopeStartToken:=closeToken;
           exit;
         end
