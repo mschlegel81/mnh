@@ -694,13 +694,14 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
     VAR p,prev:P_token;
         bracketLevel:longint=0;
     begin
-      prev:=first;
       stack.top:=recycler^.disposeToken(stack.top); //pop condition literal
       first:=recycler^.disposeToken(first); //dispose ?
+
+      prev:=first;
       if conditionLit then begin
         //look up ":" and dispose everything after that
-
-        p:=first;
+        if first^.tokType in C_openingBrackets then inc(bracketLevel);
+        p:=first^.next;
         while (p<>nil) and (bracketLevel>=0) and not((p^.tokType=tt_iifElse) and (bracketLevel=0)) do begin
           if p^.tokType in      C_openingBrackets then inc(bracketLevel)
           else if p^.tokType in C_closingBrackets then dec(bracketLevel);
@@ -714,6 +715,9 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
             else if p^.tokType in C_closingBrackets then dec(bracketLevel);
             p:=recycler^.disposeToken(p);
           end;
+        end else begin
+          prev^.next:=p;
+          exit;
         end;
         prev^.next:=p;
         didSubstitution:=true;
