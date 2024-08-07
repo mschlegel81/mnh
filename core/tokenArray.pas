@@ -298,7 +298,9 @@ TYPE
       DESTRUCTOR destroy; virtual;
   end;
 
+{$ifdef fullVersion}
 OPERATOR =(CONST A,B:T_relatedTokens):boolean;
+{$endif}
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST context:P_context; CONST recycler:P_recycler{$ifdef fullVersion};CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
 FUNCTION isOperatorName(CONST id:T_idString):boolean;
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
@@ -540,6 +542,7 @@ DESTRUCTOR T_abstractLexer.destroy;
     end;
   end;
 
+{$ifdef fullVersion}
 OPERATOR=(CONST A, B: T_relatedTokens): boolean;
   VAR i:longint;
   begin
@@ -550,6 +553,7 @@ OPERATOR=(CONST A, B: T_relatedTokens): boolean;
          (A.position[i].width<>B.position[i].width) then exit(false);
     result:=true;
   end;
+{$endif}
 
 PROCEDURE predigest(VAR first: P_token; CONST inPackage: P_abstractPackage; CONST context: P_context; CONST recycler: P_recycler{$ifdef fullVersion};CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
   VAR t:P_token;
