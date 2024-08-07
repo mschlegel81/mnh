@@ -693,9 +693,11 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
   PROCEDURE resolveInlineIf(CONST conditionLit:boolean);
     VAR p,prev:P_token;
         bracketLevel:longint=0;
+        initialLocation:T_tokenLocation;
     begin
       stack.top:=recycler^.disposeToken(stack.top); //pop condition literal
       first:=recycler^.disposeToken(first); //dispose ?
+      initialLocation:=first^.location;
 
       prev:=first;
       if conditionLit then begin
@@ -716,6 +718,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
             p:=recycler^.disposeToken(p);
           end;
         end else begin
+          context^.raiseError('Could not resolve inline-if; :-token could not be found',initialLocation);
           prev^.next:=p;
           exit;
         end;
@@ -723,12 +726,16 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
         didSubstitution:=true;
       end else begin
         //dispose everything up to :
-        while (first<>nil) and (bracketLevel>=0) and not((p^.tokType=tt_iifElse) and (bracketLevel=0)) do begin
+        while (first<>nil) and (bracketLevel>=0) and not((first^.tokType=tt_iifElse) and (bracketLevel=0)) do begin
           if first^.tokType in      C_openingBrackets then inc(bracketLevel)
           else if first^.tokType in C_closingBrackets then dec(bracketLevel);
           first:=recycler^.disposeToken(first);
         end;
-        didSubstitution:=true;
+        if (first<>nil) and (first^.tokType=tt_iifElse) and (bracketLevel=0) then begin
+          first:=recycler^.disposeToken(first);
+          didSubstitution:=true;
+        end else
+          context^.raiseError('Could not resolve inline-if; :-token could not be found',initialLocation);
       end;
     end;
 
@@ -935,11 +942,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
             didSubstitution:=true;
           end;
         tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse:
-          if (cTokType[1]=tt_iifCheck) and (cTokType[-1]=tt_operatorConcatAlt) then begin
-            trueLit:=P_literal(first^.data)=@boolLit[true];
-            stack.push(first);
-            resolveInlineIf(trueLit);
-          end else begin
+          begin
             case cTokType[-1] of
               tt_unaryOpMinus ,
               tt_unaryOpNegate,
