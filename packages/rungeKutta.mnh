@@ -46,7 +46,7 @@ private embeddedRungeKuttaStepper(Tableau:ERK_ButcherTableau,order:Int)->begin
     local y:=y0_;
     local dtRest:=dtMacro;
     dtSub:=dtRest/max(1,ceil(min(1000,dtRest/dtSub)));
-    while(dtRest>0,begin
+    while dtRest>0 do begin
       local y1:=microStep(y,dtSub);
       local errorEstimate:=y1[1];
       errorEstimate<1
@@ -59,7 +59,7 @@ private embeddedRungeKuttaStepper(Tableau:ERK_ButcherTableau,order:Int)->begin
       dtRest>0 ? begin
         dtSub:=dtRest/max(1,ceil(min(1000,dtRest/dtSub*errorEstimate)));
       end : void;
-    end);
+    end;
     y;
   end;~].flatten;
   code.toExpression;
@@ -127,7 +127,7 @@ FEHLBERG_RK12->(y0_, f, dtMacro, errorTolerance)->
     local y:=y0_;
     local dtRest:=dtMacro;
     dtSub:=dtRest/max(1, ceil(min(1000, dtRest/dtSub)));
-    while(dtRest>0, begin
+    while dtRest>0 do begin
       local y1:=microStep(y, dtSub);
       local errorEstimate:=y1[1];
       errorEstimate<1
@@ -140,7 +140,7 @@ FEHLBERG_RK12->(y0_, f, dtMacro, errorTolerance)->
       dtRest>0
       ? dtSub:=dtRest/max(1, ceil(min(1000, dtRest/dtSub*errorEstimate)))
       : dtSub/=errorEstimate;
-    end);
+    end;
     y;
   end;
 
@@ -169,7 +169,7 @@ BOGACKI_SHAMPINE->(y0_, f, dtMacro, errorTolerance)->
     local y:=y0_;
     local dtRest:=dtMacro;
     dtSub:=dtRest/max(1, ceil(min(1000, dtRest/dtSub)));
-    while(dtRest>0, begin
+    while dtRest>0 do begin
       local y1:=microStep(y, dtSub);
       local errorEstimate:=y1[1];
       errorEstimate<1
@@ -182,7 +182,7 @@ BOGACKI_SHAMPINE->(y0_, f, dtMacro, errorTolerance)->
       dtRest>0
       ? dtSub:=dtRest/max(1, ceil(min(1000, dtRest/dtSub*errorEstimate)));
       : dtSub/=errorEstimate;
-    end);
+    end;
     y;
   end;
 
