@@ -38,6 +38,7 @@ TYPE
       FUNCTION isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
       FUNCTION isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
       PROCEDURE clearLocalIdInfos;
+      FUNCTION getRelatedLocations(CONST CaretX,CaretY:longint):T_relatedTokens;
   end;
 
   P_codeAssistanceResponse=^T_codeAssistanceResponse;
@@ -669,6 +670,16 @@ PROCEDURE T_highlightingData.clearLocalIdInfos;
     enterCriticalSection(highlightingCs);
     try
       localIdInfos.clear;
+    finally
+      leaveCriticalSection(highlightingCs);
+    end;
+  end;
+
+FUNCTION T_highlightingData.getRelatedLocations(CONST CaretX,CaretY:longint):T_relatedTokens;
+  begin
+    enterCriticalSection(highlightingCs);
+    try
+      result:=localIdInfos.getRelated(CaretX,CaretY);
     finally
       leaveCriticalSection(highlightingCs);
     end;

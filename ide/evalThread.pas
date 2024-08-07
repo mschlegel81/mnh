@@ -481,10 +481,10 @@ PROCEDURE T_quickEvaluation.execute(CONST recycler: P_recycler);
       package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
       messages.postSingal(mt_clearConsole,C_nilSearchTokenLocation);
       lexer.create(toEvaluate,packageTokenLocation(@package),@package);
-      stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler);
+      stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler,false);
       while (globals.primaryContext.continueEvaluation) and (stmt.token.first<>nil) do begin
         package.interpret(stmt,lu_forDirectExecution,globals,recycler);
-        stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler);
+        stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler,false);
       end;
       if (stmt.token.first<>nil) then recycler^.cascadeDisposeToken(stmt.token.first);
       lexer.destroy;

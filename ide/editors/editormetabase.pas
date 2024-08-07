@@ -55,9 +55,14 @@ TYPE T_language=(LANG_MNH   = 0,
   T_lineRange=array[0..1] of longint;
 
   P_basicEditorMeta=^T_basicEditorMeta;
+
+  { T_basicEditorMeta }
+
   T_basicEditorMeta=object(T_codeProvider)
     private
       language_   : T_language;
+      PROCEDURE userCommandProcessed(Sender: TObject;
+        VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
     protected
       completionLogic:T_completionLogic;
       editor_     : TSynEdit;
@@ -310,6 +315,13 @@ PROCEDURE T_basicEditorMeta.processUserCommand(Sender: TObject;
     else if command=editCommandUnescapeSelection then begin command:=ecNone; escapeSelection(true);      end;
   end;
 
+PROCEDURE T_basicEditorMeta.userCommandProcessed(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
+  begin
+    if (language_=LANG_MNH) and highlighter.setCaretLocation(editor.CaretXY) then begin
+      editor_.Invalidate;
+    end;
+  end;
+
 PROCEDURE T_basicEditorMeta.setLanguage(CONST languageIndex: T_language);
   begin
     language_:=languageIndex;
@@ -462,6 +474,7 @@ CONSTRUCTOR T_basicEditorMeta.createWithExistingEditor(CONST existingEditor:TSyn
     editor_.highlighter:=highlighter;
 
     editor_.OnProcessCommand    :=@processUserCommand;
+    editor_.OnCommandProcessed  :=@userCommandProcessed;
     language_:=LANG_TXT;
   end;
 

@@ -1883,9 +1883,9 @@ FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONS
       statement:T_enhancedStatement;
   begin
     lexer.create(s,location,package);
-    statement:=lexer.getNextStatement(context^.messages,recycler);
+    statement:=lexer.getNextStatement(context^.messages,recycler,false);
     result:=statement.token.first;
-    statement:=lexer.getNextStatement(context^.messages,recycler);
+    statement:=lexer.getNextStatement(context^.messages,recycler,false);
     if statement.token.first<>nil then begin
       context^.raiseError('Unexpected additional statement: '+tokensToString(statement.token.first,50),location);
       recycler^.cascadeDisposeToken(statement.token.first);
@@ -1905,9 +1905,9 @@ FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CON
   begin
     result:=nil;
     lexer.create(l^.forcedIteratableList(nil),location,package);
-    statement:=lexer.getNextStatement(context^.messages,recycler);
+    statement:=lexer.getNextStatement(context^.messages,recycler,false);
     result:=statement.token.first;
-    statement:=lexer.getNextStatement(context^.messages,recycler);
+    statement:=lexer.getNextStatement(context^.messages,recycler,false);
     if statement.token.first<>nil then begin
       context^.raiseError('Unexpected additional statement: '+tokensToString(statement.token.first,50),location);
       recycler^.cascadeDisposeToken(statement.token.first);

@@ -8,7 +8,8 @@ USES
   mnh_constants,
   mnh_messages,
   funcs,
-  codeAssistance;
+  codeAssistance,
+  tokenArray;
 
 TYPE
   T_tokenKind = (
@@ -68,7 +69,7 @@ TYPE
     PROCEDURE setRange(value: pointer); override;
     PROCEDURE SetLine(CONST newValue: ansistring; LineNumber: integer); override;
     FUNCTION getAttributeForKind(CONST kind:T_tokenKind):TSynHighlighterAttributes;
-
+    PROCEDURE handle_inline_if(CONST line:longint); virtual;
     PROCEDURE handle194; virtual;
     PROCEDURE handleId(CONST id:string; CONST line:longint; VAR col:longint); virtual;
     FUNCTION lineContinues(CONST head,full_part:string; CONST line:longint; VAR col:longint):boolean;
@@ -76,13 +77,17 @@ TYPE
 
   TMnhInputSyn = class(TAbstractSynMnhSyn)
     private
+      related:T_relatedTokens;
       markedWord:string;
     public
       highlightingData:T_highlightingData;
       CONSTRUCTOR create(AOwner: TComponent); reintroduce;
       DESTRUCTOR destroy; override;
       FUNCTION setMarkedWord(CONST s:ansistring):boolean;
+      FUNCTION setCaretLocation(CONST caret:TPoint):boolean;
       PROCEDURE next; override;
+      FUNCTION handleRelatedPosition(CONST line:longint):boolean;
+      PROCEDURE handle_inline_if(CONST line:longint); override;
       PROCEDURE handleId(CONST id: string; CONST line: longint; VAR col: longint); override;
   end;
 
@@ -115,6 +120,16 @@ FUNCTION TMnhInputSyn.setMarkedWord(CONST s: ansistring): boolean;
   begin
     result:=(s<>markedWord);
     markedWord:=s;
+  end;
+
+FUNCTION TMnhInputSyn.setCaretLocation(CONST caret: TPoint):boolean;
+  VAR k:longint;
+      before:T_relatedTokens;
+  begin
+    before:=related;
+    related:=highlightingData.getRelatedLocations(caret.X,caret.Y);
+    for k:=0 to related.count-1 do related.position[k].x-=1;
+    result:=(before<>related);
   end;
 
 CONSTRUCTOR TAbstractSynMnhSyn.create(AOwner: TComponent; CONST flav: T_mnhSynFlavour);
@@ -201,6 +216,7 @@ CONSTRUCTOR TMnhInputSyn.create(AOwner: TComponent);
     inherited create(AOwner,msf_input);
     highlightingData.create;
     markedWord:='';
+    related.count:=0;
   end;
 
 CONSTRUCTOR TMnhOutputSyn.create(AOwner: TComponent);
@@ -258,6 +274,12 @@ FUNCTION TAbstractSynMnhSyn.getAttributeForKind(CONST kind: T_tokenKind): TSynHi
     result:=styleTable[kind,skNormal];
   end;
 
+PROCEDURE TAbstractSynMnhSyn.handle_inline_if(CONST line:longint);
+  begin
+    inc(run);
+    fTokenId:=tkOperator;
+  end;
+
 PROCEDURE TAbstractSynMnhSyn.handle194;
   begin
     inc(run);
@@ -303,8 +325,27 @@ PROCEDURE TAbstractSynMnhSyn.handleId(CONST id:string; CONST line:longint; VAR c
     end;
   end;
 
-PROCEDURE TMnhInputSyn.handleId(CONST id:string; CONST line:longint; VAR col:longint);
+FUNCTION TMnhInputSyn.handleRelatedPosition(CONST line:longint):boolean;
+  VAR k:longint;
   begin
+    for k:=0 to related.count-1 do
+      if (related.position[k].y=line) and (related.position[k].x=fTokenPos)
+      then begin
+        fTokenId:=tkHighlightedItem;
+        exit(true);
+      end;
+    result:=false;
+  end;
+
+PROCEDURE TMnhInputSyn.handle_inline_if(CONST line:longint);
+  begin
+    inherited;
+    handleRelatedPosition(line);
+  end;
+
+PROCEDURE TMnhInputSyn.handleId(CONST id: string; CONST line: longint; VAR col: longint);
+  begin
+    if handleRelatedPosition(line) then exit;
     if id=markedWord then fTokenId:=tkHighlightedItem
     else if (id=C_tokenDefaultId[tt_do]) and lineContinues(id,DO_PARALLEL_TEXT,line,col) then fTokenId:=tkOperator
     else if tokenTypeMap.containsKey(id,fTokenId)    then begin end
@@ -427,9 +468,13 @@ PROCEDURE TAbstractSynMnhSyn.next;
              inc(run);
              fTokenId := tkOperator;
            end;
-      '=','<','>','-','|', '^', '?', '+', '&', '*', '.',':': begin
+      '?',':': begin
+        handle_inline_if(lineIndex+1);
+        firstInLine:=false;
+      end;
+      '=','<','>','-','|', '^', '+', '&', '*', '.': begin
         inc(run);
-        while fLine [run] in ['=', '<', '>' ,'-','|', '^', '?', '+', '&', '*', '.',':'] do inc(run);
+        while fLine [run] in ['=', '<', '>' ,'-','|', '^', '+', '&', '*', '.'] do inc(run);
         fTokenId := tkOperator;
         firstInLine:=false;
       end;
@@ -572,8 +617,7 @@ FUNCTION TAbstractSynMnhSyn.getToken: ansistring;
     setString(result, (fLine+fTokenPos), len);
   end;
 
-PROCEDURE TAbstractSynMnhSyn.GetTokenEx(OUT tokenStart: PChar; OUT
-  tokenLength: integer);
+PROCEDURE TAbstractSynMnhSyn.GetTokenEx(OUT tokenStart: PChar; OUT tokenLength: integer);
   begin
     tokenLength := run-fTokenPos;
     tokenStart := fLine+fTokenPos;

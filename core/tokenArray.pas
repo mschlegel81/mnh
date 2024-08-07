@@ -79,6 +79,7 @@ TYPE
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
       {$endif}
       FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral; virtual;
+      FUNCTION isMain:boolean; virtual;
   end;
 
   P_extendedPackage=^T_extendedPackage;
@@ -120,12 +121,18 @@ TYPE
                   tokenType:T_tokenType;
                 end;
 
+  T_simpleTokenRange=record x,y,width:longint; end;
+  T_relatedTokens=record
+    count:byte;
+    position: array[0..2] of T_simpleTokenRange;
+  end;
+
   T_callAndIdInfos=object
     private
       usageInfoFill:longint;
       usedBuiltins :T_setOfPointer;
       usageInfos:array of T_usageInfo;
-
+      relatedTokens:array of T_relatedTokens;
       localIdInfos: array of T_localIdInfo;
       blobLines:array of record
         lineIndex:longint;
@@ -145,6 +152,9 @@ TYPE
       FUNCTION  isPackageReferenced(CONST packagePath:string):boolean;
       FUNCTION  isEmpty:boolean;
       PROCEDURE includeUsages(CONST other:P_callAndIdInfos);
+      PROCEDURE addTokenRelation(CONST token,other:P_token);
+      FUNCTION  getIndexOfRelated(CONST CaretX,CaretY:longint; CONST exactMatchOnly:boolean=false):longint;
+      FUNCTION  getRelated(CONST CaretX,CaretY:longint):T_relatedTokens;
 
       FUNCTION localTypeOf(CONST id:T_idString; CONST line,col:longint; OUT declaredAt:T_tokenLocation):T_tokenType;
       FUNCTION allLocalIdsAt(CONST line,col:longint):T_arrayOfString;
@@ -233,7 +243,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
       DESTRUCTOR destroy; virtual;
-      FUNCTION getNextStatement(CONST messages:P_messages; CONST recycler:P_recycler):T_enhancedStatement;
+      FUNCTION getNextStatement(CONST messages:P_messages; CONST recycler:P_recycler; CONST collectHighlightingInfo:boolean):T_enhancedStatement;
   end;
 
   { T_singleStringLexer }
@@ -288,6 +298,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
   end;
 
+OPERATOR =(CONST A,B:T_relatedTokens):boolean;
 PROCEDURE predigest(VAR first:P_token; CONST inPackage:P_abstractPackage; CONST context:P_context; CONST recycler:P_recycler{$ifdef fullVersion};CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
 FUNCTION isOperatorName(CONST id:T_idString):boolean;
 VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
@@ -312,10 +323,11 @@ T_idStack=object
   end;
   suppressUnusedWarningInLines:T_arrayOfLongint;
   {$ifdef fullVersion}
+  collectHighlightingInfo:boolean;
   localIdInfos:P_callAndIdInfos;
   {$endif}
 
-  CONSTRUCTOR create({$ifdef fullVersion}CONST info:P_callAndIdInfos{$endif});
+  CONSTRUCTOR create({$ifdef fullVersion}CONST info:P_callAndIdInfos; CONST collectHighlightingInfo_:boolean{$endif});
   DESTRUCTOR destroy;
   PROCEDURE clear;
   PROCEDURE suppressUnusedWarningInLine(CONST lineIndex:longint);
@@ -528,6 +540,17 @@ DESTRUCTOR T_abstractLexer.destroy;
     end;
   end;
 
+OPERATOR=(CONST A, B: T_relatedTokens): boolean;
+  VAR i:longint;
+  begin
+    if A.count<>B.count then exit(false);
+    for i:=0 to A.count-1 do
+      if (A.position[i].y    <>B.position[i].y) or
+         (A.position[i].x    <>B.position[i].x) or
+         (A.position[i].width<>B.position[i].width) then exit(false);
+    result:=true;
+  end;
+
 PROCEDURE predigest(VAR first: P_token; CONST inPackage: P_abstractPackage; CONST context: P_context; CONST recycler: P_recycler{$ifdef fullVersion};CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
   VAR t:P_token;
       pattern:P_pattern;
@@ -603,7 +626,7 @@ PROCEDURE predigest(VAR first: P_token; CONST inPackage: P_abstractPackage; CONS
     end;
   end;
 
-FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recycler:P_recycler): T_enhancedStatement;
+FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recycler:P_recycler; CONST collectHighlightingInfo:boolean): T_enhancedStatement;
   VAR localIdStack:T_idStack;
       earlierSuppressedUnusedAttribute:boolean=false;
       attributeSectionBeforeBody:boolean=true;
@@ -755,7 +778,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
   VAR nextToProcess:P_token=nil;
       lastLocation:T_tokenLocation;
   begin
-    localIdStack.create({$ifdef fullVersion}callAndIdInfos{$endif});
+    localIdStack.create({$ifdef fullVersion}callAndIdInfos,collectHighlightingInfo{$endif});
     while tokenQueue.hasNext or (fetchNext(messages,recycler) and tokenQueue.hasNext) do begin
       nextToProcess:=tokenQueue.next;
       lastLocation:=nextToProcess^.location;
@@ -783,11 +806,12 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
     localIdStack.destroy;
   end;
 
-CONSTRUCTOR T_idStack.create({$ifdef fullVersion}CONST info:P_callAndIdInfos{$endif});
+CONSTRUCTOR T_idStack.create({$ifdef fullVersion}CONST info:P_callAndIdInfos; CONST collectHighlightingInfo_:boolean{$endif});
   begin
     setLength(scope,0);
     {$ifdef fullVersion}
     localIdInfos:=info;
+    collectHighlightingInfo:=collectHighlightingInfo_;
     {$endif}
     clear;
   end;
@@ -901,6 +925,9 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
       tt_then:
         if scope[topIdx].scopeStartToken^.tokType = tt_if
         then begin
+          {$ifdef fullVersion}
+          if (localIdInfos<>nil) and collectHighlightingInfo then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
+          {$endif}
           pre:=workingIn.token.first;
           while (pre<>nil) and (pre^.next<>scope[topIdx].scopeStartToken) do pre:=pre^.next;
           pre^.next:=recycler^.disposeToken(scope[topIdx].scopeStartToken);
@@ -911,32 +938,51 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
       tt_else:
         if scope[topIdx].scopeStartToken^.tokType=tt_then
         then begin
+          {$ifdef fullVersion}
+          if (localIdInfos<>nil) and collectHighlightingInfo then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
+          {$endif}
           scope[topIdx].scopeStartToken^.tokType:=tt_iifCheck;
           closeToken                   ^.tokType:=tt_iifElse;
         end else raiseMismatchError;
       tt_iifElse: begin
         popSpecialIfPresent; if stackIsEmpty then exit;
-        if scope[topIdx].scopeStartToken^.tokType<>tt_iifCheck
-        then begin
+        if scope[topIdx].scopeStartToken^.tokType=tt_iifCheck then begin
+          {$ifdef fullVersion}
+          if (localIdInfos<>nil) and collectHighlightingInfo
+          then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
+          {$endif}
+        end else begin
           //TODO: This might be interpreted as a string-type, as in :FTPconnection - find out if a "raiseMismatchError" is appropriate
           exit;
         end;
       end;
       tt_endBlock: begin
         popSpecialIfPresent; if stackIsEmpty then exit;
-        if scope[topIdx].scopeStartToken^.tokType<>tt_beginBlock
-        then raiseMismatchError;
+        if scope[topIdx].scopeStartToken^.tokType=tt_beginBlock then begin
+          {$ifdef fullVersion}
+          if (localIdInfos<>nil) and collectHighlightingInfo then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
+          {$endif}
+        end else raiseMismatchError;
       end;
       tt_do:
         if scope[topIdx].scopeStartToken^.tokType=tt_for then begin
+          {$ifdef fullVersion}
+          if (localIdInfos<>nil) and collectHighlightingInfo then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
+          {$endif}
           if closeToken^.getDoType=dt_unknown then closeToken^.setDoType(dt_for_related_do);
           exit; //This is not a pop...
         end else if scope[topIdx].scopeStartToken^.tokType=tt_while then begin
+          {$ifdef fullVersion}
+          if (localIdInfos<>nil) and collectHighlightingInfo then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
+          {$endif}
           if closeToken^.getDoType=dt_unknown then closeToken^.setDoType(dt_while_related_do);
         end else raiseMismatchError;
       tt_until: begin
-        if scope[topIdx].scopeStartToken^.tokType<>tt_repeat
-        then raiseMismatchError;
+        if scope[topIdx].scopeStartToken^.tokType=tt_repeat then begin
+          {$ifdef fullVersion}
+          if (localIdInfos<>nil) and collectHighlightingInfo then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
+          {$endif}
+        end else raiseMismatchError;
       end;
       else raise Exception.create('Unexpected closing token '+getEnumName(TypeInfo(closeToken^.tokType),ord(closeToken^.tokType)));
     end;
@@ -1036,6 +1082,7 @@ PROCEDURE T_callAndIdInfos.clear;
     usageInfoFill:=0;
     setLength(localIdInfos,0);
     setLength(blobLines,0);
+    setLength(relatedTokens,0);
   end;
 
 PROCEDURE T_callAndIdInfos.add(CONST token: P_token);
@@ -1142,6 +1189,72 @@ PROCEDURE T_callAndIdInfos.includeUsages(CONST other:P_callAndIdInfos);
     usedBuiltins.put(other^.usedBuiltins.values);
   end;
 
+PROCEDURE T_callAndIdInfos.addTokenRelation(CONST token,other:P_token);
+  PROCEDURE assign(VAR target:T_simpleTokenRange; CONST source:P_token);
+    begin
+      target.width:=length(source^.txt);
+      if target.width<=0 then target.width:=length(C_tokenDefaultId[source^.tokType]);
+      if target.width<=0 then target.width:=1;
+      inc(target.width);
+      target.x:=source^.location.column;
+      target.y:=source^.location.line;
+    end;
+
+  VAR i,j:longint;
+  begin
+    i:=getIndexOfRelated(token^.location.column,token^.location.line,true);
+    j:=getIndexOfRelated(other^.location.column,other^.location.line,true);
+    if i>=0 then begin
+      if j>=0 then exit;
+      //other is new
+      with relatedTokens[i] do begin
+        if count>=length(position) then exit;
+        assign(position[count],other);
+        inc(count);
+      end;
+    end else begin
+      if j>=0 then begin
+        //token is new
+        with relatedTokens[j] do begin
+          if count>=length(position) then exit;
+          assign(position[count],token);
+          inc(count);
+        end;
+      end else begin
+        //both are new
+        i:=length(relatedTokens);
+        setLength(relatedTokens,i+1);
+        with relatedTokens[i] do begin
+          count:=2;
+          assign(position[0],token);
+          assign(position[1],other);
+        end;
+      end;
+    end;
+  end;
+
+FUNCTION T_callAndIdInfos.getIndexOfRelated(CONST CaretX,CaretY:longint; CONST exactMatchOnly:boolean=false):longint;
+  VAR i,j:longint;
+  begin
+    for i:=0 to length(relatedTokens)-1 do begin
+      for j:=0 to relatedTokens[i].count-1 do
+        if (CaretY =  relatedTokens[i].position[j].y) and
+          ((CaretX =  relatedTokens[i].position[j].x) or not exactMatchOnly and
+           (CaretX >= relatedTokens[i].position[j].x) and
+           (CaretX <  relatedTokens[i].position[j].x+relatedTokens[i].position[j].width))
+        then exit(i);
+    end;
+    result:=-1;
+  end;
+
+FUNCTION T_callAndIdInfos.getRelated(CONST CaretX,CaretY:longint):T_relatedTokens;
+  CONST no_relations:T_relatedTokens=(count:0; position:((x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0)));
+  VAR i:longint;
+  begin
+    i:=getIndexOfRelated(CaretX,CaretY);
+    if i<0 then result:=no_relations else result:=relatedTokens[i];
+  end;
+
 PROCEDURE T_callAndIdInfos.copyFrom(CONST original:P_callAndIdInfos);
   VAR k:longint;
   begin
@@ -1151,6 +1264,8 @@ PROCEDURE T_callAndIdInfos.copyFrom(CONST original:P_callAndIdInfos);
     for k:=0 to length(localIdInfos)-1 do localIdInfos[k]:=original^.localIdInfos[k];
     setLength(blobLines,length(original^.blobLines));
     for k:=0 to length(blobLines)-1 do blobLines[k]:=original^.blobLines[k];
+    setLength(relatedTokens,length(original^.relatedTokens));
+    for k:=0 to length(relatedTokens)-1 do relatedTokens[k]:=original^.relatedTokens[k];
   end;
 
 FUNCTION T_callAndIdInfos.localTypeOf(CONST id: T_idString; CONST line, col: longint; OUT declaredAt: T_tokenLocation): T_tokenType;
@@ -1836,6 +1951,11 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
         if (n[1]<>nil) and (n[1]^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule]) and
            (n[2]<>nil) and (n[2]^.tokType = tt_operatorIn)
         then begin
+          {$ifdef fullVersion}
+          if (callAndIdInfos<>nil) and (associatedPackage^.isMain) then begin
+            callAndIdInfos^.addTokenRelation(nextToken,n[2]);
+          end;
+          {$endif}
           nextToken^.txt:=n[1]^.txt;
           nextToken^.data:=nil;
         end else messages^.raiseSimpleError('Invalid for construct. Syntax is: for <id> in <iterable> do [parallel] ...',nextToken^.location);
@@ -1963,6 +2083,11 @@ FUNCTION T_abstractPackage.inspect(CONST includeRulePointer:boolean; CONST conte
     if functionCallInfos<>nil then new(functionCallInfos,create);
     {$endif}
     result:=recycler^.newMapLiteral(0);
+  end;
+
+FUNCTION T_abstractPackage.isMain:boolean;
+  begin
+    result:=true;
   end;
 
 FUNCTION T_extendedPackage.inspect(CONST includeRulePointer: boolean; CONST context: P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}): P_mapLiteral;

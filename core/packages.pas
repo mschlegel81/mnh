@@ -74,10 +74,9 @@ TYPE
       pseudoCallees:T_packageProfilingCalls;
       {$endif}
       FUNCTION writeDataStores(CONST messages:P_messages; CONST recurse:boolean; CONST literalRecycler:P_literalRecycler; VAR flush:T_datastoreFlush):boolean;
-      public
+    public
       PROCEDURE interpret(VAR statement:T_enhancedStatement; CONST usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals; CONST recycler:P_recycler{$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
-      private
-      FUNCTION isMain:boolean;
+      FUNCTION isMain:boolean; virtual;
       {$ifdef fullVersion}
       PROCEDURE complainAboutUnused(CONST messages:P_messages; CONST functionCallInfos:P_callAndIdInfos);
       {$endif}
@@ -606,11 +605,11 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
 
       helperUse.destroy;
       lexer.createForExtendedPackage(importWrapper,@self{$ifdef fullVersion},callAndIdInfos{$endif});
-      stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler);
+      stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler,usecase=lu_forCodeAssistance);
       inc(extendsLevel);
       while (globals.primaryContext.continueEvaluation) and (stmt.token.first<>nil) do begin
         interpret(stmt,usecase,globals,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
-        stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler);
+        stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler,usecase=lu_forCodeAssistance);
       end;
       if (stmt.token.first<>nil) then recycler^.cascadeDisposeToken(stmt.token.first);
       dec(extendsLevel);
@@ -1081,7 +1080,7 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
     if profile then globals.timeBaseComponent(pc_tokenizing);
     lexer.createForPackageParsing(@self{$ifdef fullVersion},callAndIdInfos{$endif});
     if profile then globals.timeBaseComponent(pc_tokenizing);
-    stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler);
+    stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler,usecase=lu_forCodeAssistance);
     isPlainScript:=isPlainScriptStatement;
     if isPlainScript then begin
       case usecase of
@@ -1090,14 +1089,14 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
       end;
       commentOnPlainMain:=join(stmt.comments,C_lineBreakChar);
       recycler^.cascadeDisposeToken(stmt.token.first);
-      stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler);
+      stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler,usecase=lu_forCodeAssistance);
     end;
     if profile then globals.timeBaseComponent(pc_tokenizing);
 
     while (C_packageLoadUsecaseMeta[usecase].assistanceRun or globals.primaryContext.continueEvaluation) and (stmt.token.first<>nil) do begin
       interpret(stmt,usecase,globals,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
       if profile then globals.timeBaseComponent(pc_tokenizing);
-      stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler);
+      stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler,usecase=lu_forCodeAssistance);
       if profile then globals.timeBaseComponent(pc_tokenizing);
     end;
     if (stmt.token.first<>nil) then recycler^.cascadeDisposeToken(stmt.token.first);
