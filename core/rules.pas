@@ -1703,13 +1703,11 @@ PROCEDURE T_memoizedRule.clearCache;
   end;
 
 FUNCTION T_memoizedRule.doPutCache(CONST param: P_listLiteral; CONST recycler:P_literalRecycler): P_literal;
-  VAR val:P_literal;
   begin
-    val:=param^.value[1];
-    if val=nil then val:=newVoidLiteral;
-
-    cache.put(P_listLiteral(param^.value[0]),val,recycler);
-    result:=val^.rereferenced;
+    if param^.size=2
+    then result:=param^.value[1]^.rereferenced
+    else result:=newVoidLiteral;
+    cache.put(P_listLiteral(param^.value[0]),result,recycler);
   end;
 
 end.
