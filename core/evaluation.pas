@@ -366,7 +366,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
           firstTokenOfHead,
           firstTokenOfCondition,
           lastTokenOfHead:P_token;
-
+          statementsInBody:longint=1;
           p,prev:P_token;
       begin
         result:=false;
@@ -383,12 +383,13 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
         while (p<>nil) and not((p^.tokType =tt_until) and (bracketLevel=0)) do begin
           if      (p^.tokType in C_openingBrackets) then inc(bracketLevel)
           else if (p^.tokType in C_closingBrackets) then dec(bracketLevel);
+          if (bracketLevel=0) and (p^.tokType=tt_semicolon) then inc(statementsInBody);
           prev:=p;
           p:=p^.next;
         end;
 
         if (p<>nil) and (p^.tokType=tt_until) then begin
-          //"normal" case: while <condition> do ...
+          //"normal" case: repeat <condition> until ...
           lastTokenOfHead:=prev;
           p:=p^.next;
           firstTokenOfCondition:=p;
@@ -414,6 +415,15 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
         assert(p^.tokType=tt_semicolon);
         first^.next:=p;
         lastTokenOfHead^.next:=nil;
+
+        if statementsInBody>1 then begin
+          //Implicitly transform  repeat ... until ... -> repeat begin ... end until ...
+          p:=recycler^.newToken(firstTokenOfHead^.location,C_tokenDefaultId[tt_beginBlock],tt_beginBlock);
+          p^.next:=firstTokenOfHead;
+          firstTokenOfHead:=p;
+          lastTokenOfHead^.next:=recycler^.newToken(lastTokenOfHead^.location,C_tokenDefaultId[tt_endBlock],tt_endBlock);
+        end;
+
         new(bodyRule,createForWhile(firstTokenOfHead,firstTokenOfHead^.location,context,recycler));
 
         result:=true;
