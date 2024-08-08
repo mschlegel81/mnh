@@ -1883,6 +1883,13 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
         appendToken(nextToken);
         nextToken:=n[1];
       end;
+      tt_literal: begin // replace 2 | <id> -> 2 | * | <id>
+        n[1]:=fetch(messages,recycler);
+        appendToken(nextToken);
+        if (n[1]<>nil) and (n[1]^.toktype=tt_identifier) and (P_literal(nextToken^.data)^.literalType in [lt_bigint,lt_smallint,lt_real])
+        then appendToken(recycler^.newToken(nextToken^.location,C_tokenDefaultId[tt_operatorMult],tt_operatorMult));
+        nextToken:=n[1];
+      end;
       tt_iifElse: begin
         // : may be part of # ? # : # or part of a pattern like (x:Type)
         n[1]:=fetch(messages,recycler);
