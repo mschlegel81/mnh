@@ -599,18 +599,35 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
         newLiteral:P_literal;
         parameterListLiteral:P_listLiteral;
         inlineRule:P_inlineExpression;
+    FUNCTION isNullaryArity(CONST arity:T_arityInfo):boolean;
+      begin
+        result:=(arity.minPatternLength=0) and (arity.maxPatternLength=0);
+      end;
 
     begin
-      if parameterListToken=nil then parameterListLiteral:=nil
-                                else parameterListLiteral:=parameterListToken^.data;
+      if parameterListToken=nil
+      then parameterListLiteral:=nil
+      else parameterListLiteral:=parameterListToken^.data;
       case first^.tokType of
         tt_userRule: begin
           {$ifdef useTryCatchBlocks}
           try
           {$endif}
             if not(P_rule(first^.data)^.canBeApplied(first^.location,parameterListLiteral,replace,context,recycler)) then begin
-              context^.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location);
-              exit;
+              if (parameterListToken<>nil) and (parameterListLiteral<>nil) and (parameterListLiteral^.size>0) and isNullaryArity(P_rule(first^.data)^.arity) then begin
+                if P_rule(first^.data)^.canBeApplied(first^.location,nil,replace,context,recycler)
+                then begin
+                  //Automatic uncurrying for nullary functions
+                  replace.last^.next:=recycler^.newToken(parameterListToken^.location,'',parameterListToken^.tokType,parameterListLiteral^.rereferenced);
+                  replace.last:=replace.last^.next;
+                end else begin
+                  context^.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location);
+                  exit;
+                end;
+              end else begin
+                context^.raiseCannotApplyError('user defined rule '+P_rule(first^.data)^.getId,parameterListLiteral,first^.location);
+                exit;
+              end;
             end;
           {$ifdef useTryCatchBlocks}
           except
