@@ -758,7 +758,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
         end;
         tt_identifier,tt_userRule,tt_intrinsicRule,tt_globalVariable,tt_customType:begin
           if (nextStatement.token.last<>nil) and (nextStatement.token.last^.tokType=tt_modifier) and (nextStatement.token.last^.getModifier=modifier_local) then begin
-            if tok^.tokType=tt_identifier then messages^.postTextMessage(mt_el1_note,nextStatement.token.last^.location,'Obsolete local modifier.');
+            if (tok^.tokType=tt_identifier) and not(localIdStack.hasId(tok^.txt,idType,idLoc)) then messages^.postTextMessage(mt_el1_note,nextStatement.token.last^.location,'Obsolete local modifier.');
             tok^.tokType:=tt_blockLocalVariable;
             air:=localIdStack.addId(tok^.txt,tok^.location,tt_blockLocalVariable);
             if messages<>nil then case air of
