@@ -4,13 +4,13 @@ type ERK_ButcherTableau(T:List)->T.each(row,row.isNumericList AND row.size<=inde
 @SuppressUnusedWarning=all
 absNorm(x:NumericList)->x.abs.agg(+)/x.size;
 absNorm(l:List)->begin
-  local f:=l.flatten;
+  f:=l.flatten;
   f.isNumericList ? absNorm(f) : fail;
 end;
 
 private rkCodeStart(intermediate)->[
-                          'local F0'         ,':=dt*f(y0)',';']|
-  intermediate.each(stage,'local F'&(index+1),':=dt*f(y0' ,
+                          'F0'         ,':=dt*f(y0)',';']|
+  intermediate.each(stage,'F'&(index+1),':=dt*f(y0' ,
                           stage.each(a ,a=0 ? void : [a,'F'&index])
                                .each(af,'+',
                                         af[0]=1 ? void : af[0],
@@ -27,8 +27,8 @@ private summationStageCode(summationStage:NumericList)->
 //*Constructs an explicit Runge-Kutta method from its Butcher Tableau
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric)
 private rungeKuttaStepper(Tableau:ERK_ButcherTableau)->begin
-  local intermediate  :=Tableau.leading;
-  local summationStage:=Tableau.trailing;
+  intermediate  :=Tableau.leading;
+  summationStage:=Tableau.trailing;
   ('(y0,f:Expression(1),dt>0.0)->begin'|rkCodeStart(intermediate)|
                 summationStageCode(summationStage)|';'|'end').toExpression;
 end;
@@ -36,19 +36,19 @@ end;
 //*Constructs an embedded explicit Runge-Kutta method from its Butcher Tableau
 //*The resulting expression accepts/expects parameters: (y0,F:expression(1),dt:numeric,errorTolerance)
 private embeddedRungeKuttaStepper(Tableau:ERK_ButcherTableau,order:Int)->begin
-  local intermediate   :=Tableau.leading(2);
-  local summationStages:=Tableau.trailing(2);
-  local code:=['(y0_,f,dtMacro,errorTolerance)->begin local microStep:=(y0,dt)->begin'             ,rkCodeStart       (intermediate),
-                   '[local result:=',summationStageCode(summationStages[0]),',',
+  intermediate   :=Tableau.leading(2);
+  summationStages:=Tableau.trailing(2);
+  code:=['(y0_,f,dtMacro,errorTolerance)->begin local microStep:=(y0,dt)->begin'             ,rkCodeStart       (intermediate),
+                   '[result:=',summationStageCode(summationStages[0]),',',
                                 '((',summationStageCode(summationStages[1]),'-result).flatten.abs.max/errorTolerance)^',1/order,']; end;'&//!~
-    local dtSub:=dtMacro;
+    dtSub:=dtMacro;
   save;
-    local y:=y0_;
-    local dtRest:=dtMacro;
+    y:=y0_;
+    dtRest:=dtMacro;
     dtSub:=dtRest/max(1,ceil(min(1000,dtRest/dtSub)));
     while dtRest>0 do begin
-      local y1:=microStep(y,dtSub);
-      local errorEstimate:=y1[1];
+      y1:=microStep(y,dtSub);
+      errorEstimate:=y1[1];
       errorEstimate<1
       ? begin
           y:=y1[0];
@@ -115,21 +115,21 @@ HEUN_EULER->embeddedRungeKuttaStepper(
 
 FEHLBERG_RK12->(y0_, f, dtMacro, errorTolerance)->
   begin
-    local F0:=void;
-    local microStep:=(y0, dt)->begin
+    F0:=void;
+    microStep:=(y0, dt)->begin
             F0:=F0 orElse dt*f(y0);
-      local F1:=dt*f(y0+0.5*F0);
-      local F2:=dt*f(local lowerOrderApprox:=y0+0.00390625*F0+0.99609375*F1);
-      [local result:=y0+0.001953125*F0+0.99609375*F1+0.001953125*F2,((lowerOrderApprox-result).flatten.abs.max/errorTolerance)^0.5];
+      F1:=dt*f(y0+0.5*F0);
+      F2:=dt*f(lowerOrderApprox:=y0+0.00390625*F0+0.99609375*F1);
+      [result:=y0+0.001953125*F0+0.99609375*F1+0.001953125*F2,((lowerOrderApprox-result).flatten.abs.max/errorTolerance)^0.5];
     end;
-    local dtSub:=dtMacro;
+    dtSub:=dtMacro;
   save;
-    local y:=y0_;
-    local dtRest:=dtMacro;
+    y:=y0_;
+    dtRest:=dtMacro;
     dtSub:=dtRest/max(1, ceil(min(1000, dtRest/dtSub)));
     while dtRest>0 do begin
-      local y1:=microStep(y, dtSub);
-      local errorEstimate:=y1[1];
+      y1:=microStep(y, dtSub);
+      errorEstimate:=y1[1];
       errorEstimate<1
       ? begin
           y:=y1[0];
@@ -155,23 +155,23 @@ FEHLBERG_RK12->(y0_, f, dtMacro, errorTolerance)->
 
 BOGACKI_SHAMPINE->(y0_, f, dtMacro, errorTolerance)->
   begin
-    local F0:=void;
-    local F3:=void;
-    local microStep:=(y0, dt)->begin
+    F0:=void;
+    F3:=void;
+    microStep:=(y0, dt)->begin
             F0:=F0 orElse dt*f(y0);
-      local F1:=dt*f(y0+0.5*F0);
-      local F2:=dt*f(y0+0.75*F1);
-            F3:=dt*f(local result:=y0+0.2222222222222222*F0+0.3333333333333333*F1+0.4444444444444444*F2);
+      F1:=dt*f(y0+0.5*F0);
+      F2:=dt*f(y0+0.75*F1);
+            F3:=dt*f(result:=y0+0.2222222222222222*F0+0.3333333333333333*F1+0.4444444444444444*F2);
       [result,((y0+0.29166666666666669*F0+0.25*F1+0.3333333333333333*F2+0.125*F3-result).flatten.abs.max/errorTolerance)^0.3333333333333333];
     end;
-    local dtSub:=dtMacro;
+    dtSub:=dtMacro;
   save;
-    local y:=y0_;
-    local dtRest:=dtMacro;
+    y:=y0_;
+    dtRest:=dtMacro;
     dtSub:=dtRest/max(1, ceil(min(1000, dtRest/dtSub)));
     while dtRest>0 do begin
-      local y1:=microStep(y, dtSub);
-      local errorEstimate:=y1[1];
+      y1:=microStep(y, dtSub);
+      errorEstimate:=y1[1];
       errorEstimate<1
       ? begin
           y:=y1[0];
@@ -225,11 +225,11 @@ integrator(EERK:Expression(4),df:Expression(1),dt:Numeric,tolerance>0.0)->(state
 
 //*Iterates, returning all results
 iterate(initialValue,f:Expression(1),stepCount>=1)->begin
-  [local y:=initialValue]| rangeGenerator(1,stepCount).each(step,y:=f(y));
+  [y:=initialValue]| rangeGenerator(1,stepCount).each(step,y:=f(y));
 end;
 
 //*Iterates, returning only the last value
 iterateLast(initialValue,f:Expression(1),stepCount>=1)->begin
-  local y:=initialValue;
+  y:=initialValue;
   rangeGenerator(1,stepCount).each(step,y:=f(y),trailing);
 end;

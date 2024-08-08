@@ -6,7 +6,7 @@ ducktype GeneralNumberList(l:List)->!l.isRational AND l.each(entry,entry.isGener
 //*Returns rational number r in canonical form or as integer
 @SuppressUnusedWarning=all
 shortenRational(r:IntList)->begin
-  local x:=abs(r);
+  x:=abs(r);
   x:=x div gcd@x;
   x[1]=1
   ? (r[0]<0 xor r[1]<0)
@@ -20,7 +20,7 @@ end;
 toReal(rat:Rational)->toReal(rat[0])/toReal(rat[1]);
 //*Converts continued fraction f to a real number
 private toReal(f:RegularContinuedFraction)->begin
-  local r:=0;
+  r:=0;
   f.reverseList.each(i,index=0 ? r:=i : r:=i+1.0/r);
   r;
 end;
@@ -29,7 +29,7 @@ end;
 toRational(i:Int)->[i,1];
 @Override
 toRational(f:RegularContinuedFraction)->begin
-  local r:=void;
+  r:=void;
   f.reverseList.each(i,index=0 ? r:=[i,1].toRational : r:=i+1/r);
   r.isInt ? r.toRational
           : r;
@@ -39,14 +39,14 @@ end;
 //*Converts continued fraction f to a rational number
 toRational(x:Real)->begin
   assert(!x.isNan and !x.isInfinite);
-  local negative:=x<0;
-  local rest:=x.abs;
-  local integerPart:=floor(rest);
+  negative:=x<0;
+  rest:=x.abs;
+  integerPart:=floor(rest);
   rest-=integerPart;
-  local A:=[0,1];
-  local B:=[1,1];
+  A:=[0,1];
+  B:=[1,1];
   A:=[1..100].each(step,begin
-    local N:=A+B;
+    N:=A+B;
     N[0]>rest*N[1]
     ? B:=N
     : A:=N;
@@ -121,8 +121,8 @@ OPERATOR_NEGATE_ARITHMETIC(a:Rational)->[-a[0],a[1]].toRational;
 
 sqr(x:Rational)->sqr(x.toBuiltin).shortenRational;
 sqrt(x:Rational)->begin
-  local a:=isqrt(x[0]);
-  local b:=isqrt(x[1]);
+  a:=isqrt(x[0]);
+  b:=isqrt(x[1]);
   a[1] AND b[1] ? [a[0],b[0]].shortenRational : sqrt(x.toReal);
 end;
 
@@ -132,10 +132,10 @@ toRegularContinuedFraction(r:Real)->r.toRational.toRegularContinuedFraction;
 //*Converts rational number r to a continued fraction
 @Override
 toRegularContinuedFraction(r:Rational)->begin
-  local x:=r.toBuiltin;
-  local cf:=[];
+  x:=r.toBuiltin;
+  cf:=[];
   while x[1]!=0 do begin
-    local integerPart:=x[0] div x[1];
+    integerPart:=x[0] div x[1];
     x[0]-=x[1]*integerPart;
     x:=x.reverseList;
     cf|=integerPart;
@@ -146,22 +146,22 @@ end;
 //*Returns a decimal representation of the given rational number
 //*Periodic parts are shown in round brackets; periods longer than 200 will not be found
 decimalForm(rat:Rational)->begin
-  local enum:=rat[1];
-  local r:=divMod(rat[0],rat[1]);
-  local first:=r[0]; r:=r[1]*10;
-  local result:=[];
-  local hist:=[];
+  enum:=rat[1];
+  r:=divMod(rat[0],rat[1]);
+  first:=r[0]; r:=r[1]*10;
+  result:=[];
+  hist:=[];
   while !(r in hist) AND result.size<200 do begin
     hist|=r;
-    local q:=divMod(r,enum);
+    q:=divMod(r,enum);
     r:=q[1]*10;
     result|=q[0];
   end;
-  local h:=indexOf(hist=r)[0];
+  h:=indexOf(hist=r)[0];
   h.isVoid
   ? first&'.'&result.join
   : begin
-      local periodicPart:=result.tail(h);
+      periodicPart:=result.tail(h);
       first&'.'&result.head(h).join&
       (periodicPart==[0]
        ? ''
@@ -174,10 +174,10 @@ decimalForm(cf:RegularContinuedFraction)->cf.toRational.decimalForm;
 
 //*Lists the first 30 approximations for r
 listApprox(cf:RegularContinuedFraction)->begin
-  local r:=cf.toReal;
+  r:=cf.toReal;
   [1..min(30,cf.size)].each(k,cf.head(k).toRegularContinuedFraction)
   .pMap({begin
-      local rat:=$cf.toRational;
+      rat:=$cf.toRational;
       "["&abs(rat[1]*r-rat[0])& "]\t"&rat.toString&"\t=\t"&$cf.toString;
     end})
   .join("\n")
@@ -201,12 +201,12 @@ parseRational(s:String)->
     end
   : s.matches('^-?\d+(.\d*(\(\d+\))?)?$')
     ? begin
-        local p:=s.split('.');
-        local sig:=s.matches('^-') ? -1 : 1;
-        local intPart:=p.head.toInt;
-        local fracPart:=p.tail.head.split(['(',')']).head(2);
-        local periodicPart   :=fracPart[1] orElse '0';
-        local nonperiodicPart:=fracPart[0] orElse '0';
+        p:=s.split('.');
+        sig:=s.matches('^-') ? -1 : 1;
+        intPart:=p.head.toInt;
+        fracPart:=p.tail.head.split(['(',')']).head(2);
+        periodicPart   :=fracPart[1] orElse '0';
+        nonperiodicPart:=fracPart[0] orElse '0';
         sig*intPart.abs+(nonperiodicPart.toInt+periodicPart.toInt/(10^periodicPart.length-1))/10^nonperiodicPart.length;
       end
     : fail('cannot parse ',s);

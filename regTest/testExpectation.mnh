@@ -37,12 +37,12 @@ private memoized allFlavours->BUILDS.filter({$B['doTest']}).map({$B['flavour']})
 private plausibilizeExpectationsOnStartup:=
   expectations.each(entry,
     begin
-      local script:=entry[0];
-      local expect:=entry[1];
+      script:=entry[0];
+      expect:=entry[1];
       isFlavourDependent(script)
       ? expect.isMap
         ? begin
-            local changed:=false;
+            changed:=false;
             expect:=expect.each(e,e[0] in allFlavours ? e : begin changed:=true; void; end).toMap;
             changed
             ? expectations[script]:=expect
@@ -84,7 +84,7 @@ private mutable failedTests:=[];
 getFailedTests->failedTests;
 
 synchronized checkExpectation(script:String,testRunOutput:StringList,runTime:Numeric,doLog:Boolean)->begin
-  local resultOk:=checkExpectation(script,testRunOutput);
+  resultOk:=checkExpectation(script,testRunOutput);
   resultOk
   ? logSmokeTestRunTime(script,runTime,doLog)
   : void;
@@ -93,12 +93,12 @@ end;
 
 @SuppressUnusedWarning
 private checkExpectation(script:String,testRunOutput:StringList)->begin
-  local outputToCheck:=script in pathDependentScripts
-                       ? testRunOutput.replace(testRootLinux  ,testRootPlaceholder)
-                                      .replace(testRootWindows,testRootPlaceholder)
-                       : testRunOutput;
+  outputToCheck:=script in pathDependentScripts
+                 ? testRunOutput.replace(testRootLinux  ,testRootPlaceholder)
+                                .replace(testRootWindows,testRootPlaceholder)
+                 : testRunOutput;
 
-  local expectation:=expectations[script,isFlavourDependent(script) ? myFlavour : void];
+  expectation:=expectations[script,isFlavourDependent(script) ? myFlavour : void];
   expectation.isVoid
   ? isFlavourDependent(script)
     ? begin
@@ -126,9 +126,9 @@ end;
 private average(X)->X.flatten.agg(+)/X.size;
 
 private memoized averageRunTimes->runTimes.each(caseEntry,begin
-  local case:=caseEntry[0];
+  case:=caseEntry[0];
   //Create time groups by flavour
-  local times:=caseEntry[1].each(flavEntry,flavEntry[1].getInner(1).each(t,[flavEntry[0],t]),|);
+  times:=caseEntry[1].each(flavEntry,flavEntry[1].getInner(1).each(t,[flavEntry[0],t]),|);
   times:=times.getInner(1).group(times.getInner(0));
   //Add time groups by optimization group (optimized/debug)
   times.map({[$x[0].copy(1,1),$x[1]]})
@@ -142,9 +142,9 @@ end).toMap;
 
 @SuppressUnusedWarning
 showTestTimeInfo->timesOfThisRun.size=0 ? void : begin
-  local thisRunTotalTime:=timesOfThisRun.getInner(1).agg(+);
-  local myFlavourGroup:=copy(myFlavour,1,1);
-  local timesByFlavour     :=
+  thisRunTotalTime:=timesOfThisRun.getInner(1).agg(+);
+  myFlavourGroup:=copy(myFlavour,1,1);
+  timesByFlavour     :=
     averageRunTimes
     .getAll(timesOfThisRun.getInner(0))
     .map({[$x[myFlavour],$x[myFlavourGroup]]})
@@ -167,8 +167,8 @@ allTestsPassed(flavour:String,codeHash:String)->
 
 @SuppressUnusedWarning
 timeForFullTest(flavour:String,codeHash:String)->begin
-  local groupedTimes:=runTimes.getAll(expectationNamesForFlavour(flavour))
-                              .map({($x[flavour] orElse []).filter({$z[0]==codeHash}).getInner(1)});
+  groupedTimes:=runTimes.getAll(expectationNamesForFlavour(flavour))
+                        .map({($x[flavour] orElse []).filter({$z[0]==codeHash}).getInner(1)});
   groupedTimes.each(t,t.size>=1,AND)
   ? groupedTimes.each(t,t.agg(+)/t.size,+)
   : void;
@@ -179,7 +179,7 @@ private allScripts->expectations.getInner(0);
 matching(L:StringCollection,pattern)->
   pattern.matches('\*|\|')
   ? begin
-      local reg:=pattern.replace('*','.*');
+      reg:=pattern.replace('*','.*');
       L.filter({$s.matches(reg)});
     end
   : L.filter({$s=pattern});
@@ -207,13 +207,13 @@ main('remove',Script)->
 
 //*List information on all test expectations
 main->begin
-  local testsByFlavour:=allFlavours.each(flavour,
+  testsByFlavour:=allFlavours.each(flavour,
     [flavour,
      flavour.expectationNamesForFlavour
             .toSet])
     .toMap;
-  local allTests:=testsByFlavour.getInner(1).flatten.unique;
-  local flavoursByTest:=testsByFlavour.each(entry,entry[1].each(case,[case,entry[0]]).toMap,aggregator({mergeMaps($x,$y,::|)}));
+  allTests:=testsByFlavour.getInner(1).flatten.unique;
+  flavoursByTest:=testsByFlavour.each(entry,entry[1].each(case,[case,entry[0]]).toMap,aggregator({mergeMaps($x,$y,::|)}));
 
   allTests
     .each(case,begin
@@ -225,7 +225,7 @@ main->begin
           expectations[case].isVoid
           ? 'expectation missing'
           : begin
-              local missingFor:=flavoursByTest[case].minus(expectations[case].getInner(0));
+              missingFor:=flavoursByTest[case].minus(expectations[case].getInner(0));
               missingFor.size=0
               ? 'complete'
               : 'missing for: '&join(missingFor,', ');
@@ -241,28 +241,28 @@ end;
 ELEMENTS_TO_RETAIN_ON_CLEANUP:=30;
 
 private calcThreshold(X:NumericList)->X.size<5 ? Inf : begin
-  local weights:=1.5^[0..X.size-1];
+  weights:=1.5^[0..X.size-1];
   weights/=weights.agg(+);
-  local weightedMean    :=(    X              *weights).agg(+) orElse 0;
-  local weightedVariance:=(sqr(X-weightedMean)*weights).agg(+) orElse 0;
+  weightedMean    :=(    X              *weights).agg(+) orElse 0;
+  weightedVariance:=(sqr(X-weightedMean)*weights).agg(+) orElse 0;
   weightedMean+3*sqrt(weightedVariance);
 end;
 
 //*Limit to 30 timings per case and flavour
 //*Drop all values outside of 3 sigma environment
 main('cleanup')->begin
-  local droppedExtremes:=0;
-  local droppedTotal:=0;
-  local anyDropped:=true;
+  droppedExtremes:=0;
+  droppedTotal:=0;
+  anyDropped:=true;
   repeat begin
     anyDropped:=false;
     runTimes.each(caseEntry,begin
-      local case:=caseEntry[0];
+      case:=caseEntry[0];
       caseEntry[1].each(flavEntry,begin
-        local flavour:=flavEntry[0];
-        local times:=flavEntry[1];
-        local threshold:=times.trailing(ELEMENTS_TO_RETAIN_ON_CLEANUP).getInner(1).calcThreshold;
-        local sizeBefore:=times.size;
+        flavour:=flavEntry[0];
+        times:=flavEntry[1];
+        threshold:=times.trailing(ELEMENTS_TO_RETAIN_ON_CLEANUP).getInner(1).calcThreshold;
+        sizeBefore:=times.size;
         droppedTotal+=times.size;
         droppedExtremes+=trueCount(times.getInner(1)>threshold);
         times:=times[times.getInner(1)<=threshold];

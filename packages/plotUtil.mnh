@@ -1,12 +1,12 @@
 implicitFunctionContour(F:Expression(2),x0:Numeric,x1>x0,y0:Numeric,y1>y0,samplingPoints,maxSegmentLength>0.0)->begin
   //Helper function to calculate a root between two points (Regula Falsi)
-  local findRootBetween:=(p0:NumericList(2),f0_:Numeric,p1:NumericList(2),f1_:Numeric)->begin
-    local x0:=p0; local f0:=f0_;
-    local x1:=p1; local f1:=f1_;
-    local counter:=20;
+  findRootBetween:=(p0:NumericList(2),f0_:Numeric,p1:NumericList(2),f1_:Numeric)->begin
+    x0:=p0; f0:=f0_;
+    x1:=p1; f1:=f1_;
+    counter:=20;
     while(euklideanNorm(x1-x0)>1E-3 AND (counter-=1)>0,begin
-      local xm:=x0-(x1-x0)*(f0/(f1-f0));
-      local fm:=F@xm;
+      xm:=x0-(x1-x0)*(f0/(f1-f0));
+      fm:=F@xm;
       sign(fm)=sign(f0) ? begin x0:=xm; f0:=fm; end :
       sign(fm)=sign(f1) ? begin x1:=xm; f1:=fm; end : abs(f1)<abs(f0)
       ? begin x0:=xm; f0:=fm; end
@@ -16,37 +16,37 @@ implicitFunctionContour(F:Expression(2),x0:Numeric,x1>x0,y0:Numeric,y1>y0,sampli
   end;
 
   //Determine points to sample at:
-  local px:=max(1,round(sqrt((x1-x0)/(y1-y0)*samplingPoints))-1); px:=[0..px]*(x1-x0)/px+x0;
-  local py:=max(1,round(sqrt((y1-y0)/(x1-x0)*samplingPoints))-1); py:=[0..py]*(y1-y0)/py+y0;
+  px:=max(1,round(sqrt((x1-x0)/(y1-y0)*samplingPoints))-1); px:=[0..px]*(x1-x0)/px+x0;
+  py:=max(1,round(sqrt((y1-y0)/(x1-x0)*samplingPoints))-1); py:=[0..py]*(y1-y0)/py+y0;
 
-  local edges:=cross([0..px.size-1],[0..py.size-1]).each(idxPair,
-                     idxPair[0]=px.size-1 ? void : [idxPair,idxPair+[1,0]] ,
-                     idxPair[1]=py.size-1 ? void : [idxPair,idxPair+[0,1]]);
+  edges:=cross([0..px.size-1],[0..py.size-1]).each(idxPair,
+               idxPair[0]=px.size-1 ? void : [idxPair,idxPair+[1,0]] ,
+               idxPair[1]=py.size-1 ? void : [idxPair,idxPair+[0,1]]);
 
-  local pxy:=cross(px,py);
-  local fxy:=pxy.map((p)->F@p);
+  pxy:=cross(px,py);
+  fxy:=pxy.map((p)->F@p);
 
 
   //filter out edges without sign changes
-  local sxy:=sign(fxy);
-  local edgeIdx :=edges.map((pair)->pair.map((p)->p[0]*py.size+p[1]));
-  local mask:=sxy[edgeIdx.getInner(0)]!=sxy[edgeIdx.getInner(1)];
+  sxy:=sign(fxy);
+  edgeIdx :=edges.map((pair)->pair.map((p)->p[0]*py.size+p[1]));
+  mask:=sxy[edgeIdx.getInner(0)]!=sxy[edgeIdx.getInner(1)];
   edges  :=edges[mask];
   edgeIdx:=edgeIdx[mask];
 
-  local edgePoint:=edges.each(edge,begin
-    local I:=edgeIdx[index];
+  edgePoint:=edges.each(edge,begin
+    I:=edgeIdx[index];
     findRootBetween(pxy[I[0]],fxy[I[0]],pxy[I[1]],fxy[I[1]]);
   end);
 
-  local edgeMap:=edges.each(edge,edge=>index).toMap;
+  edgeMap:=edges.each(edge,edge=>index).toMap;
 
   //which edges are adjacent?
-  local adj:=edges
+  adj:=edges
   .each(e,begin
-     local p0:=e[0]; local p1:=e[1];
-     local myIdx:=edgeMap[e];
-     local horizontal:=p1==p0+[1,0];
+     p0:=e[0]; p1:=e[1];
+     myIdx:=edgeMap[e];
+     horizontal:=p1==p0+[1,0];
      (horizontal
       ? [e+[[0,1],[0,1]],[p0,p0+[0,1]],[p1,p1+[0,1]],[p0-[0,1],p0],[p1-[0,1],p1]]
       : [e+[[1,0],[1,0]],[p0,p0+[1,0]],[p1,p1+[1,0]],[p0-[1,0],p0],[p1-[1,0],p1]])
@@ -56,13 +56,13 @@ implicitFunctionContour(F:Expression(2),x0:Numeric,x1>x0,y0:Numeric,y1>y0,sampli
   .unique
   .{$L.getInner(0).group($L.getInner(1))}
   .each(ad,begin
-     (local A:=ad[1]).size<=2
+     (A:=ad[1]).size<=2
      ? void
      : begin
-         local p0:=edgePoint[ad[0]];
+         p0:=edgePoint[ad[0]];
          A:=
          A.each(i1,begin
-           local p1:=edgePoint[i1];
+           p1:=edgePoint[i1];
            abs(F@((p0+p1)*0.5))|i1;
          end).sort.head(2).getInner(1);
        end;
@@ -72,23 +72,23 @@ implicitFunctionContour(F:Expression(2),x0:Numeric,x1>x0,y0:Numeric,y1>y0,sampli
 
   adj:=adj[adj.getInner(1)>adj.getInner(0)]
   .each(a,begin
-    local d:=edgePoint[a].agg(-); d/=d.euklideanNorm;
+    d:=edgePoint[a].agg(-); d/=d.euklideanNorm;
     d.isNan.agg(or) or d.isInfinite.agg(or)
     ? void
     : [a|[-d],a.reverseList|[d]];
   end,|);
   adj:=group(adj.map(::tail),adj.map(::head)).map((g)->g[0]=>g[1].toMap).toMap;
 
-  local toBeVisited:=adj.getInner(0);
+  toBeVisited:=adj.getInner(0);
 
-  local runs:=[];
+  runs:=[];
   while(toBeVisited.size>0,begin
-    local n0:=toBeVisited.head; toBeVisited>>n0;
-    local n1:=adj[n0].getInner(0).intersect(toBeVisited).head;
-    local direction:=adj[n0,n1];
-    local currentRun:=[n0,n1];
+    n0:=toBeVisited.head; toBeVisited>>n0;
+    n1:=adj[n0].getInner(0).intersect(toBeVisited).head;
+    direction:=adj[n0,n1];
+    currentRun:=[n0,n1];
     [0..1].each(loop,begin
-      local next:=void;
+      next:=void;
       while(toBeVisited.size>0 AND !isVoid(next:=adj[n1].orElse([]).each(entry,entry[0] in toBeVisited ? [(direction*entry[1]).agg(+),entry] : void,max)),begin
         n0:=n1; n1:=next[1,0]; direction:=next[1,1]; currentRun|=n1; toBeVisited>>n1;
       end);
@@ -101,15 +101,14 @@ implicitFunctionContour(F:Expression(2),x0:Numeric,x1>x0,y0:Numeric,y1>y0,sampli
   runs:=runs
   .each(run,edgePoint[run])
   .pEach(run,begin
-    local refined:=run.head(1);
-    local prev:=refined[0];
+    refined:=run.head(1);
+    prev:=refined[0];
     run.tail(1).each(point,begin
-      local distance:=euklideanNorm(local step:=point-prev);
+      distance:=euklideanNorm(step:=point-prev);
       while(distance>maxSegmentLength,begin
         step/=ceil(distance/maxSegmentLength);
-        local side:=step.reverseList*[-0.1,0.1];
-        local p0:=local p1:=
-        local f0:=local f1:=1;
+        side:=step.reverseList*[-0.1,0.1];
+        p0:=p1:=f0:=f1:=1;
         while(sign(f0)=sign(f1),begin
           side*=2;
           f0:=F@(p0:=prev+step-side);
@@ -133,15 +132,15 @@ begin
   // kx    = ky   * (x1-x0)/(y1-y0)*sqrt(0.5)
   // kx    = n/kx * (x1-x0)/(y1-y0)*sqrt(0.5)
   // kx    = sqrt(n    * (x1-x0)/(y1-y0)*sqrt(0.5))
-  local kx:=max(2,round(sqrt(n*(x1-x0)/(y1-y0)*sqrt(0.5))));
-  local ky:=max(2,n div (kx*2)*2+1);
-  local edges:=[];
+  kx:=max(2,round(sqrt(n*(x1-x0)/(y1-y0)*sqrt(0.5))));
+  ky:=max(2,n div (kx*2)*2+1);
+  edges:=[];
 
-  local outIdx:=0;
-  local P:=[0..ky-1].cross([0..kx-1]).each(c,
+  outIdx:=0;
+  P:=[0..ky-1].cross([0..kx-1]).each(c,
   begin
-    local ix:=c[1];
-    local iy:=c[0];
+    ix:=c[1];
+    iy:=c[0];
     ix==(kx-1) AND (iy and 1)=1 ? void :
     begin
       ////Straight upward neighbor:
@@ -166,18 +165,18 @@ begin
     end;
   end);
 
-  local edgesByPoint:=edges.each(edge,[edge[0],edge],[edge[1],edge])
-                           .group(0)
-                           .each(g,[g[0],g[1].getInner(1)])
-                           .toMap;
-  local triangles:= edges.each(edge,intersect(edgesByPoint[edge[0]].flatten,
-                                              edgesByPoint[edge[1]].flatten)
-                                    .minus(edge)
-                                    .each(k,sort(edge|k)),|)
+  edgesByPoint:=edges.each(edge,[edge[0],edge],[edge[1],edge])
+                     .group(0)
+                     .each(g,[g[0],g[1].getInner(1)])
+                     .toMap;
+  triangles:= edges.each(edge,intersect(edgesByPoint[edge[0]].flatten,
+                                        edgesByPoint[edge[1]].flatten)
+                              .minus(edge)
+                              .each(k,sort(edge|k)),|)
                          .unique;
-  local f:=[(x1-x0)/P.getInner(0).max,
-            (y1-y0)/P.getInner(1).max];
-  local o:=[x0,y0];
+  f:=[(x1-x0)/P.getInner(0).max,
+      (y1-y0)/P.getInner(1).max];
+  o:=[x0,y0];
   P:=P.map({$p*f+o});
   [P,triangles];
 end;
@@ -188,14 +187,14 @@ private edges(poly:IntList)->transpose([[0..poly.size-1],[1..poly.size-1,0]]).ma
 
 private cutLine(F:Expression(2),x:NumericList(2),dx:NumericList(2),level:Numeric,
                 t_:Numeric,F0:Numeric,F1:Numeric,quality:Int)->begin
-  local t0:= 0; local f0:=F0         -level;
-  local t1:= 1; local f1:=F1         -level;
-  local tm:=t_; local fm:=F@(x+dx*t_)-level;
+  t0:= 0; f0:=F0         -level;
+  t1:= 1; f1:=F1         -level;
+  tm:=t_; fm:=F@(x+dx*t_)-level;
   [1..quality].each(step,begin
     f0*fm>0
     ? begin f0:=fm; t0:=tm; end
     : begin f1:=fm; t1:=tm; end;
-    local tm_:=t1-f1*(t0-t1)/(f0-f1);
+    tm_:=t1-f1*(t0-t1)/(f0-f1);
     tm:=0<=tm_<=1
         ? tm_
         : (t0+t1)/2;
@@ -210,8 +209,8 @@ USE customFormUtil;
 contourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:NumericList,maxSegmentLength,interactive:Boolean)->
   plot() orElse addContourPlot(F,x0,x1,y0,y1,triangleCount,contourLevels,maxSegmentLength,interactive);
 addContourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:NumericList,maxSegmentLength,interactive:Boolean)->begin
-  local contourForLevel:=[].toMap;
-  local dataForLevel:=(level)->contourForLevel[level] orElse contourForLevel[level]:=implicitFunctionContour(level==0 ? F : F-level,x0,x1,y0,y1,triangleCount,maxSegmentLength);
+  contourForLevel:=[].toMap;
+  dataForLevel:=(level)->contourForLevel[level] orElse contourForLevel[level]:=implicitFunctionContour(level==0 ? F : F-level,x0,x1,y0,y1,triangleCount,maxSegmentLength);
 
   contourLevels
   .sort
@@ -219,9 +218,9 @@ addContourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:
 
   interactive ? void : return void;
   display;
-  local x:=0;
-  local y:=0;
-  local f:=0;
+  x:=0;
+  y:=0;
+  f:=0;
   showDialog('Interactive Contour Plot',[
     newLabel.withCaption({'x='&x}),
     newLabel.withCaption({'y='&y}),
@@ -230,7 +229,7 @@ addContourPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,triangleCount>=2,contourLevels:
       x:=$x;
       y:=$y;
       f:=F($x,$y);
-      local lines:=dataForLevel(f);
+      lines:=dataForLevel(f);
       lines.size==0 ? void : addPlot(lines,'black');
       display;
       lines.size==0 ? void : removePlot;
@@ -242,12 +241,12 @@ densityPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,sampleCount>=4,interactive:Boolean
   plot() orElse addDensityPlot(F,x0,x1,y0,y1,sampleCount,interactive);
 
 addDensityPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,sampleCount>=4,interactive:Boolean)->begin
-  local h:=sqrt((x1-x0)*(y1-y0)/sampleCount);
-  local px:=max(1,ceil((x1-x0)/h)); px:=([0..px-1]+0.5)*h+x0;
-  local py:=max(1,ceil((y1-y0)/h)); py:=([0..py-1]+0.5)*h+y0;
+  h:=sqrt((x1-x0)*(y1-y0)/sampleCount);
+  px:=max(1,ceil((x1-x0)/h)); px:=([0..px-1]+0.5)*h+x0;
+  py:=max(1,ceil((y1-y0)/h)); py:=([0..py-1]+0.5)*h+y0;
 
-  local fxy:=cross(py.reverseList,px).pMap((xy)->F@xy);
-  local Q:=
+  fxy:=cross(py.reverseList,px).pMap((xy)->F@xy);
+  Q:=
   [vectorIfThenElse(fxy<0,1,0),
    vectorIfThenElse(fxy<0,0,0),
    vectorIfThenElse(fxy<0,0,1),
@@ -256,9 +255,9 @@ addDensityPlot(F:Expression(2),x0,x1>x0,y0,y1>y0,sampleCount>=4,interactive:Bool
   interactive ? void : return void;
 
   display;
-  local x:=0;
-  local y:=0;
-  local f:=0;
+  x:=0;
+  y:=0;
+  f:=0;
   showDialog('Interactive Density Plot',[
     newLabel.withCaption({'x='&x}),
     newLabel.withCaption({'y='&y}),
@@ -274,14 +273,14 @@ end;
 private PLOT_STYLE_KEYS:=['scale','color','ti','style','style2'];
 type PlotStyle(m:Map)->m.getInner(0).minus(PLOT_STYLE_KEYS).size=0;
 private modifyStyle(S:PlotStyle,key=='style2',value)->begin
-  local R:=S;
+  R:=S;
   R[key]:=isVoid(S[key])
           ? value
           : S[key]&' '&value;
   R.toPlotStyle;
 end;
 private modifyStyle(S:PlotStyle,key in PLOT_STYLE_KEYS,value)->begin
-  local R:=S;
+  R:=S;
   R[key]:=value;
   R.toPlotStyle;
 end;

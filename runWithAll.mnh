@@ -4,25 +4,25 @@ barPlot(captions     ,samples            ,targetWidth,'%s');
 
 barPlot(captions:List,samples:NumericList,targetWidth>0,sampleFormat:String)->
   begin
-    local factor:=targetWidth/samples.max;
+    factor:=targetWidth/samples.max;
     samples.each(s,
       captions[index],
       "\t",
       format(sampleFormat,s),
       "\t",
-      repeat("=",round(factor*s)),
+      repeatString("=",round(factor*s)),
       "\n",&);
   end;
 
 timedExecute(exe:String,params)->begin
   print('Executing ',join(exe|params,' '));
-  local t0:=scriptTime;
+  t0:=scriptTime;
   exe.execPipeless(params);
   scriptTime-t0;
 end;
 
 findExecutables->allFiles('.','mnh*.exe').pFilter((executable)->begin
-  local output:=executable.exec(['-info'],false);
+  output:=executable.exec(['-info'],false);
   output[1]!=0
   ? false
   : begin
@@ -35,6 +35,6 @@ end).map((exe)->relativeFileName('.',exe)).sort;
 main('-list')->findExecutables.map(::print);
 
 main(...)->begin
-  local timedExes:=findExecutables.each(target,[target,timedExecute(target,...)]);
+  timedExes:=findExecutables.each(target,[target,timedExecute(target,...)]);
   barPlot(timedExes.getInner(0),timedExes.getInner(1),100).print;
 end;

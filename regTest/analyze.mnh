@@ -10,7 +10,7 @@ private quartiles(x:Numeric)->[x,x,x];
 private average(X)->X.agg(+)/X.size;
 private averageAndRelativeSigma(X)->begin
   local avg:=average(X);
-  local variance:=average((X-avg)^2);
+  variance:=average((X-avg)^2);
   [avg,sqrt(variance)/avg];
 end;
 
@@ -18,31 +18,31 @@ private doAnalysis()->begin
   ([['Test','|','o.s.','25%ile','opt.median','75%ile','|','d.s.','25%ile','deb.median','75%ile','|','ratios']]|
   runTimesAsFlatList.getInner(0).unique.pEach(testCase,
     begin
-      local debugSamples:=runTimesAsFlatList[runTimesAsFlatList.getInner(0)=testCase];
-      local debugMask:=debugSamples.getInner(1).matches('^[F|L|I]D');
-            debugSamples:=debugSamples.getInner(2);
-      local optSamples  :=debugSamples[!debugMask];
-            debugSamples:=debugSamples[ debugMask];
+      debugSamples:=runTimesAsFlatList[runTimesAsFlatList.getInner(0)=testCase];
+      debugMask:=debugSamples.getInner(1).matches('^[F|L|I]D');
+      debugSamples:=debugSamples.getInner(2);
+      optSamples  :=debugSamples[!debugMask];
+      debugSamples:=debugSamples[ debugMask];
       [testCase,'|',
        optSamples.size,
-       local optQ:=optSamples.quartiles.round(4),'|',
+       optQ:=optSamples.quartiles.round(4),'|',
        debugSamples.size,
-       local debQ:=debugSamples.quartiles.round(4),'|',
+       debQ:=debugSamples.quartiles.round(4),'|',
        round(debQ/optQ,2)].flatten;
     end)
   ).showTable('Test times',true);
 
   [true,false].each(debugVersions,
   begin
-    local filteredTests:=runTimesAsFlatList[runTimesAsFlatList.getInner(1).matches('^[F|L|I]D')=debugVersions];
+    filteredTests:=runTimesAsFlatList[runTimesAsFlatList.getInner(1).matches('^[F|L|I]D')=debugVersions];
     filteredTests.size=0 ? void :
     begin
       print("=====================================================================\n",
             " Analysis for ",debugVersions ? '' : 'non-',"debug flavours\n",
             "=====================================================================\n");
-      local flavors:=filteredTests.getInner(1).toSet;
-      local testsWithTime:=filteredTests.group(0).getInner(1).pMap({$x[0,0]|averageAndRelativeSigma($x.getInner(2))}).sort(1);
-      local totalTime:=testsWithTime.getInner(1).agg(+);
+      flavors:=filteredTests.getInner(1).toSet;
+      testsWithTime:=filteredTests.group(0).getInner(1).pMap({$x[0,0]|averageAndRelativeSigma($x.getInner(2))}).sort(1);
+      totalTime:=testsWithTime.getInner(1).agg(+);
       print("Fast tests: ");
       print(testsWithTime.head(5)    .each(t,"  \v"&t[0]&"\t"&t[1]&"\vs\t"&round(100*t[1]/totalTime,3)&"\v%\n",&));
       print("Slow tests: ");
@@ -55,15 +55,15 @@ private doAnalysis()->begin
       print(testsWithTime.trailing(5).each(t,"  \v"&t[0]&"\t"&round(t[1],6)&"\v+/-\v"&round(t[1]*t[2],6)&"s\n",&));
       totalTime:=filteredTests.getInner(2).agg(+);
 
-      local quartileTimes:=filteredTests
-                         .group(filteredTests.getInner([0,1]),{[$x[0],$x[1],$x[2]|$y[2]]}) //group by flavour + case
-                         .getInner(1)
-                         .each(entry,entry[[0,1]]|[quartiles(entry[2])]) //median time per test case
-                         .group(1,{[$x[0],$x[1],$x[2]+$y[2]]}) //group by flavour
-                         .getInner(1)
-                         .getInner([1,2]); //drop case
+      quartileTimes:=filteredTests
+                   .group(filteredTests.getInner([0,1]),{[$x[0],$x[1],$x[2]|$y[2]]}) //group by flavour + case
+                   .getInner(1)
+                   .each(entry,entry[[0,1]]|[quartiles(entry[2])]) //median time per test case
+                   .group(1,{[$x[0],$x[1],$x[2]+$y[2]]}) //group by flavour
+                   .getInner(1)
+                   .getInner([1,2]); //drop case
       totalTime:=quartileTimes.getInner(1,1).agg(+);
-      local star:=80/quartileTimes.getInner(1,2).max;
+      star:=80/quartileTimes.getInner(1,2).max;
       print('Median test time by flavour: ');
       print("  \vFlavour\t25%ile\v\t50%ile\v\t75%ile\v\trel.\t\vvisual\n",
             flavors.each(f,"\v"&f&"\t"&round(quartileTimes[f,0],3)&"\vs\t"
@@ -74,40 +74,40 @@ private doAnalysis()->begin
 end;
 
 private analyzeCase(data,testCase:String)->begin
-  local debugSamples:=[];
-  local optSamples:=[];
+  debugSamples:=[];
+  optSamples:=[];
   data[data.getInner(0)=testCase]
   .each(sample,sample[1].matches('^[F|L|I]D')
                ? debugSamples|=[sample[[2,1]]]
                : optSamples  |=[sample[[2,1]]]);
-  local allSamples:=debugSamples|optSamples;
+  allSamples:=debugSamples|optSamples;
   allSamples.group(1).getInner(1).pEach(g,g[0,1]|g.getInner(0).reverseList.map({roundToRelevantDigits($0,4)})).transpose('').showTable('Times for '&testCase&' (newest first)',true);
 
   debugSamples:=debugSamples.sort;
   optSamples:=optSamples.sort;
   print("Samples for optimized versions:\t",optSamples.size,"\nSamples for debug versions:\t",debugSamples.size,"\n");
 
-  local table:=[['',"25%ile","50%ile","75%ile","average","std. dev"]]|
-        ([['optimized',optSamples.getInner(0)]]|
-         (optSamples.getInner(1).unique.each(flavour,["  "&flavour,optSamples[optSamples.getInner(1)=flavour].getInner(0)]))|
-         [["\ndebug",debugSamples.getInner(0)]]|
-         (debugSamples.getInner(1).unique.each(flavour,["  "&flavour,debugSamples[debugSamples.getInner(1)=flavour].getInner(0)])))
-         .each(set,[set[0],set[1].quartiles,set[1].avg,set[1].sigma].flatten);
+  table:=[['',"25%ile","50%ile","75%ile","average","std. dev"]]|
+  ([['optimized',optSamples.getInner(0)]]|
+   (optSamples.getInner(1).unique.each(flavour,["  "&flavour,optSamples[optSamples.getInner(1)=flavour].getInner(0)]))|
+   [["\ndebug",debugSamples.getInner(0)]]|
+   (debugSamples.getInner(1).unique.each(flavour,["  "&flavour,debugSamples[debugSamples.getInner(1)=flavour].getInner(0)])))
+   .each(set,[set[0],set[1].quartiles,set[1].avg,set[1].sigma].flatten);
 
-  local star:=80/table.getInner(3).tail.max;
+  star:=80/table.getInner(3).tail.max;
   table:=table.each(line,index=0 ? line|'visual' : line|bar(star,line[[1..3]]));
   table.each(line,line.each(x,x.isNumeric ? round(x,4) : x).join("\t")).join("\n").print;
 
   setOptions([['fontsize',6],['preserveAspect',false],['autoscaleX',true],['autoscaleY',true]]);
   plot([]);
   allSamples:=allSamples.group(1).getInner(1).each(g,g.getInner(0));
-  local minSize:=allSamples.pMap(::size).min;
+  minSize:=allSamples.pMap(::size).min;
   allSamples.each(g,g.trailing(minSize).addPlot);
   plot.display;
 end;
 
 private analyzeFlavour(data,flavour:String)->begin
-  local groupedData:=
+  groupedData:=
   data[data.getInner(1)=flavour] //filter by flavour
   .pEach(e,e[[0,2]]) //drop flavour info
   .group(0,{[$x[0],$x[1]|$y[1]]}) //group by case
@@ -141,7 +141,7 @@ private analyzeFlavour(data,flavour:String)->begin
   //times only
   groupedData:=groupedData.getInner(1);
   //fill with Nan from left to equal size
-  local maxSize:=groupedData.each(L,L.size,max);
+  maxSize:=groupedData.each(L,L.size,max);
   groupedData:=groupedData.each(L,L.size<maxSize ? [1..maxSize-L.size].each(i,Nan)|L : L).each(L,L.isList ? L : [L]);
   groupedData.each(L,addPlot(L,'0.5 black'));
   [0..maxSize-1].each(i,groupedData.getInner(i).each(t,isNan(t) ? void : t).{$T.agg(+)/$T.size}).addPlot('2 red');
@@ -152,9 +152,9 @@ end;
 USE formattingUtils;
 
 private compareFlavours(data,flavour1:String,flavour2:String)->begin
-  local dat1:=data[data.getInner(1)=flavour1].pEach(e,e[[0,2]]).group(0,{[$x[0],$x[1]|$y[1]]}).getInner(1).pEach(case,[case[0],[case[1].agg(+)/size(case[1]),case[1].trailing]]);
-  local dat2:=data[data.getInner(1)=flavour2].pEach(e,e[[0,2]]).group(0,{[$x[0],$x[1]|$y[1]]}).getInner(1).pEach(case,[case[0],[case[1].agg(+)/size(case[1]),case[1].trailing]]);
-  local tableData:=dat1.getInner(0).union(dat2.getInner(0))
+  dat1:=data[data.getInner(1)=flavour1].pEach(e,e[[0,2]]).group(0,{[$x[0],$x[1]|$y[1]]}).getInner(1).pEach(case,[case[0],[case[1].agg(+)/size(case[1]),case[1].trailing]]);
+  dat2:=data[data.getInner(1)=flavour2].pEach(e,e[[0,2]]).group(0,{[$x[0],$x[1]|$y[1]]}).getInner(1).pEach(case,[case[0],[case[1].agg(+)/size(case[1]),case[1].trailing]]);
+  tableData:=dat1.getInner(0).union(dat2.getInner(0))
     .each(case,case|(dat1[case] orElse [0,0])|(dat2[case] orElse [0,0]))
     .{$L|['TOTAL'| $L.agg(+).tail]}
     .each(line, map(line|(100*(1-line[[3,4]]/line[[1,2]]))|(line[[3,4]]-line[[1,2]]),{roundToRelevantDigits($x,3)}));
@@ -166,12 +166,12 @@ end;
 
 main()->doAnalysis();
 bar(factor,q)->begin
-  local a:=round(factor*q[0]);
-  local b:=round(factor*q[1]);
-  local c:=round(factor*q[2]);
-  (a<b ? repeat('-',a-1)&'<' : repeat('-',a-1))&
-         repeat('=',b-a-1)&'|'&
-  (b<c ? repeat('=',c-b-1)&'>' : '');
+  a:=round(factor*q[0]);
+  b:=round(factor*q[1]);
+  c:=round(factor*q[2]);
+  (a<b ? repeatString('-',a-1)&'<' : repeatString('-',a-1))&
+         repeatString('=',b-a-1)&'|'&
+  (b<c ? repeatString('=',c-b-1)&'>' : '');
 end;
 
 main(testCaseOrFlavour:String)->begin

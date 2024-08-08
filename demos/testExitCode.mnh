@@ -5,7 +5,7 @@ main('fail')->fail('This is a failure');
 main(code)->print('Setting exit code ',code.toInt) orElse setExitCode(code.toInt);
 
 runExternally(parameter)->begin
-  local output:=executor.exec(['-v1','-stdout','-silent',myPath,parameter],false);
+  output:=executor.exec(['-v1','-stdout','-silent',myPath,parameter],false);
   [format('Calling %s %s',myPath.extractFileName,parameter),
    output[0],
    format('Exit code: %s',output[1])].flatten;
@@ -37,9 +37,9 @@ runSandboxed(parameter)->
 
 main->
   ['print','note','warn','fail','40','41','x'].each(parameter,begin
-    local ext:=runExternally(parameter);
+    ext:=runExternally(parameter);
     printf("%s",ext);
-    local int:=runSandboxed(parameter);
+    int:=runSandboxed(parameter);
     ext==int
     ? print('Sandbox produces the same output')
     : warn("SANDBOXED OUTPUT IS DIFFERENT: \n",int.join("\n"));

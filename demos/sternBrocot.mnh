@@ -1,10 +1,10 @@
 @OEIS=A002487
 sternBrocotGenerator->{begin
-  local L:=[0,1,1];
-  local i:=-1;
+  L:=[0,1,1];
+  i:=-1;
 save;
   L[i+=1] orElse begin
-    local j:=(size(L)-1) div 2+1;
+    j:=(size(L)-1) div 2+1;
     L|=[L[j]+L[j-1],L[j]];
     L[i];
   end;
@@ -15,7 +15,7 @@ end}.toIterableExpression;
 main->begin
   print('Stern-Brocot seqence');
   print('  First 15: ',sternBrocotGenerator.head(16).tail);
-  local seqStart:=sternBrocotGenerator.head(2500);
+  seqStart:=sternBrocotGenerator.head(2500);
   printf("  %s\tfirst occurs at index\t%s",
     [1..10,100],
     [1..10,100].each(k,indexOf(seqStart=k).head));

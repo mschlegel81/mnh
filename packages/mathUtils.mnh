@@ -1,7 +1,7 @@
 iterate(x0,function:Expression(1),stepCount>=1)->iterate(x0,function,stepCount,true);
 iterate(x0,function:Expression(1),stepCount>=1,lastOnly=true )->iterate(x0,function,stepCount,false).trailing;
 iterate(x0,function:Expression(1),stepCount>=1,lastOnly=false)->begin
-  local x:=x0;
+  x:=x0;
   [1..stepCount].each(step,x:=function(x));
 end;
 
@@ -10,7 +10,7 @@ sum(L:NumericList)->L.agg(+) orElse 0;
 prod(L:NumericList)->L.agg(*) orElse 1;
 
 runningSum(L:NumericList)->begin
-  (local s:=0)|(L.each(x,s+=x));
+  (s:=0)|(L.each(x,s+=x));
 end;
 
 memoized
@@ -20,7 +20,7 @@ factorial(i>0)->[1..i].agg(*);
 memoized
 binomCoeff(0)->[1];
 binomCoeff(n>=1)->begin
-  local b:=binomCoeff(n-1);
+  b:=binomCoeff(n-1);
   ([0]|b)+(b|[0]);
 end;
 binomCoeff(n>=0,k)->binomCoeff(n)[k];
@@ -44,21 +44,21 @@ sumOfProperDividers(n<=1)->0;
 memoized powers(x:IntList(2))->toSet(x[0]^[0..x[1]]);
 allDividerPairs(n>=10000)->
   begin
-    local d:=factorize(n).elementFrequency.each(x,powers(x),*).toList;
+    d:=factorize(n).elementFrequency.each(x,powers(x),*).toList;
     d:=d[d*d<=n];
     [d,n div d].transpose;
   end;
 
 allDividerPairs(n>=1)->begin
-  local range:=[1..isqrt(n)[0]];
-  local mask:=(local d:=divMod(n,range)).getInner(1)=0;
+  range:=[1..isqrt(n)[0]];
+  mask:=(d:=divMod(n,range)).getInner(1)=0;
   [range[mask],d[mask].getInner(0)].transpose;
 end;
 
 allPartitions(L:List)->begin
   rangeGenerator(2^L.size,2^(L.size)+2^(L.size-1)-1).pEach(maskIndex,
     begin
-      local mask:=tail(maskIndex.digits(2)=0);
+      mask:=tail(maskIndex.digits(2)=0);
       mask;
       [L[!mask],L[mask]];
     end);
@@ -68,7 +68,7 @@ end;
 rootOfQuadraticPoly(squareFactor:Numeric,
                     linearFactor:Numeric,
                     constantPart:Numeric)->begin
-  local discriminant:=linearFactor^2-4*squareFactor*constantPart;
+  discriminant:=linearFactor^2-4*squareFactor*constantPart;
   discriminant<0 ? return [] : void;
   (-linearFactor+sqrt(discriminant)*[-1,1])/(2*squareFactor);
 end;
@@ -76,11 +76,11 @@ end;
 //*Returns the points where the given circles intersect
 circleIntersection(c0:NumericList(2),r0:Numeric,
                    c1:NumericList(2),r1:Numeric)->begin
-  local d:=euklideanNorm(c1-c0);
-  local a:=(r0^2-r1^2+d^2)/(2*d);
-  local h:=r0^2-a^2;
+  d:=euklideanNorm(c1-c0);
+  a:=(r0^2-r1^2+d^2)/(2*d);
+  h:=r0^2-a^2;
   h<0 ? return void : h:=sqrt(h);
-  local X:=c0+a*(c1-c0)/d;
-  local Y:=[c1[1]-c0[1],c0[0]-c1[0]]*h/d;
+  X:=c0+a*(c1-c0)/d;
+  Y:=[c1[1]-c0[1],c0[0]-c1[0]]*h/d;
   [X+Y,X-Y];
 end;

@@ -2,7 +2,7 @@ private assertingExistence(path:String)->assert(fileExists(path)) orElse path;
 kjv ->assertingExistence(extractFileDirectory(myPath)&"/kjv.txt"     );
 dict->assertingExistence(extractFileDirectory(myPath)&"/unixdict.txt");
 editedDict->begin
-  local path:=dict.changeFileExt('2.txt');
+  path:=dict.changeFileExt('2.txt');
   fileExists(path)
   ? void
   : path.writeFileLines(dict.fileLines.each(line,20<index<30 ? void : index=102 ? 'insertion' : line));

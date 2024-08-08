@@ -34,16 +34,16 @@ materialOf(frameColor    :NumericList,
                             FRAMECOLOR => frameColor.canonicalColor].toMap.toMaterial;
 
 private illuminate(M:Material,illumination:Real)->begin
-  local ambient:=M[AMBIENT];
-  local diffuse:=M[DIFFUSE];
+  ambient:=M[AMBIENT];
+  diffuse:=M[DIFFUSE];
   [(ambient.leading+diffuse.leading*max(0,min(1,abs(illumination))))|((ambient[3]+diffuse[3])*0.5),M[FRAMECOLOR],M[FRAMESIZE]];
 end;
 
 private I20:=[1,2,0];
 private Z01:=[2,0,1];
 private normal(a:Vector3D,b:Vector3D,c:Vector3D)->begin
-  local x:=b-a;
-  local y:=c-a;
+  x:=b-a;
+  y:=c-a;
   x:=x[I20]*y[Z01]-y[I20]*x[Z01];
   x/x.euklideanNorm;
 end;
@@ -52,9 +52,9 @@ private consensusNormal(points:Vector3DList)->
   points.size<3 ? [0,0,0] :
   points.size=3 ? normal@points :
   begin
-    local center:=points.agg(+)/points.size;
-    local X:=(points.transpose-center).transpose;
-    local Y:=X.trailing(1)|X.leading(1);
+    center:=points.agg(+)/points.size;
+    X:=(points.transpose-center).transpose;
+    Y:=X.trailing(1)|X.leading(1);
     X:=((X:=X.transpose)[I20]*(Y:=Y.transpose)[Z01]-Y[I20]*X[Z01]);
     Y:=(X.isNan or X.isInfinite).agg(or);
     X:=X.transpose[!Y].agg(+);
@@ -66,25 +66,25 @@ ducktype Geometry3D(L:List)->L.isGeometry3DItem OR L.each(item,item.isGeometry3D
 
 //*Rotates a given vector list around the x-axis
 rotateX(V:Vector3DList,angle:Numeric)->begin
-  local ex:=[1,0,0];
-  local ey:=[0, cos(angle),sin(angle)];
-  local ez:=[0,-sin(angle),cos(angle)];
+  ex:=[1,0,0];
+  ey:=[0, cos(angle),sin(angle)];
+  ez:=[0,-sin(angle),cos(angle)];
   V.pEach(v,v[0]*ex+v[1]*ey+v[2]*ez).toVector3DList;
 end;
 
 //*Rotates a given vector list around the y-axis
 rotateY(V:Vector3DList,angle:Numeric)->begin
-  local ex:=[cos(angle),0,sin(angle)];
-  local ey:=[0,1,0];
-  local ez:=[-sin(angle),0,cos(angle)];
+  ex:=[cos(angle),0,sin(angle)];
+  ey:=[0,1,0];
+  ez:=[-sin(angle),0,cos(angle)];
   V.pEach(v,v[0]*ex+v[1]*ey+v[2]*ez).toVector3DList;
 end;
 
 //*Rotates a given vector list around the z-axis
 rotateZ(V:Vector3DList,angle:Numeric)->begin
-  local ex:=[cos(angle),sin(angle),0];
-  local ey:=[-sin(angle),cos(angle),0];
-  local ez:=[0,0,1];
+  ex:=[cos(angle),sin(angle),0];
+  ey:=[-sin(angle),cos(angle),0];
+  ez:=[0,0,1];
   V.pEach(v,v[0]*ex+v[1]*ey+v[2]*ez).toVector3DList;
 end;
 
@@ -99,7 +99,7 @@ rotateZ(D:Geometry3D    ,angle:Numeric)->D.map({$item.rotateZ(angle)}).toGeometr
 //*Helper function to plot a color gradient as background
 plotBackground(y0:Numeric,c0:NumericList(3),
                y1>y0     ,c1:NumericList(3))->begin
-  local big    :=10;
+  big    :=10;
   plot();
   ([0..255]/255).each(w,[round((c0+(c1-c0)*w)*255),
                          index=0   ? -big : y0+ w       *(y1-y0),
@@ -112,14 +112,14 @@ end;
 
 private BSB:=[[[1,0,0],[0,1,0],[0,0,1]],[[0.56758398869893267,0.5812881746257792,0.58305443469099816],[-0.80203393725723049,0.23039997403607523,0.55105119131696],[0.1859838145115722,-0.78039727703548878,0.59698417963570838]],[[0.6133835632501391,0.007494142448045344,0.78974960725759857],[0.6195055144408625,-0.62479595508732977,-0.4752293468251657],[0.4898709237257555,0.7807521068402441,-0.38788223180830966]],[[0.00057322480732512559,0.6837940878464745,0.72967480211360469],[-0.7023534163842524,-0.51912795301446257,0.48703782901575804],[0.7118281744260263,-0.5127687722796912,0.47996753668148123]],[[0.820738298011894,0.5683854639679302,0.057676776318552295],[0.07572731264128969,-0.008168883246102145,-0.9970951025186313],[-0.5662632076134455,0.8227218446695532,-0.0497468190627277]],[[0.87617428242462869,0.25238441012283247,0.41063455327655624],[0.1268452505379606,0.7011799231203348,-0.701610289141289],[-0.46500420345804294,0.6668199344200135,0.5823420522566097]],[[0.3397029390337272,0.891933492717754,0.29842345380374513],[-0.82126539521557118,0.4359392776419923,-0.36807621062816526],[-0.4583940050145283,-0.12004828519094354,0.880603966258076]],[[0.2853785871187046,0.34169218138026908,0.89543593584227188],[0.48434960448991149,-0.85761983387485707,0.17289789233801806],[0.8270214765316547,0.38436268514003263,-0.41024480938501329]]];
 boundingSphere(v:Vector3DList)->begin
-  local centerOfMass:=v.agg(+)/v.size;
-  local vt:=v.transpose-centerOfMass;
+  centerOfMass:=v.agg(+)/v.size;
+  vt:=v.transpose-centerOfMass;
 
-  local center:=
+  center:=
   BSB.pEach(base,begin
-    local e0:=(base[0]*vt).agg(+); e0:=0.5*(e0.min+e0.max);
-    local e1:=(base[1]*vt).agg(+); e1:=0.5*(e1.min+e1.max);
-    local e2:=(base[2]*vt).agg(+); e2:=0.5*(e2.min+e2.max);
+    e0:=(base[0]*vt).agg(+); e0:=0.5*(e0.min+e0.max);
+    e1:=(base[1]*vt).agg(+); e1:=0.5*(e1.min+e1.max);
+    e2:=(base[2]*vt).agg(+); e2:=0.5*(e2.min+e2.max);
     e0*base[0]+
     e1*base[1]+
     e2*base[2];
@@ -132,18 +132,18 @@ end;
 //*Projects a raw vector list wihtout illumination
 projectOnly(L:Vector3DList,perspectivity>=0.0)->projectOnly(L,boundingSphere(L)[0],perspectivity);
 projectOnly(L:Vector3DList,boundingSphereCenter:Vector3D,perspectivity>=0.0)->begin
-  local radius:=L.pEach(p,euklideanNorm(p-boundingSphereCenter),max);
+  radius:=L.pEach(p,euklideanNorm(p-boundingSphereCenter),max);
   //Normalize all points, so that they lie within unit sphere
-  local zOffset:=(perspectivity=0
-                  ? [0,0,0]
-                  : [0,0,-radius*(1/perspectivity+1)])-boundingSphereCenter;
-  local allPoints:=L.pMap({$p}+zOffset)/radius;
+  zOffset:=(perspectivity=0
+            ? [0,0,0]
+            : [0,0,-radius*(1/perspectivity+1)])-boundingSphereCenter;
+  allPoints:=L.pMap({$p}+zOffset)/radius;
     //if perspectivity, then all points are within unit sphere around [0,0,-(1/perspectivity+1)]
     //points will be projected via [x,y]/(z*perspectivity), so the moust outward point is closer to the origin as
     //   1/((1/perspectivity+1)*perspectivity)
     // = 1/(1+perspectivity)
-  local rescale:=0.95*(1+perspectivity);
-  local projectVector:=perspectivity=0
+  rescale:=0.95*(1+perspectivity);
+  projectVector:=perspectivity=0
                        ? {$x.leading                            *rescale}
                        : {$p.leading/($p.trailing*perspectivity)*rescale};
   //3. Perspective transform
@@ -153,51 +153,51 @@ end;
 
 //*Illuminate, project and plot geometry
 illuminateAndProject(geometry:Geometry3D, lightDirection:Vector3D, perspectivity>=0.0, firstItem:Boolean, outputShift:NumericList(2))->begin
-  local options:=getOptions;
+  options:=getOptions;
 save;
 
   //1. split geometry in separate items, illuminate and and determine bounding sphere
-  local normalizedLight:=lightDirection/euklideanNorm(lightDirection);
-  local allPoints:=[];
-  local polygons:=
+  normalizedLight:=lightDirection/euklideanNorm(lightDirection);
+  allPoints:=[];
+  polygons:=
   (geometry.isGeometry3DItem ? [geometry] : geometry).each(geometryItem,begin
-    local points       :=geometryItem[0];
-    local material     :=geometryItem[2];
-    local pointIndexOffset:=allPoints.size;
+    points       :=geometryItem[0];
+    material     :=geometryItem[2];
+    pointIndexOffset:=allPoints.size;
     allPoints|=points;
     geometryItem[1].each(a,
       [[pointIndexOffset+a,material.illuminate((normalizedLight*consensusNormal(points[a])).agg(+))]],|);
   end,|);
-  local center:=boundingSphere(allPoints);
-  local radius:=center[1]; center:=center[0];
+  center:=boundingSphere(allPoints);
+  radius:=center[1]; center:=center[0];
   //Normalize all points, so that they lie within unit sphere
-  local zOffset:=(perspectivity=0
-                  ? [0,0,0]
-                  : [0,0,-radius*(1/perspectivity+1)])-center;
+  zOffset:=(perspectivity=0
+            ? [0,0,0]
+            : [0,0,-radius*(1/perspectivity+1)])-center;
   allPoints:=allPoints.pMap({$p}+zOffset)/radius;
     //if perspectivity, then all points are within unit sphere around [0,0,-(1/perspectivity+1)]
     //points will be projected via [x,y]/(z*perspectivity), so the moust outward point is closer to the origin as
     //   1/((1/perspectivity+1)*perspectivity)
     // = 1/(1+perspectivity)
-  local rescale:=0.95*(1+perspectivity);
-  local projectVector:=perspectivity=0
+  rescale:=0.95*(1+perspectivity);
+  projectVector:=perspectivity=0
                        ? {$x.leading                            *rescale+outputShift}
                        : {$p.leading/($p.trailing*perspectivity)*rescale+outputShift};
   //3. Perspective transform
   // [x',y'] = [x,y]/z
-  local zFactor:=perspectivity=0 ? -1 : 1;
+  zFactor:=perspectivity=0 ? -1 : 1;
   allPoints:=allPoints.map({[$p[2]*zFactor,$p.projectVector]});
   polygons:=polygons.pEach(poly,
     begin
-      local p:=allPoints[poly[0]];
-      local avgZ:=p.getInner(0).agg(+)/p.size;
+      p:=allPoints[poly[0]];
+      avgZ:=p.getInner(0).agg(+)/p.size;
       [avgZ,p.getInner(1),poly[1]];
     end).sort(0).map(::tail);
   //4. plot
-  local x0:=outputShift[0]-1;
-  local x1:=outputShift[0]+1;
-  local y0:=outputShift[1]-1;
-  local y1:=outputShift[1]+1;
+  x0:=outputShift[0]-1;
+  x1:=outputShift[0]+1;
+  y0:=outputShift[1]-1;
+  y1:=outputShift[1]+1;
   firstItem
   ? options:=['axisStyleX'=>0,'axisStyleY'=>0,
               'logscaleX'=>false,'logscaleY'=>false  ,
@@ -212,9 +212,9 @@ save;
     end;
   setOptions(options);
   polygons.each(poly,begin
-    local faceColor:=poly[1,0];
-    local lineColor:=poly[1,1];
-    local lineWidth:=lineColor.trailing==0 ? 0 : poly[1,2];
+    faceColor:=poly[1,0];
+    lineColor:=poly[1,1];
+    lineWidth:=lineColor.trailing==0 ? 0 : poly[1,2];
     addPlot(poly[0],'polygon fs RGB'&join(faceColor,','));
     lineWidth>0
     ? addPlot(poly[0],'polygon RGB'&join(lineColor,',')&' '&lineWidth)
@@ -228,13 +228,13 @@ illuminateAndProject(geometry:Geometry3D, lightDirection:Vector3D)->illuminateAn
 //*Plots a binary function
 @SuppressUnusedWarning
 plot3d(function:Expression(2),x0:Numeric,x1>x0,y0:Numeric,y1>y0,samples,material:Material,animation:Boolean)->begin
-  local samplePoints:=cross([0..samples-1]/(samples-1)*(x1-x0)+x0,
-                            [0..samples-1]/(samples-1)*(y1-y0)+y0);
-  local zValues:=samplePoints.pMap({function($p[0],$p[1])});
+  samplePoints:=cross([0..samples-1]/(samples-1)*(x1-x0)+x0,
+                      [0..samples-1]/(samples-1)*(y1-y0)+y0);
+  zValues:=samplePoints.pMap({function($p[0],$p[1])});
   assert(zValues.size==samplePoints.size);
   assert(zValues.each(z,z.isNumeric AND !z.isNan AND !z.isInfinite,AND));
   samplePoints:=[samplePoints,zValues].transpose.map(::flatten);
-  local adjacency:=cross([0..samples-2],[0..samples-2]).map({$x[0]+$x[1]*samples}).each(k,[k,k+1,k+1+samples,k+samples]);
+  adjacency:=cross([0..samples-2],[0..samples-2]).map({$x[0]+$x[1]*samples}).each(k,[k,k+1,k+1+samples,k+samples]);
 
   animation
   ? begin

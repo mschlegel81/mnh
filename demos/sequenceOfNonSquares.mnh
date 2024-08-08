@@ -5,11 +5,11 @@ A000037->rangeGenerator(1).map(::nonSquares);
 @demo_for=math, list processing
 main-> begin
   print('OEIS: A000037 starts with ',nonSquares([1..22]).join(", "),", ...");
-  local seriesElements:=nonSquares([1..100000]);
-  local squares:=[0..seriesElements.trailing.sqrt.ceil].sqr;
-  local squaresInSeries:=seriesElements.intersect(squares);
+  seriesElements:=nonSquares([1..100000]);
+  squares:=[0..seriesElements.trailing.sqrt.ceil].sqr;
+  squaresInSeries:=seriesElements.intersect(squares);
   print('  The series contains ',squaresInSeries==[] ? 'no' : squaresInSeries.size,' squares');
-  local nonSquaresInRange:=[seriesElements.head..seriesElements.trailing].minus(squares);
+  nonSquaresInRange:=[seriesElements.head..seriesElements.trailing].minus(squares);
   nonSquaresInRange==seriesElements.toSet
   ? print('  The series contains all non-square integers')
   : print('  Some non-square integers are missing: ',nonSquaresInRange.minus(seriesElements).join(","));

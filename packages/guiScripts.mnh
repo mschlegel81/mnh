@@ -77,7 +77,7 @@ USE inspectionUtil;
 @SuppressUnusedParameterWarning
 demosByCategory(dummyParameter)->
 allFiles(mnhInfo['configDir'],'*.mnh')
-  .toIteratableExpression
+  .toIterableExpression
   .pMap({inspect($file)})
   .map({$x['path']=>$x['declares'].map(::ruleAttributes).map({$att['demo_for']})})
   .map({$x[1].size>0 ? $x[0]=>$x[1].head.split(',').trim : void})
@@ -137,17 +137,17 @@ end;
 @newEdit
 @language=mnh
 formatCipherScript(editorFile:String)->begin
-  local plainTextSource:=editorContent(editorFile).join("\n");
-  local passphrase:=ask('Please enter passphrase');
-  local cipherSource:=plainTextSource.compress;
+  plainTextSource:=editorContent(editorFile).join("\n");
+  passphrase:=ask('Please enter passphrase');
+  cipherSource:=plainTextSource.compress;
   cipherSource:=chars[isaacRandomGenerator(passphrase.sha256,256).head(cipherSource.byteLength) xor cipherSource.bytes.ord].join.base64encode;
-  local scriptSource:=['plain script;',
+  scriptSource:=['plain script;',
     'scriptSource:=//!~'&copy(cipherSource,0,150-18)];
   cipherSource:=cipherSource.copy(150-18);
-  while(cipherSource.byteLength>0,begin
+  while cipherSource.byteLength>0 do begin
     scriptSource|=cipherSource.copy(0,150);
     cipherSource:=cipherSource.copy(150);
-  end);
+  end;
   scriptSource[scriptSource.size-1]&='~.base64decode;';
   scriptSource|=['deciphered:=chars[isaacRandomGenerator(ask("Enter passphrase").sha256,256).head(scriptSource.byteLength) xor scriptSource.bytes.ord].join.decompress;',
                  'deciphered.sha256=='&plainTextSource.sha256,
@@ -179,10 +179,10 @@ showCheatSheet(editorFile:String)->print(
 @utility=Index scripts on drive
 @SuppressUnusedParameterWarning
 scanDrive(editorFile:String)->begin
-  local roots:=mnhInfo['targetOs']=='Linux'
-               ? '/'
-               : interpret("sort(driveInfo.getInner(0)&':')");
-  local rootToScan:=ask('Which drive/root folder should be scanned?',roots);
+  roots:=mnhInfo['targetOs']=='Linux'
+         ? '/'
+         : interpret("sort(driveInfo.getInner(0)&':')");
+  rootToScan:=ask('Which drive/root folder should be scanned?',roots);
   rootToScan==''
   ? return void
   : print('Scanning: ',rootToScan);

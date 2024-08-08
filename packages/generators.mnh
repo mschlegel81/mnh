@@ -41,7 +41,7 @@ begin
 end;
 
 //*Returns the count of iteratable expression i
-count(i:IteratableExpression)->begin
+count(i:IterableExpression)->begin
   result:=0;
   while !isVoid(i()) do result+=1;
   result;
@@ -71,8 +71,8 @@ save;
   result;
 end}.toGenerator;
 
-//*Wraps iterator in a new IteratableExpression which removes duplicates
-deduplicate(iterator:IteratableExpression)->{begin
+//*Wraps iterator in a new IterableExpression which removes duplicates
+deduplicate(iterator:IterableExpression)->{begin
   seen:=[].toSet;
 save;
   next:=iterator();
@@ -81,9 +81,9 @@ save;
   next;
 end}.toGenerator;
 
-//*Wraps iterator in a new IteratableExpression which removes duplicates
+//*Wraps iterator in a new IterableExpression which removes duplicates
 //*Terminates when more than maxDuplicates duplicates have been encountered or the underlying iterator terminates
-deduplicate(iterator:IteratableExpression,maxDuplicates>=1)->{begin
+deduplicate(iterator:IterableExpression,maxDuplicates>=1)->{begin
   seen:=[].toSet;
   duplicatesCounted:=0;
 save;
@@ -99,7 +99,7 @@ end}.toGenerator;
 //*E.g. to iterate over all rational numbers r with 0<r<1 use:
 //*  dovetail(rangeGenerator(1),rangeGenerator(1))
 //*  .filter((i)->i.agg(<) AND gcd@i=1);
-dovetail(g1:IteratableExpression,g2:IteratableExpression)->{begin
+dovetail(g1:IterableExpression,g2:IterableExpression)->{begin
   l1:=[g1()];
   l2:=[g2()];
   k:=0;

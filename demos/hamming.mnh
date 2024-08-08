@@ -1,11 +1,11 @@
 @OEIS=A051037
 hammingGenerator->{begin
-  local P5:=[1,2,3,5].toSet;
-  local H:=[1]; //generated Hamming numbers
-  local i:=-1;  //previous output index
-  local lastReliableEntry:= 1;  //Value of last relieable entry in H
+  P5:=[1,2,3,5].toSet;
+  H:=[1]; //generated Hamming numbers
+  i:=-1;  //previous output index
+  lastReliableEntry:= 1;  //Value of last relieable entry in H
 save;
-  (local r:=H[i+=1])>=lastReliableEntry
+  (r:=H[i+=1])>=lastReliableEntry
   ? begin
       H:=(H.toSet*P5).sort;
       lastReliableEntry*=2;

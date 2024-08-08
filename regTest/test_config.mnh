@@ -65,7 +65,7 @@ skipFile(file in plotters                     ,false      )->true;
 skipFile(scriptFileName:String                ,fullVersion)->false;
 
 testsToExecuteForFlavour(flavourString)->begin
-  local fullVersion:=copy(flavourString,0,1)='F';
+  fullVersion:=copy(flavourString,0,1)='F';
   allDemos.filter({!(skipFile($script,fullVersion))});
 end;
 

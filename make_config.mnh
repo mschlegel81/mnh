@@ -30,10 +30,10 @@ buildConfig(platformKey in (TARGET_PLATFORM.getInner(0)),
             projectKey  in (TARGET_PROJECT.getInner(0)),
             flavourKey  in (TARGET_FLAVOUR.getInner(0)))->
 begin
-  local result:=[].toMap;
-  local platform:=TARGET_PLATFORM[platformKey];
-  local project :=TARGET_PROJECT [projectKey ];
-  local flavor  :=TARGET_FLAVOUR [flavourKey ];
+  result:=[].toMap;
+  platform:=TARGET_PLATFORM[platformKey];
+  project :=TARGET_PROJECT [projectKey ];
+  flavor  :=TARGET_FLAVOUR [flavourKey ];
   result['platform'    ]:=platformKey;
   result['flavour'     ]:=project['part']&flavor['part']&platformKey;
   result['compilerCall']:=[platform['compiler'],flavor['flags'] | project['lpi']];
@@ -83,7 +83,7 @@ call7z(fileList:StringList,builtNo,suffix)->begin
   fileExists(fileList).agg(and)
   ? void
   : return warn('Distro build is missing for ',suffix);
-  local zipFileName:=format('target/mnh5_%s_%s.zip',builtNo,suffix);
+  zipFileName:=format('target/mnh5_%s_%s.zip',builtNo,suffix);
   fileExists(zipFileName)
   ? return print('Not creating ',zipFileName,' because the file already exists')
   : void;

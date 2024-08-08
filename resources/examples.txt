@@ -1458,7 +1458,7 @@ sandBoxExecute("f(x)->3*x+1; f(f(f(1)))",['alter package state']);
 #C The resulting expression returns void until the task is finished.
 #C If you want to access local variables, use localAsync instead
 begin
-  local x:=async({print('start') orElse sleep(0.1) orElse 'end'});
+  x:=async({print('start') orElse sleep(0.1) orElse 'end'});
   print('1: ',x().isVoid); //still running, x() should display void
   sleep(0.2);
   print('2: ',x());
@@ -1481,7 +1481,7 @@ end;
 #C Future tasks are killed at the end of (synchonous) evaluation.
 #C The resulting expression blocks until the task is finished.
 begin
-  local x:=future({print('start') orElse sleep(0.1) orElse 'end'});
+  x:=future({print('start') orElse sleep(0.1) orElse 'end'});
   print('1: ',x().isVoid); //x() should block until finished
   sleep(0.2);
   print('2: ',x());
@@ -1542,7 +1542,7 @@ isIterableExpression([1..10]);
 #I isIterable
 begin
   resetRandom;
-  local gen:={begin local last:=0; save; last+=random; end};
+  gen:={begin last:=0; save; last+=random; end};
   print('gen.isIterable= ',gen.isIterable,'; ',gen.head(3));
   gen:=gen.toIterableExpression;
   print('gen.isIterable= ',gen.isIterable,'; ',gen.head(3));
@@ -1558,7 +1558,7 @@ end;
 toIterableExpression(::sqr);
 
 #I toIterableExpression
-toIterableExpression({begin local i:=1; save; i+=i-1; end});
+toIterableExpression({begin i:=2; save; i+=i-1; end});
 
 euklideanNorm([1,2]);
 #S euklideanNorm(v:NumericList);
