@@ -32,7 +32,7 @@ private versionVector->[versionInfo['MajorVersionNr'] orElse 0,
 
 memoized expectedVersionInfoSource(codeHash:String)->
   begin
-    local buildAndVersion:=getBuildNumberAndVersion(codeHash);
+    buildAndVersion:=getBuildNumberAndVersion(codeHash);
     ["BUILD_NUMBER=%s;".format(buildAndVersion[0]),
      "CODE_HASH=%s;".format(codeHash.escapePascal),
      "VERSION=%s;".format(escapePascal(versionVector.join('.')))];
@@ -48,8 +48,8 @@ memoized getBuildNumberAndVersion(codeHash:String)->
     isVoid(LOG)
     ? LOG:=[].toMap
     : void;
-    local result:=LOG[codeHash] orElse begin
-      local nextNo:=maxLoggedBuildNumber+1;
+    result:=LOG[codeHash] orElse begin
+      nextNo:=maxLoggedBuildNumber+1;
       LOG[codeHash]:=[nextNo,versionVector];
       [nextNo,versionVector];
     end;
@@ -75,10 +75,10 @@ main->isVoid(LOG)
 
 private fixLpiFile(lpiPath:String,fullVersion:Boolean,buildNr:Int,version:IntList(3))->
   begin
-    local versionInfoTag:=getVersionInfoTag(fullVersion,buildNr,version);
-    local nextLine:=lpiPath.fileLineIterator;
-    local newLines:=[];
-    local currLine:=void;
+    versionInfoTag:=getVersionInfoTag(fullVersion,buildNr,version);
+    nextLine:=lpiPath.fileLineIterator;
+    newLines:=[];
+    currLine:=void;
     while !isVoid(currLine:=nextLine()) do begin
       currLine.trim=='<VersionInfo>'
       ? begin
