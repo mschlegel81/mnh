@@ -1314,9 +1314,9 @@ end}
         end;
         tt_formatString: resolveFormatString;
 {cT[0]=}tt_literal,tt_aggregatorExpressionLiteral: case cTokType[-1] of
-          tt_for: if cTokType[1]=tt_do then begin
-            stack.popLink(first);
-            resolveFor;
+          tt_for: case cTokType[1] of
+            tt_do:begin stack.popLink(first); resolveFor; end;
+            COMMON_CASES;
           end;
  {cT[-1]=}tt_separatorMapItem: case cTokType[1] of
             tt_braceClose,tt_separatorCnt,tt_separatorComma,tt_EOL,tt_semicolon,tt_expBraceClose,tt_listBraceClose: processEntryConstructor;
