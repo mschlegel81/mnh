@@ -1751,11 +1751,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
         result^.tokType:=tt_parameterIdentifier;
       end;
       'a'..'z','A'..'Z','_':
-      if copy(line,inputLocation.column,length(C_tokenDefaultId[tt_operatorNotIn]))=C_tokenDefaultId[tt_operatorNotIn] then apply(tt_operatorNotIn)
-      else if copy(line,inputLocation.column,length(DO_PARALLEL_TEXT)) = DO_PARALLEL_TEXT then begin
-        parsedLength:=                  length(DO_PARALLEL_TEXT);
-        result^.setDoType(dt_for_related_do_parallel);
-      end else if isFormatString then begin
+      if isFormatString then begin
         stringValue:=unescapeString(line,inputLocation.column+1,parsedLength);
         inc(parsedLength); //...because we added one more character before the string
         result^.tokType:=tt_formatString;
@@ -1867,6 +1863,26 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
     nextToken:=fetch(messages,recycler);
     if nextToken=nil then exit(false);
     while nextToken<>nil do case nextToken^.tokType of
+      tt_do: begin // do | parallel -> do parallel
+        n[1]:=fetch(messages,recycler);
+        if (n[1]<>nil) and (n[1]^.tokType = tt_identifier) and (n[1]^.txt='parallel') then begin
+          nextToken^.setDoType(dt_for_related_do_parallel);
+          recycler^.disposeToken(n[1]);
+          n[1]:=nil;
+        end;
+        appendToken(nextToken);
+        nextToken:=n[1];
+      end;
+      tt_unaryOpNegate: begin // not | in -> not in
+        n[1]:=fetch(messages,recycler);
+        if (n[1]<>nil) and (n[1]^.tokType=tt_operatorIn) then begin
+          nextToken^.tokType:=tt_operatorNotIn;
+          recycler^.disposeToken(n[1]);
+          n[1]:=nil;
+        end;
+        appendToken(nextToken);
+        nextToken:=n[1];
+      end;
       tt_iifElse: begin
         // : may be part of # ? # : # or part of a pattern like (x:Type)
         n[1]:=fetch(messages,recycler);
