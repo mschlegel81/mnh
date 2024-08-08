@@ -210,7 +210,7 @@ TYPE
   T_builtinGeneratorExpression=object(T_expressionLiteral)
     public
       FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
-      CONSTRUCTOR create(CONST location:T_tokenLocation; CONST et:T_expressionType=et_builtinIteratable);
+      CONSTRUCTOR create(CONST location:T_tokenLocation; CONST et:T_expressionType=et_builtinIterable);
       FUNCTION applyBuiltinFunction(CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:P_literalRecycler):P_expressionLiteral; virtual;
       FUNCTION arity:T_arityInfo; virtual;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
@@ -954,7 +954,7 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST literalRecycler:P_literalRecyc
       if LHS^.literalType=lt_expression then begin
         r:=P_inlineExpression(LHS);
         if r^.typ in C_statefulExpressionTypes   then makeStateful(nil,opLocation);
-        if r^.typ in C_iteratableExpressionTypes then makeIteratable(nil,opLocation);
+        if r^.typ in C_iterableExpressionTypes then makeIterable(nil,opLocation);
         embrace:=r^.needEmbrace(op,false);
         if embrace then appendToExpression(tt_braceOpen);
         for i:=0 to length(r^.preparedBody)-1 do appendToExpression(r^.preparedBody[i]);
@@ -965,7 +965,7 @@ CONSTRUCTOR T_inlineExpression.createFromOp(CONST literalRecycler:P_literalRecyc
     if RHS^.literalType=lt_expression then begin
       r:=P_inlineExpression(RHS);
       if r^.typ in C_statefulExpressionTypes   then makeStateful(nil,opLocation);
-      if r^.typ in C_iteratableExpressionTypes then makeIteratable(nil,opLocation);
+      if r^.typ in C_iterableExpressionTypes then makeIterable(nil,opLocation);
       embrace:=ignoreLHS and (length(r^.preparedBody)>1) or
           not(ignoreLHS) and r^.needEmbrace(op,true);
       if embrace then appendToExpression(tt_braceOpen);
@@ -987,7 +987,7 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
       LHSinstead:P_literal=nil;
       RHSinstead:P_literal=nil;
   begin
-    if (LHS<>nil) and (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_iteratableExpressionTypes) and not(RHS^.literalType=lt_expression) then begin
+    if (LHS<>nil) and (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_iterableExpressionTypes) and not(RHS^.literalType=lt_expression) then begin
       // generator+3 -> lazyMap(generator,{$x+3})
       LHSinstead:=newIdentityRule(P_context(threadContext),tokenLocation,recycler);
       new(newRule,createFromOp(recycler,LHSinstead,op,RHS,tokenLocation));
@@ -997,7 +997,7 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
       recycler^.disposeLiteral(RHSinstead);
       exit(result);
     end;
-    if (RHS^.literalType=lt_expression) and (P_expressionLiteral(RHS)^.typ in C_iteratableExpressionTypes) and not(LHS^.literalType=lt_expression) then begin
+    if (RHS^.literalType=lt_expression) and (P_expressionLiteral(RHS)^.typ in C_iterableExpressionTypes) and not(LHS^.literalType=lt_expression) then begin
       // 2^generator -> lazyMap(generator,{2^$x})
       RHSinstead:=newIdentityRule(P_context(threadContext),tokenLocation,recycler);
       new(newRule,createFromOp(recycler,LHS,op,RHSinstead,tokenLocation));
@@ -1190,7 +1190,7 @@ DESTRUCTOR T_builtinExpressionProxy.destroy;
     func:=nil;
   end;
 
-CONSTRUCTOR T_builtinGeneratorExpression.create(CONST location:T_tokenLocation; CONST et:T_expressionType=et_builtinIteratable);
+CONSTRUCTOR T_builtinGeneratorExpression.create(CONST location:T_tokenLocation; CONST et:T_expressionType=et_builtinIterable);
   begin
     inherited create(et,location);
   end;
@@ -1904,7 +1904,7 @@ FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CON
       statement: T_enhancedStatement;
   begin
     result:=nil;
-    lexer.create(l^.forcedIteratableList(nil),location,package);
+    lexer.create(l^.forcedIterableList(nil),location,package);
     statement:=lexer.getNextStatement(context^.messages,recycler,false);
     result:=statement.token.first;
     statement:=lexer.getNextStatement(context^.messages,recycler,false);

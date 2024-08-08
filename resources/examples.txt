@@ -580,7 +580,7 @@ rangeGenerator(1,20).chunkMap(5,(x)->format('%2s',x)).toList;
 #C flattens L and applies f
 #S flatMap(L);
 #C Note that the mapping function (if present) is applied AFTER flattening!
-#C Always returns an iteratable expression
+#C Always returns an iterable expression
 [1,[2,3],[4,5,6]].flatMap((x)->x³).toList;
 
 #I sort
@@ -1520,45 +1520,45 @@ isStatelessExpression(::sin);
 #I isStatelessExpression
 isStatelessExpression(future(::sin,[3]));
 
-#I isIteratable
-isIteratable(future(::sin,[3]));
+#I isIterable
+isIterable(future(::sin,[3]));
 
-#I isIteratable
-isIteratable(primeGenerator);
+#I isIterable
+isIterable(primeGenerator);
 
-#I isIteratable
-#S isIteratable(x); 
-#C Returns true if x is an iteratable expression, a collection or a map.
-isIteratable([1..10]);
+#I isIterable
+#S isIterable(x);
+#C Returns true if x is an iterable expression, a collection or a map.
+isIterable([1..10]);
 
-#I isIteratableExpression
-#S isIteratableExpression(x); 
-#C Returns true if x is an iteratable expression.
-isIteratableExpression(primeGenerator);
+#I isIterableExpression
+#S isIterableExpression(x);
+#C Returns true if x is an iterable expression.
+isIterableExpression(primeGenerator);
 
-#I isIteratableExpression
-isIteratableExpression([1..10]);
+#I isIterableExpression
+isIterableExpression([1..10]);
 
-#I isIteratable
+#I isIterable
 begin
   resetRandom;
   local gen:={begin local last:=0; save; last+=random; end};
-  print('gen.isIteratable= ',gen.isIteratable,'; ',gen.head(3));
-  gen:=gen.toIteratableExpression;
-  print('gen.isIteratable= ',gen.isIteratable,'; ',gen.head(3));
+  print('gen.isIterable= ',gen.isIterable,'; ',gen.head(3));
+  gen:=gen.toIterableExpression;
+  print('gen.isIterable= ',gen.isIterable,'; ',gen.head(3));
 end;
 
 #I toGenerator
 #S toGenerator(e:Expression(0));
-#C Alias for toIteratableExpression
+#C Alias for toIterableExpression
 
-#I toIteratableExpression
-#S toIteratableExpression(e:Expression(0));
-#C Marks the expression as IteratableExpression if possible or throws an error
-toIteratableExpression(::sqr);
+#I toIterableExpression
+#S toIterableExpression(e:Expression(0));
+#C Marks the expression as IterableExpression if possible or throws an error
+toIterableExpression(::sqr);
 
-#I toIteratableExpression
-toIteratableExpression({begin local i:=1; save; i+=i-1; end});
+#I toIterableExpression
+toIterableExpression({begin local i:=1; save; i+=i-1; end});
 
 euklideanNorm([1,2]);
 #S euklideanNorm(v:NumericList);
@@ -1839,7 +1839,7 @@ vectorIfThenElse(x.isInfinite,0,x);
 
 #I zip
 #S zip(a,b,...);
-#C Returns an iterator over [a,b,...].transposed if any parameter is an iteratable expression or [a,b,...].transposed if all parameters are compound literals.
+#C Returns an iterator over [a,b,...].transposed if any parameter is an iterable expression or [a,b,...].transposed if all parameters are compound literals.
 zip(rangeGenerator(0),primeGenerator).head(10);
 
 #I kMeans
@@ -1994,7 +1994,7 @@ formatTime('hh:nn dd.mm.yyyy',systime);
 #C joins L in chunks of the specified size and applies f
 #S chunkMap(L,chunkSize>0);
 #C Note that the mapping function (if present) is applied AFTER chunking!
-#C Always returns an iteratable expression
+#C Always returns an iterable expression
 
 #I pMap
 #S pMap(L,f:Expression(1));
@@ -2524,7 +2524,7 @@ bitXor(5,213,10);
 
 #I newQueue
 #S newQueue;
-#C Returns a new queue; The queue can be filled with "put" and otherwise behaves as an iteratable.
+#C Returns a new queue; The queue can be filled with "put" and otherwise behaves as an iterable.
 
 #I put
 #S put(Q:Queue, valueToAdd, ...);

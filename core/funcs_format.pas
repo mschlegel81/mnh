@@ -400,7 +400,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
     if listSize=-1 then listSize:=1;
     setLength(iter,params^.size);
     for i:=1 to params^.size-1 do if (params^.value[i]^.literalType in C_collectionTypes) and (P_collectionLiteral(params^.value[i])^.customType=nil)
-    then iter[i]:=P_collectionLiteral(params^.value[i])^.forcedIteratableList(recycler)
+    then iter[i]:=P_collectionLiteral(params^.value[i])^.forcedIterableList(recycler)
     else begin setLength(iter[i],1); iter[i][0]:=params^.value[i]^.rereferenced; end;
 
     if formatSubrule=nil

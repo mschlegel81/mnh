@@ -347,7 +347,7 @@ FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLi
         exit(nil);
       end;
     end else if firstSet>=0 then begin
-      setIter:=P_setLiteral(params^.value[firstSet])^.tempIteratableList;
+      setIter:=P_setLiteral(params^.value[firstSet])^.tempIterableList;
       result:=recycler^.newSetLiteral(length(setIter));
       for i:=0 to length(setIter)-1 do if allOkay then begin
         p:=getSetSubParameters(i);

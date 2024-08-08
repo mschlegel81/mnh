@@ -530,7 +530,7 @@ PROCEDURE TtableForm.fillTable(CONST firstFill:boolean; CONST suppressMarker:boo
       for i:=0 to literal^.size-1 do begin
         rowLit:=literal^.value[i];
         if rowLit^.literalType in C_compoundTypes then begin
-          iter:=P_compoundLiteral(rowLit)^.forcedIteratableList(@globalLiteralRecycler);
+          iter:=P_compoundLiteral(rowLit)^.forcedIterableList(@globalLiteralRecycler);
           setLength(cellContents[i],length(iter));
           for j:=0 to length(iter)-1 do begin
             cellLit:=iter[j];

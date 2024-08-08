@@ -8,7 +8,7 @@ ternary(i:Int)->begin
 end;
 
 printTable(L:List)->L.map((row)->row.join("\t|\t")).join("\n").print;
-printTable(iteratable:IteratableExpression)->iteratable.head(100).printTable;
+printTable(iterable:IterableExpression)->iterable.head(100).printTable;
 
 //*Demonstrates the behavior of Van-der-Corput numbers
 main->begin

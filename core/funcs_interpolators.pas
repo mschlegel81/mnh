@@ -143,7 +143,7 @@ FUNCTION T_1D_interpolator.evaluate(CONST location:T_tokenLocation; CONST contex
       lt_emptyList,lt_intList,lt_numList,lt_realList:
         begin
           result.literal:=P_literalRecycler(recycler)^.newListLiteral(P_listLiteral(parameters^.value[0])^.size);
-          for aSub in P_listLiteral(parameters^.value[0])^.tempIteratableList do
+          for aSub in P_listLiteral(parameters^.value[0])^.tempIterableList do
             P_listLiteral(result.literal)^.appendReal(P_literalRecycler(recycler),getSingleInterpolatedValue(P_numericLiteral(aSub)^.floatValue));
         end;
       else begin P_context(context)^.raiseCannotApplyError('interpolator '+getId,parameters,location);
@@ -750,7 +750,7 @@ FUNCTION calcFourierCoeff_im intFuncSignature;
         sinSum,cosSum:double;
     begin
       //Prepare input data
-      iter:=list0^.tempIteratableList;
+      iter:=list0^.tempIterableList;
       setLength(x,length(iter));
       for k:=0 to length(iter)-1 do x[k]:=P_numericLiteral(iter[k])^.floatValue;
       setLength(iter,0);

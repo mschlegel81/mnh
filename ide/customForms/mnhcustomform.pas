@@ -204,7 +204,7 @@ CONSTRUCTOR T_guiElementMeta.create(CONST def: P_mapLiteral;
         k:P_literal;
     begin
       if not(context.continueEvaluation) then exit;
-      keys:=def^.keyIteratableList;
+      keys:=def^.keyIterableList;
       for k in keys do if not(isConsidered(k)) then begin
         context.messages^.postTextMessage(mt_el2_warning,location,'Key '+k^.toString()+' is ignored in '+def^.toString());
       end;
@@ -560,7 +560,7 @@ PROCEDURE TscriptedForm.initialize(CONST setupParam: P_literal; CONST setupLocat
       begin
         if panelContents=nil then begin end
         else if panelContents^.literalType=lt_list then begin
-          iter:=P_listLiteral(panelContents)^.tempIteratableList;
+          iter:=P_listLiteral(panelContents)^.tempIterableList;
           recycler^.disposeLiteral(panelContents);
           for panelContents in iter do if setupContext^.messages^.continueEvaluation then initComponent(targetPanel,panelContents);
         end else begin

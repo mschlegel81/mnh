@@ -16,10 +16,10 @@ save;
   end;
   while nextSquare>nextCube do nextCube:=cubes();
   nextSquare;
-end}.toIteratableExpression;
+end}.toGenerator;
 
 //*Extracts elements with given indexes from a generator
-extract(generator:IteratableExpression, indexes:IntList)->generator.head(indexes.max+1)[indexes];
+extract(generator:IterableExpression, indexes:IntList)->generator.head(indexes.max+1)[indexes];
 
 //*Solves the "Generator/Exponential" task from rosettacode.org (http://rosettacode.org/wiki/Generator/Exponential)
 main->squareButNotCubic.extract([20..29]).print;

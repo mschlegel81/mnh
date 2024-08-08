@@ -200,7 +200,7 @@ FUNCTION T_patternElement.toCmdLineHelpStringString: ansistring;
                                                    else result:=restrictionValue^.toString
       end else result:='<'+id+'>';
       tt_operatorIn: if (restrictionValue<>nil) and (restrictionValue^.literalType in [lt_stringList,lt_stringSet]) then begin
-        iter:=P_listLiteral(restrictionValue)^.tempIteratableList;
+        iter:=P_listLiteral(restrictionValue)^.tempIterableList;
         result:='';
         for l in iter do begin
           if result<>'' then result:=result+'|';

@@ -12,7 +12,7 @@ save;
     end
   : void;
   r;
-end}.toIteratableExpression;
+end}.toIterableExpression;
 
 @demo_for=list construction
 //*See http://rosettacode.org/wiki/Hamming_numbers

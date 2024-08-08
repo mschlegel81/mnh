@@ -89,7 +89,7 @@ FUNCTION formatJson_impl intFuncSignature;
         lt_string: result:=escapeString(P_stringLiteral(literal)^.value,es_javaStyle,P_stringLiteral(literal)^.getEncoding,nonescapableFound);
         lt_list, lt_booleanList, lt_intList, lt_realList, lt_numList, lt_stringList, lt_emptyList,
         lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet,  lt_emptySet: begin
-          iter:=P_collectionLiteral(literal)^.tempIteratableList;
+          iter:=P_collectionLiteral(literal)^.tempIterableList;
           setLength(parts,length(iter));
           for i:=0 to length(iter)-1 do parts[i]:=literalToJson(iter[i]);
           result:='['+join(parts,',')+']';

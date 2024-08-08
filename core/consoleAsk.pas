@@ -115,7 +115,7 @@ FUNCTION ask_impl intFuncSignature;
         lt_boolean   : visible:=P_boolLiteral(params^.value[i])^.value;
         lt_stringList: begin
           hasOptions:=true;
-          iter:=P_listLiteral(params^.value[i])^.tempIteratableList;
+          iter:=P_listLiteral(params^.value[i])^.tempIterableList;
           setLength(opt,length(iter));
           for k:=0 to length(opt)-1 do opt[k]:=P_stringLiteral(iter[k])^.value;
         end;

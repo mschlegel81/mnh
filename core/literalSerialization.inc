@@ -316,29 +316,29 @@ PROCEDURE T_literalSerializer.writeLiteral(CONST l: P_literal);
       lt_string: streamWrapper^.writeAnsiString(P_stringLiteral(L)^.val);
       lt_booleanList,lt_booleanSet:begin
         streamWrapper^.writeNaturalNumber(P_compoundLiteral(L)^.size);
-        iter:=P_collectionLiteral(L)^.tempIteratableList;
+        iter:=P_collectionLiteral(L)^.tempIterableList;
         for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then streamWrapper^.writeBoolean(P_boolLiteral(x)^.val);
       end;
       lt_intList,lt_intSet:begin
         streamWrapper^.writeNaturalNumber(P_compoundLiteral(L)^.size);
-        iter:=P_collectionLiteral(L)^.tempIteratableList;
+        iter:=P_collectionLiteral(L)^.tempIterableList;
         for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then P_abstractIntLiteral(x)^.writeToStream(streamWrapper);
       end;
       lt_realList,lt_realSet:begin
         streamWrapper^.writeNaturalNumber(P_compoundLiteral(L)^.size);
-        iter:=P_collectionLiteral(L)^.tempIteratableList;
+        iter:=P_collectionLiteral(L)^.tempIterableList;
         for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then streamWrapper^.writeDouble(P_realLiteral(x)^.val);
       end;
       lt_stringList,lt_stringSet:begin
         streamWrapper^.writeNaturalNumber(P_compoundLiteral(L)^.size);
-        iter:=P_collectionLiteral(L)^.tempIteratableList;
+        iter:=P_collectionLiteral(L)^.tempIterableList;
         for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then streamWrapper^.writeAnsiString(P_stringLiteral(x)^.val);
       end;
       lt_void, lt_emptyList,lt_emptySet,lt_emptyMap: begin end; //completely defined by type
       lt_list,lt_set,
       lt_numList,lt_numSet:begin
         streamWrapper^.writeNaturalNumber(P_compoundLiteral(L)^.size);
-        iter:=P_collectionLiteral(L)^.tempIteratableList;
+        iter:=P_collectionLiteral(L)^.tempIterableList;
         for x in iter do if (adapters=nil) or (adapters^.continueEvaluation) then writeLiteral(x);
       end;
       lt_map: begin

@@ -1,18 +1,18 @@
 USE anagram,inputs;
 @demo_for=string processing, list processing, file processing
 private findSemordnilaps(dictionaryFile:String)->
-  readAnagramGroups(dictionaryFile)
-  .pEach(anagramGroup,
-     begin
-       local semordnilapGroup:=anagramGroup[1];
-       semordnilapGroup:=intersect(semordnilapGroup,reverseString(semordnilapGroup));
-       size(semordnilapGroup)<=1 ? void : semordnilapGroup.toList.join("\v, ");
-     end);
+  for anagramGroup in readAnagramGroups(dictionaryFile) do parallel
+    begin
+      semordnilapGroup:=anagramGroup[1];
+      semordnilapGroup:=intersect(semordnilapGroup,reverseString(semordnilapGroup));
+      if size(semordnilapGroup)>1
+      then semordnilapGroup.toList.join("\v, ");
+    end;
 
 private sortByLength(L:List)->L[L.length.sortPerm];
 
 main(dictionaryFile)->begin
-  local fullList:=findSemordnilaps(dictionaryFile);
+  fullList:=findSemordnilaps(dictionaryFile);
   printf('Found %d Semordnilaps',size(fullList));
   printf("%s\t%s",['Examples:','','','',''],fullList.get(intRandom(size(fullList),5)));
   printf("%s\t%s",['Longest :','','','',''],fullList.sortByLength.trailing(5)         );
@@ -20,3 +20,5 @@ end;
 
 //*See http://rosettacode.org/wiki/Semordnilap
 main->main(inputs.dict);
+
+findSemordnilaps(inputs.dict);

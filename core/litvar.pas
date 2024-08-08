@@ -12,12 +12,12 @@ CONST HASH_GROWTH_THRESHOLD_FACTOR=  3;
       HASH_SHRINK_THRESHOLD_FACTOR=0.5;
       MAX_DEAD_LIST_SIZE=256;
 TYPE T_expressionType=(et_builtin          ,
-                       et_builtinIteratable,
+                       et_builtinIterable,
                        et_builtinAsyncOrFuture    ,
                        et_subrule          ,
                        et_inline           ,
-                       et_subruleIteratable,
-                       et_inlineIteratable ,
+                       et_subruleIterable,
+                       et_inlineIterable ,
                        et_subruleStateful  ,
                        et_inlineStateful   ,
                        et_eachBody         ,
@@ -25,23 +25,23 @@ TYPE T_expressionType=(et_builtin          ,
                        et_builtinStateful,
                        et_builtinObject);
 
-CONST C_builtinExpressionTypes:set of T_expressionType=[et_builtin,et_builtinStateful,et_builtinIteratable,et_builtinAsyncOrFuture,et_builtinObject];
-      C_subruleExpressionTypes:set of T_expressionType=[et_subrule,et_subruleIteratable,et_subruleStateful];
-      C_inlineExpressionTypes:set of T_expressionType =[et_inline,et_inlineIteratable,et_inlineStateful];
-      C_statefulExpressionTypes:set of T_expressionType=[et_builtinStateful,et_builtinIteratable,et_builtinAsyncOrFuture,
-                                                         et_subruleIteratable,et_subruleStateful,
-                                                         et_inlineIteratable ,et_inlineStateful, et_builtinObject];
-      C_iteratableExpressionTypes:set of T_expressionType=[et_builtinIteratable,
-                                                           et_subruleIteratable,
-                                                           et_inlineIteratable];
+CONST C_builtinExpressionTypes:set of T_expressionType=[et_builtin,et_builtinStateful,et_builtinIterable,et_builtinAsyncOrFuture,et_builtinObject];
+      C_subruleExpressionTypes:set of T_expressionType=[et_subrule,et_subruleIterable,et_subruleStateful];
+      C_inlineExpressionTypes:set of T_expressionType =[et_inline,et_inlineIterable,et_inlineStateful];
+      C_statefulExpressionTypes:set of T_expressionType=[et_builtinStateful,et_builtinIterable,et_builtinAsyncOrFuture,
+                                                         et_subruleIterable,et_subruleStateful,
+                                                         et_inlineIterable ,et_inlineStateful, et_builtinObject];
+      C_iterableExpressionTypes:set of T_expressionType=[et_builtinIterable,
+                                                         et_subruleIterable,
+                                                         et_inlineIterable];
       C_expressionTypeString:array[T_expressionType] of string=(
         'builtin',
-        'builtin iteratable',
+        'builtin iterable',
         'builtin future',
         'subrule',
         'inline',
-        'subrule iteratable',
-        'inline iteratable',
+        'subrule iterable',
+        'inline iterable',
         'subrule stateful',
         'inline stateful',
         'eachBody',
@@ -284,7 +284,7 @@ TYPE
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual; abstract;
 
       PROCEDURE makeStateful  (CONST context:P_abstractContext; CONST location:T_tokenLocation);
-      PROCEDURE makeIteratable(CONST context:P_abstractContext; CONST location:T_tokenLocation);
+      PROCEDURE makeIterable(CONST context:P_abstractContext; CONST location:T_tokenLocation);
 
       FUNCTION getParentId:T_idString; virtual;
       FUNCTION typeString:string; virtual;
@@ -350,7 +350,7 @@ TYPE
     FUNCTION size:longint;                        virtual; abstract;
     FUNCTION contains(CONST L:P_literal):boolean; virtual; abstract;
     FUNCTION clone(CONST literalRecycler:P_literalRecycler):P_compoundLiteral; virtual; abstract;
-    FUNCTION forcedIteratableList(CONST literalRecycler:P_literalRecycler):T_arrayOfLiteral; virtual; abstract;
+    FUNCTION forcedIterableList(CONST literalRecycler:P_literalRecycler):T_arrayOfLiteral; virtual; abstract;
   end;
 
   P_collectionLiteral=^T_collectionLiteral;
@@ -366,8 +366,8 @@ TYPE
     FUNCTION appendBool  (CONST literalRecycler:P_literalRecycler; CONST b:boolean   ):P_collectionLiteral;
     FUNCTION appendInt   (CONST literalRecycler:P_literalRecycler; CONST i:int64     ):P_collectionLiteral;
     FUNCTION appendReal  (CONST literalRecycler:P_literalRecycler; CONST r:T_myFloat ):P_collectionLiteral;
-    FUNCTION tempIteratableList:T_arrayOfLiteral; virtual; abstract;
-    FUNCTION forcedIteratableList(CONST literalRecycler:P_literalRecycler):T_arrayOfLiteral; virtual;
+    FUNCTION tempIterableList:T_arrayOfLiteral; virtual; abstract;
+    FUNCTION forcedIterableList(CONST literalRecycler:P_literalRecycler):T_arrayOfLiteral; virtual;
     PROCEDURE setContents(CONST literals:T_arrayOfLiteral; CONST literalRecycler:P_literalRecycler); virtual; abstract;
   end;
 
@@ -395,7 +395,7 @@ TYPE
       FUNCTION appendConstructing(CONST literalRecycler:P_literalRecycler; CONST L: P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST doRangeAppend:boolean):P_compoundLiteral;
       FUNCTION append(CONST literalRecycler:P_literalRecycler; CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_collectionLiteral; virtual;
       FUNCTION clone(CONST literalRecycler:P_literalRecycler):P_compoundLiteral; virtual;
-      FUNCTION tempIteratableList:T_arrayOfLiteral; virtual;
+      FUNCTION tempIterableList:T_arrayOfLiteral; virtual;
 
       PROCEDURE setContents(CONST literals:T_arrayOfLiteral; CONST literalRecycler:P_literalRecycler); virtual;
 
@@ -440,7 +440,7 @@ TYPE
       FUNCTION append(CONST literalRecycler:P_literalRecycler; CONST L: P_literal; CONST incRefs: boolean; CONST forceVoidAppend:boolean=false):P_collectionLiteral; virtual;
       FUNCTION appendAll(CONST literalRecycler:P_literalRecycler; CONST L:P_compoundLiteral):P_collectionLiteral; virtual;
       FUNCTION clone(CONST literalRecycler:P_literalRecycler):P_compoundLiteral; virtual;
-      FUNCTION tempIteratableList:T_arrayOfLiteral; virtual;
+      FUNCTION tempIterableList:T_arrayOfLiteral; virtual;
       PROCEDURE drop(CONST literalRecycler:P_literalRecycler; CONST L:P_literal);
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       PROCEDURE setContents(CONST literals:T_arrayOfLiteral; CONST literalRecycler:P_literalRecycler); virtual;
@@ -463,7 +463,7 @@ TYPE
       FUNCTION getInner(CONST literalRecycler:P_literalRecycler; CONST accessor:P_literal):P_literal; virtual;
       FUNCTION clone(CONST literalRecycler:P_literalRecycler):P_compoundLiteral; virtual;
       FUNCTION entryList:T_arrayOfKeyValuePair;
-      FUNCTION keyIteratableList:T_arrayOfLiteral;
+      FUNCTION keyIterableList:T_arrayOfLiteral;
 
       PROCEDURE drop(CONST literalRecycler:P_literalRecycler; CONST L:P_literal);
       FUNCTION put(CONST literalRecycler:P_literalRecycler; CONST key,                  newValue:P_literal; CONST incRefs:boolean):P_mapLiteral;
@@ -476,7 +476,7 @@ TYPE
       FUNCTION putAll(CONST literalRecycler:P_literalRecycler; CONST map:P_mapLiteral):P_mapLiteral;
       FUNCTION transpose(CONST literalRecycler:P_literalRecycler): P_listLiteral;
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
-      FUNCTION forcedIteratableList(CONST literalRecycler:P_literalRecycler):T_arrayOfLiteral; virtual;
+      FUNCTION forcedIterableList(CONST literalRecycler:P_literalRecycler):T_arrayOfLiteral; virtual;
       FUNCTION underlyingMap:P_literalKeyLiteralValueMap;
       PROCEDURE ensureType;
   end;
@@ -627,9 +627,9 @@ FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; 
     if modifier<0 then case check of
       tc_typeCheckStatelessExpression : result:=not(P_expressionLiteral(valueToCheck)^.typ in C_statefulExpressionTypes);
       tc_typeCheckStatefulExpression  : result:=   (P_expressionLiteral(valueToCheck)^.typ in C_statefulExpressionTypes);
-      tc_typeCheckIteratableExpression: result:=    P_expressionLiteral(valueToCheck)^.typ in C_iteratableExpressionTypes;
-      tc_typeCheckIteratable          : result:=   (valueToCheck^.literalType<>lt_expression) or
-                                                   (P_expressionLiteral(valueToCheck)^.typ in C_iteratableExpressionTypes);
+      tc_typeCheckIterableExpression: result:=    P_expressionLiteral(valueToCheck)^.typ in C_iterableExpressionTypes;
+      tc_typeCheckIterable          : result:=   (valueToCheck^.literalType<>lt_expression) or
+                                                   (P_expressionLiteral(valueToCheck)^.typ in C_iterableExpressionTypes);
       else result:=true;
     end else case check of
       tc_any: result:=true;
@@ -877,7 +877,7 @@ FUNCTION T_typedef.cloneLiteral(CONST literalRecycler:P_literalRecycler; CONST L
     result:=nil;
     case L^.literalType of
       lt_expression: begin
-        if P_expressionLiteral(l)^.typ in [et_builtin,et_builtinAsyncOrFuture,et_builtinIteratable] then begin
+        if P_expressionLiteral(l)^.typ in [et_builtin,et_builtinAsyncOrFuture,et_builtinIterable] then begin
           result:=P_expressionLiteral(L)^.clone(location,threadContext,recycler);
         end else begin
           if L^.numberOfReferences<=1
@@ -1377,7 +1377,7 @@ FUNCTION T_collectionLiteral.appendReal  (CONST literalRecycler:P_literalRecycle
 FUNCTION T_collectionLiteral.appendAll   (CONST literalRecycler:P_literalRecycler; CONST L: P_compoundLiteral): P_collectionLiteral;
   VAR x:P_literal;
   begin
-    for x in L^.forcedIteratableList(literalRecycler) do append(literalRecycler,x,false);
+    for x in L^.forcedIterableList(literalRecycler) do append(literalRecycler,x,false);
     result:=@self
   end;
 
@@ -1392,7 +1392,7 @@ FUNCTION T_setLiteral.appendAll(CONST literalRecycler:P_literalRecycler; CONST L
         E.key^.rereference;
         modifyType(E.key);
       end;
-    end else for x in L^.forcedIteratableList(literalRecycler) do append(literalRecycler,x,false);
+    end else for x in L^.forcedIterableList(literalRecycler) do append(literalRecycler,x,false);
     result:=@self;
   end;
 
@@ -1595,7 +1595,7 @@ FUNCTION T_setLiteral.toString(CONST lengthLimit: longint): ansistring;
   begin
     if size = 0 then result:='[]'
     else begin
-      iter:=tempIteratableList;;
+      iter:=tempIterableList;;
       remainingLength:=lengthLimit-1;
       result:='['+iter[0]^.toString(remainingLength);
       for i:=1 to size-1 do if remainingLength>0 then begin
@@ -1892,7 +1892,7 @@ FUNCTION T_compoundLiteral  .typeString:string;
 FUNCTION T_expressionLiteral.typeString:string;
   begin
     if customType<>nil then exit(customType^.name);
-    if expressionType in C_iteratableExpressionTypes then exit(C_typeCheckInfo[tc_typeCheckIteratableExpression].name)
+    if expressionType in C_iterableExpressionTypes then exit(C_typeCheckInfo[tc_typeCheckIterableExpression].name)
     else if expressionType in C_statefulExpressionTypes
     then result:=C_typeCheckInfo[tc_typeCheckStatefulExpression].name
     else result:=C_typeInfo     [literalType                   ].name;
@@ -1995,17 +1995,17 @@ PROCEDURE T_expressionLiteral.makeStateful  (CONST context:P_abstractContext; CO
     end;
   end;
 
-PROCEDURE T_expressionLiteral.makeIteratable(CONST context:P_abstractContext;  CONST location:T_tokenLocation);
+PROCEDURE T_expressionLiteral.makeIterable(CONST context:P_abstractContext;  CONST location:T_tokenLocation);
   begin
-    if expressionType in C_iteratableExpressionTypes then exit;
+    if expressionType in C_iterableExpressionTypes then exit;
     if not(canApplyToNumberOfParameters(0)) or not(expressionType in C_statefulExpressionTypes) then begin
-      if context<>nil then context^.raiseError('Only nullary stateful expressions may be iteratable.',location);
+      if context<>nil then context^.raiseError('Only nullary stateful expressions may be iterable.',location);
       exit;
     end;
     case expressionType of
-      et_subruleStateful: expressionType:=et_subruleIteratable;
-      et_inlineStateful : expressionType:=et_inlineIteratable;
-    else if context<>nil then context^.raiseError('Only nullary stateful expressions may be iteratable.',location);
+      et_subruleStateful: expressionType:=et_subruleIterable;
+      et_inlineStateful : expressionType:=et_inlineIterable;
+    else if context<>nil then context^.raiseError('Only nullary stateful expressions may be iterable.',location);
     end;
   end;
 
@@ -2174,7 +2174,7 @@ FUNCTION T_listLiteral.get(CONST literalRecycler:P_literalRecycler; CONST access
         exit(result);
       end;
       lt_intSet, lt_emptySet: begin
-        iter:=P_setLiteral(accessor)^.tempIteratableList;
+        iter:=P_setLiteral(accessor)^.tempIterableList;
         setLength(resultElements,length(iter));
         for idx in iter do if P_abstractIntLiteral(idx)^.isBetween(0,fill-1)
         then begin
@@ -2211,7 +2211,7 @@ FUNCTION T_setLiteral.get(CONST literalRecycler:P_literalRecycler; CONST accesso
   begin
     result:=nil;
     if isKeyValueCollection then begin
-      iter:=tempIteratableList;
+      iter:=tempIterableList;
       for x in iter do if (result=nil) and accessor^.equals(P_listLiteral(x)^.value[0])
                                                then result:=P_listLiteral(x)^.value[1]^.rereferenced;
       if result=nil then result:=newVoidLiteral;
@@ -2243,7 +2243,7 @@ FUNCTION T_setLiteral.getInner(CONST literalRecycler:P_literalRecycler; CONST ac
   VAR iter:T_arrayOfLiteral;
       sub:P_literal;
   begin
-    iter:=tempIteratableList;
+    iter:=tempIterableList;
     result:=literalRecycler^.newSetLiteral(length(iter));
     for sub in iter do if sub^.literalType in C_compoundTypes
     then P_setLiteral(result)^.append(literalRecycler,P_compoundLiteral(sub)^.get(literalRecycler,accessor),false)
@@ -2515,7 +2515,7 @@ FUNCTION T_compoundLiteral.toMap(CONST literalRecycler:P_literalRecycler; CONST 
       pair:P_literal;
   begin
     if literalType in C_mapTypes then exit(P_mapLiteral(rereferenced));
-    iter:=P_collectionLiteral(@self)^.tempIteratableList;
+    iter:=P_collectionLiteral(@self)^.tempIterableList;
     result:=literalRecycler^.newMapLiteral(length(iter));
     for pair in iter do if (pair^.literalType in C_listTypes) and (P_listLiteral(pair)^.isKeyValuePair) then begin
       result^.put(literalRecycler,
@@ -3101,14 +3101,14 @@ FUNCTION T_mapLiteral.clone(CONST literalRecycler:P_literalRecycler): P_compound
     new(P_mapLiteral(result),createClone(self));
   end;
 
-FUNCTION T_listLiteral.tempIteratableList: T_arrayOfLiteral;
+FUNCTION T_listLiteral.tempIterableList: T_arrayOfLiteral;
   VAR i:longint;
   begin
     setLength(result,fill);
     for i:=0 to fill-1 do result[i]:=dat[i];
   end;
 
-FUNCTION T_setLiteral.tempIteratableList: T_arrayOfLiteral;
+FUNCTION T_setLiteral.tempIterableList: T_arrayOfLiteral;
   begin
     result:=dat.keySet;
   end;
@@ -3125,14 +3125,14 @@ FUNCTION T_mapLiteral.entryList:T_arrayOfKeyValuePair;
     end;
   end;
 
-FUNCTION T_collectionLiteral.forcedIteratableList(CONST literalRecycler:P_literalRecycler):T_arrayOfLiteral;
+FUNCTION T_collectionLiteral.forcedIterableList(CONST literalRecycler:P_literalRecycler):T_arrayOfLiteral;
   VAR L:P_literal;
   begin
-    result:=tempIteratableList;
+    result:=tempIterableList;
     for L in result do L^.rereference;
   end;
 
-FUNCTION T_mapLiteral.forcedIteratableList(CONST literalRecycler:P_literalRecycler):T_arrayOfLiteral;
+FUNCTION T_mapLiteral.forcedIterableList(CONST literalRecycler:P_literalRecycler):T_arrayOfLiteral;
   VAR e:T_literalKeyLiteralValueMap.KEY_VALUE_LIST;
       i:longint;
   begin
@@ -3151,7 +3151,7 @@ PROCEDURE T_mapLiteral.ensureType;
     if dat.fill=0 then literalType:=lt_emptyMap else literalType:=lt_map;
   end;
 
-FUNCTION T_mapLiteral.keyIteratableList:T_arrayOfLiteral;
+FUNCTION T_mapLiteral.keyIterableList:T_arrayOfLiteral;
   VAR L:P_literal;
   begin
     result:=dat.keySet;
@@ -3251,7 +3251,7 @@ FUNCTION setIntersect(CONST literalRecycler:P_literalRecycler; CONST params:P_li
 
     counterSet.create(maxSubsetSize div 2);
     for i:=0 to params^.size-1 do begin
-      iter:=P_collectionLiteral(params^.value[i])^.tempIteratableList;
+      iter:=P_collectionLiteral(params^.value[i])^.tempIterableList;
       for x in iter do counterSet.putNew(x,counterSet.get(x,0) or bit[i],prevMask);
       inc(acceptMask,bit[i]);
     end;
@@ -3275,14 +3275,14 @@ FUNCTION setMinus(CONST literalRecycler:P_literalRecycler; CONST params:P_listLi
            (params^.value[0]^.literalType in C_collectionTypes) and
            (params^.value[1]^.literalType in C_collectionTypes))
     then exit(nil);
-    iter:=P_collectionLiteral(params^.value[0])^.tempIteratableList;
+    iter:=P_collectionLiteral(params^.value[0])^.tempIterableList;
     result:=literalRecycler^.newSetLiteral(length(iter));
     if params^.value[1]^.literalType in C_setTypes then begin
       s:=P_setLiteral(params^.value[1]);
       for L in iter do if not(s^.contains(L)) then result^.append(literalRecycler,L,true);
     end else begin
       for L in iter do result^.dat.put(L,true);
-      iter:=P_collectionLiteral(params^.value[1])^.tempIteratableList;
+      iter:=P_collectionLiteral(params^.value[1])^.tempIterableList;
       for L in iter do result^.dat.drop(L);
       for L in result^.dat.keySet do begin
         L^.rereference;
@@ -3597,8 +3597,8 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLo
           if L^.literalType in [lt_set..lt_emptySet,lt_map..lt_emptyMap] then begin
             sortedTemp:=P_compoundLiteral(L)^.toList(@globalLiteralRecycler);
             sortedTemp^.sort;
-            iter:=sortedTemp^.tempIteratableList;
-          end else iter:=P_collectionLiteral(L)^.tempIteratableList;
+            iter:=sortedTemp^.tempIterableList;
+          end else iter:=P_collectionLiteral(L)^.tempIterableList;
           for k:=0 to length(iter)-1 do if ((adapters=nil) or (adapters^.continueEvaluation)) and not(aborted) then begin
             ser(iter[k],k);
             if k<length(iter)-1 then begin
@@ -3627,7 +3627,7 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLo
           inc(indent);
           sortedTemp:=P_compoundLiteral(L)^.toList(@globalLiteralRecycler);
           sortedTemp^.sort;
-          iter:=sortedTemp^.tempIteratableList;
+          iter:=sortedTemp^.tempIterableList;
           for k:=0 to length(iter)-1 do if ((adapters=nil) or (adapters^.continueEvaluation)) and not(aborted) then begin
             ser(P_listLiteral(iter[k])^.value[0],0);
             nextLine+='=>';

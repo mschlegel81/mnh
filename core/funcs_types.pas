@@ -24,7 +24,7 @@ FUNCTION softCast_imp intFuncSignature;
         lt_string: result:=P_stringLiteral(x)^.softCast(recycler);
         lt_list..lt_emptySet: begin
           result:=P_collectionLiteral(x)^.newOfSameType(recycler,true);
-          iter:=P_collectionLiteral(x)^.tempIteratableList;
+          iter:=P_collectionLiteral(x)^.tempIterableList;
           for sub in iter do collResult^.append(recycler,softCastRecurse(sub),false);
         end;
         else begin
@@ -144,7 +144,7 @@ FUNCTION toList_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
-      if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
+      if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iterableExpressionTypes) then begin
         iterator:=P_expressionLiteral(arg0);
         result:=recycler^.newListLiteral();
         valueToAppend:=iterator^.evaluate(tokenLocation,context,recycler).literal;
@@ -164,7 +164,7 @@ FUNCTION toSet_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
-      if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
+      if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iterableExpressionTypes) then begin
         iterator:=P_expressionLiteral(arg0);
         result:=recycler^.newSetLiteral(1);
         valueToAppend:=iterator^.evaluate(tokenLocation,context,recycler).literal;
@@ -185,7 +185,7 @@ FUNCTION toMap_imp intFuncSignature;
   begin
     result:=nil;
     if (params<>nil) and (params^.size=1) then begin
-      if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
+      if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iterableExpressionTypes) then begin
         iterator:=P_expressionLiteral(arg0);
         result:=recycler^.newMapLiteral(1);
         valueToAppend:=iterator^.evaluate(tokenLocation,context,recycler).literal;
@@ -242,10 +242,10 @@ FUNCTION toMap_imp intFuncSignature;
 {$define TYPE_CHECK:=tc_typeCheckNumCollection   } {$define FUNC_ID:=isNumericCollection} GENERIC_TYPE_CHECK;
 {$define TYPE_CHECK:=tc_typeCheckMap             } {$define FUNC_ID:=isMap              } GENERIC_TYPE_CHECK;
 {$define TYPE_CHECK:=tc_typeCheckExpression      } {$define FUNC_ID:=isExpression       } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tc_typeCheckStatelessExpression } {$define FUNC_ID:=isStatelessExpression } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tc_typeCheckStatefulExpression  } {$define FUNC_ID:=isStatefulExpression  } GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tc_typeCheckIteratableExpression} {$define FUNC_ID:=isIteratableExpression} GENERIC_TYPE_CHECK;
-{$define TYPE_CHECK:=tc_typeCheckIteratable          } {$define FUNC_ID:=isIteratable          } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckStatelessExpression} {$define FUNC_ID:=isStatelessExpression} GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckStatefulExpression } {$define FUNC_ID:=isStatefulExpression } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckIterableExpression } {$define FUNC_ID:=isIterableExpression } GENERIC_TYPE_CHECK;
+{$define TYPE_CHECK:=tc_typeCheckIterable           } {$define FUNC_ID:=isIterable           } GENERIC_TYPE_CHECK;
 
 FUNCTION isVoid intFuncSignature;
   begin
@@ -300,9 +300,9 @@ INITIALIZATION
   builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'isNumericCollection',@isNumericCollection,ak_variadic_1);
   builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'isMap'              ,@isMap              ,ak_variadic_1);
   builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'isExpression'       ,@isExpression       ,ak_variadic_1);
-  builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'isStatelessExpression' ,@isStatelessExpression ,ak_variadic_1);
-  builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'isStatefulExpression'  ,@isStatefulExpression  ,ak_variadic_1);
-  builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'isIteratableExpression',@isIteratableExpression,ak_unary     );
-  builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'isIteratable'          ,@isIteratable          ,ak_unary     );
+  builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'isStatelessExpression',@isStatelessExpression ,ak_variadic_1);
+  builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'isStatefulExpression' ,@isStatefulExpression  ,ak_variadic_1);
+  builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'isIterableExpression' ,@isIterableExpression,ak_unary     );
+  builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'isIterable'           ,@isIterable          ,ak_unary     );
 
 end.

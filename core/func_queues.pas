@@ -46,7 +46,7 @@ IMPLEMENTATION
 
 CONSTRUCTOR T_queue.create(CONST location: T_tokenLocation);
   begin
-    inherited create(location,et_builtinIteratable);
+    inherited create(location,et_builtinIterable);
     first:=nil;
     last:=nil;
     closed:=false;
@@ -99,7 +99,7 @@ FUNCTION queue_put intFuncSignature;
   begin
     if (params<>nil) and (params^.size>=2)
     and (params^.value[0]^.literalType=lt_expression)
-    and (P_expressionLiteral(params^.value[0])^.typ=et_builtinIteratable)
+    and (P_expressionLiteral(params^.value[0])^.typ=et_builtinIterable)
     and (P_builtinGeneratorExpression(params^.value[0])^.getBultinGeneratorType=bgt_queue) then begin
       queue:=P_queue(params^.value[0]);
       with queue^ do begin
@@ -131,7 +131,7 @@ FUNCTION queue_close intFuncSignature;
   begin
     if (params<>nil) and (params^.size=1)
     and (params^.value[0]^.literalType=lt_expression)
-    and (P_expressionLiteral(params^.value[0])^.typ=et_builtinIteratable)
+    and (P_expressionLiteral(params^.value[0])^.typ=et_builtinIterable)
     and (P_builtinGeneratorExpression(params^.value[0])^.getBultinGeneratorType=bgt_queue) then begin
       queue:=P_queue(params^.value[0]);
       with queue^ do begin

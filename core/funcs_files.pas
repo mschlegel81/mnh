@@ -513,7 +513,7 @@ FUNCTION fileInfo_imp intFuncSignature;
       lt_string: exit(infoForSearch(str0^.value));
       lt_stringList,lt_stringSet: begin
         result:=collection0^.newOfSameType(recycler,true);
-        iter  :=collection0^.tempIteratableList;
+        iter  :=collection0^.tempIterableList;
         for sub in iter do collResult^.append(recycler,infoForSearch(P_stringLiteral(sub)^.value),false);
       end;
       lt_emptyList: result:=recycler^.newListLiteral(0);

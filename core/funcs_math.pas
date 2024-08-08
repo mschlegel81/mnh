@@ -307,7 +307,7 @@ FUNCTION max_imp intFuncSignature;
     else x:=params;
     if x^.literalType in [lt_emptyList,lt_emptySet] then exit(newVoidLiteral);
     if x^.literalType in C_scalarTypes+C_mapTypes then exit(x^.rereferenced);
-    it:=P_collectionLiteral(x)^.tempIteratableList;
+    it:=P_collectionLiteral(x)^.tempIterableList;
     result:=it[0];
     for x in it do if not(x^.leqForSorting(result)) then result:=x;
     result^.rereference;
@@ -331,7 +331,7 @@ FUNCTION min_imp intFuncSignature;
     else x:=params;
     if x^.literalType in [lt_emptyList,lt_emptySet] then exit(newVoidLiteral);
     if x^.literalType in C_scalarTypes+C_mapTypes then exit(x^.rereferenced);
-    it:=P_collectionLiteral(x)^.tempIteratableList;
+    it:=P_collectionLiteral(x)^.tempIterableList;
     result:=it[0];
     for x in it do if leq_for_min(x,result) then result:=x;
     result^.rereference;
@@ -460,7 +460,7 @@ FUNCTION subSets_impl intFuncSignature;
     VAR iter:T_arrayOfLiteral;
         i:longint;
     begin
-      iter:=s^.tempIteratableList;
+      iter:=s^.tempIterableList;
       setLength(mightContain,length(iter));
       for i:=0 to length(mightContain)-1 do begin
         mightContain[i].value:=iter[i];
@@ -532,7 +532,7 @@ FUNCTION permutations_impl intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=1) and ((arg0^.literalType in C_listTypes) or (arg0^.literalType in C_setTypes)) then begin
       setLength(mustContain,0);
-      iter:=collection0^.tempIteratableList;
+      iter:=collection0^.tempIterableList;
       setLength(mightContain,length(iter));
       for i:=0 to length(mightContain)-1 do mightContain[i]:=iter[i];
       result:=recycler^.newSetLiteral(length(iter));

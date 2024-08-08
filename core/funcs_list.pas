@@ -37,7 +37,7 @@ end}
            (params<>nil)
        and (params^.size=2)
        and (arg0^.literalType=lt_expression)
-       and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes)
+       and (P_expressionLiteral(arg0)^.typ in C_iterableExpressionTypes)
        and (arg1^.literalType in [lt_smallint,lt_bigint])
        and (int1^.intValue>=0)}
 
@@ -217,7 +217,7 @@ FUNCTION getElementFreqency intFuncSignature;
   begin
     if (params=nil) or (params^.size<>1) then exit(nil);
     result:=nil;
-    if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then begin
+    if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iterableExpressionTypes) then begin
       new(aggregator,create);
 
       valueToAppend:=P_expressionLiteral(arg0)^.evaluate(tokenLocation,context,recycler);
@@ -232,7 +232,7 @@ FUNCTION getElementFreqency intFuncSignature;
 
     if (arg0^.literalType in C_setTypes) or (arg0^.literalType in C_mapTypes) then begin
       result:=recycler^.newMapLiteral(100);
-      iter:=compound0^.forcedIteratableList(recycler);
+      iter:=compound0^.forcedIterableList(recycler);
       for x in iter do P_mapLiteral(result)^.put(recycler,x,recycler^.newIntLiteral(1),false);
       exit(result);
     end;
@@ -267,7 +267,7 @@ FUNCTION flatten_imp intFuncSignature;
     VAR iter:T_arrayOfLiteral;
         x:P_literal;
     begin
-      iter:=L^.forcedIteratableList(recycler);
+      iter:=L^.forcedIterableList(recycler);
       for x in iter do if x^.literalType in C_compoundTypes
       then recurse_flatten(P_compoundLiteral(x))
       else listResult^.append(recycler,x,true);
@@ -287,7 +287,7 @@ FUNCTION size_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) then begin
       if arg0^.literalType in C_compoundTypes
       then result:=recycler^.newIntLiteral(compound0^.size)
-      else if (arg0^.literalType=lt_expression)  and (P_expressionLiteral(arg0)^.typ=et_builtinIteratable) and (P_builtinGeneratorExpression(arg0)^.getBultinGeneratorType=bgt_queue)
+      else if (arg0^.literalType=lt_expression)  and (P_expressionLiteral(arg0)^.typ=et_builtinIterable) and (P_builtinGeneratorExpression(arg0)^.getBultinGeneratorType=bgt_queue)
       then result:=recycler^.newIntLiteral(P_queue(arg0)^.getQueuedCount)
       else result:=recycler^.newIntLiteral(1);
     end;
@@ -342,7 +342,7 @@ FUNCTION isSubsetOf_imp   intFuncSignature;
         lt_set,  lt_booleanSet,  lt_intSet,  lt_realSet,  lt_numSet,  lt_stringSet,
         lt_map:
           begin
-            iter:=compound0^.forcedIteratableList(recycler);
+            iter:=compound0^.forcedIterableList(recycler);
             for a in iter do allContained:=allContained and list1^.contains(a);
             recycler^.disposeLiterals(iter);
             result:=newBoolLiteral(allContained);
@@ -388,7 +388,7 @@ FUNCTION getAll_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size=2) and (arg0^.literalType in C_compoundTypes) and (arg1^.literalType in C_compoundTypes) then begin
       result:=P_collectionLiteral(arg1)^.newOfSameType(recycler,true);
-      iter:=compound1^.forcedIteratableList(recycler);
+      iter:=compound1^.forcedIterableList(recycler);
       for sub in iter do if result<>nil then begin
         got:=compound0^.get(recycler,sub);
         if got<>nil then begin
@@ -471,7 +471,7 @@ FUNCTION cross_impl intFuncSignature;
         for k:=0 to length(lit)-1 do subLit[k]:=lit[k];
         k:=length(lit);
 
-        iter:=P_compoundLiteral(params^.value[index])^.forcedIteratableList(recycler);
+        iter:=P_compoundLiteral(params^.value[index])^.forcedIterableList(recycler);
         for l in iter do begin //if not(memoryPanic) then begin
           subLit[k]:=l;
           recurseBuild(index+1,subLit);
@@ -572,7 +572,7 @@ FUNCTION group_imp intFuncSignature;
       then begin
         initialize(keyList);
         makeKeysByIndex(int1^.intValue);
-      end else keyList:=list1^.forcedIteratableList(recycler);
+      end else keyList:=list1^.forcedIterableList(recycler);
 
       result:=recycler^.newMapLiteral(0);
       groupMap:=P_mapLiteral(result)^.underlyingMap;
@@ -694,7 +694,7 @@ FUNCTION toGenerator_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) then begin
       if (arg0^.literalType=lt_expression) then begin
         result:=arg0^.rereferenced;
-        P_expressionLiteral(result)^.makeIteratable(context,tokenLocation);
+        P_expressionLiteral(result)^.makeIterable(context,tokenLocation);
       end else result:=newIterator(recycler,arg0,tokenLocation);
     end;
   end;
@@ -762,6 +762,6 @@ INITIALIZATION
   builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'group',  @group_imp ,ak_variadic_2);
   builtinFunctionMap.registerRule(DEFAULT_BUILTIN_NAMESPACE,'groupToList',  @groupToList_imp ,ak_variadic_4);
   builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'toGenerator'   ,
-  builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'toIteratableExpression',@toGenerator_imp,ak_unary),ak_unary);
+  builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'toIterableExpression',@toGenerator_imp,ak_unary),ak_unary);
   builtinFunctionMap.registerRule(LIST_NAMESPACE,'vectorIfThenElse',@vectorIfThenElse_imp,ak_ternary);
 end.

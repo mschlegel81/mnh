@@ -8,7 +8,7 @@ timingOutGenerator(sourceGenerator:IteratableExpression,runForSeconds:Numeric)->
    scriptTime<timeout
    ? gen()
    : generatorClosed;
- end}.toIteratableExpression;
+ end}.toGenerator;
 
 //*Returns a list of all integer pairs [a,b] with initialSum<=(a+b)<=finalSum and a,b>=minElementValue, ordered by (a+b)
 pairGenerator(initialSum,finalSum,minElementValue<=initialSum)->{begin
@@ -17,7 +17,7 @@ pairGenerator(initialSum,finalSum,minElementValue<=initialSum)->{begin
 save;
   (k-i<=minElementValue) ? begin k+=1; i:=minElementValue-1; end : void;
   k<=finalSum ? [i+=1,k-i] : generatorClosed;
-end}.toIteratableExpression;
+end}.toGenerator;
 
 //*Returns a list of all integer pairs [a,b] with initialSum<=(a+b) and a,b>=1, ordered by (a+b)
 //*Warning: (potentially) infinite generator!
@@ -69,7 +69,7 @@ save;
   result:=pending[firstDone]();
   pending[firstDone]:=void;
   result;
-end}.toIteratableExpression;
+end}.toGenerator;
 
 //*Wraps iterator in a new IteratableExpression which removes duplicates
 deduplicate(iterator:IteratableExpression)->{begin
@@ -79,7 +79,7 @@ save;
   while !next.isVoid AND next in seen do next:=iterator();
   seen||=next;
   next;
-end}.toIteratableExpression;
+end}.toGenerator;
 
 //*Wraps iterator in a new IteratableExpression which removes duplicates
 //*Terminates when more than maxDuplicates duplicates have been encountered or the underlying iterator terminates
@@ -93,7 +93,7 @@ save;
   duplicatesCounted>maxDuplicates
   ? generatorClosed
   : next;
-end}.toIteratableExpression;
+end}.toGenerator;
 
 //*Performs a dovetailing iteration over g1 and g2
 //*E.g. to iterate over all rational numbers r with 0<r<1 use:
@@ -120,11 +120,11 @@ save;
     b:=l2[k-i];
     a.isVoid OR b.isVoid ? void : return [a,b];
   end;
-end}.toIteratableExpression;
+end}.toGenerator;
 
 //*Returns a window iterator, effectively returning all consecutive sub-lists of the given width/size
 window(I:Iteratable,width>1)->{begin
-  gen:=I.toIteratableExpression;
+  gen:=I.toGenerator;
   window:=[];
   begin
     next:=void;
@@ -136,11 +136,11 @@ save;
   window:=window.tail;
   window||=gen();
   out.size=width ? out : generatorClosed;
-end}.toIteratableExpression;
+end}.toGenerator;
 
 //*Returns a dynamic concatenation of all given iteratables
-concat(A:Iteratable,...)->toIteratableExpression(()->begin
-  remainingGenerators:=map($params,::toIteratableExpression);
+concat(A:Iteratable,...)->toGenerator(()->begin
+  remainingGenerators:=map($params,::toGenerator);
 save;
   nextOutput:=(remainingGenerators[0] orElse {void})();
   while remainingGenerators.size>0 AND nextOutput.isVoid do begin

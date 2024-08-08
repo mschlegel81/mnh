@@ -30,7 +30,7 @@ FUNCTION intPlusCollection(CONST a:int64; CONST b:P_collectionLiteral; CONST rec
       i:longint;
   begin
     assert(b^.literalType in [lt_emptyList,lt_intList,lt_numList,lt_intSet,lt_numSet]);
-    temp:=b^.tempIteratableList;
+    temp:=b^.tempIterableList;
     for i:=0 to length(temp)-1 do begin
       case temp[i]^.literalType of
         lt_smallint: temp[i]:=recycler^.newIntLiteral(a+P_smallIntLiteral(temp[i])^.value);
@@ -48,7 +48,7 @@ FUNCTION realPlusCollection(CONST a:T_myFloat; CONST b:P_collectionLiteral; CONS
       i:longint;
   begin
     assert(b^.literalType in [lt_emptyList,lt_intList,lt_numList,lt_intSet,lt_numSet,lt_realList,lt_realSet]);
-    temp:=b^.tempIteratableList;
+    temp:=b^.tempIterableList;
     for i:=0 to length(temp)-1 do temp[i]:=recycler^.newRealLiteral(a+P_numericLiteral(temp[i])^.floatValue);
     result:=b^.newOfSameType(recycler,false);
     result^.setContents(temp,recycler);
@@ -59,7 +59,7 @@ FUNCTION intMinusCollection(CONST a:int64; CONST b:P_collectionLiteral; CONST re
       i:longint;
   begin
     assert(b^.literalType in [lt_emptyList,lt_intList,lt_numList,lt_intSet,lt_numSet]);
-    temp:=b^.tempIteratableList;
+    temp:=b^.tempIterableList;
     for i:=0 to length(temp)-1 do begin
       case temp[i]^.literalType of
         lt_smallint: temp[i]:=recycler^.newIntLiteral(a-P_smallIntLiteral(temp[i])^.value);
@@ -77,7 +77,7 @@ FUNCTION realMinusCollection(CONST a:T_myFloat; CONST b:P_collectionLiteral; CON
       i:longint;
   begin
     assert(b^.literalType in [lt_emptyList,lt_intList,lt_numList,lt_intSet,lt_numSet,lt_realList,lt_realSet]);
-    temp:=b^.tempIteratableList;
+    temp:=b^.tempIterableList;
     for i:=0 to length(temp)-1 do temp[i]:=recycler^.newRealLiteral(a-P_numericLiteral(temp[i])^.floatValue);
     result:=b^.newOfSameType(recycler,false);
     result^.setContents(temp,recycler);
@@ -88,7 +88,7 @@ FUNCTION intMultCollection(CONST a:int64; CONST b:P_collectionLiteral; CONST rec
       i:longint;
   begin
     assert(b^.literalType in [lt_emptyList,lt_intList,lt_numList,lt_intSet,lt_numSet]);
-    temp:=b^.tempIteratableList;
+    temp:=b^.tempIterableList;
     for i:=0 to length(temp)-1 do begin
       case temp[i]^.literalType of
         lt_smallint: temp[i]:=recycler^.newIntLiteral(a*P_smallIntLiteral(temp[i])^.value);
@@ -106,7 +106,7 @@ FUNCTION realMultCollection(CONST a:T_myFloat; CONST b:P_collectionLiteral; CONS
       i:longint;
   begin
     assert(b^.literalType in [lt_emptyList,lt_intList,lt_numList,lt_intSet,lt_numSet,lt_realList,lt_realSet]);
-    temp:=b^.tempIteratableList;
+    temp:=b^.tempIterableList;
     for i:=0 to length(temp)-1 do temp[i]:=recycler^.newRealLiteral(a*P_numericLiteral(temp[i])^.floatValue);
     result:=b^.newOfSameType(recycler,false);
     result^.setContents(temp,recycler);
@@ -143,7 +143,7 @@ FUNCTION logicalNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocation; 
       lt_list,lt_booleanList,lt_emptyList,
       lt_set ,lt_booleanSet ,lt_emptySet: begin
         result:=P_collectionLiteral(x)^.newOfSameType(recycler,true);
-        iter:=P_collectionLiteral(x)^.tempIteratableList;
+        iter:=P_collectionLiteral(x)^.tempIterableList;
         for y in iter do begin
           yNeg:=logicalNegationOf(y,opLocation,context,recycler);
           if yNeg=nil
@@ -181,7 +181,7 @@ FUNCTION arithmeticNegationOf(CONST x:P_literal; CONST opLocation:T_tokenLocatio
       lt_list,lt_realList,lt_intList,lt_numList,lt_emptyList,
       lt_set ,lt_realSet ,lt_intSet ,lt_numSet ,lt_emptySet: begin
         result:=P_collectionLiteral(x)^.newOfSameType(recycler,true);
-        iter:=P_collectionLiteral(x)^.tempIteratableList;
+        iter:=P_collectionLiteral(x)^.tempIterableList;
         for y in iter do begin
           yNeg:=arithmeticNegationOf(y,opLocation,context,recycler);
           if yNeg=nil
@@ -317,7 +317,7 @@ FUNCTION operator_NotIn       intFuncSignature;
     VAR temp:T_arrayOfLiteral;
         i:longint;
     begin
-      temp:=P_collectionLiteral(RHS)^.tempIteratableList;
+      temp:=P_collectionLiteral(RHS)^.tempIterableList;
       for i:=0 to length(temp)-1 do begin
         temp[i]:=function_id(LHS,temp[i],tokenLocation,context,recycler);
         if temp[i]=nil then begin
@@ -334,7 +334,7 @@ FUNCTION operator_NotIn       intFuncSignature;
     VAR temp:T_arrayOfLiteral;
         i:longint;
     begin
-      temp:=P_collectionLiteral(LHS)^.tempIteratableList;
+      temp:=P_collectionLiteral(LHS)^.tempIterableList;
       for i:=0 to length(temp)-1 do begin
         temp[i]:=function_id(temp[i],RHS,tokenLocation,context,recycler);
         if temp[i]=nil then begin
@@ -352,8 +352,8 @@ FUNCTION operator_NotIn       intFuncSignature;
         lhsIt,rhsIt:T_arrayOfLiteral;
     begin
       if  (P_listLiteral(LHS)^.size=P_listLiteral(RHS)^.size) then begin
-        lhsIt:=P_listLiteral(LHS)^.tempIteratableList;
-        rhsIt:=P_listLiteral(RHS)^.tempIteratableList;
+        lhsIt:=P_listLiteral(LHS)^.tempIterableList;
+        rhsIt:=P_listLiteral(RHS)^.tempIterableList;
 
         for i:=0 to P_listLiteral(LHS)^.size-1 do begin
           lhsIt[i]:=function_id(lhsIt[i],rhsIt[i],tokenLocation,context,recycler);
@@ -374,8 +374,8 @@ FUNCTION operator_NotIn       intFuncSignature;
         k:longint=0;
     begin
       if (LHS^.literalType in C_setTypes) and (RHS^.literalType in C_setTypes) then begin
-        lhsIt:=P_collectionLiteral(LHS)^.tempIteratableList;
-        rhsIt:=P_collectionLiteral(RHS)^.tempIteratableList;
+        lhsIt:=P_collectionLiteral(LHS)^.tempIterableList;
+        rhsIt:=P_collectionLiteral(RHS)^.tempIterableList;
         setLength(resultElements,length(lhsIt)*length(rhsIt));
         for lhsX in lhsIt do for rhsX in rhsIt do begin
           resultElements[k]:=function_id(lhsX,rhsX,tokenLocation,context,recycler);

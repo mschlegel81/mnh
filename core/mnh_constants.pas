@@ -608,8 +608,8 @@ TYPE
                tc_typeCheckExpression,
                tc_typeCheckStatelessExpression,
                tc_typeCheckStatefulExpression,
-               tc_typeCheckIteratableExpression,
-               tc_typeCheckIteratable,
+               tc_typeCheckIterableExpression,
+               tc_typeCheckIterable,
                tc_any,
                tc_byTypeString);
 
@@ -677,10 +677,10 @@ CONST
                                    modifiable:true;  matching:[lt_expression]),
   {tc_typeCheckStatefulExpression}(name:'StatefulExpression'; helpText:'Matches stateful expressions#Can be modified to only match expressions accepting a given number of parameters';
                                    modifiable:true;  matching:[lt_expression]),
-  {tc_typeCheckIteratableExpression}
-                                  (name:'IteratableExpression'; helpText:'Matches iteratable expressions';
+  {tc_typeCheckIterableExpression}
+                                  (name:'IterableExpression'; helpText:'Matches iterable expressions';
                                    modifiable:false;  matching:[lt_expression]),
-  {tc_typeCheckIteratable}        (name:'Iteratable'; helpText:'Matches iteratable expressions, collections and maps';
+  {tc_typeCheckIterable}        (name:'Iterable'; helpText:'Matches iterable expressions, collections and maps';
                                    modifiable:false;  matching:[lt_expression..lt_emptyMap]),
   {tc_any}                        (name:''; helpText:'';
                                    modifiable:false;  matching:[lt_boolean..lt_emptyMap]),

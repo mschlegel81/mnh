@@ -85,7 +85,7 @@ FUNCTION plotRasterImage intFuncSignature;
         else exit(nil);
       end;
       new(message,create(int1^.intValue,scale,offsetX,offsetY));
-      iter:=list0^.tempIteratableList;
+      iter:=list0^.tempIterableList;
       for c in iter do if not(message^.canAddColor(c)) then begin
         disposeMessage(message);
         exit(nil);
@@ -251,7 +251,7 @@ FUNCTION setOptions intFuncSignature;
     result:=nil;
     opt.setDefaults;
     if (params<>nil) and (params^.size=1) and ((arg0^.literalType=lt_map) or (arg0^.literalType in C_listTypes+C_setTypes) and (list0^.isKeyValueCollection)) then begin
-      iter:=compound0^.forcedIteratableList(recycler);
+      iter:=compound0^.forcedIterableList(recycler);
       for pair in iter do if P_listLiteral(pair)^.value[0]^.literalType<>lt_string then begin
         recycler^.disposeLiterals(iter);
         exit(nil);

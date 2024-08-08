@@ -36,7 +36,7 @@ CONSTRUCTOR T_listIterator.create(CONST literalRecycler:P_literalRecycler; CONST
     inherited create(location);
     index:=0;
     underlying:=v^.rereferenced;
-    values:=v^.forcedIteratableList(literalRecycler);
+    values:=v^.forcedIterableList(literalRecycler);
   end;
 
 FUNCTION T_listIterator.toString(CONST lengthLimit:longint=maxLongint):string;
@@ -103,7 +103,7 @@ FUNCTION T_zipIterator.addGenerator(CONST literal: P_literal;CONST literalRecycl
         addUnderlying(gen);
         result:=true;
       end;
-      lt_expression: if P_expressionLiteral(literal)^.typ in C_iteratableExpressionTypes
+      lt_expression: if P_expressionLiteral(literal)^.typ in C_iterableExpressionTypes
       then begin
         addUnderlying(P_expressionLiteral(literal^.rereferenced));
         result:=true;
@@ -210,7 +210,7 @@ FUNCTION newIterator(CONST literalRecycler:P_literalRecycler; CONST input:P_lite
   begin
     if input^.literalType in C_compoundTypes then new(P_listIterator(result),create(literalRecycler,P_compoundLiteral(input),location))
     else if (input^.literalType=lt_expression) and
-            (P_expressionLiteral(input)^.typ in C_iteratableExpressionTypes) then result:=P_expressionLiteral(input^.rereferenced)
+            (P_expressionLiteral(input)^.typ in C_iterableExpressionTypes) then result:=P_expressionLiteral(input^.rereferenced)
     else new(P_singleValueIterator(result),create(input,location));
   end;
 
@@ -359,7 +359,7 @@ CONSTRUCTOR T_permutationIterator.create(CONST literalRecycler:P_literalRecycler
     sorted:=literalRecycler^.newListLiteral();
     sorted^.appendAll(literalRecycler,arr);
     sorted^.sort;
-    nextPermutation:=sorted^.forcedIteratableList(literalRecycler);
+    nextPermutation:=sorted^.forcedIterableList(literalRecycler);
     literalRecycler^.disposeLiteral(sorted);
   end;
 
@@ -645,13 +645,13 @@ FUNCTION T_flatMapGenerator.evaluate(CONST location:T_tokenLocation; CONST conte
             lt_numSet,
             lt_stringSet,
             lt_map: begin
-              iter:=P_compoundLiteral(currentUnmapped)^.forcedIteratableList(recycler);
+              iter:=P_compoundLiteral(currentUnmapped)^.forcedIterableList(recycler);
               for sub.literal in iter do appendEvaluated(sub.literal^.rereferenced);
               P_recycler(recycler)^.disposeLiterals(iter);
               P_recycler(recycler)^.disposeLiteral(currentUnmapped);
             end;
             lt_expression: begin
-              if (P_expressionLiteral(currentUnmapped)^.typ in C_iteratableExpressionTypes) then begin
+              if (P_expressionLiteral(currentUnmapped)^.typ in C_iterableExpressionTypes) then begin
                 repeat
                   sub:=P_expressionLiteral(currentUnmapped)^.evaluate(location,context,recycler);
                   stillFetchingFromIterator:=sub.reasonForStop in [rr_ok,rr_okWithReturn];
@@ -1103,7 +1103,7 @@ FUNCTION map_imp intFuncSignature;
     if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) then
       case arg0^.literalType of
         lt_list..lt_emptyMap: result:=processMapSerial(P_compoundLiteral(arg0),P_expressionLiteral(arg1),tokenLocation,context,recycler);
-        lt_expression: if (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then
+        lt_expression: if (P_expressionLiteral(arg0)^.typ in C_iterableExpressionTypes) then
           new(P_mapGenerator(result),create(P_expressionLiteral(arg0),P_expressionLiteral(arg1),tokenLocation));
       end;
   end;
@@ -1114,7 +1114,7 @@ FUNCTION filter_imp intFuncSignature;
     if (params<>nil) and (params^.size=2) and (arg1^.literalType=lt_expression) then begin
       case arg0^.literalType of
         lt_list..lt_emptyMap: result:=processFilterSerial(P_compoundLiteral(arg0),P_expressionLiteral(arg1),tokenLocation,context,recycler);
-        lt_expression: if (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then
+        lt_expression: if (P_expressionLiteral(arg0)^.typ in C_iterableExpressionTypes) then
           new(P_filterGenerator(result),create(P_expressionLiteral(arg0),P_expressionLiteral(arg1),tokenLocation));
       end;
     end;
@@ -1129,7 +1129,7 @@ FUNCTION pMap_imp intFuncSignature;
       then begin
         new(mapGenerator,create(newIterator(recycler,arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation));
         mapGenerator^.doEnqueueTasks(tokenLocation,context,recycler);
-        if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then exit(mapGenerator);
+        if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iterableExpressionTypes) then exit(mapGenerator);
         result:=recycler^.newListLiteral();
         mapGenerator^.collectResults(P_listLiteral(result),tokenLocation,context,recycler);
         mapGenerator^.cleanup(recycler);
@@ -1148,7 +1148,7 @@ FUNCTION parallelFilter_imp intFuncSignature;
       then begin
         new(filterGenerator,create(newIterator(recycler,arg0,tokenLocation),P_expressionLiteral(arg1),tokenLocation));
         filterGenerator^.doEnqueueTasks(tokenLocation,context,recycler);
-        if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iteratableExpressionTypes) then exit(filterGenerator);
+        if (arg0^.literalType=lt_expression) and (P_expressionLiteral(arg0)^.typ in C_iterableExpressionTypes) then exit(filterGenerator);
         if arg0^.literalType= lt_set then begin
           result:=recycler^.newSetLiteral(set0^.size div 2);
           filterGenerator^.collectResults(P_setLiteral(result),tokenLocation,context,recycler);
@@ -1643,7 +1643,7 @@ FUNCTION stringIterator intFuncSignature;
        (arg1^.literalType=lt_smallint) and (int1^.intValue>=0) and
        (arg2^.literalType=lt_smallint) and (int2^.intValue>=int1^.intValue) then begin
       charSet:=[];
-      iter:=collection0^.tempIteratableList;
+      iter:=collection0^.tempIterableList;
       for c in iter do begin
         s:=P_stringLiteral(c)^.value;
         if length(s)=1
