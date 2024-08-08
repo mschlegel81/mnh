@@ -309,7 +309,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       repeat
         p:=recycler^.disposeToken(p); (**)
         bodyRuleStart:=p;
-        while (p<>nil) and (bracketLevel>=0) and not(((p^.tokType in [tt_aggregatorConstructor,tt_aggregatorExpressionLiteral]) or (p^.tokType=tt_do) and (p^.getDoType in [dt_for_related_do_parallel,dt_for_related_do])) and (bracketLevel=0)) do begin
+        while (p<>nil) and (bracketLevel>=0) and not(((p^.tokType in [tt_aggregatorConstructor,tt_aggregatorExpressionLiteral,tt_semicolon]) or (p^.tokType=tt_do) and (p^.getDoType in [dt_for_related_do_parallel,dt_for_related_do])) and (bracketLevel=0)) do begin
           if      (p^.tokType in C_openingBrackets) then inc(bracketLevel)
           else if (p^.tokType in C_closingBrackets) then dec(bracketLevel);
           prev:=p;
@@ -353,6 +353,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
         bodyRule[i]^.cleanup(recycler);
         dispose(bodyRule[i],destroy);
       end;
+      didSubstitution:=context^.continueEvaluation;
       //----------------------------------------------------------------------cleanup
     end;
 
@@ -914,7 +915,6 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
     end;
 
   PROCEDURE process_op_lit;
-    VAR trueLit:boolean;
     begin
       case cTokType[1] of
         tt_pow2,tt_pow3: process_pow2_pow3;

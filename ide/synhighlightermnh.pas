@@ -345,7 +345,6 @@ PROCEDURE TMnhInputSyn.handle_inline_if(CONST line:longint);
 
 PROCEDURE TMnhInputSyn.handleId(CONST id: string; CONST line: longint; VAR col: longint);
   begin
-    if handleRelatedPosition(line) then exit;
     if id=markedWord then fTokenId:=tkHighlightedItem
     else if (id=C_tokenDefaultId[tt_do]) and lineContinues(id,DO_PARALLEL_TEXT,line,col) then fTokenId:=tkOperator
     else if tokenTypeMap.containsKey(id,fTokenId)    then begin end
@@ -354,6 +353,8 @@ PROCEDURE TMnhInputSyn.handleId(CONST id: string; CONST line: longint; VAR col: 
     else if builtinRules    .contains  (id)          then fTokenId:=tkBultinRule
     else if (id=ALTERNATIVE_NOT_TEXT)                then fTokenId:=tkOperator
     else                                                  fTokenId:=tkDefault;
+    handleRelatedPosition(line);
+
   end;
 
 PROCEDURE TAbstractSynMnhSyn.next;
