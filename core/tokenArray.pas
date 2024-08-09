@@ -124,7 +124,7 @@ TYPE
   T_simpleTokenRange=record x,y,width:longint; end;
   T_relatedTokens=record
     count:byte;
-    position: array[0..2] of T_simpleTokenRange;
+    position: array[0..7] of T_simpleTokenRange;
   end;
 
   T_callAndIdInfos=object
@@ -700,7 +700,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST messages: P_messages; CONST recy
         tt_braceOpen,tt_expBraceOpen,tt_listBraceOpen,tt_iifCheck,tt_while,tt_repeat,tt_if:
           localIdStack.scopePush(tok,sc_bracketOnly);
         tt_braceClose,tt_expBraceClose,tt_listBraceClose,tt_iifElse,tt_do,tt_until,tt_then,tt_else,
-        tt_endOfPatternDeclare,tt_endOfPatternAssign:
+        tt_endOfPatternDeclare,tt_endOfPatternAssign,tt_aggregatorConstructor:
           localIdStack.scopePop(messages,tok^.location,recycler,nextStatement,tok,true);
         tt_semicolon:
           begin
@@ -982,6 +982,12 @@ PROCEDURE T_idStack.scopePop(CONST adapters:P_messages; CONST location:T_tokenLo
           {$endif}
           if closeToken^.getDoType=dt_unknown then closeToken^.setDoType(dt_while_related_do);
         end else raiseMismatchError;
+      tt_aggregatorConstructor: begin
+        {$ifdef fullVersion}
+        if (scope[topIdx].scopeStartToken^.tokType in [tt_for,tt_each,tt_parallelEach]) and (localIdInfos<>nil) and collectHighlightingInfo then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
+        {$endif}
+        exit;
+      end;
       tt_until: begin
         if scope[topIdx].scopeStartToken^.tokType=tt_repeat then begin
           {$ifdef fullVersion}
@@ -1253,7 +1259,7 @@ FUNCTION T_callAndIdInfos.getIndexOfRelated(CONST CaretX,CaretY:longint; CONST e
   end;
 
 FUNCTION T_callAndIdInfos.getRelated(CONST CaretX,CaretY:longint):T_relatedTokens;
-  CONST no_relations:T_relatedTokens=(count:0; position:((x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0)));
+  CONST no_relations:T_relatedTokens=(count:0; position:((x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0)));
   VAR i:longint;
   begin
     i:=getIndexOfRelated(CaretX,CaretY);

@@ -63,6 +63,8 @@ TYPE T_language=(LANG_MNH   = 0,
       language_   : T_language;
       PROCEDURE userCommandProcessed(Sender: TObject;
         VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
+      PROCEDURE userCommandProcessedOnMouseUp(Sender: TObject;
+        button: TMouseButton; Shift: TShiftState; X, Y: integer);
     protected
       completionLogic:T_completionLogic;
       editor_     : TSynEdit;
@@ -317,9 +319,14 @@ PROCEDURE T_basicEditorMeta.processUserCommand(Sender: TObject;
 
 PROCEDURE T_basicEditorMeta.userCommandProcessed(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
   begin
-    if (language_=LANG_MNH) and highlighter.setCaretLocation(editor.CaretXY) then begin
-      editor_.Invalidate;
-    end;
+    if (language_=LANG_MNH) and highlighter.setCaretLocation(editor.CaretXY)
+    then editor_.Invalidate;
+  end;
+
+PROCEDURE T_basicEditorMeta.userCommandProcessedOnMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+  begin
+    if (language_=LANG_MNH) and highlighter.setCaretLocation(editor.CaretXY)
+    then editor_.Invalidate;
   end;
 
 PROCEDURE T_basicEditorMeta.setLanguage(CONST languageIndex: T_language);
@@ -475,6 +482,7 @@ CONSTRUCTOR T_basicEditorMeta.createWithExistingEditor(CONST existingEditor:TSyn
 
     editor_.OnProcessCommand    :=@processUserCommand;
     editor_.OnCommandProcessed  :=@userCommandProcessed;
+    editor_.OnMouseUp           :=@userCommandProcessedOnMouseUp;
     language_:=LANG_TXT;
   end;
 
