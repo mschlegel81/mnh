@@ -969,7 +969,11 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
             didSubstitution:=true;
           end;
         tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse:
-          begin
+          if (cTokType[1]=tt_iifCheck) and (cTokType[-1]=tt_operatorConcatAlt) then begin
+            //Special handling for nested assignment directly followed by inline-if, e.g.: x[3] := condition ? thenValue : elseValue;
+            stack.push(first);
+            resolveInlineIf(P_literal(stack.top^.data)=@boolLit[true]);
+          end else begin
             case cTokType[-1] of
               tt_unaryOpMinus ,
               tt_unaryOpNegate,
