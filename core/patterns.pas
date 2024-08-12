@@ -84,7 +84,7 @@ TYPE
       FUNCTION matches(VAR par:T_listLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean;
       FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean;
       FUNCTION idForIndexInline(CONST index:longint):T_idString;
-      PROCEDURE parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; {$ifdef fullVersion} CONST callAndIdInfos:P_callAndIdInfos=nil;{$endif} CONST replaceOpeningBracketByPatternToken:boolean=false);
+      PROCEDURE parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; {$ifdef fullVersion} CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
       FUNCTION toString:ansistring;
       FUNCTION toCmdLineHelpStringString:ansistring;
       PROCEDURE toParameterIds(CONST tok:P_token);
@@ -614,7 +614,7 @@ FUNCTION T_pattern.getNamedParameters: T_patternElementLocations;
     setLength(result,i);
   end;
 
-PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; {$ifdef fullVersion} CONST callAndIdInfos:P_callAndIdInfos=nil;{$endif} CONST replaceOpeningBracketByPatternToken:boolean=false);
+PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; {$ifdef fullVersion} CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
   CONST MSG_INVALID_OPTIONAL='Optional parameters are allowed only as last entry in a function head declaration.';
   VAR parts:T_bodyParts;
       closingBracket:P_token;
@@ -640,9 +640,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
       setLength(parts,0);
       closingBracket:=first^.next;
     end else begin
-      if replaceOpeningBracketByPatternToken
-      then parts:=getBodyParts(first,0,context,closingBracket,[                      tt_endOfPatternDeclare],[tt_iifElse])
-      else parts:=getBodyParts(first,0,context,closingBracket,[tt_endOfPatternAssign,tt_endOfPatternDeclare],[tt_iifElse]);
+      parts:=getBodyParts(first,0,context,closingBracket,[tt_endOfPatternAssign,tt_endOfPatternDeclare],[tt_iifElse]);
       if closingBracket=nil then begin
         context^.raiseError('Invalid pattern.',first^.location);
         exit;
@@ -767,14 +765,10 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
       parts:=nil;
     end;
     finalizeRefs(ruleDeclarationStart,context,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
-    if replaceOpeningBracketByPatternToken then begin
-      first^.tokType:=tt_functionPattern;
-      first^.data:=@self;
-      first^.next:=recycler^.disposeToken(closingBracket);
-    end else begin
-      recycler^.disposeToken(first);
-      first:=closingBracket;
-    end;
+
+    first^.tokType:=tt_functionPattern;
+    first^.data:=@self;
+    first^.next:=recycler^.disposeToken(closingBracket);
   end;
 
 {$ifdef fullVersion}

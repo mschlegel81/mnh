@@ -286,7 +286,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; CONST context
       else begin
         dropFirst(fileLines,1);
         lexer.create(fileLines,location,P_abstractPackage(location.package));
-        stmt:=lexer.getNextStatement(context^.messages,recycler,false);
+        stmt:=lexer.getNextStatement(context,recycler,false);
         stmt.token.first^.setSingleLocationForExpression(location);
         lexer.destroy;
         result:=context^.reduceToLiteral(stmt.token.first,recycler).literal;

@@ -542,7 +542,7 @@ PROCEDURE T_inlineExpression.constructExpression(CONST rep:P_token; CONST contex
       inc(i);
     end;
     setLength(preparedBody,i);
-    stripExpression;
+    if (i>2) then stripExpression;
   end;
 
 CONSTRUCTOR T_inlineExpression.init(CONST srt: T_expressionType; CONST location: T_tokenLocation);
@@ -1883,9 +1883,9 @@ FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONS
       statement:T_enhancedStatement;
   begin
     lexer.create(s,location,package);
-    statement:=lexer.getNextStatement(context^.messages,recycler,false);
+    statement:=lexer.getNextStatement(context,recycler,false);
     result:=statement.token.first;
-    statement:=lexer.getNextStatement(context^.messages,recycler,false);
+    statement:=lexer.getNextStatement(context,recycler,false);
     if statement.token.first<>nil then begin
       context^.raiseError('Unexpected additional statement: '+tokensToString(statement.token.first,50),location);
       recycler^.cascadeDisposeToken(statement.token.first);
@@ -1905,9 +1905,9 @@ FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CON
   begin
     result:=nil;
     lexer.create(l^.forcedIterableList(nil),location,package);
-    statement:=lexer.getNextStatement(context^.messages,recycler,false);
+    statement:=lexer.getNextStatement(context,recycler,false);
     result:=statement.token.first;
-    statement:=lexer.getNextStatement(context^.messages,recycler,false);
+    statement:=lexer.getNextStatement(context,recycler,false);
     if statement.token.first<>nil then begin
       context^.raiseError('Unexpected additional statement: '+tokensToString(statement.token.first,50),location);
       recycler^.cascadeDisposeToken(statement.token.first);
@@ -1938,7 +1938,6 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
       temp:=first^.last;
       temp^.next:=recycler^.newToken(location,'',tt_expBraceClose);
     end;
-    predigest(first,package,context,recycler{$ifdef fullVersion},nil{$endif});
     digestInlineExpression(first,context,recycler);
     if (context^.messages^.continueEvaluation) and (first^.next<>nil) then context^.raiseError('The parsed expression goes beyond the expected limit... I know this is a fuzzy error. Sorry.',location);
     if not(context^.messages^.continueEvaluation) then begin

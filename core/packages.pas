@@ -605,11 +605,11 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
 
       helperUse.destroy;
       lexer.createForExtendedPackage(importWrapper,@self{$ifdef fullVersion},callAndIdInfos{$endif});
-      stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler,usecase=lu_forCodeAssistance);
+      stmt:=lexer.getNextStatement(@globals.primaryContext,recycler,usecase=lu_forCodeAssistance);
       inc(extendsLevel);
       while (globals.primaryContext.continueEvaluation) and (stmt.token.first<>nil) do begin
         interpret(stmt,usecase,globals,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
-        stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler,usecase=lu_forCodeAssistance);
+        stmt:=lexer.getNextStatement(@globals.primaryContext,recycler,usecase=lu_forCodeAssistance);
       end;
       if (stmt.token.first<>nil) then recycler^.cascadeDisposeToken(stmt.token.first);
       dec(extendsLevel);
@@ -793,21 +793,17 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
       if isPlainScript and (ruleId=MAIN_RULE_ID) then begin
         globals.primaryContext.raiseError('plain scripts must not have main rules',ruleDeclarationStart);
       end;
-      if not(statement.token.first^.tokType in [tt_startOfPattern,tt_assign,tt_declare])  then begin
+      if not(statement.token.first^.tokType in [tt_functionPattern,tt_assign,tt_declare])  then begin
         globals.primaryContext.messages^.raiseSimpleError('Invalid declaration head.',statement.token.first^.location);
         recycler^.cascadeDisposeToken(statement.token.first);
         recycler^.cascadeDisposeToken(ruleBody);
         exit;
       end;
       rulePattern.create;
-      if statement.token.first^.tokType=tt_startOfPattern then rulePattern.parse(statement.token.first,ruleDeclarationStart,@globals.primaryContext,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
-      {$ifdef fullVersion}
-      if (callAndIdInfos<>nil) and (ruleBody<>nil) then begin
-        ruleDeclarationEnd:=ruleBody^.last^.location;
-        for parameterId in rulePattern.getNamedParameters do
-          callAndIdInfos^.addLocalIdInfo(parameterId.id,parameterId.location,ruleDeclarationEnd,tt_parameterIdentifier);
+      if statement.token.first^.tokType=tt_functionPattern then begin
+        rulePattern.clone(P_pattern(statement.token.first^.data)^);
+        statement.token.first:=recycler^.disposeToken(statement.token.first);
       end;
-      {$endif}
 
       if statement.token.first<>nil then begin
         statement.token.first:=recycler^.disposeToken(statement.token.first);
@@ -816,7 +812,6 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         recycler^.cascadeDisposeToken(ruleBody);
         exit;
       end;
-      rulePattern.toParameterIds(ruleBody);
 
       if evaluateBody and (globals.primaryContext.continueEvaluation)
       then begin
@@ -872,20 +867,11 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
     VAR tok:P_token;
     begin
       tok:=statement.token.first;
-      while (tok<>nil) and (tok^.tokType<>tt_startOfPattern) do begin
-        case tok^.tokType of
-          tt_modifier, tt_identifier,tt_userRule,tt_intrinsicRule: begin end;
-          tt_assign,tt_declare: exit(tok);
-          else exit(nil);
-        end;
-        tok:=tok^.next;
-      end;
+      result:=nil;
       while (tok<>nil) do begin
-        if tok^.tokType in [tt_endOfPatternAssign,tt_endOfPatternDeclare]
-        then exit(tok);
+        if tok^.tokType in [tt_assign,tt_declare] then exit(tok);
         tok:=tok^.next;
       end;
-      exit(nil);
     end;
 
   begin
@@ -924,7 +910,6 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
           recycler^.cascadeDisposeToken(statement.token.first);
           exit;
         end;
-        predigest(assignmentToken^.next,@self,@globals.primaryContext,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
         if globals.primaryContext.messages^.isCollecting(mt_echo_declaration)
         then globals.primaryContext.messages^.postTextMessage(mt_echo_declaration,statement.token.first^.location,tokensToEcho(statement.token.first));
         parseRule;
@@ -958,7 +943,6 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
             {$endif}
             if profile then globals.timeBaseComponent(pc_interpretation);
             if (statement.token.first=nil) then exit;
-            predigest(statement.token.first,@self,@globals.primaryContext,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
             if globals.primaryContext.messages^.isCollecting(mt_echo_input)
             then globals.primaryContext.messages^.postTextMessage(mt_echo_input,statement.token.first^.location,tokensToEcho(statement.token.first));
             globals.primaryContext.reduceExpression(statement.token.first,recycler);
@@ -973,7 +957,6 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
             then globals.primaryContext.messages^.postCustomMessage(newEchoMessage(P_literal(statement.token.first^.data),statement.token.first^.location),true);
           end;
           lu_forCodeAssistance,lu_forCodeAssistanceSecondary: if (statement.token.first<>nil) then begin
-            predigest(statement.token.first,@self,@globals.primaryContext,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
             resolveBuiltinIDs(statement.token.first,globals.primaryContext.messages);
           end
           else globals.primaryContext.messages^.postTextMessage(mt_el1_note,statement.token.first^.location,'Skipping expression '+tokensToString(statement.token.first,50));
@@ -1080,7 +1063,7 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
     if profile then globals.timeBaseComponent(pc_tokenizing);
     lexer.createForPackageParsing(@self{$ifdef fullVersion},callAndIdInfos{$endif});
     if profile then globals.timeBaseComponent(pc_tokenizing);
-    stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler,usecase=lu_forCodeAssistance);
+    stmt:=lexer.getNextStatement(@globals.primaryContext,recycler,usecase=lu_forCodeAssistance);
     isPlainScript:=isPlainScriptStatement;
     if isPlainScript then begin
       case usecase of
@@ -1089,14 +1072,14 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
       end;
       commentOnPlainMain:=join(stmt.comments,C_lineBreakChar);
       recycler^.cascadeDisposeToken(stmt.token.first);
-      stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler,usecase=lu_forCodeAssistance);
+      stmt:=lexer.getNextStatement(@globals.primaryContext,recycler,usecase=lu_forCodeAssistance);
     end;
     if profile then globals.timeBaseComponent(pc_tokenizing);
 
     while (C_packageLoadUsecaseMeta[usecase].assistanceRun or globals.primaryContext.continueEvaluation) and (stmt.token.first<>nil) do begin
       interpret(stmt,usecase,globals,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
       if profile then globals.timeBaseComponent(pc_tokenizing);
-      stmt:=lexer.getNextStatement(globals.primaryContext.messages,recycler,usecase=lu_forCodeAssistance);
+      stmt:=lexer.getNextStatement(@globals.primaryContext,recycler,usecase=lu_forCodeAssistance);
       if profile then globals.timeBaseComponent(pc_tokenizing);
     end;
     if (stmt.token.first<>nil) then recycler^.cascadeDisposeToken(stmt.token.first);
