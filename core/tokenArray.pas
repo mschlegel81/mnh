@@ -849,7 +849,7 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
     VAR t:P_token;
     begin
       topIdx:=length(scope)-1;
-      if (topIdx>=0) and (scope[topIdx].scopeStartToken^.tokType in [tt_while,tt_for,tt_then,tt_functionPattern]) then begin
+      while (topIdx>=0) and (scope[topIdx].scopeStartToken^.tokType in [tt_while,tt_for,tt_then,tt_functionPattern]) do begin
         if scope[topIdx].scopeStartToken^.tokType = tt_then then begin
           scope[topIdx].scopeStartToken^.tokType:=tt_iifCheck;
           t:=workingIn.token.last;
@@ -903,20 +903,21 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
           pattern^.parse(scope[topIdx].scopeStartToken,
                          scope[topIdx].scopeStartToken^.location,
                          context,
-                         recycler,{$ifdef fullVersion}localIdInfos{$endif});
+                         recycler{$ifdef fullVersion},localIdInfos{$endif});
           for namedParamter in pattern^.getNamedParameters do begin
             addId(namedParamter.id,
                   namedParamter.location,
                   tt_parameterIdentifier);
           end;
           //expression changed; need to collect new last token
+          if not(context^.continueEvaluation) then pattern^.cleanup(recycler);
           //TODO: Do we need exception handling here? scopeStartToken might be destroyed/disposed by parsing
           workingIn.token.last:=scope[topIdx].scopeStartToken^.last;
 
-          if topIdx=0 then case closeToken^.tokType of
+          case closeToken^.tokType of
             tt_endOfPatternDeclare: closeToken^.tokType:=tt_declare;
             tt_endOfPatternAssign : closeToken^.tokType:=tt_assign;
-          end else closeToken^.tokType:=tt_blank;
+          end;
           //We exit early, because we do not want to pop the scope we just modified.
           exit;
 

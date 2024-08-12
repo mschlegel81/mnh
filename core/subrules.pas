@@ -324,10 +324,11 @@ PROCEDURE digestInlineExpression(VAR rep:P_token; CONST context:P_context; CONST
       context^.raiseError('Error creating subrule from inline; expression does not start with "{"',rep^.location);
       exit;
     end;
-    lambdaForm:=rep^.tokType=tt_functionPattern;
+    lambdaForm:=(rep^.tokType=tt_functionPattern) and (rep^.next<>nil) and (rep^.next^.tokType=tt_declare);
     if lambdaForm then begin
-
+      rep^.next:=recycler^.disposeToken(rep^.next);
       t:=rep^.next; prev:=rep;
+
       inlineRuleTokens:=rep;
       while (t<>nil) and (bracketLevel>=0) do begin
         case t^.tokType of
@@ -1932,7 +1933,7 @@ FUNCTION stringOrListToExpression(CONST L:P_literal; CONST location:T_tokenLocat
     else if L^.literalType in C_listTypes then first:=listToTokens  (P_listLiteral  (L)       ,location,package,context,recycler);
     if first=nil then exit(nil);
 
-    if not(first^.tokType in [tt_expBraceOpen,tt_startOfPattern]) then begin
+    if not(first^.tokType in [tt_expBraceOpen,tt_functionPattern]) then begin
       temp:=recycler^.newToken(location,'',tt_expBraceOpen);
       temp^.next:=first; first:=temp;
       temp:=first^.last;

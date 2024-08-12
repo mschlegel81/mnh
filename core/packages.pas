@@ -865,11 +865,14 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
 
   FUNCTION findAssignmentToken:P_token;
     VAR tok:P_token;
+        bracketLevel:longint=0;
     begin
       tok:=statement.token.first;
       result:=nil;
       while (tok<>nil) do begin
-        if tok^.tokType in [tt_assign,tt_declare] then exit(tok);
+        if tok^.tokType in C_openingBrackets then inc(bracketLevel) else
+        if tok^.tokType in C_closingBrackets then dec(bracketLevel) else
+        if (bracketLevel=0) and (tok^.tokType in [tt_assign,tt_declare]) then exit(tok);
         tok:=tok^.next;
       end;
     end;

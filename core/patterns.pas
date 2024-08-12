@@ -84,7 +84,7 @@ TYPE
       FUNCTION matches(VAR par:T_listLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean;
       FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean;
       FUNCTION idForIndexInline(CONST index:longint):T_idString;
-      PROCEDURE parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; {$ifdef fullVersion} CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
+      PROCEDURE parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler {$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
       FUNCTION toString:ansistring;
       FUNCTION toCmdLineHelpStringString:ansistring;
       PROCEDURE toParameterIds(CONST tok:P_token);
@@ -614,7 +614,7 @@ FUNCTION T_pattern.getNamedParameters: T_patternElementLocations;
     setLength(result,i);
   end;
 
-PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; {$ifdef fullVersion} CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
+PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler {$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
   CONST MSG_INVALID_OPTIONAL='Optional parameters are allowed only as last entry in a function head declaration.';
   VAR parts:T_bodyParts;
       closingBracket:P_token;
@@ -822,8 +822,8 @@ FUNCTION T_pattern.usesStrictCustomTyping: boolean;
 FUNCTION patternToString(CONST p:pointer):ansistring;
   begin
     if length(P_pattern(p)^.sig)=0
-    then result:='()'                  +C_tokenDefaultId[tt_declare]
-    else result:=P_pattern(p)^.toString+C_tokenDefaultId[tt_declare];
+    then result:='()'
+    else result:=P_pattern(p)^.toString;
   end;
 
 PROCEDURE disposePattern(VAR pattern:pointer; CONST literalRecycler: P_literalRecycler);
