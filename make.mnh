@@ -13,9 +13,9 @@ private delp->(isLinux ? 'delp' : DelpPath).exec(
         'consoles/lib/x86_64-win64']);
 
 private templateToInc(inFile,outFile<>inFile)->begin
-  local pasId:=clean(inFile.extractFileName,['a'..'z','A'..'Z'],'_');
-  local inLines:=fileLines(inFile).join("\n").compress;
-  local outText:=
+  pasId:=clean(inFile.extractFileName,['a'..'z','A'..'Z'],'_');
+  inLines:=fileLines(inFile).join("\n").compress;
+  outText:=
   'CONST '&pasId&': string='&inLines.escapePascal&';';
   outFile.fileContents==outText
   ? void
@@ -23,21 +23,21 @@ private templateToInc(inFile,outFile<>inFile)->begin
 end;
 
 private ensureDefaultFilesSource->begin
-  local code:=
+  code:=
   format('(%{escapePascal($0)}s,%{escapePascal($0.fileContents.compress)}s)',
   sort(allFiles('demos\','*.mnh')|allFiles('packages\','*.mnh')));
-  local header:='CONST DEFAULT_FILES:array[0..'&(code.size-1)&',0..1] of string=(';
+  header:='CONST DEFAULT_FILES:array[0..'&(code.size-1)&',0..1] of string=(';
   code:=header|code.each(f,f&(index=code.size-1 ? ');':','));
 
-  local filename:='ide/res_defaultFiles.inc';
+  filename:='ide/res_defaultFiles.inc';
   fileExists(filename) AND fileLines(filename)==code
   ? void
   : writeFileLines(filename,code);
 end;
 
 private ensureFilesToDeleteSource->begin
-  local code:=[SSL64.extractFileName.{'CONST ADDITIONAL_FILES_TO_DELETE:array[0..%s] of string=(%s);'.format($x.size-1, $x.escapePascal.join(','))}];
-  local filename:='ide/res_toDeleteOnUninstall.inc';
+  code:=[SSL64.extractFileName.{'CONST ADDITIONAL_FILES_TO_DELETE:array[0..%s] of string=(%s);'.format($x.size-1, $x.escapePascal.join(','))}];
+  filename:='ide/res_toDeleteOnUninstall.inc';
   fileExists(filename) AND fileLines(filename)==code
   ? void
   : writeFileLines(filename,code);
@@ -62,8 +62,8 @@ currentCodeHash:=begin
   ensureFilesToDeleteSource;
   //update code hash
   tprint('Updating code hash based on ',hashFiles.size,' files');
-  local result:=format('%x',fileStats(hashFiles).getInner(3).agg(+));
-  local expectedContents:=expectedVersionInfoSource(result);
+  result:=format('%x',fileStats(hashFiles).getInner(3).agg(+));
+  expectedContents:=expectedVersionInfoSource(result);
   fileLines('core/res_version.inc')==expectedContents
   ? void
   : begin
@@ -77,7 +77,7 @@ end;
 private ensureCodeHash->currentCodeHash orElse updateCurrentCodeHash;
 
 private myMove(source,dest:String)->fileExists(source) ? begin
-  local tries:=3;
+  tries:=3;
   while fileExists(dest) AND tries>0 do
     deleteFile(dest) ? void : begin
     tries-=1;
@@ -92,8 +92,8 @@ private buildExe(B:Map)->
   ? begin
       ensureCodeHash;
       tprint('Building ',B['targetDest'].systemSpecificFilename);
-      local compilerOutput:=exec@(B['compilerCall']);
-      local sepLine:=repeatString('-',compilerOutput[0].each(line,line.length,max) orElse 0);
+      compilerOutput:=exec@(B['compilerCall']);
+      sepLine:=repeatString('-',compilerOutput[0].each(line,line.length,max) orElse 0);
       compilerOutput[0]:=sepLine|
                          B['compilerCall'].flatten.join(' ')|
                          sepLine|
@@ -108,7 +108,7 @@ private buildExe(B:Map)->
   : void;
 
 private testExe(B:Map,...)->begin
-  local forceTest:='retest' in ...;
+  forceTest:='retest' in ...;
   //Skip entries that should not be tested
   !(B['canBuild']) OR !(B['doTest'])
   ? return void
@@ -132,12 +132,12 @@ private showStatus->begin
   print;
   tprint('Current code hash: ',ensureCodeHash);
   BUILDS.each(B,begin
-    local exe  :=B['targetDest'].systemSpecificFilename;
-    local exist:=fileExists(exe);
-    local canBuild:=B['canBuild'];
-    local version    :=exist ? canBuild ? exe.codeVersion : '?' : '';
-    local testVersion:=exist ? canBuild ? exe.codeVersion : currentCodeHash : '';
-    local cmpTime :=exist ? canBuild ? exe.compileTime : formatTime('YYYY/MM/DD hh:nn:ss',fileInfo(exe)['time']) : '';
+    exe  :=B['targetDest'].systemSpecificFilename;
+    exist:=fileExists(exe);
+    canBuild:=B['canBuild'];
+    version    :=exist ? canBuild ? exe.codeVersion : '?' : '';
+    testVersion:=exist ? canBuild ? exe.codeVersion : currentCodeHash : '';
+    cmpTime :=exist ? canBuild ? exe.compileTime : formatTime('YYYY/MM/DD hh:nn:ss',fileInfo(exe)['time']) : '';
     [B['flavour'],
      exe,
      version==currentCodeHash ? 'o.k.' : version.copy(0,8),
@@ -180,7 +180,7 @@ private cleanup->begin
 end;
 
 private isSameFileName(filename1:String,filename2:String)->begin
-  local case:=isLinux ? {$x} : {$x.upper};
+  case:=isLinux ? {$x} : {$x.upper};
   (filename1.expandedFileName.case)==
   (filename2.expandedFileName.case);
 end;
@@ -229,15 +229,15 @@ main('-h')->print(helpOnMain);
 
 //*Build one specific target
 main(target:String)->begin
-  local testAfterBuild:=false;
-  local tgt:=target;
+  testAfterBuild:=false;
+  tgt:=target;
   target.copy(target.length-1,1)=='!'
   ? begin
       tgt:=target.copy(0,target.length-1);
       testAfterBuild:=true;
     end
   : void;
-  local buildAndTest:=
+  buildAndTest:=
     testAfterBuild ? {buildExe($B) orElse testExe($B) orElse true}
                    : {buildExe($B) orElse                    true};
 
