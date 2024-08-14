@@ -164,6 +164,7 @@ private compareFlavours(data,flavour1:String,flavour2:String)->begin
                      'Delta.avg.'  ,'Delta.last']]|tableData,'Flavour comparison',true);
 end;
 
+//*Show overview over all flavours and test cases
 main()->doAnalysis();
 bar(factor,q)->begin
   a:=round(factor*q[0]);
@@ -174,6 +175,10 @@ bar(factor,q)->begin
   (b<c ? repeatString('=',c-b-1)&'>' : '');
 end;
 
+//*Display this help
+main('-h')->print(helpOnMain);
+
+//*Show statistics on a test case or a flavour
 main(testCaseOrFlavour:String)->begin
   testCaseOrFlavour in runTimesAsFlatList.getInner(0)
   ? analyzeCase(runTimesAsFlatList,testCaseOrFlavour)
@@ -186,6 +191,7 @@ main(testCaseOrFlavour:String)->begin
       end;
 end;
 
+//*Compare flavours
 main(flavour1:String,flavour2:String)->begin
   flavour1 in runTimesAsFlatList.getInner(1) AND
   flavour2 in runTimesAsFlatList.getInner(1)

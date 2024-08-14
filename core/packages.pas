@@ -770,7 +770,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         statement.token.first:=recycler^.disposeToken(statement.token.first);
       end;
       evaluateBody:=(evaluateBody or (modifier_mutable in ruleModifiers));
-      if (modifier_datastore in ruleModifiers) and not(continueDatastoreDeclaration) then exit;
+      if (modifier_datastore in ruleModifiers) and not(modifier_memoized in ruleModifiers) and not(continueDatastoreDeclaration) then exit;
       if not(statement.token.first^.tokType in [tt_identifier, tt_userRule, tt_intrinsicRule]) then begin
         globals.primaryContext.messages^.raiseSimpleError('Declaration does not start with an identifier.',statement.token.first^.location);
         recycler^.cascadeDisposeToken(statement.token.first);

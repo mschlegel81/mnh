@@ -112,10 +112,19 @@ TYPE
       FUNCTION getFunctionPointer(CONST context:P_context; CONST recycler:P_recycler; CONST location:T_tokenLocation):P_expressionLiteral; virtual;
   end;
 
+  T_variableState=(vs_uninitialized,  //set on construction
+                   vs_initialized,    //set on declaration
+                   vs_modified,       //set on mutate
+                   vs_readFromFile,   //set on datastore read
+                   vs_inSyncWithFile);//set on datastore write
+
   P_memoizedRule=^T_memoizedRule;
   T_memoizedRule=object(T_protectedRuleWithSubrules)
     private
       cache:T_cache;
+      dataStoreMeta:T_datastoreMeta;
+      state:T_variableState;
+      PROCEDURE readDataStore(CONST context:P_context; CONST recycler:P_recycler);
     public
       CONSTRUCTOR create(CONST ruleId: T_idString; CONST startAt:T_tokenLocation; CONST ruleType:T_ruleType=rt_memoized);
       DESTRUCTOR destroy; virtual;
@@ -124,6 +133,7 @@ TYPE
       FUNCTION canBeApplied(CONST callLocation:T_tokenLocation; CONST param:P_listLiteral; OUT output:T_tokenRange; CONST context:P_abstractContext; CONST recycler:P_recycler):boolean; virtual;
       FUNCTION isPure:boolean; virtual;
       PROCEDURE addOrReplaceSubRule(CONST rule:P_subruleExpression; CONST context:P_context; CONST recycler:P_recycler); virtual;
+      FUNCTION writeBackToTemp(CONST adapters:P_messages; VAR flush:T_datastoreFlush):boolean;
   end;
 
   P_typeCheckRule=^T_typeCheckRule;
@@ -157,12 +167,6 @@ TYPE
       DESTRUCTOR destroy; virtual;
       FUNCTION arity:T_arityInfo; virtual;
   end;
-
-  T_variableState=(vs_uninitialized,  //set on construction
-                   vs_initialized,    //set on declaration
-                   vs_modified,       //set on mutate
-                   vs_readFromFile,   //set on datastore read
-                   vs_inSyncWithFile);//set on datastore write
 
   T_variable=object(T_abstractRule)
     private
@@ -553,7 +557,9 @@ PROCEDURE T_ruleMap.declare(CONST ruleId: T_idString;
       if rule=nil then begin
         newEntry:=true;
         case ruleType of
-          rt_memoized    ,rt_memoized_curry    : new(P_memoizedRule             (rule),create(ruleId,ruleDeclarationStart,ruleType));
+          rt_memoized    ,rt_memoized_curry,
+          rt_memoized_persisted, rt_memoized_persisted_curry,
+          rt_memoized_plain_persisted, rt_memoized_plain_persisted_curry: new(P_memoizedRule(rule),create(ruleId,ruleDeclarationStart,ruleType));
           rt_synchronized,rt_synchronized_curry: new(P_protectedRuleWithSubrules(rule),create(ruleId,ruleDeclarationStart,ruleType));
           rt_normal      ,rt_normal_curry,
           rt_customOperator                    : new(P_ruleWithSubrules         (rule),create(ruleId,ruleDeclarationStart,ruleType));
@@ -562,7 +568,10 @@ PROCEDURE T_ruleMap.declare(CONST ruleId: T_idString;
         if ruleType=rt_customOperator then appendIfNew(builtinOverrides,ruleId);
       end;
       assert(rule<>nil);
-      assert(rule^.getRuleType in [rt_memoized,rt_memoized_curry,rt_synchronized,rt_synchronized_curry,rt_normal,rt_normal_curry,rt_customOperator,rt_customTypeCast,rt_customTypeCheck]);
+      assert(rule^.getRuleType in [rt_memoized,rt_memoized_curry,rt_memoized_persisted,
+                                   rt_memoized_persisted_curry,rt_memoized_plain_persisted,
+                                   rt_memoized_plain_persisted_curry,
+                                   rt_synchronized,rt_synchronized_curry,rt_normal,rt_normal_curry,rt_customOperator,rt_customTypeCast,rt_customTypeCheck]);
 
       P_ruleWithSubrules(rule)^.addOrReplaceSubRule(subRule,context,recycler);
 
@@ -724,10 +733,15 @@ FUNCTION T_ruleMap.writeBackDatastores(CONST messages: P_messages; CONST literal
   VAR entry:T_ruleMapEntry;
   begin
     result:=false;
-    for entry in valueSet do
-    if not(entry.isImported) and (entry.entryType=tt_globalVariable) and (P_variable(entry.value)^.varType in [vt_datastore,vt_plainDatastore])
-    then begin
-      if P_datastore(entry.value)^.writeBackToTemp(messages,flush) then result:=true;
+    for entry in valueSet do if not(entry.isImported) then begin
+      if (entry.entryType=tt_globalVariable) and (P_variable(entry.value)^.varType in [vt_datastore,vt_plainDatastore])
+      then begin
+        if P_datastore(entry.value)^.writeBackToTemp(messages,flush) then result:=true;
+      end;
+      if (entry.entryType=tt_userRule) and (P_rule(entry.value)^.getRuleType in [rt_memoized_persisted, rt_memoized_persisted_curry,rt_memoized_plain_persisted, rt_memoized_plain_persisted_curry])
+      then begin
+        if P_memoizedRule(entry.value)^.writeBackToTemp(messages,flush) then result:=true;
+      end;
     end;
   end;
 
@@ -1043,6 +1057,8 @@ CONSTRUCTOR T_memoizedRule.create(CONST ruleId: T_idString; CONST startAt: T_tok
   begin
     inherited create(ruleId,startAt,ruleType);
     cache.create(rule_cs);
+    state:=vs_uninitialized;
+    dataStoreMeta.create(startAt.package^.getPath,ruleId);
   end;
 
 CONSTRUCTOR T_typeCastRule.create(CONST def:P_typedef; CONST relatedCheckRule:P_typeCheckRule);
@@ -1341,6 +1357,7 @@ exit}
     end;
 
   begin
+    readDataStore(P_context(context),recycler);
     initialize(output);
     result:=false;
     if param=nil then useParam:=recycler^.newListLiteral
@@ -1672,6 +1689,24 @@ PROCEDURE T_datastore.readDataStore(CONST context:P_context; CONST recycler:P_re
     end;
   end;
 
+PROCEDURE T_memoizedRule.readDataStore(CONST context:P_context; CONST recycler:P_recycler);
+  VAR lit: P_literal;
+      entry: T_keyValuePair;
+  begin
+    if (getRuleType in [rt_memoized_persisted, rt_memoized_persisted_curry,rt_memoized_plain_persisted, rt_memoized_plain_persisted_curry])
+    and ((state in [vs_uninitialized,vs_initialized]) or (state=vs_readFromFile) and dataStoreMeta.fileChangedSinceRead) then begin
+      system.enterCriticalSection(rule_cs);
+      lit:=dataStoreMeta.readValue(getLocation,context,recycler);
+      if (lit<>nil) and (lit^.literalType=lt_map) then begin
+        for entry in P_mapLiteral(lit)^.entryList do
+          if entry.key^.literalType in C_listTypes
+          then cache.put(P_listLiteral(entry.key),entry.value,recycler);
+      end;
+      state:=vs_readFromFile;
+      system.leaveCriticalSection(rule_cs);
+    end;
+  end;
+
 FUNCTION T_variable.mutateInline(CONST mutation: T_tokenType; CONST RHS: P_literal; CONST location: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler): P_literal;
   begin
     result:=namedValue.mutate(recycler,mutation,RHS,location,context,recycler);
@@ -1695,6 +1730,15 @@ FUNCTION T_datastore.writeBackToTemp(CONST adapters:P_messages; VAR flush:T_data
     end else result:=false;
   end;
 
+FUNCTION T_memoizedRule.writeBackToTemp(CONST adapters:P_messages; VAR flush:T_datastoreFlush):boolean;
+  begin
+    if (getRuleType in [rt_memoized_persisted, rt_memoized_persisted_curry,rt_memoized_plain_persisted, rt_memoized_plain_persisted_curry]) and (state=vs_modified) then begin
+      flush.addStoreToFlush(@dataStoreMeta,cache.getMap,getLocation,getRuleType in [rt_memoized_plain_persisted,rt_memoized_plain_persisted_curry]);
+      state:=vs_inSyncWithFile;
+      result:=true;
+    end else result:=false;
+  end;
+
 PROCEDURE T_memoizedRule.clearCache;
   begin
     enterCriticalSection(rule_cs);
@@ -1708,6 +1752,7 @@ FUNCTION T_memoizedRule.doPutCache(CONST param: P_listLiteral; CONST recycler:P_
     then result:=param^.value[1]^.rereferenced
     else result:=newVoidLiteral;
     cache.put(P_listLiteral(param^.value[0]),result,recycler);
+    state:=vs_modified;
   end;
 
 end.

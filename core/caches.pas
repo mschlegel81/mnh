@@ -34,6 +34,7 @@ TYPE
     FUNCTION get(CONST key: P_listLiteral): P_literal;
     FUNCTION getIfNotLocked(CONST key: P_listLiteral): P_literal;
     PROCEDURE clear;
+    FUNCTION getMap:P_mapLiteral;
   end;
 
 IMPLEMENTATION
@@ -216,6 +217,15 @@ PROCEDURE T_cache.clear;
     finally
       leaveCriticalSection(criticalSection);
     end;
+  end;
+
+FUNCTION T_cache.getMap:P_mapLiteral;
+  VAR i:longint;
+      entry: T_cacheEntry;
+  begin
+    result:=globalLiteralRecycler.newMapLiteral(fill);
+    for i:=0 to length(cached)-1 do for entry in cached[i].data do
+      result^.put(@globalLiteralRecycler,entry.key,entry.value,true);
   end;
 
 end.

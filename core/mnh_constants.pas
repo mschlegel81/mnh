@@ -735,6 +735,8 @@ CONST
 TYPE
   T_ruleType=(rt_normal, rt_normal_curry,
               rt_memoized, rt_memoized_curry,
+              rt_memoized_persisted, rt_memoized_persisted_curry,
+              rt_memoized_plain_persisted, rt_memoized_plain_persisted_curry,
               rt_synchronized, rt_synchronized_curry,
               rt_customTypeCheck,
               rt_duckTypeCheck,
@@ -749,6 +751,10 @@ CONST C_ruleTypesWithOnlyOneSubrule:set of T_ruleType=[rt_customTypeCheck,rt_duc
       'curry ',
       'memoized ',
       'memoized curry ',
+      'datastore memoized ',
+      'datastore memoized curry ',
+      'plain datastore memoized ',
+      'plain datastore memoized curry ',
       'synchronized ',
       'synchronized curry ',
       'type ',
@@ -756,19 +762,27 @@ CONST C_ruleTypesWithOnlyOneSubrule:set of T_ruleType=[rt_customTypeCheck,rt_duc
       'typecast ',
       'custom operator ',
       'delegate ');
-      C_validModifierCombinations:array[0..19] of record
+      C_validModifierCombinations:array[0..27] of record
         modifiers:T_modifierSet;
         metaType:T_tokenType;
         ruleType:T_ruleType;
         variableType:T_variableType;
-      end=((modifiers:[];                                                       metaType: tt_userRule;       ruleType:rt_normal               ; variableType:vt_mutable       ),
-           (modifiers:[modifier_private];                                       metaType: tt_userRule;       ruleType:rt_normal               ; variableType:vt_mutable       ),
-           (modifiers:[modifier_curry];                                         metaType: tt_userRule;       ruleType:rt_normal_curry         ; variableType:vt_mutable       ),
-           (modifiers:[modifier_curry,modifier_private];                        metaType: tt_userRule;       ruleType:rt_normal_curry         ; variableType:vt_mutable       ),
-           (modifiers:[modifier_memoized];                                      metaType: tt_userRule;       ruleType:rt_memoized             ; variableType:vt_mutable       ),
-           (modifiers:[modifier_memoized,modifier_private];                     metaType: tt_userRule;       ruleType:rt_memoized             ; variableType:vt_mutable       ),
-           (modifiers:[modifier_curry,modifier_memoized];                       metaType: tt_userRule;       ruleType:rt_memoized_curry       ; variableType:vt_mutable       ),
-           (modifiers:[modifier_curry,modifier_memoized,modifier_private];      metaType: tt_userRule;       ruleType:rt_memoized_curry       ; variableType:vt_mutable       ),
+      end=((modifiers:[];                                                                      metaType: tt_userRule;       ruleType:rt_normal               ; variableType:vt_mutable       ),
+           (modifiers:[modifier_private];                                                      metaType: tt_userRule;       ruleType:rt_normal               ; variableType:vt_mutable       ),
+           (modifiers:[modifier_curry];                                                        metaType: tt_userRule;       ruleType:rt_normal_curry         ; variableType:vt_mutable       ),
+           (modifiers:[modifier_curry,modifier_private];                                       metaType: tt_userRule;       ruleType:rt_normal_curry         ; variableType:vt_mutable       ),
+           (modifiers:[modifier_memoized];                                                     metaType: tt_userRule;       ruleType:rt_memoized             ; variableType:vt_mutable       ),
+           (modifiers:[modifier_memoized,modifier_private];                                    metaType: tt_userRule;       ruleType:rt_memoized             ; variableType:vt_mutable       ),
+           (modifiers:[modifier_curry,modifier_memoized];                                      metaType: tt_userRule;       ruleType:rt_memoized_curry       ; variableType:vt_mutable       ),
+           (modifiers:[modifier_curry,modifier_memoized,modifier_private];                     metaType: tt_userRule;       ruleType:rt_memoized_curry       ; variableType:vt_mutable       ),
+           (modifiers:[modifier_memoized,modifier_datastore];                                  metaType: tt_userRule;       ruleType:rt_memoized_persisted             ; variableType:vt_mutable       ),
+           (modifiers:[modifier_memoized,modifier_private,modifier_datastore];                 metaType: tt_userRule;       ruleType:rt_memoized_persisted             ; variableType:vt_mutable       ),
+           (modifiers:[modifier_curry,modifier_memoized,modifier_datastore];                   metaType: tt_userRule;       ruleType:rt_memoized_persisted_curry      ; variableType:vt_mutable       ),
+           (modifiers:[modifier_curry,modifier_memoized,modifier_private,modifier_datastore];  metaType: tt_userRule;       ruleType:rt_memoized_persisted_curry       ; variableType:vt_mutable       ),
+           (modifiers:[modifier_memoized,modifier_datastore,modifier_plain];                   metaType: tt_userRule;       ruleType:rt_memoized_plain_persisted           ; variableType:vt_mutable       ),
+           (modifiers:[modifier_memoized,modifier_private,modifier_datastore,modifier_plain];  metaType: tt_userRule;       ruleType:rt_memoized_plain_persisted             ; variableType:vt_mutable       ),
+           (modifiers:[modifier_curry,modifier_memoized,modifier_datastore,modifier_plain];    metaType: tt_userRule;       ruleType:rt_memoized_plain_persisted_curry      ; variableType:vt_mutable       ),
+           (modifiers:[modifier_curry,modifier_memoized,modifier_private,modifier_datastore,modifier_plain]; metaType: tt_userRule;       ruleType:rt_memoized_plain_persisted_curry       ; variableType:vt_mutable       ),
            (modifiers:[modifier_synchronized];                                  metaType: tt_userRule;       ruleType:rt_synchronized         ; variableType:vt_mutable       ),
            (modifiers:[modifier_synchronized,modifier_private];                 metaType: tt_userRule;       ruleType:rt_synchronized         ; variableType:vt_mutable       ),
            (modifiers:[modifier_curry,modifier_synchronized];                   metaType: tt_userRule;       ruleType:rt_synchronized_curry   ; variableType:vt_mutable       ),
