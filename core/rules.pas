@@ -1697,11 +1697,15 @@ PROCEDURE T_memoizedRule.readDataStore(CONST context:P_context; CONST recycler:P
     and ((state in [vs_uninitialized,vs_initialized]) or (state=vs_readFromFile) and dataStoreMeta.fileChangedSinceRead) then begin
       system.enterCriticalSection(rule_cs);
       lit:=dataStoreMeta.readValue(getLocation,context,recycler);
-      if (lit<>nil) and (lit^.literalType=lt_map) then begin
-        for entry in P_mapLiteral(lit)^.entryList do
-          if entry.key^.literalType in C_listTypes
-          then cache.put(P_listLiteral(entry.key),entry.value,recycler);
-      end;
+      if (lit<>nil) and (lit^.literalType=lt_map)
+      then for entry in P_mapLiteral(lit)^.entryList do
+        if entry.key^.literalType in C_listTypes
+        then begin
+          cache.put(P_listLiteral(entry.key),entry.value,recycler);
+          entry.key^.unreference;
+          entry.value^.unreference;
+        end;
+      if (lit<>nil) then recycler^.disposeLiteral(lit);
       state:=vs_readFromFile;
       system.leaveCriticalSection(rule_cs);
     end;
