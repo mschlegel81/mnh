@@ -878,6 +878,12 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
     end;
 
   begin
+    if FlagGUINeeded in globals.primaryContext.messages^.getFlags
+    then begin
+      recycler^.cascadeDisposeToken(statement.token.first);
+      exit;
+    end;
+
     profile:=globals.primaryContext.messages^.isCollecting(mt_timing_info) and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
     if statement.token.first=nil then exit;
 

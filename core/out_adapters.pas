@@ -198,7 +198,7 @@ TYPE
       //messages
       PROCEDURE postSingal(CONST kind:T_messageType; CONST location:T_searchTokenLocation);
       PROCEDURE postTextMessage(CONST kind:T_messageType; CONST location:T_searchTokenLocation; CONST txt:T_arrayOfString);
-      PROCEDURE raiseSimpleError(CONST text:string; CONST location:T_searchTokenLocation; CONST kind:T_messageType=mt_el3_evalError); virtual;
+      PROCEDURE raiseSimpleError(CONST text:string; CONST location:T_searchTokenLocation; CONST kind:T_messageType=mt_el3_evalError);
       PROCEDURE raiseUnhandledError(CONST unhandledMessage:P_storedMessage);
       PROCEDURE postCustomMessage(CONST message:P_storedMessage; CONST disposeAfterPosting:boolean=false);                            virtual; abstract;
       PROCEDURE postCustomMessages(CONST message:T_storedMessages);
@@ -781,7 +781,7 @@ PROCEDURE T_messagesDistributor.postCustomMessage(CONST message: P_storedMessage
         flags+=C_messageClassMeta[message^.messageClass].triggeredFlags;
         if (message^.messageClass in [mc_error,mc_fatal]) then begin
           inc(errorCount);
-          if errorCount>20 then doAppend:=false;
+          if errorCount>64 then doAppend:=false;
         end;
         if doAppend then for a in adapters do if a.adapter^.append(message) then appended:=true;
         if appended then include(collected,message^.messageType);

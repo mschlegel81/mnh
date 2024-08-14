@@ -6,7 +6,7 @@ private exact(t)->1/16*(t²+4)²;
 @demo_for=expressions, numerics/time integration
 //*Solves the Runge-Kutta task from http://rosettacode.org/wiki/Runge-Kutta_method
 main->begin
-  RK4solution     :=         iterate (initial,integrator(RK4      ,::df,0.1     ),100);
+  RK4solution     :=iterate(initial,integrator(RK4,::df,0.1),100);
   pointsInTime    :=RK4solution.getInner(0);
   exactSolutions  :=exact(pointsInTime);
 

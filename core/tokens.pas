@@ -114,6 +114,7 @@ FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CO
   VAR t,p:P_token;
       bracketLevel,i:longint;
       partLength:longint=-1;
+      errorOcurred:boolean=false;
   begin
     closingBracket:=nil;
     bracketLevel:=initialBracketLevel;
@@ -130,16 +131,23 @@ FUNCTION getBodyParts(CONST first:P_token; CONST initialBracketLevel:longint; CO
       if      (t^.tokType in C_openingBrackets) and not(t^.tokType in ignoredTokenTypes) then inc(bracketLevel)
       else if (t^.tokType in C_closingBrackets) and not(t^.tokType in ignoredTokenTypes) then dec(bracketLevel)
       else if (t^.tokType=tt_separatorComma) and (bracketLevel=1) then begin
-        if partLength=0 then context^.raiseError('Empty body part.',result[length(result)-1].first^.location);
+        if partLength=0
+        then begin
+          context^.raiseError('Empty body part.',result[length(result)-1].first^.location);
+          errorOcurred:=true;
+        end;
         result[length(result)-1].last:=p; //end of body part is token before comma
         setLength(result,length(result)+1);
         result[length(result)-1].first:=t^.next; //start of next body part is token after comma
-        if (t^.next^.tokType in C_closingBrackets) and (bracketLevel=1) then context^.raiseError('Empty body part.',result[length(result)-1].first^.location);
+        if (t^.next^.tokType in C_closingBrackets) and (bracketLevel=1) then begin
+          context^.raiseError('Empty body part.',result[length(result)-1].first^.location);
+          errorOcurred:=true;
+        end;
         partLength:=-1; //excluding delimiting separators
       end;
       p:=t; t:=t^.next; inc(partLength);
     end;
-    if not(context^.continueEvaluation) then begin
+    if errorOcurred then begin
       setLength(result,0);
       exit;
     end;
