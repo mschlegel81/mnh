@@ -214,6 +214,7 @@ main('distro')->isLinux ? fail('Must be executed in windows environment') : begi
   BUILDS.each(B,B['canBuild'] AND B['distro'] ? B.testExe : void,AND)
   ? void
   : fail('Cannot make distro because there are failed tests');
+  for zipTask in packSets(getBuildNumberAndVersion(ensureCodeHash)) do parallel call7z@zipTask;
   writeAllDataStores;
   {fileExists($0)
    ? runScript(['name'=>$0,"side effects"=>listSideEffects,"connection level"=>3].toMap)

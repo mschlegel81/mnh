@@ -23,10 +23,10 @@
     <LazDoc Paths="../doc"/>
     <VersionInfo>
       <UseVersionInfo Value="True"/>
-      <MajorVersionNr Value="3"/>
-      <MinorVersionNr Value="1"/>
-      <RevisionNr Value="1"/>
-      <BuildNr Value="459"/>
+      <MajorVersionNr Value="4"/>
+      <MinorVersionNr Value="0"/>
+      <RevisionNr Value="0"/>
+      <BuildNr Value="460"/>
       <CharSet Value="04B0"/>
       <StringTable CompanyName="Martin Schlegel" FileDescription="MNH5 IDE and interpreter" InternalName="mnh5_full" LegalCopyright="LGPL" OriginalFilename="mnh" ProductName="MNH5"/>
     </VersionInfo>
