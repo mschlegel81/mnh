@@ -688,16 +688,6 @@ FUNCTION T_highlightingData.getRelatedLocations(CONST CaretX,CaretY:longint):T_r
 CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST messages:T_storedMessages; CONST stateHash_:T_hashInt; CONST callAndIdInfos_:P_callAndIdInfos);
   VAR m:P_storedMessage;
       level:longint;
-  PROCEDURE sortByLocation(VAR m:T_storedMessages);
-    VAR i,j:longint;
-        temp:P_storedMessage;
-    begin
-      for i:=1 to length(m)-1 do for j:=0 to i-1 do
-      if m[i]^.getLocation<m[j]^.getLocation then begin
-        temp:=m[i]; m[i]:=m[j]; m[j]:=temp;
-      end;
-    end;
-
   begin
     inherited create(mt_ide_codeAssistanceResponse);
     package:=package_;
@@ -717,8 +707,6 @@ CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST mess
         externalErrors[length(externalErrors)-1]:=m^.rereferenced;
       end;
     end;
-    sortByLocation(localErrors);
-    sortByLocation(externalErrors);
   end;
 
 DESTRUCTOR T_codeAssistanceResponse.destroy;
