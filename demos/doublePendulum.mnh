@@ -28,7 +28,7 @@ F12(phi1,phi2,phi1dt,phi2dt)->F1(phi1,phi2,phi1dt,phi2dt,F2(phi1,phi2,phi1dt,phi
 //*Overloaded for use in RK4
 accel(state:NumericList(4))->accel@state;
 
-quickRoot(F:Expression)->begin -1-(local f1:=F(-1))*2/(F(1)-f1); end;
+quickRoot(F:Expression)->begin -1-(f1:=F(-1))*2/(F(1)-f1); end;
 
 //*Returns first derivative in time for given state
 @demo_for=numerics, simulation, animation, plain script, future
@@ -81,11 +81,11 @@ begin
   step:=integrator(CASH_KARP,::accel,timeStepPerFrame,1E-7);
   state1:=future(step,[state1]);
   state2:=future(step,[state2]);
-  while(!plotClosed,begin
+  while not plotClosed do begin
     p1:=(state1:=state1()).plottable; hist1|=[state1]; state1:=future(step,[state1]);
     p2:=(state2:=state2()).plottable; hist2|=[state2]; state2:=future(step,[state2]);
     replot();
-  end);
+  end;
 
   t:=[0..hist1.size-1]*timeStepPerFrame;
   mask:=[0..hist1.size-1] mod max(1,round(hist1.size/2000))=0;

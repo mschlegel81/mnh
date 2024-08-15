@@ -29,10 +29,10 @@ end;
 randomPangram->begin
   s:=randomWord;
   missing:=s.missingLetters;
-  while(missing.size>0,begin
+  while missing.size>0 do begin
     s&=' '&randomWord(missing);
     missing:=s.missingLetters;
-  end);
+  end;
   s;
 end;
 
@@ -42,7 +42,7 @@ findShortRandomPangram->begin
            ask('Press enter to stop.');
            halt;
          end});
-  while(true,begin
+  while true do begin
     p:=randomPangram;
     p.length<shortestLength
     ? begin
@@ -50,7 +50,7 @@ findShortRandomPangram->begin
         print('String: ',p);
       end
     : void;
-  end);
+  end;
 end;
 
 checkForPangram(s:String)->begin

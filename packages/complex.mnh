@@ -63,19 +63,19 @@ OPERATOR_NEGATE_ARITHMETIC(x:Complex)->[-x[0],-x[1]].toComplex;
 //*Returns cosinus of complex x
 cos(x:Complex)->begin
   //cos(x)=(e^(ix)+e^(-ix))/2
-  local result:=exp(i*x);
+  result:=exp(i*x);
   (result+1/result)*0.5;
 end;
 
 //*Returns sinus of complex x
 sin(x:Complex)->begin
   //sin(x)=(e^(ix)-e^(-ix))/2i
-  local result:=exp(i*x);
+  result:=exp(i*x);
   (1/result-result)*0.5*i;
 end;
 
 sqrt(x:Complex)->begin
-  local z:=[0.25*(x.toBuiltin.sqr.agg(+)).ln,0.5*arg(x)];
+  z:=[0.25*(x.toBuiltin.sqr.agg(+)).ln,0.5*arg(x)];
   exp(z[0])*[cos(z[1]),sin(z[1])].toComplex;
 end;
 

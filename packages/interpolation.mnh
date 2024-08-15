@@ -53,8 +53,8 @@ private IPgen(thresholds:NumericList,coefficients:List)->
 
 //*Returns a piecewise linear function in x, interpolating the given points
 interpolateLineSegments(X:NumericList,Y:NumericList)->begin
-  local slopes:=(Y.tail-Y.leading)/(X.tail-X.leading);
-  local offsets:=Y.leading-X.leading*slopes;
+  slopes:=(Y.tail-Y.leading)/(X.tail-X.leading);
+  offsets:=Y.leading-X.leading*slopes;
   ILSgen(X,X.size-2,[offsets,slopes].transpose);
 end;
 

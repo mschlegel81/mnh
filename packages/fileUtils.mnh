@@ -3,7 +3,7 @@ timedFolderContent(folderPath:String)->fileInfo(folderPath&'/*').each(info,[info
 //*Returns the updated folder content or false if the content is unchanged
 @SuppressUnusedWarning=all
 changedFolderContent(folderPath:String,previousContent:List)->begin
-  local currentContent:=timedFolderContent(folderPath);
+  currentContent:=timedFolderContent(folderPath);
   currentContent==previousContent
   ? false
   : currentContent;
@@ -12,14 +12,14 @@ end;
 private changeToContent(L:List)->L.each(el,el[1]='deleted' ? void : el[[0,2]]).sort(0);
 private
 waitForFolderChange(folderPath:String,maxSleepTimeInSeconds:Numeric,timeoutInSeconds:Numeric,initialContent)->begin
-  local scanInterval:=-1;
-  local currentContent:=initialContent;
-  local timeout:=time+timeoutInSeconds;
-  while(currentContent==initialContent AND time<timeout,begin
+  scanInterval:=-1;
+  currentContent:=initialContent;
+  timeout:=time+timeoutInSeconds;
+  while currentContent==initialContent AND time<timeout do begin
     sleep(scanInterval:=min(scanInterval+1,maxSleepTimeInSeconds));
     currentContent:=timedFolderContent(folderPath);
-  end);
-  local names:=initialContent.getInner(0).union(currentContent.getInner(0)).sort;
+  end;
+  names:=initialContent.getInner(0).union(currentContent.getInner(0)).sort;
   names.each(n,n in initialContent.getInner(0)
                ? n in currentContent.getInner(0)
                  ? initialContent[n]==currentContent[n]
@@ -46,12 +46,12 @@ pseudoFolderChange(folderPath:String)->timedFolderContent(folderPath).each(e,[e[
 //*Waits for a folder change and calls onChange when the folder is changed
 watchFolder(folderPath:String,onChange:Expression(1),maxSleepTimeInSeconds:Numeric)->
   async({begin
-    local contents:=timedFolderContent(folderPath);
-    while(true,begin
+    contents:=timedFolderContent(folderPath);
+    while true do begin
       contents:=waitForFolderChange(folderPath,maxSleepTimeInSeconds,2^31,contents);
       onChange(contents);
       contents:=contents.changeToContent;
-    end);
+    end;
   end});
 
 //*Returns a temp file name by the specified pattern.
@@ -60,8 +60,8 @@ tempFile(pattern:String)->
   trueCount(pattern.chars='#')!=1
   ? fail('pattern must contain exactly one "#" as placeholder')
   : begin
-      local tmpFileIndex:=0;
-      while(fileExists(replace(pattern,'#',tmpFileIndex.toString)),tmpFileIndex+=1);
+      tmpFileIndex:=0;
+      while fileExists(replace(pattern,'#',tmpFileIndex.toString)) do tmpFileIndex+=1;
       replace(pattern,'#',tmpFileIndex.toString);
     end;
 
@@ -76,7 +76,7 @@ isLinux:=mnhInfo['targetOs']='Linux' orElse false;
 
 //*Returns true if the file names indicate equal files
 isSameFileName(filename1:String,filename2:String)->begin
-  local case:=isLinux ? {$x} : {$x.upper};
+  case:=isLinux ? {$x} : {$x.upper};
   (filename1.expandedFileName.case)==
   (filename2.expandedFileName.case);
 end;

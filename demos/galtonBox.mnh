@@ -20,8 +20,6 @@ private plotState->begin
   collected.sort.each(i,[2*i[0],i[1]*fillFactor]).addPlot('bar fs blue');
   //plot balls
   balls.map({$x[[1,0]]}).addPlot('. 3 black');
-  //display immediate
-  display;
 end;
 
 @demo_for=animation, plotting, plain script
@@ -46,8 +44,10 @@ setOptions([['autoscaleY',false],['axisStyleX',0],
             ['x0',-8],['x1',8],
             ['preserveAspect',true]]);
 
-while(!plotClosed,begin
+clearAnimation(true);
+while not plotClosed do begin
   stepState;
   plotState;
-  sleep(0.01);
-end);
+  addAnimationFrame;
+  postDisplay;
+end;

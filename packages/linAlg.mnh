@@ -15,8 +15,8 @@ private matrixDimensions(M:Matrix)->[M.size,M[0].size];
 //*Matrix multiplication
 @Override
 OPERATOR_MULT(x:Matrix,y:Matrix)->begin
-  local dimX:=matrixDimensions(x);
-  local dimY:=matrixDimensions(y);
+  dimX:=matrixDimensions(x);
+  dimY:=matrixDimensions(y);
   (dimX[1]==dimY[0]) ? [0..dimX[0]-1].each(i,
                        [0..dimY[1]-1].each(k,(x.get(i)*y.getInner(k)).agg(+))).toMatrix
                      : fail('Matrices must have compatible sizes for multiplication.');
@@ -45,16 +45,16 @@ crossProd(x:NumericList(3),y:NumericList(3))->[x[1]*y[2]-y[1]*x[2],
                                                x[0]*y[1]-y[0]*x[1]];
 euclideanNorm(x:NumericList)->x.sqr.agg(+).sqrt;
 randomVec3OnSphere->begin
-  local x:=random(3)-0.5;
+  x:=random(3)-0.5;
   x/euclideanNorm(x);
 end;
 
 @SuppressUnusedWarning=all
 randomOrthoMatrix->begin
-  local x:=randomVec3OnSphere;
-  local y:=x.crossProd(randomVec3OnSphere);
+  x:=randomVec3OnSphere;
+  y:=x.crossProd(randomVec3OnSphere);
         y:=y/euclideanNorm(y);
-  local z:=x.crossProd(y);
+  z:=x.crossProd(y);
   [x,y,z].toMatrix;
 end;
 
@@ -66,7 +66,7 @@ toString(M:Matrix)->M.each(row,"\v|\t"&row.map(::toString).join("\t")&"\t|").joi
 private sortByValueInRowDescending(L:List,rowIndex:Int)->L[sortPerm(-L.getInner(rowIndex).map(::toReal).abs)];
 
 cramerInvert(M:SquareMatrix)->begin
-(abs(local determinant:=M[0,0]*M[1,1]-M[1,0]*M[0,1])>1E-30
+(abs(determinant:=M[0,0]*M[1,1]-M[1,0]*M[0,1])>1E-30
    ? [[ M[1,1]/determinant,-M[0,1]/determinant],
       [-M[1,0]/determinant, M[0,0]/determinant]]
    : [[Nan,Nan],[Nan,Nan]]).toSquareMatrix;
@@ -74,7 +74,7 @@ end;
 
 invert(M:SquareMatrix)->begin
   //Gauss-Jordan Algorithm
-  local aid:=M.each(row,begin local i:=index; row|(row.each(r,index=i ? 1 : 0)); end);
+  aid:=M.each(row,begin i:=index; row|(row.each(r,index=i ? 1 : 0)); end);
   [0..M.size-1].each(rowIndex,
     begin
       //Pivot
@@ -83,14 +83,14 @@ invert(M:SquareMatrix)->begin
       //Divide by diagonal element
       aid[rowIndex]:=aid[rowIndex]/aid[rowIndex,rowIndex];
       //Subtract
-      local x:=aid[rowIndex];
+      x:=aid[rowIndex];
       [0..M.size-1].each(i,i=rowIndex ? void : aid[i]-=aid[i,rowIndex]*x);
       void;
     end);
   aid.each(row,row.tail(M.size)).toSquareMatrix;
 end;
 
-isUnitMatrix(M:SquareMatrix)->M.each(row,begin local rowIndex:=index; row.each(x,index=rowIndex ? x=1 : x=0,AND); end,AND);
+isUnitMatrix(M:SquareMatrix)->M.each(row,begin rowIndex:=index; row.each(x,index=rowIndex ? x=1 : x=0,AND); end,AND);
 isUnitMatrix(M:Matrix)->false;
 
 rotZ(angle)->[[ cos(angle),sin(angle),0],
@@ -113,17 +113,17 @@ dyadicProduct(v1,v2:Vector)->v1.each(e,v2*e).toMatrix;
 //*See https://www.keithlantz.net/2012/05/qr-decomposition-using-householder-transformations/
 qrDecomposition(A:Matrix)->
   begin
-    local R:=A;
-    local Q:=(local I:=identityMatrix(A.matrixDimensions[0]));
+    R:=A;
+    Q:=(I:=identityMatrix(A.matrixDimensions[0]));
     [0..A.matrixDimensions[1]-1].each(i,begin
-      local u:=R.getInner(i).each(x,index<i ? 0 : x);
-      local alpha:=((u[i] orElse 0)<0 ? 1 :-1) * u.euclideanNorm;
-      local v:=u.each(x,index=i ? x+alpha : x);
+      u:=R.getInner(i).each(x,index<i ? 0 : x);
+      alpha:=((u[i] orElse 0)<0 ? 1 :-1) * u.euclideanNorm;
+      v:=u.each(x,index=i ? x+alpha : x);
       (alpha:=v.euclideanNorm)<1E-10
       ? void
       : begin
           v/=alpha;
-          local P:=I-v.each(x,x*v*2).toMatrix;
+          P:=I-v.each(x,x*v*2).toMatrix;
           R:=P*R;
           Q:=Q*P;
         end;

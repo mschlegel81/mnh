@@ -13,9 +13,9 @@ private force(delta:NumericList(2))->delta*sqr(delta).agg(+)^(-3/2);
 
 private F:={begin
              [$x[1],
-              (local f20:=force($x[2]-$x[0]))+(local f40:=force($x[4]-$x[0])),
+              (f20:=force($x[2]-$x[0]))+(f40:=force($x[4]-$x[0])),
               $x[3],
-              -f20+(local f42:=force($x[4]-$x[2])),
+              -f20+(f42:=force($x[4]-$x[2])),
               $x[5],
               -f40-f42];
             end};
@@ -50,11 +50,11 @@ main->begin
   stepCounter:=-1;
   clearAnimation(true);
   postDisplay;
-  while(!plotClosed,begin
+  while not plotClosed do begin
     plot();
     state[[0,2,4]].each(position,plotter[index](position));
     plot.drawTextAbsolute(0.05,1,format('t=%6.2f',(stepCounter+=1)*timeStepSize),'TL');
     addAnimationFrame;
     state:=state.stepForward;
-  end);
+  end;
 end;

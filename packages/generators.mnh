@@ -1,6 +1,6 @@
 //*Wraps sourceGenerator so that it generates (at max) for the given period of time
 @SuppressUnusedWarning=all
-timingOutGenerator(sourceGenerator:IteratableExpression,runForSeconds:Numeric)->
+timingOutGenerator(sourceGenerator:IterableExpression,runForSeconds:Numeric)->
 {begin
    gen:=sourceGenerator;
    timeout:=scriptTime+runForSeconds;
@@ -123,7 +123,7 @@ save;
 end}.toGenerator;
 
 //*Returns a window iterator, effectively returning all consecutive sub-lists of the given width/size
-window(I:Iteratable,width>1)->{begin
+window(I:Iterable,width>1)->{begin
   gen:=I.toGenerator;
   window:=[];
   begin
@@ -139,7 +139,7 @@ save;
 end}.toGenerator;
 
 //*Returns a dynamic concatenation of all given iteratables
-concat(A:Iteratable,...)->toGenerator(()->begin
+concat(A:Iterable,...)->toGenerator(()->begin
   remainingGenerators:=map($params,::toGenerator);
 save;
   nextOutput:=(remainingGenerators[0] orElse {void})();

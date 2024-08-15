@@ -3,13 +3,13 @@ tprint(...)->print@(formatTime('hh:nn.ss ',systime)|...);
 main("wf")->workflow.flatten.join("\n").print;
 main(xRes,yRes)->workflow.executeWorkflow(xRes.toInt,yRes.toInt,5*1024^2,changeFileExt(myPath,format('_%sx%s.jpg',xRes,yRes)),::tprint);
 main('todo',resolutionString,targetStep)->begin
-  local todoLines:=['resize:'&resolutionString,
-                    workflow,
-                    'save:'&targetStep].flatten;
-  local todoIdx:=0;
-  local todoWritten:=false;
-  while(!todoWritten,begin
-    local todoName:=changeFileExt(myPath,'_%s.todo'.format(todoIdx+=1));
+  todoLines:=['resize:'&resolutionString,
+              workflow,
+             'save:'&targetStep].flatten;
+  todoIdx:=0;
+  todoWritten:=false;
+  while !todoWritten do begin
+    todoName:=changeFileExt(myPath,'_%s.todo'.format(todoIdx+=1));
     fileExists(todoName)
     ? void
     : begin
@@ -17,6 +17,6 @@ main('todo',resolutionString,targetStep)->begin
         print('Todo written: ',todoName);
         todoWritten:=true;
       end;
-  end);
+  end;
 end;
 main(...)->workflow.executeWorkflow@softCast(...);

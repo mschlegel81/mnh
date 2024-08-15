@@ -4,14 +4,14 @@ implicitFunctionContour(F:Expression(2),x0:Numeric,x1>x0,y0:Numeric,y1>y0,sampli
     x0:=p0; f0:=f0_;
     x1:=p1; f1:=f1_;
     counter:=20;
-    while(euklideanNorm(x1-x0)>1E-3 AND (counter-=1)>0,begin
+    while euklideanNorm(x1-x0)>1E-3 AND (counter-=1)>0 do begin
       xm:=x0-(x1-x0)*(f0/(f1-f0));
       fm:=F@xm;
       sign(fm)=sign(f0) ? begin x0:=xm; f0:=fm; end :
       sign(fm)=sign(f1) ? begin x1:=xm; f1:=fm; end : abs(f1)<abs(f0)
       ? begin x0:=xm; f0:=fm; end
       : begin x1:=xm; f1:=fm; end;
-    end);
+    end;
     x0-(x1-x0)*(f0/(f1-f0));
   end;
 
@@ -82,21 +82,21 @@ implicitFunctionContour(F:Expression(2),x0:Numeric,x1>x0,y0:Numeric,y1>y0,sampli
   toBeVisited:=adj.getInner(0);
 
   runs:=[];
-  while(toBeVisited.size>0,begin
+  while toBeVisited.size>0 do begin
     n0:=toBeVisited.head; toBeVisited>>n0;
     n1:=adj[n0].getInner(0).intersect(toBeVisited).head;
     direction:=adj[n0,n1];
     currentRun:=[n0,n1];
     [0..1].each(loop,begin
       next:=void;
-      while(toBeVisited.size>0 AND !isVoid(next:=adj[n1].orElse([]).each(entry,entry[0] in toBeVisited ? [(direction*entry[1]).agg(+),entry] : void,max)),begin
+      while toBeVisited.size>0 AND !isVoid(next:=adj[n1].orElse([]).each(entry,entry[0] in toBeVisited ? [(direction*entry[1]).agg(+),entry] : void,max)) do begin
         n0:=n1; n1:=next[1,0]; direction:=next[1,1]; currentRun|=n1; toBeVisited>>n1;
-      end);
+      end;
       currentRun:=currentRun.reverseList;
       direction:=adj[currentRun.leading.trailing,currentRun.trailing];
     end);
     runs||=currentRun;
-  end);
+  end;
 
   runs:=runs
   .each(run,edgePoint[run])
@@ -105,18 +105,18 @@ implicitFunctionContour(F:Expression(2),x0:Numeric,x1>x0,y0:Numeric,y1>y0,sampli
     prev:=refined[0];
     run.tail(1).each(point,begin
       distance:=euklideanNorm(step:=point-prev);
-      while(distance>maxSegmentLength,begin
+      while distance>maxSegmentLength do begin
         step/=ceil(distance/maxSegmentLength);
         side:=step.reverseList*[-0.1,0.1];
         p0:=p1:=f0:=f1:=1;
-        while(sign(f0)=sign(f1),begin
+        while sign(f0)=sign(f1) do begin
           side*=2;
           f0:=F@(p0:=prev+step-side);
           f1:=F@(p1:=prev+step+side);
-        end);
+        end;
         refined|=[prev:=findRootBetween(p0,f0,p1,f1)];
         distance:=euklideanNorm(step:=point-prev);
-      end);
+      end;
       refined|=[prev:=point];
     end);
     refined;

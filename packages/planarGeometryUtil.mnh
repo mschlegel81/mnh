@@ -5,21 +5,21 @@ ducktype Vector2d(x:NumericList(2))->true;
 //*Returns the points where the circles (c0,r0) and (c1,r1) intersect
 circleIntersection(c0:Vector2d,r0,
                    c1:Vector2d,r1)->begin
-  local d:=euklideanNorm(c1-c0);
-  local a:=(r0^2-r1^2+d^2)/(2*d);
-  local h:=r0^2-a^2;
+  d:=euklideanNorm(c1-c0);
+  a:=(r0^2-r1^2+d^2)/(2*d);
+  h:=r0^2-a^2;
   h<0 ? return void : h:=sqrt(h);
-  local X:=c0+a*(c1-c0)/d;
-  local Y:=[c1[1]-c0[1],c0[0]-c1[0]]*h/d;
+  X:=c0+a*(c1-c0)/d;
+  Y:=[c1[1]-c0[1],c0[0]-c1[0]]*h/d;
   [X+Y,X-Y];
 end;
 
 //*Returns true if the lines intersect, false otherwise
 linesIntersect(a0:NumericList(2),a1:NumericList(2),
                b0:NumericList(2),b1:NumericList(2))->begin
-  local Q:=a1-a0; Q:=[-Q[1],Q[0]];
-  local P:=b0-a0;
-  local R:=b1-a0;
+  Q:=a1-a0; Q:=[-Q[1],Q[0]];
+  P:=b0-a0;
+  R:=b1-a0;
   (Q*P).agg(+)*(Q*R).agg(+)<0 AND begin
      Q:=b1-b0; Q:=[-Q[1],Q[0]];
      P:=a0-b0;
@@ -30,17 +30,17 @@ end;
 
 //*Returns the convex hull of the given set of points
 convexHull(points:List)->begin
-  local rest:=points.sort;
-  local P:=rest.head(1);
+  rest:=points.sort;
+  P:=rest.head(1);
 
-  while(rest.size>0,begin
-    local dp:=P.size==1 ? [0,-1] : -P.trailing(2).agg(-); dp/=dp.euklideanNorm;
-    local q:=P.trailing;
-    local i:=rest.map((p)->begin local delta:=p-q; (delta/delta.euklideanNorm*dp).agg(+); end).argMax;
+  while rest.size>0 do begin
+    dp:=P.size==1 ? [0,-1] : -P.trailing(2).agg(-); dp/=dp.euklideanNorm;
+    q:=P.trailing;
+    i:=rest.map((p)->begin delta:=p-q; (delta/delta.euklideanNorm*dp).agg(+); end).argMax;
     P||=rest[i];
     i==0
     ? return P
     : rest[i]:=void;
-  end);
+  end;
   P;
 end;
