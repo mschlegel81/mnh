@@ -100,6 +100,7 @@ TYPE
 FUNCTION extractIdsForCaseDistinction(CONST patterns:T_arrayOfPpattern):T_arrayOfLongint;
 {$endif}
 IMPLEMENTATION
+USES funcs;
 {$ifdef fullVersion}
 FUNCTION extractIdsForCaseDistinction(CONST patterns:T_arrayOfPpattern):T_arrayOfLongint;
   VAR minPatternLength:longint=maxLongint;
@@ -666,6 +667,8 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
               rulePatternElement.builtinTypeCheck:=tc_byTypeString;
               rulePatternElement.restrictionId   :=parts[i].first^.next^.txt;
               if parts[i].first^.next^.next<>nil then fail(parts[i].first);
+              if not isStringTypeValid(rulePatternElement.restrictionId)
+              then context^.raiseError('Invalid pattern element (unknown type): '+tokensToString(parts[i].first),parts[i].first^.location);
               parts[i].first:=recycler^.disposeToken(parts[i].first);
               parts[i].first:=recycler^.disposeToken(parts[i].first);
             end else if (parts[i].first^.tokType=tt_typeCheck) then begin

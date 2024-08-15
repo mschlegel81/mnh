@@ -335,6 +335,7 @@ T_idStack=object
     scopeType:T_scopeType;
     scopeStartToken:P_token;
     ids:array of record name:T_idString; used:boolean; location:T_tokenLocation; idType:T_tokenType; end;
+    delayedErrorMessages:T_storedMessages;
   end;
   suppressUnusedWarningInLines:T_arrayOfLongint;
   {$ifdef fullVersion}
@@ -816,12 +817,27 @@ PROCEDURE T_idStack.scopePush(CONST openToken:P_token; CONST scopeType:T_scopeTy
     newTopIdx:=length(scope);
     setLength(scope,newTopIdx+1);
     setLength(scope[newTopIdx].ids,0);
+    setLength(scope[newTopIdx].delayedErrorMessages,0);
     scope[newTopIdx].scopeType:=scopeType;
     scope[newTopIdx].scopeStartToken:=openToken;
   end;
 
 PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLocation; CONST recycler:P_recycler; VAR workingIn:T_enhancedStatement; CONST closeToken:P_token; CONST warnAboutUnused:boolean; CONST forcePop:boolean=false);
   VAR topIdx:longint;
+  PROCEDURE postDelayedMismatchError;
+    VAR message: string;
+        i: longint;
+    begin
+      if context=nil then exit;
+      message:='Mismatch; '+scope[topIdx].scopeStartToken^.singleTokenToString+' closed by '+closeToken^.singleTokenToString;
+      with scope[topIdx] do begin
+        i:=length(delayedErrorMessages);
+        setLength(delayedErrorMessages,i+2);
+        new(P_storedMessageWithText(delayedErrorMessages[i  ]),create(mt_el3_evalError,scopeStartToken^.location,message));
+        new(P_storedMessageWithText(delayedErrorMessages[i+1]),create(mt_el3_evalError,closeToken     ^.location,message));
+      end;
+    end;
+
   PROCEDURE raiseMismatchError;
     VAR message:string;
     begin
@@ -833,6 +849,7 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
 
   PROCEDURE performPop;
     VAR i:longint;
+        msg: P_storedMessage;
     begin
       with scope[topIdx] do for i:=0 to length(ids)-1 do begin
         if warnAboutUnused and not(ids[i].used) and (context<>nil) and not(arrContains(suppressUnusedWarningInLines,ids[i].location.line)) then context^.messages^.postTextMessage(mt_el2_warning,ids[i].location,'Unused local variable '+ids[i].name);
@@ -841,6 +858,7 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
         {$endif}
       end;
       setLength(scope[topIdx].ids,0);
+      for msg in scope[topIdx].delayedErrorMessages do context^.messages^.postCustomMessage(msg,true);
       setLength(scope,topIdx);
       dec(topIdx);
     end;
@@ -872,6 +890,7 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
   VAR pre:P_token;
       pattern:P_pattern;
       namedParamter: T_patternElementLocation;
+      i: longint;
   begin
     if (closeToken<>nil) and (closeToken^.tokType in [tt_semicolon,tt_separatorComma]) then begin
       popSpecialIfPresent;
@@ -894,6 +913,10 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
       tt_endOfPatternDeclare,tt_endOfPatternAssign:
         if   scope[topIdx].scopeStartToken^.tokType =tt_braceOpen
         then begin
+          with scope[topIdx] do begin
+            for i:=0 to length(delayedErrorMessages)-1 do disposeMessage(delayedErrorMessages[i]);
+            setLength(delayedErrorMessages,0);
+          end;
           scope[topIdx].scopeStartToken^.tokType:=tt_startOfPattern;
           //The closing token is not part of the expression yet: add a clone now:
           workingIn.token.last^.next:=recycler^.newToken(closeToken);
@@ -957,7 +980,7 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
           then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
           {$endif}
         end else begin
-          //TODO: This might be interpreted as a string-type, as in :FTPconnection - find out if a "raiseMismatchError" is appropriate
+          postDelayedMismatchError;
           exit;
         end;
       end;

@@ -80,16 +80,29 @@ CONST
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST L:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST messageTail:ansistring='');
 PROCEDURE raiseNotApplicableError(CONST functionName:ansistring; CONST x,y:P_literal; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST messageTail:ansistring='');
 FUNCTION genericVectorization(CONST functionId:T_idString; CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_literal;
+PROCEDURE registerValidStringType(CONST id:T_idString);
+FUNCTION isStringTypeValid(CONST id:T_idString):boolean;
 OPERATOR =(CONST x,y:T_builtinFunctionMetaData):boolean;
 VAR builtinFunctionMap:T_functionMap;
     makeBuiltinExpressionCallback:FUNCTION(CONST meta:P_builtinFunctionMetaData):P_expressionLiteral;
     intFuncForOperator:array[tt_comparatorEq..tt_operatorConcatAlt] of P_intFuncCallback;
     failFunction    :P_intFuncCallback;
+    validStringTypes:T_arrayOfString;
 IMPLEMENTATION
 USES sysutils,Classes,
      myStringUtil
      {$ifdef fullVersion},
      mnh_doc{$endif};
+
+PROCEDURE registerValidStringType(CONST id: T_idString);
+  begin
+    appendIfNew(validStringTypes,id);
+  end;
+
+FUNCTION isStringTypeValid(CONST id: T_idString): boolean;
+  begin
+    result:=arrContains(validStringTypes,id);
+  end;
 
 OPERATOR =(CONST x,y:T_builtinFunctionMetaData):boolean;
   begin
@@ -500,6 +513,8 @@ FUNCTION allBuiltinFunctions intFuncSignature;
   end;
 
 INITIALIZATION
+  initialize(validStringTypes);
+  setLength(validStringTypes,0);
   builtinFunctionMap.create;
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'clearPrint'   ,@clearPrint_imp   ,ak_nullary ,[se_output]);
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'print'        ,@print_imp        ,ak_variadic,[se_output]);

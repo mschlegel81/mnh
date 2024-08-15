@@ -16,9 +16,9 @@ USES sysutils,lclintf,
      funcs,
      synsock;
 
-CONST FTP_TYPE_STRING='FTPconnection';
 IMPLEMENTATION
 USES ftpsend,subrules,fileWrappers;
+CONST FTP_TYPE_STRING='FTPconnection';
 TYPE
   P_ftpConnection=^T_ftpConnection;
   T_ftpConnection=object(T_builtinObject)
@@ -326,6 +326,6 @@ INITIALIZATION
   builtinFunctionMap.registerRule(FTP_NAMESPACE,'ftpDeleteFile',@ftp_deleteFile_impl,ak_binary);
   builtinFunctionMap.registerRule(FTP_NAMESPACE,'setTimeout'   ,@ftp_setTimeout_impl,ak_binary);
   builtinFunctionMap.registerRule(FTP_NAMESPACE,'setLogging'   ,@ftp_setLogging_impl,ak_binary);
-
+  registerValidStringType(FTP_TYPE_STRING);
 end.
 

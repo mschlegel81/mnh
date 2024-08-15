@@ -8,13 +8,6 @@ USES mnh_constants,
      contexts,
      litVar,subrules;
 
-CONST INTERPOLATOR_TYPE_NAMES:array [0..4] of string =
-      ('LinearInterpolator',
-       'CSplineInterpolator',
-       'BSpline',
-       'LocalInterpolator',
-       'FourierSeries');
-
 TYPE
   T_1D_interpolator=object(T_builtinObject)
     protected
@@ -798,5 +791,9 @@ INITIALIZATION
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'newFourierSeries'     ,@fourierSeries_imp      ,ak_unary);
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'calculateFourierCoefficients',@calcFourierCoeff_im,ak_unary);
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'newLocalInterpolator' ,@localInterpolator_imp,ak_unary);
-
+  registerValidStringType('LinearInterpolator');
+  registerValidStringType('CSplineInterpolator');
+  registerValidStringType('BSpline');
+  registerValidStringType('LocalInterpolator');
+  registerValidStringType('FourierSeries');
 end.

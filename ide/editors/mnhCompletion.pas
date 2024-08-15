@@ -60,9 +60,7 @@ PROCEDURE initIntrinsicRuleList;
       end;
     end;
     intrinsicRulesForCompletion.put(C_tokenDefaultId[tt_operatorNotIn]);
-    for id in INTERPOLATOR_TYPE_NAMES do intrinsicRulesForCompletion.put(id);
-    intrinsicRulesForCompletion.put(FTP_TYPE_STRING);
-    intrinsicRulesForCompletion.put(QUEUE_TYPE_NAME);
+    for id in validStringTypes do intrinsicRulesForCompletion.put(id);
 
     for tt in T_tokenType do if isIdentifier(C_tokenDefaultId[tt],false) then
       intrinsicRulesForCompletion.put(ansiReplaceStr(C_tokenDefaultId[tt],ID_QUALIFY_CHARACTER,''))

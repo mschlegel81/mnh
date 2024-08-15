@@ -12,7 +12,6 @@ USES sysutils,Classes,
      funcs,contexts,
      recyclers,
      subrules;
-CONST QUEUE_TYPE_NAME='Queue';
 TYPE
   P_queueEntry=^T_queueEntry;
   T_queueEntry=record
@@ -43,6 +42,7 @@ TYPE
 
 IMPLEMENTATION
 {$i func_defines.inc}
+CONST QUEUE_TYPE_NAME='Queue';
 
 CONSTRUCTOR T_queue.create(CONST location: T_tokenLocation);
   begin
@@ -181,6 +181,6 @@ INITIALIZATION
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'newQueue',@new_queue    ,ak_nullary);
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'put',@queue_put         ,ak_variadic_1);
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'closeQueue',@queue_close,ak_nullary);
-
+  registerValidStringType(QUEUE_TYPE_NAME);
 end.
 
