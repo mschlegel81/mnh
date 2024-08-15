@@ -1,7 +1,7 @@
 leftTruncatablePrimes(maxPrime>10)->
   begin
-    local PRIME_SET:=primes(maxPrime);
-    local SUB:=primes(10); //SUB is the subset of 1-digit primes
+    PRIME_SET:=primes(maxPrime);
+    SUB:=primes(10); //SUB is the subset of 1-digit primes
     SUB|(
     [1..ceil(ln(maxPrime)/ln(10))-1].each(k,
       SUB:=PRIME_SET[10^k<=PRIME_SET<10^(k+1)] //filter all primes with k+1 digits
@@ -10,8 +10,8 @@ leftTruncatablePrimes(maxPrime>10)->
 
 rightTruncatablePrimes(maxPrime>10)->
   begin
-    local PRIME_SET:=primes(maxPrime);
-    local SUB:=primes(10); //SUB is the subset of 1-digit primes
+    PRIME_SET:=primes(maxPrime);
+    SUB:=primes(10); //SUB is the subset of 1-digit primes
     SUB|(
     [1..ceil(ln(maxPrime)/ln(10))-1].each(k,
        SUB:=PRIME_SET[10^k<=PRIME_SET<10^(k+1)] //filter all primes with k+1 digits

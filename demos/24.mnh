@@ -13,7 +13,7 @@ private canSolve(set:IntList(4))->!isVoid(findSolution(set));
 
 private getRiddle->rangeGenerator(0,1000).each(i,
   begin
-    local n:=1+intRandom(9,4);
+    n:=1+intRandom(9,4);
     canSolve(n) ? n.sort : void;
   end,head);
 
@@ -43,13 +43,13 @@ private playARound->begin
   answer:=ask('Find an expression to calculate 24 from the numbers '&toString(set).unbrace&'.');
   retrying:=true;
   solutionOk:=false;
-  while(retrying and !(solutionOk:=isCorrectSolution(set,answer)),
+  while retrying and not(solutionOk:=isCorrectSolution(set,answer)) do
   begin
     retrying:=ask('Retry?',['yes','no'])='yes';
     retrying
     ? answer:=ask('Find an expression to calculate 24 from the numbers '&toString(set).unbrace&'.')
     : void;
-  end);
+  end;
   solutionOk
   ? void
   : print('A possible solution would have been: ',findSolution(set));
@@ -65,9 +65,9 @@ main('demo')->print('This is a demo - start without argument to play.',resetRand
 
 @demo_for=user input, expressions
 main->begin
-  local continue:=true;
-  while(continue, begin
+  continue:=true;
+  repeat
     playARound;
     continue:=ask('Another round?',['yes','no'])='yes';
-  end);
+  until not continue;
 end;
