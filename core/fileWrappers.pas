@@ -105,7 +105,7 @@ FUNCTION writeFile(CONST name, textToWrite: ansistring): boolean;
 FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfString; CONST lineSeparator:string; CONST doAppend:boolean): boolean;
 FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs: boolean): T_arrayOfString;
 FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
-
+PROCEDURE moveSafely(CONST source,dest:string);
 FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean; OUT pid:longint; CONST customFolder:string=''): int64;
 PROCEDURE ensurePath(CONST path:ansistring);
 
@@ -113,6 +113,15 @@ VAR fileCache:T_fileCache;
     notify_event:F_notify_event=nil;
     FILE_CACHE_MAX_AGE:double=1; //one day
 IMPLEMENTATION
+
+PROCEDURE moveSafely(CONST source,dest:string);
+  begin
+    if not(RenameFile(source,dest))
+    then begin
+      if CopyFile(source,dest,[cffOverwriteFile,cffPreserveTime],false)
+      then DeleteFile(source);
+    end;
+  end;
 
 FUNCTION cleanPath(CONST pathWithTrailingSeparator:string):string;
   begin

@@ -338,6 +338,7 @@ PROCEDURE T_workspace.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
   VAR k:longint;
       active:P_editorMeta;
   begin
+    EnterCriticalSection(workspaceCs);
     {$ifdef debugMode}
     writeln('Saving T_workspace @',stream.streamPos);
     {$endif}
@@ -360,6 +361,7 @@ PROCEDURE T_workspace.saveToStream(VAR stream: T_bufferedOutputStreamWrapper);
     fileHistory.saveToStream(stream);
     runnerModel.saveToStream(stream);
     savedAt:=now;
+    LeaveCriticalSection(workspaceCs);
   end;
 
 FUNCTION T_workspace.currentEditor: P_editorMeta;

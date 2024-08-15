@@ -164,7 +164,7 @@ TYPE
     subTimerCounter:longint;
     PROCEDURE ensureTimerSuspend;
   public
-    PROCEDURE saveIdeSettings;
+    FUNCTION saveIdeSettings(CONST maxAttempts:byte=5):boolean;
     { public declarations }
   end;
 
@@ -244,12 +244,15 @@ PROCEDURE TIdeMainForm.FormDestroy(Sender: TObject);
   end;
 
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
+  var
+    saved: Boolean;
   begin
-    fileCache.onMemoryPanic;
-    ensureTimerSuspend;
-    saveIdeSettings;
+    fileCache.onMemoryPanic; //stop background file scan
+    ensureTimerSuspend;      //stop timers
+    finalizeCodeAssistance;  //stop code assistance
+    saved:=saveIdeSettings;
     closeAllForms;
-    finalizeCodeAssistance;
+    if not saved then saveIdeSettings(255);
     workspace.destroy;
     runnerModel.destroy;
     searchReplaceModel.destroy;
@@ -654,13 +657,31 @@ PROCEDURE TIdeMainForm.Splitter1Moved(Sender: TObject);
     for cp in PAGES do dockSites[cp]^.updateRelSizeByAbsSize;
   end;
 
-PROCEDURE TIdeMainForm.saveIdeSettings;
+FUNCTION TIdeMainForm.saveIdeSettings(CONST maxAttempts:byte=5):boolean;
+  CONST temp_extension='.temporary';
+  VAR allOkay: boolean;
+      n:byte;
   begin
-    mnh_settings.saveSettings;
-    runParameterHistory.saveToFile(runParameterHistoryFileName);
-    workspace          .saveToFile(ideSettings.workspaceFilename);
-    ideSettings        .saveToFile(ideSettingsFilename);
-    settings           .saveToFile(settingsFileName);
+    n:=maxAttempts;
+    repeat
+      try
+        runParameterHistory.saveToFile(runParameterHistoryFileName  +temp_extension);
+        workspace          .saveToFile(ideSettings.workspaceFilename+temp_extension);
+        ideSettings        .saveToFile(ideSettingsFilename          +temp_extension);
+        settings           .saveToFile(settingsFileName             +temp_extension);
+        allOkay:=true;
+      except
+        allOkay:=false;
+      end;
+      dec(n);
+      if not(allOkay) then sleep(100);
+    until allOkay or (n=0);
+    if allOkay then begin
+      moveSafely(runParameterHistoryFileName  +temp_extension,runParameterHistoryFileName  );
+      moveSafely(ideSettings.workspaceFilename+temp_extension,ideSettings.workspaceFilename);
+      moveSafely(ideSettingsFilename          +temp_extension,ideSettingsFilename          );
+      moveSafely(settingsFileName             +temp_extension,settingsFileName             );
+    end;
   end;
 
 PROCEDURE TIdeMainForm.attachNewForm(CONST form: T_mnhComponentForm);
@@ -738,7 +759,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
         startOfTask:=now;
         if workspace.savingRequested then begin
           postIdeMessage('Saving settings',false);
-          saveIdeSettings;
+          if not saveIdeSettings then postIdeMessage('Saving settings failed',true);
         end;
         taskDone('Saving settings');
 

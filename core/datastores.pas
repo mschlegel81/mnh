@@ -111,15 +111,6 @@ PROCEDURE T_datastoreFlush.addStoreToFlush(CONST meta: P_datastoreMeta; CONST L:
     pendingWrites[length(pendingWrites)-1].writePlainText:=writePlainText;
   end;
 
-PROCEDURE moveSafely(CONST source,dest:string);
-  begin
-    if not(RenameFile(source,dest))
-    then begin
-      if CopyFile(source,dest,[cffOverwriteFile,cffPreserveTime],false)
-      then DeleteFile(source);
-    end;
-  end;
-
 PROCEDURE T_datastoreFlush.finalize(CONST threadLocalMessages: P_messages;
   CONST recycler: P_literalRecycler);
   VAR i:longint;

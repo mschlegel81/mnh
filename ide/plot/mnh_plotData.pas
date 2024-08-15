@@ -1334,10 +1334,12 @@ PROCEDURE T_plot.renderToFile(CONST fileName: string; CONST width, height:longin
       then storeImage.picture.Bitmap.saveToFile(fileName)
       else storeImage.picture.PNG.saveToFile(ChangeFileExt(fileName, '.png'));
     except
-      message:='Export to file failed for: '+fileName;
-      if feedbackMessages<>nil
-      then feedbackMessages^.raiseSimpleError(message,feedbackLocation)
-      else postIdeMessage(message,true);
+      on e:Exception do begin
+        message:='Export to file failed for: '+fileName+C_lineBreakChar+e.Message;
+        if feedbackMessages<>nil
+        then feedbackMessages^.raiseSimpleError(message,feedbackLocation)
+        else postIdeMessage(message,true);
+      end;
     end;
     storeImage.destroy;
   end;
