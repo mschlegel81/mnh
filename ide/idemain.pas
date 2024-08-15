@@ -244,8 +244,8 @@ PROCEDURE TIdeMainForm.FormDestroy(Sender: TObject);
   end;
 
 PROCEDURE TIdeMainForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
-  var
-    saved: Boolean;
+  VAR
+    saved: boolean;
   begin
     fileCache.onMemoryPanic; //stop background file scan
     ensureTimerSuspend;      //stop timers
