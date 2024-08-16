@@ -2587,3 +2587,8 @@ bitXor(5,213,10);
 #S convolve1D(F:NumericList,G:NumericList,allowGrowth:Boolean)
 #C Returns the discrete convolution of F and G.
 #C If allowGrowth is false (or omitted), G is taken to be a symmetric kernel; the output wil have the same size as F.
+
+#I freeConsole
+#S freeConsole
+#C Detaches the interpreter from the console.
+#C Intended for GUI and/or headless scripts.
