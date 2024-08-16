@@ -691,6 +691,11 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
             recycler^.disposeToken(tok);
             exit;
           end;
+          if (nextStatement.token.last=nil)
+          then context^.raiseError('Invalid assignment',tok^.location)
+          else if not (nextStatement.token.last^.tokType in [tt_listBraceClose,tt_identifier])
+               and not((nextStatement.token.last^.tokType in [tt_userRule,tt_intrinsicRule]) and localIdStack.scopeBottom)
+          then context^.raiseError('Invalid assignment; Left hand side: '+tokenTypeName(nextStatement.token.last^.tokType),tok^.location);
         end;
         tt_mut_nested_assign..tt_mut_nestedDrop: begin
           if (nextStatement.token.last<>nil) and (nextStatement.token.last^.tokType=tt_blockLocalVariable) then begin
@@ -1018,7 +1023,7 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
           {$endif}
         end else raiseMismatchError;
       end;
-      else raise Exception.create('Unexpected closing token '+getEnumName(TypeInfo(closeToken^.tokType),ord(closeToken^.tokType)));
+      else raise Exception.create('Unexpected closing token '+tokenTypeName(closeToken^.tokType));
     end;
     performPop;
   end;

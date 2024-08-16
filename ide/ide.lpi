@@ -703,6 +703,7 @@
       </Checks>
       <HeapSize Value="10000000"/>
       <StackSize Value="10000000"/>
+      <VerifyObjMethodCallValidity Value="True"/>
       <Optimizations>
         <OptimizationLevel Value="0"/>
       </Optimizations>
@@ -711,6 +712,7 @@
       <Debugging>
         <DebugInfoType Value="dsDwarf2Set"/>
         <UseHeaptrc Value="True"/>
+        <TrashVariables Value="True"/>
       </Debugging>
     </Linking>
     <Other>

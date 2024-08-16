@@ -857,7 +857,14 @@ FUNCTION configDir:string;
 FUNCTION collapseMnhDir(CONST fileName:string):string;
 FUNCTION expandMnhDir(CONST fileName:string):string;
 FUNCTION getTempFileName:string;
+FUNCTION tokenTypeName(CONST tokType:T_tokenType):string;
 IMPLEMENTATION
+USES typinfo;
+
+FUNCTION tokenTypeName(CONST tokType:T_tokenType):string;
+  begin
+    result:=getEnumName(TypeInfo(tokType),ord(tokType));
+  end;
 
 FUNCTION isQualified(CONST s:string):boolean;
   begin

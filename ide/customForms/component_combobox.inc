@@ -130,7 +130,7 @@ FUNCTION T_comboboxMeta.evaluate(CONST location: T_tokenLocation; CONST context:
         if (tmp<>nil) then begin
           if tmp^.literalType in [lt_stringList,lt_emptyList]
           then state_items:=P_listLiteral(tmp)^
-          else context^.raiseError('Expression returned '+tmp^.typeString+' as items; must be stringList',location);
+          else context^.raiseError('Expression returned '+tmp^.typeString+' as items; must be stringList',config_items^.getLocation);
           recycler^.disposeLiteral(tmp);
         end;
         result:=result or not(arrEquals(oldItems,state_items));
