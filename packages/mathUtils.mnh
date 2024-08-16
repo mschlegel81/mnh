@@ -27,6 +27,9 @@ binomCoeff(n>=0,k)->binomCoeff(n)[k];
 
 sinh(x:Numeric)->(exp(x)-exp(-x))/2;
 
+gamma_by_integral(z,errorTolerance>=0.0)->integrate((t)->t^(z-1)*exp(-t),0  ,z   ,1000000,errorTolerance)+
+                                          integrate((t)->t^(z-1)*exp(-t),z  ,1E50,1000000,errorTolerance);
+
 //*An approximation to the (real valued) Gamma function
 Gamma(i>=1)->factorial(i-1);
 Gamma(x<36.5)->Gamma(x+1)/x;

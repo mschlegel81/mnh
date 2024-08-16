@@ -1,8 +1,8 @@
 implicitFunctionContour(F:Expression(2),x0:Numeric,x1>x0,y0:Numeric,y1>y0,samplingPoints,maxSegmentLength>0.0)->begin
   //Helper function to calculate a root between two points (Regula Falsi)
   findRootBetween:=(p0:NumericList(2),f0_:Numeric,p1:NumericList(2),f1_:Numeric)->begin
-    x0:=p0; f0:=f0_;
-    x1:=p1; f1:=f1_;
+    local x0:=p0; f0:=f0_;
+    local x1:=p1; f1:=f1_;
     counter:=20;
     while euklideanNorm(x1-x0)>1E-3 AND (counter-=1)>0 do begin
       xm:=x0-(x1-x0)*(f0/(f1-f0));

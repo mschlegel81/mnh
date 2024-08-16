@@ -66,7 +66,7 @@ toString(M:Matrix)->M.each(row,"\v|\t"&row.map(::toString).join("\t")&"\t|").joi
 private sortByValueInRowDescending(L:List,rowIndex:Int)->L[sortPerm(-L.getInner(rowIndex).map(::toReal).abs)];
 
 cramerInvert(M:SquareMatrix)->begin
-(abs(determinant:=M[0,0]*M[1,1]-M[1,0]*M[0,1])>1E-30
+(abs(local determinant:=M[0,0]*M[1,1]-M[1,0]*M[0,1])>1E-30
    ? [[ M[1,1]/determinant,-M[0,1]/determinant],
       [-M[1,0]/determinant, M[0,0]/determinant]]
    : [[Nan,Nan],[Nan,Nan]]).toSquareMatrix;
