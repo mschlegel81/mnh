@@ -878,8 +878,6 @@ FUNCTION T_messagesDistributor.triggersBeep: boolean;
 PROCEDURE T_messagesDistributor.addOutAdapter(CONST p: P_abstractOutAdapter; CONST destroyIt: boolean);
   VAR i:longint=0;
   begin
-    enterCriticalSection(messagesCs);
-    try
       while (i<length(adapters)) and (adapters[i].adapter<>p) do inc(i);
       if i>=length(adapters) then begin
         setLength(adapters,length(adapters)+1);
@@ -889,9 +887,6 @@ PROCEDURE T_messagesDistributor.addOutAdapter(CONST p: P_abstractOutAdapter; CON
         if p^.adapterType=at_textFile then ensureFileFlushThread;
         p^.parentMessage:=@self;
       end;
-    finally
-      leaveCriticalSection(messagesCs);
-    end;
   end;
 
 PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,options:string);

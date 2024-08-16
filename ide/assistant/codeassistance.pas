@@ -163,12 +163,9 @@ PROCEDURE T_codeAssistanceThread.execute;
       globals:P_evaluationGlobals;
       adapters:T_messagesErrorHolder;
       recycler:P_recycler;
-
       requests:array of P_codeAssistanceRequest;
-
       isLatest:boolean;
       i,j:longint;
-      folderToScan:string;
 
   FUNCTION findUsedAndExtendedPackages(CONST fileName:string):T_arrayOfString;
     VAR package:T_package;
@@ -231,9 +228,12 @@ PROCEDURE T_codeAssistanceThread.execute;
   PROCEDURE scanScript(CONST request:P_codeAssistanceRequest);
     VAR response: P_codeAssistanceResponse;
     begin
+      {$ifdef debugMode}
+      writeln('  code assistance processes script ',request^.scriptPath);
+      {$endif}
       response:=request^.execute(recycler,globals,@adapters);
       {$ifdef debugMode}
-      writeln('  response for ',request^.scriptPath,' is ',response^.stateHash);
+      writeln('  code assistance response for     ',request^.scriptPath,' is ',response^.stateHash);
       {$endif}
       updateScriptUsage(response^.package^.getPath,response^.usedAndExtendedPackages);
       preparedResponses.append(response);

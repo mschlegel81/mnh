@@ -785,7 +785,7 @@ FUNCTION fileCacheScanTask(p:pointer):ptrint;
         temp.destroy;
         lastRunWasIdle:=false;
       end;
-    until fileCache.scan_task_state=running_stop_requested;
+    until (fileCache.scan_task_state=running_stop_requested) or lastRunWasIdle;
 
     enterCriticalSection(fileCache.cacheCs);
     fileCache.scan_task_state:=stopped;

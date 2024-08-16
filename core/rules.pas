@@ -750,7 +750,7 @@ FUNCTION T_ruleMap.getTypeMap: T_typeMap;
   begin
     result.create();
     for entry in valueSet do
-    if not(entry.isImported) and (entry.entryType=tt_customType) then
+    if (entry.entryType=tt_customType) then
     result.put(entry.value^.getId,P_typedef(entry.value));
   end;
 
