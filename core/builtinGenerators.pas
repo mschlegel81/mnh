@@ -1036,12 +1036,12 @@ PROCEDURE T_parallelMapGenerator.collectResults(CONST container:P_collectionLite
       if outputQueue.hasNext
       then container^.append(recycler,outputQueue.next,false)
       else begin
-        if not(doEnqueueTasks(loc,context,recycler))
-        then context^.getGlobals^.taskQueue.activeDeqeue(recycler)
+        if (context^.continueEvaluation) and not(doEnqueueTasks(loc,context,recycler))
+        then context^.getGlobals^.taskQueue.activeDeqeue(recycler);
       end;
     until doneFetching or not(context^.continueEvaluation);
-    while (firstToAggregate<>nil) and context^.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate(true,context,recycler);
-    while (firstToAggregate<>nil)                                                           do canAggregate(true,context,recycler);
+    while (context^.continueEvaluation) and (firstToAggregate<>nil) and context^.getGlobals^.taskQueue.activeDeqeue(recycler) do canAggregate(true,context,recycler);
+    while (context^.continueEvaluation) and (firstToAggregate<>nil)                                                           do canAggregate(true,context,recycler);
 
     if context^.continueEvaluation
     then while outputQueue.hasNext do container^.append(recycler,outputQueue.next,false)
