@@ -282,5 +282,3 @@ horner(poly:Polynomial)->begin
         powerToString([toExtract]),
         within.toPolynomial.horner);
 end;
-
-
