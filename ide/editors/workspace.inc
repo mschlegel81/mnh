@@ -41,6 +41,8 @@ T_workspace=object(T_serializable)
 
    changedFilesQueue:specialize G_threadsafeQueue<T_fileChangedMessage>;
    checkFilesThread:T_checkFilesThread;
+   checkFilesThread_running:boolean;
+
   public
     saveIntervalIdx:byte;
     autosaveBeforeEachExecution:boolean;
@@ -199,6 +201,7 @@ PROCEDURE T_checkFilesThread.execute;
     end;
     threadStopsSleeping;
     Terminate;
+    workspace.checkFilesThread_running:=false;
   end;
 
 CONSTRUCTOR T_checkFilesThread.create();
@@ -228,12 +231,15 @@ CONSTRUCTOR T_workspace.create(CONST ide: T_mnhIdeForm; CONST pageControlForEdit
     clearDebugLine;
     changedFilesQueue.create;
     checkFilesThread:=T_checkFilesThread.create();
+    checkFilesThread_running:=true;
   end;
 
 DESTRUCTOR T_workspace.destroy;
   VAR k:longint;
   begin
     checkFilesThread.Terminate;
+    repeat until not checkFilesThread_running;
+
     fileHistory.destroy;
     enterCriticalSection(workspaceCs);
     for k:=0 to length(metas)-1 do dispose(metas[k],destroy);
