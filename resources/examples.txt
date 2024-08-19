@@ -1,3 +1,8 @@
+#I OPERATOR_STRCONCAT
+#S OPERATOR_STRCONCAT(a,b);
+#S a & b
+#C Returns a string concatenation of a and b; vectorized for nested lists/sets
+
 #I readDatastore
 #S readDatastore(scriptPath:String,ruleName:String);
 #C Tries to read the specified datastore; returns void if the datastore does not exist#
@@ -16,8 +21,11 @@
 
 #I COMPARATOR_EQ
 #S COMPARATOR_EQ(x,y);
-#C Wrapper function for =
+#S x = y
+#C Wrapper function for =; vectorized for nested lists/sets
 3=3.0;
+
+Nan = Nan //Nan is not equal to itself by definition
 
 {$x}=3; //Used with expressions the result will be a new expression
 
@@ -120,6 +128,8 @@ toString(234);
 toString([1, 2.6, "a", true, {$x}]);
 
 #I abs
+#S abs(x)
+#C Returns the absolute value of x; vectorized for nested lists/sets
 abs(-0.92);
 
 abs(3);
@@ -308,6 +318,7 @@ sqrt(3);
 #I sqrt
 sqrt({1+$x});
 
+#I isqrt
 #S isqrt(n);
 #C Returns [floor(sqrt(n)),isSquare(n)]
 isqrt(121);
@@ -526,10 +537,12 @@ chars('Testtext').elementFrequency;
 //elementFrequency can be used for aggregating
 chars('Testtext').agg(elementFrequency);
 
+#I flatten
 #S flatten(L,...);
 #C Returns all parameters as a flat list.
 flatten([1,[2,[3,4],[5]],6]);
 
+#I head
 #S head(L);
 #C Returns the first element of list L or [] if L is empty
 head(['A'..'Z']);
@@ -541,6 +554,7 @@ head(['A'..'Z'],3);
 #I head
 ['A'..'Z'].toSet.head(3);
 
+#I tail
 #S tail(L);
 #C Returns list L without the first element
 tail(['A'..'Z']);
@@ -552,6 +566,7 @@ tail(['A'..'Z'],3);
 #I tail
 rangeGenerator(1,10).tail(3);
 
+#I leading
 #S leading(L);
 #C Returns L without the last element or [] if L is empty
 leading(['A'..'Z']);
@@ -563,6 +578,7 @@ leading(['A'..'Z'],3);
 #I leading
 rangeGenerator(1,10).leading(3);
 
+#I trailing
 #S trailing(L);
 #C Returns the last element of L
 trailing(['A'..'Z']);
@@ -645,6 +661,7 @@ get([0..4],[2..6] mod 3 = 0);
 
 get([['A',1],['B',2],['C',0]],'B');
 
+#I getInner
 #S getInner(L:List, k:Int);
 #C Returns the k-th elements of each entry in nested list L
 #H See <a href="types.html#lists">List types</a> for further information
@@ -659,10 +676,12 @@ getInner([[1,2,3],[4,5,6],[7,8,9]],[true,false,true]);
 #C Returns the indexes for which B is true.
 indexOf([1..6]^2 mod 3=0);
 
+#I reverseList
 #S reverseList(L:List);
 #C Returns L reversed
 reverseList([1..5]);
 
+#I size
 #S size(L);
 #C Returns the number of elements in set, list or map L
 size([0.5,0.1,0.2]);
@@ -1197,6 +1216,7 @@ encodeRequest('127.0.0.1:3126','rest',[['user','anonymous'],['request','3*&7']].
 #S isServerRunning(ipAndPort:String);
 #C Returns true if the server is running - only servers in the current instance are checked!
 
+#I cross
 #S cross(A,...);
 #C Returns the cross product of the arguments (each of which must be a list, set or map)
 cross(['1'..'3'],['A'..'C']);
@@ -1610,7 +1630,6 @@ powMod(2988348162058574136915891421498819466320163312926952423791023078876139,23
 #I randomGenerator
 randomGenerator(123).head(10);
 
-#I intRandomGenerator
 intRandomGenerator(123,5).head(10);
 
 #I isaacRandomGenerator
@@ -1665,18 +1684,27 @@ isPrime(47531677974672740279381824573269878221106369761817);
 #C result is guaranteed to be correct for i<3.317E23
 
 #I mnh.COMPARATOR_LISTEQ
+#S COMPARATOR_LISTEQ(a,b)
+#S a == b
+#C Returns true if a and b are identical
 3==3.0; //not equal, because types differ
 
 #I mnh.COMPARATOR_LISTEQ
 [1,2,3]==[3,1,3]; //== always returns a scalar boolean
 
 #I COMPARATOR_LEQ
+#S COMPARATOR_LEQ(a,b)
+#S a <= b
+#C Returns true if a is lesser or equal to b; vectorized for nested lists/sets
 3<=3.0;
 
 #I COMPARATOR_LEQ
 [1,2,3]<=[3,1,3];
 
 #I COMPARATOR_GEQ
+#S COMPARATOR_GEQ(a,b)
+#S a >= b
+#C Returns true if a is greater than or equal to b; vectorized for nested lists/sets
 3>=3.0;
 
 #I COMPARATOR_GEQ
@@ -1686,15 +1714,25 @@ isPrime(47531677974672740279381824573269878221106369761817);
 3<3.0;
 
 #I COMPARATOR_LSS
+#S COMPARATOR_LSS(a,b)
+#S a < b
+#C Returns true if a is lesser than b; vectorized for nested lists/sets
 [1,2,3]<[3,1,3];
 
 #I COMPARATOR_GRT
+#S COMPARATOR_GRT(a,b)
+#S a > b
+#C Returns true if a is greater than b; vectorized for nested lists/sets
 3>3.0;
 
 #I COMPARATOR_GRT
 [1,2,3]>[3,1,3];
 
 #I COMPARATOR_NEQ
+#S COMPARATOR_NEQ(a,b)
+#S a <> b
+#S a != b
+#C Returns true if a is not equal to b; vectorized for nested lists/sets
 3!=3.0;
 
 #I COMPARATOR_NEQ
@@ -1707,9 +1745,15 @@ true AND false;
 true AND 3; //Lazy boolean operators only examine the left hand side
 
 #I OPERATOR_LAZYAND
+#S OPERATOR_LAZYAND(a,b)
+#S a AND b
+#C Returns a (very) lazy and
 false AND 3;  //Lazy boolean operators only examine the left hand side
 
 #I OPERATOR_AND
+#S OPERATOR_AND(a,b)
+#S a and b
+#C Returns a and b; vectorized for nested lists/sets
 true and false;
 
 #I OPERATOR_AND
@@ -1719,6 +1763,9 @@ true and false;
 7 and 252; //and can be applied on integers
 
 #I OPERATOR_LAZYOR
+#S OPERATOR_LAZYOR(a,b)
+#S a OR b
+#C Returns a (very) lazy or
 true OR false;
 
 #I OPERATOR_LAZYOR
@@ -1728,6 +1775,9 @@ true OR 3; //Lazy boolean operators only examine the left hand side
 false OR 3;  //Lazy boolean operators only examine the left hand side
 
 #I OPERATOR_OR
+#S OPERATOR_OR(a,b)
+#S a or b
+#C Returns the conjunction of a and b; vectorized for nested lists/sets
 true or false;
 
 #I OPERATOR_OR
@@ -1737,6 +1787,9 @@ true or false;
 7 or 252; //or can be applied on integers
 
 #I OPERATOR_XOR
+#S OPERATOR_XOR(a,b)
+#S a xor b
+#C Returns the exclusive conjunction of a and b; vectorized for nested lists/sets
 true xor false;
 
 #I OPERATOR_XOR
@@ -1746,30 +1799,50 @@ true xor false;
 7 xor 252; //xor can be applied on integers
 
 #I OPERATOR_UNARY_PLUS
+#S OPERATOR_UNARY_PLUS(x)
+#S +x
+#C This is a dummy function.
 +'a'; //the unary plus is a dummy and will be dropped
 
 #I OPERATOR_NEGATE_ARITHMETIC
+#S OPERATOR_NEGATE_ARITHMETIC(x)
+#S -x
+#C Returns the arithmetic negation of x; vectorized for nested lists/sets
 -3;
 
 #I OPERATOR_NEGATE_ARITHMETIC
 -[1,2.0,Inf,Nan];
 
 #I OPERATOR_NEGATE_LOGICAL
+#S OPERATOR_NEGATE_LOGICAL(x)
+#S !x
+#S not x
+#C Returns the logical negation of x; vectorized for nestes lists/sets
 !true;
 
 #I OPERATOR_IN
+#S OPERATOR_IN(a,b)
+#S a in b
+#C Returns true if a is contained in (compound) b
 3 in [1..5];
 
 #I OPERATOR_IN
 3.0 in [1..5]; //3.0 is not contained in [1..5], because the types of 3 (contained in list) and 3.0 differ
 
 #I OPERATOR_NOT_IN
+#S OPERATOR_NOT_IN(a,b)
+#S a not in b
+#C Returns true if a is not contained in b
 3 not in [1..5];
 
 #I OPERATOR_NOT_IN
 3.0 not in [1..5]; //3.0 is not contained in [1..5], because the types of 3 (contained in list) and 3.0 differ
 
 #I OPERATOR_CONCAT
+#S OPERATOR_CONCAT(a,b)
+#S a | b
+#C Returns a concatenation of a and b, potentially destroying the structure of b.
+#C For compound b the following is not generally true: b in (a || b)
 1|2;
 
 #I OPERATOR_CONCAT
@@ -1782,15 +1855,25 @@ true xor false;
 [1]|[[2]];
 
 #I OPERATOR_CONCATALT
+#S OPERATOR_CONCATALT(a,b)
+#S a || b
+#C Returns a concatenation of a and b, preserving the structure of b.
+#C The following is always true: b in (a || b)
 [1]||2;
 
 #I OPERATOR_CONCATALT
 [1]||[2];
 
 #I OPERATOR_DIVINT
+#S OPERATOR_DIVINT(a:Int,b:Int)
+#S a div b
+#C Returns the integer part of a/b or Nan if b is 0; vectorized for nested lists/sets
 10 div 3;
 
 #I OPERATOR_DIVREAL
+#S OPERATOR_DIVREAL(a,b)
+#S a / b
+#C Returns a divided by b or Inf if b = 0 and a != 0; Returns Nan if a = b = 0; vectorized for nested lists/sets
 10 / 3;
 
 #I OPERATOR_DIVREAL
@@ -1800,30 +1883,58 @@ true xor false;
 10.0 / 5; //If either operand is a real number, the quotient will be a real number
 
 #I OPERATOR_ORELSE
+#S OPERATOR_ORELSE(a,b)
+#S a orElse b
+#C Returns a if a is not void, else b
 void orElse 42; //orElse returns the right-hand-side if the left-hand-side is void
 
 #I OPERATOR_ORELSE
 3 orElse fail; //The right-hand side will never be evaluated for a given (non-void) left-hand-side
 
 #I OPERATOR_MINUS
+#S OPERATOR_MINUS(a,b)
+#S a - b
+#C Returns a minus b; vectorized for nested lists/sets
 3-pi;
 
 #I OPERATOR_MOD
+#S OPERATOR_MOD(a:Int,b:Int);
+#S a mod b;
+#C Returns the (symmetric) modulus of a and b or Nan if b is 0.
+#C a mod b -> b==0 ? Nan : sign(a) * sign(b) * (abs(a) mod abs(b))
 32459378562983 mod 2342832;
 
+7 mod 3;
+
+-7 mod 3;
+
+7 mod -3;
+
+-7 mod -3;
+
 #I OPERATOR_MULT
+#S OPERATOR_MULT(a,b)
+#S a * b
+#C Returns a multiplied with b; vectorized for nested lists/sets
 2*3;
 
 #I OPERATOR_MULT
 2.0*3; //If either factor is a real number the product will be a real number
 
 #I OPERATOR_PLUS
+#S OPERATOR_PLUS(a,b)
+#S a + b
+#C Returns a plus b; vectorized for nested lists/sets
 4+5;
 
 #I OPERATOR_PLUS
 'a'+'b'; //You can "add" strings
 
 #I OPERATOR_POT
+#S OPERATOR_POT(a,b)
+#S a ^ b
+#S a ** b
+#C Returns a raised to the b-th power; vectorized for nested lists/sets
 5^7;
 
 #I OPERATOR_POT
@@ -1885,6 +1996,7 @@ getCPULoadPercentage;
 #C Returns the CPU load in percent (Windows only)
 
 #I getTaskInfo
+#S getTaskInfo;
 #C Returns info on running tasks (Windows only)
 getTaskInfo.filter((task)->task['PID']=mnhInfo['PID']);
 
@@ -1960,6 +2072,8 @@ formatTime('hh:nn dd.mm.yyyy',systime);
 #S parseJson(value:String,insteadOfNull);
 #C As above but representing null values with given marker
 
+parseJson('{A:[1,2,3], B:"x", C:1, nested:{x:0.123,y:4.321}}')
+
 #I formatJson
 #S formatJson(x);
 #C Formats x as a JSON (as far as compatible)
@@ -1987,6 +2101,9 @@ formatTime('hh:nn dd.mm.yyyy',systime);
 #I newLocalInterpolator
 #S newLocalInterpolator(L:List);
 #C returns an local non-convex smooth interpolator
+
+newLocalInterpolator([1,2,1,0,3]);
+
 
 #I rangeGenerator
 #S rangeGenerator(i0:Int,i1:Int);
@@ -2047,6 +2164,8 @@ formatTime('hh:nn dd.mm.yyyy',systime);
 #I randomGenerator
 #S randomGenerator(seed:Int);
 #C returns a XOS generator for real valued random numbers in range [0,1)
+
+#I intRandomGenerator
 #S intRandomGenerator(seed:Int,range>0);
 #C returns a XOS generator generating pseudo random integers in range [0,range)
 #C The range of the returned generator can be changed by calling it with an integer argument.
@@ -2286,21 +2405,12 @@ files('*.mnh')
 #S files(searchPattern:String);
 #C Returns a list of files matching the given search pattern
 
-#I allFiles
-#S allFiles(root);
-#C Returns a list of all files below root (string or stringList)
-#S allFiles(root,pattern);
-#C Returns a list of all files matching pattern(s) (string or stringList)
-#S allFiles(root,pattern,recurse=false);
-#C As above but without recursing subfolders
+
 
 folders('*');
 #S folders(searchPattern:String);
 #C Returns a list of folders matching the given search pattern
 
-allFolders('.');
-#S allFolders(rootFolder:String);
-#C Returns a list of all folders below and including a given root directory
 
 fileExists('testLog.mnh');
 #S fileExists(filename:String);
@@ -2603,3 +2713,23 @@ bitXor(5,213,10);
 #S freeConsole
 #C Detaches the interpreter from the console.
 #C Intended for GUI and/or headless scripts.
+
+
+
+#I allFiles
+#S allFiles(root);
+#C Returns a list of all files below root (string or stringList)
+#S allFiles(root,pattern);
+#C Returns a list of all files matching pattern(s) (string or stringList)
+#S allFiles(root,pattern,recurse=false);
+#C As above but without recursing subfolders
+allFiles('\','*.*',false);
+
+#I allFolders
+#S allFolders(rootFolder:String);
+#C Returns a list of all folders below and including a given root directory
+allFolders('.');
+
+#I showVariable
+#S showVariable(V);
+#C Shows V in a tree-view.

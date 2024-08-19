@@ -18,16 +18,19 @@ main->begin
 
   context:=void;
 
-  ensure_context:=()->context orElse context:=(collectedCode==[] ? void : begin
-    c:=inspect('example.mnh',collectedCode)['called builtin'];
-    if c.size>1 then warn('Ambiguous context: ',c," caused by code: \n",collectedCode.join("\n"));
-    collectedCode:=[];
-    call_found|=c;
-    c;
-  end);
+  ensure_context:=()->
+    if collectedCode==[]
+    then context
+    else begin
+      c:=inspect('example.mnh',collectedCode)['called builtin'];
+      if c.size>1 then warn('Ambiguous context: ',c," caused by code: \n",collectedCode.join("\n"));
+      collectedCode:=[];
+      call_found|=c;
+      context:=context orElse c;
+    end;
 
   for line in 'resources\examples.txt'.fileLines do begin
-    note('Context: ',context.isVoid ? '<void>' : context,'; Line: ',line);
+  //  note('Context: ',context.isVoid ? '<void>' : context,'; Line: ',line);
     if line.hasPrefix('#I') then context:=resolveId(line.copy(2).trim) else
     if line.hasPrefix('#S') then sig_found    |=ensure_context() else
     if line.hasPrefix('#C') then comment_found|=ensure_context() else
@@ -42,6 +45,16 @@ main->begin
   missing_comments:=listBuiltin.minus(comment_found);
   missing_calls:=listBuiltin.minus(call_found);
 
-  union(missing_signatures,missing_comments,missing_calls).map((id)-> f"{id}\t{id in sig_found ? '' : 'missing signature'}\t  {id in comment_found ? '' : 'missing comment'}\t  {id in missing_calls ? 'missing call' : ''}")
-  .join("\n").print;
+  union(missing_signatures,missing_comments,missing_calls).map((id)->[id,id in sig_found ? '' : 'missing signature',id in comment_found ? '' : 'missing comment',id in missing_calls ? 'missing call' : '']).sort(3).sort(2).sort(1)
+  .map((l)->l.join("\t"))
+  .join("\n")
+  .print;
+end;
+
+
+while true do begin
+  lastInfo:='resources\examples.txt'.fileInfo;
+  clearPrint;
+  main;
+  while 'resources\examples.txt'.fileInfo==lastInfo do sleep(1);
 end;
