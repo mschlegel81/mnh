@@ -1,14 +1,14 @@
 #!/usr/bin/mnh
 firstString(c:String)->begin
-  local indexes:=indexOf(c.chars="'")+1;
+  indexes:=indexOf(c.chars="'")+1;
   indexes.size<2
   ? ''
   : c.copy(indexes[0],indexes[1]-indexes[0]-1);
 end;
 
 namespacePart(c:String)->begin
-  local tok:=c.tokenSplit;
-  local idx:=indexOf(tok.matches('NAMESPACE'));
+  tok:=c.tokenSplit;
+  idx:=indexOf(tok.matches('NAMESPACE'));
   tok[idx[0] orElse -1] orElse '?';
 end;
 

@@ -30,20 +30,31 @@ arity({3});
 #I mnh.arity
 arity({sin($x)/$x});
 
+[1..2].isIntList;
+#S isIntList(x);
+#C Returns true iff x is an intList
+#S isIntList(x,listSize>=0);
+#C Returns true iff x is an intList with listSize elements
+
+extractFileDirectory('folder/subFolder/file.extension')
+#S extractFileDirectory(s)
+#C Returns the directory for String s; vectorized for nested lists/sets
+
 #I mnh.runScript
 runScript(['name'=>'hello.mnh',
            'source'=>["main->print('Hello world');"],
            'side effects'=>['alter package state','output']].toMap)
 .filter({$message.head=='printline'})
 .map(::trailing);
-#S runScript(config:Map);//executes the given script config
-#I expected keys:
-#I   'name' (String, mandatory)
-#I   'source' (StringList)
-#I   'parameters' (StringList)
-#I   'side effects' (StringCollection, see function listSideEffects for possible values)
-#I   'connection level' 0: isolated, 1: print, 2: print and warnings, 3: print, warnings and errors
-#I   'deterministic' (Boolean, true to enforce determinism of PRGNs)
+#S runScript(config:Map);
+#C executes the given script config
+#C expected keys:
+#C   'name' (String, mandatory)
+#C   'source' (StringList)
+#C   'parameters' (StringList)
+#C   'side effects' (StringCollection, see function listSideEffects for possible values)
+#C   'connection level' 0: isolated, 1: print, 2: print and warnings, 3: print, warnings and errors
+#C   'deterministic' (Boolean, true to enforce determinism of PRGNs)
 
 #I mnh.arity
 arity({sin($x)/$y});
@@ -1821,9 +1832,9 @@ void orElse 42; //orElse returns the right-hand-side if the left-hand-side is vo
 #I OPERATOR_STRCONCAT
 3 & 4; //You can concatenate operands of any type
 
+isSubsetOf([1,2,3],[1,2,3]);
 #S isSubsetOf(A,B);
 #C Returns true if A is a subset of (or equal to) B
-isSubsetOf([1,2,3],[1,2,3]);
 
 isSubsetOf(1,[1,2,3]);
 
@@ -1953,8 +1964,8 @@ formatTime('hh:nn dd.mm.yyyy',systime);
 #S formatJson(x);
 #C Formats x as a JSON (as far as compatible)
 
-#I linearInterpolator
-#S linearInterpolator(L:List);
+#I newLinearInterpolator
+#S newLinearInterpolator(L:List);
 #C returns an linear interpolator, which returns values out of L by their index
 
 #I newSplineInterpolator

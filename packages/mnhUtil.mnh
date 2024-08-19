@@ -4,7 +4,7 @@
 readDatastore(storeFileName:String)->
   begin
     //Try to parse plain text datastore:
-    local contents:=fileLines(storeFileName);
+    contents:=fileLines(storeFileName);
     contents.head.matches('^[a-zA-Z][a-zA-Z0-9]*:=$')
     ? [contents.head.replace(":=",''),contents.tail.join.toExpression()()]
     : begin
@@ -12,8 +12,8 @@ readDatastore(storeFileName:String)->
         contents:=fileContents(storeFileName);
         //Note: #255 signifies, that serialized content follows
         //      #4   marks the next entry as a string
-        local id:=(#255#4&contents).deserialize;
-        local bytesToSkip:=id.serialize.byteLength-2;
+        id:=(#255#4&contents).deserialize;
+        bytesToSkip:=id.serialize.byteLength-2;
         [id,contents.copy(bytesToSkip,contents.length).deserialize];
       end;
   end;

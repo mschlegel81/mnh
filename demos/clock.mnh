@@ -39,7 +39,7 @@ memoized printOnce(s:StringList)->clearPrint orElse printf('%s',s);
 
 formatTimeNoDate(t<1)->formatTime('hhnnss',t);
 formatTimeNoDate(t<100/24)->begin
-  local rest:=t*24;
+  rest:=t*24;
   rest:=(rest-(hours  :=floor(rest)))*60;
   rest:=(rest-(minutes:=floor(rest)))*60;
                seconds:=floor(rest);
@@ -49,11 +49,11 @@ formatTimeNoDate(t)->'995959';
 
 guessTimeOrInterval(TimeOrIntervalString:String)->
   begin
-    local S:=TimeOrIntervalString.upper.clean(['0'..'9',':','H','M','S'],'');
+    S:=TimeOrIntervalString.upper.clean(['0'..'9',':','H','M','S'],'');
     (pos(['H','M','S'],S)<Inf).agg(OR)
     ? interpret(S.replace(['H','M','S'],['/24+','/(24*60)+','/(24*60*60)+'])&'0')+systime
     : begin
-        local R:=try({parseTime('hh:nn:ss',S)},
+        R:=try({parseTime('hh:nn:ss',S)},
                      {parseTime('hh:nn'   ,S)});
         R<systime ? R+1 : R;
       end;

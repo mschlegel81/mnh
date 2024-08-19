@@ -40,9 +40,9 @@ testFile(scriptFileName:String,doLog:Boolean)->
     printCase(scriptFileName);
     mnhInfo['used_mem']>0.5*mnhInfo['configured_mem'] ? callMemoryCleaner : void;
 
-    local logName:=extractFileNameOnly(scriptFileName);
-    local startTime:=scriptTime;
-    local output:=runScript(testConfiguration(scriptFileName))
+    logName:=extractFileNameOnly(scriptFileName);
+    startTime:=scriptTime;
+    output:=runScript(testConfiguration(scriptFileName))
                  .processSandboxOutput(DEMO_EXCLUDES)
                  |checkAfterTest(scriptFileName);
     note("Collected the following output: \n",output.join("\n"));
@@ -71,11 +71,11 @@ end;
 private executeExamples(doLog:Boolean)->begin
   printCase(EXAMPLES_LOG_NAME);
   resetRandom;
-  local output:=[];
-  local collectOut:=true;
-  local codeToExecute:=[];
-  local inputLines:=fileLines(myPath.extractFileDirectory&'/../resources/examples.txt');
-  local startTime:=scriptTime;
+  output:=[];
+  collectOut:=true;
+  codeToExecute:=[];
+  inputLines:=fileLines(myPath.extractFileDirectory&'/../resources/examples.txt');
+  startTime:=scriptTime;
   inputLines.each(line,
     line==''
     ? begin
@@ -98,11 +98,11 @@ end;
 testAll(logging:Boolean, forceRun:Boolean)->begin
   assertUniqueInstance;
   sandBoxExecute('1');
-  local toRun:=allDemos
+  toRun:=allDemos
            .filter({!skipFile($f)})
            .filter({forceRun OR !isTestAlreadyPassed(extractFileNameOnly($script))});
-  local allPassed:=
-  (toRun.map({testFile($script,logging)})|((local runExamples:=forceRun OR !isTestAlreadyPassed(EXAMPLES_LOG_NAME)) ? executeExamples(logging) : void)).agg(AND);
+  allPassed:=
+  (toRun.map({testFile($script,logging)})|((runExamples:=forceRun OR !isTestAlreadyPassed(EXAMPLES_LOG_NAME)) ? executeExamples(logging) : void)).agg(AND);
   printCase("");
   printDirect("\r");
   printf("Tests total:\t%s\nSkipped:\t%s\nExecuted:\t%s\nFailed:\t%s",
@@ -135,14 +135,14 @@ main('info')->allDemos.map({[$0,$0.isSmokeTest ? 'SMOKE' : '',$0.skipFile ? 'SKI
 //*Run only the tests matching case, without logging and even if the test has been passed
 main('only',case)->begin
   assertUniqueInstance;
-  local includeTest:={$x.matches(case)};
+  includeTest:={$x.matches(case)};
 
   sandBoxExecute('1');
-  local toRun:=allDemos
+  toRun:=allDemos
            .filter({!skipFile($f)})
            .filter({includeTest($script)});
-  local allPassed:=
-  (toRun.map({testFile($script,false)})|((local runExamples:=includeTest(EXAMPLES_LOG_NAME)) ? executeExamples(false) : void)).agg(AND);
+  allPassed:=
+  (toRun.map({testFile($script,false)})|((runExamples:=includeTest(EXAMPLES_LOG_NAME)) ? executeExamples(false) : void)).agg(AND);
   printCase("");
   printDirect("\r");
   printf("Tests total:\t%s\nSkipped:\t%s\nExecuted:\t%s\nFailed:\t%s",
@@ -157,8 +157,8 @@ end;
 
 //*Create a file test.bat for testcase by testcase heaptracing
 main('makebat',exeName)->begin
-  local batname:=myPath.extractFileDirectory.extractFileDirectory&'/test_reg.bat';
-  local batLines:=
+  batname:=myPath.extractFileDirectory.extractFileDirectory&'/test_reg.bat';
+  batLines:=
   allDemos.filter({!skipFile($f)})
           .map(::extractFileNameOnly)
           .|(EXAMPLES_LOG_NAME)

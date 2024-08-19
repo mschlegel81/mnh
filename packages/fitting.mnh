@@ -1,9 +1,9 @@
 private average(L:NumericList)->L.agg(+)/L.size;
 fitParameters(x:NumericList,y:NumericList)->begin
-  local mask:=!(isInfinite(x) or isNan(x) or isInfinite(y) or isNan(y));
-  local mx:=(local x_:=x[mask]).average;
-  local my:=(local y_:=y[mask]).average;
-  local linearTerm:=average((x_-mx)*(y_-my))/average(sqr(x_-mx));
+  mask:=!(isInfinite(x) or isNan(x) or isInfinite(y) or isNan(y));
+  mx:=(x_:=x[mask]).average;
+  my:=(y_:=y[mask]).average;
+  linearTerm:=average((x_-mx)*(y_-my))/average(sqr(x_-mx));
   [my-linearTerm*mx,linearTerm];
 end;
 
@@ -13,11 +13,11 @@ to2D(X:NumericList,Y:NumericList)->assert(X.size=Y.size) orElse [X,Y];
 
 @SuppressUnusedWarning=all
 linearFit(...)->begin
-  local p:=fitParameters@(to2D@(...));
+  p:=fitParameters@(to2D@(...));
   p[0]+((x)->x)*p[1];
 end;
 
 exponentialFit(...)->begin
-  local p:=fitParameters@ln(to2D@(...));
+  p:=fitParameters@ln(to2D@(...));
   exp(p[0])*((x)->x)^p[1];
 end;

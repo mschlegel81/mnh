@@ -3,7 +3,7 @@ private bruteForceShuffle(s:String)->begin
   minEq:=s.length;
   best:=s;
   c.permutationIterator.each(p,begin
-    local eq:=trueCount(p=c);
+    eq:=trueCount(p=c);
     eq<minEq
     ? begin
         minEq:=eq;

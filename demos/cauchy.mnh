@@ -8,7 +8,7 @@ private eSeries(n>0)->(1+1/[1..n])^[1..n];
 private harmonicSummands(n>0)->1/[1..n];
 
 private arctanSummands(n:Int)->begin
-  local N:=[0..n];
+  N:=[0..n];
   ((-1)^N/(2*N+1));
 end;
 

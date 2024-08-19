@@ -10,7 +10,7 @@ main->begin
   rows:=['t','arcsin(t)','linear','Spline','BSpline'].join("\t")|
   ([0..20]/20).each(t,
     begin
-      local a:=arcsin(t);
+      a:=arcsin(t);
       "%f\t%1.7f\t%1.7f\t%1.7f\t%1.7f".format@([t,a]|abs([SLin(t),SCub(t),Sbsp(t)]-a));
     end);
   print('               Absolute approximation errors');

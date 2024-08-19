@@ -2,7 +2,7 @@
 
 
 drawLayout(HL:Int)->begin
-  local STYLE:=
+  STYLE:=
   [false=>'box black 4',
    true =>'box fs RGB0.5,0.5,1'];
 save;

@@ -28,11 +28,11 @@ IGNORED_PATTERNS:=['3rd_party',
                   '/core/tokenArray.*\(5023\).*"strutils"'];
 
 splitMessage(message:String)->begin
-  local errorCode:=message.matchComposite('\(....\)').trailing[0];
-  local fileLine :=message.matchComposite('\(\d*,\d*\)').trailing[0];
+  errorCode:=message.matchComposite('\(....\)').trailing[0];
+  fileLine :=message.matchComposite('\(\d*,\d*\)').trailing[0];
   errorCode.isVoid OR fileLine.isVoid ? return void : void;
-  local parts:=message.split([fileLine,errorCode]);
-  local numericLine:=fileLine.unbrace.split(",").softCast;
+  parts:=message.split([fileLine,errorCode]);
+  numericLine:=fileLine.unbrace.split(",").softCast;
   [replace(parts[0],'/./','/'),//filename
    "(",numericLine[0],",",numericLine[1],")\t",
    parts[1],//message type
@@ -64,7 +64,7 @@ DEV_ROOT:=myPath.extractFileDirectory.extractFileDirectory.replace('/','\');
 USE make_config;
 //*Check file usage
 main('files')->begin
-  local newList:='build.log'.fileLines
+  newList:='build.log'.fileLines
     .{$L[$L.matches('\(3104\)')]}
     .unique
     .replace('(3104) Compiling','')
@@ -91,9 +91,9 @@ main('files')->begin
   : print('Added  : ',newList.minus(hashFiles).toList,
         "\nRemoved: ",hashFiles.minus(newList).toList);
 
-  local make_config_path:=inspect['uses','make_config'];
-  local markerRead:=false;
-  local newFileLines:=
+  make_config_path:=inspect['uses','make_config'];
+  markerRead:=false;
+  newFileLines:=
   fileLines(make_config_path).each(line,markerRead ? void :
     line.hasPrefix('hashFiles:=[')
     ? begin markerRead:=true; void; end

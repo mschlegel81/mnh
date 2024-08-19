@@ -2,19 +2,19 @@ private cleanline(s)->regex.replace(s,'\$\w+','').trim;
 
 main(inputFile,...)->begin
   (inputFile|...).each(file,begin
-    local block:=[];
+    block:=[];
     file.fileLineIterator.each(line,
     begin
       line=''
       ? begin
-          local prevBlock:=block;
+          prevBlock:=block;
           block:=[];
           prevBlock.filter({$s<>''});
         end
       : begin
           line.matches('^Call trace')
           ? begin
-              local prevBlock:=block;
+              prevBlock:=block;
               block:=[cleanline(line)];
               prevBlock.filter({$s<>''});
             end
