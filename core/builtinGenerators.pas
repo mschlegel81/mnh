@@ -1060,7 +1060,7 @@ FUNCTION T_parallelMapGenerator.mustBeDroppedBeforePop:boolean;
 
 PROCEDURE T_parallelMapGenerator.cleanup(CONST literalRecycler:P_literalRecycler);
   VAR literal:P_literal;
-      toAggregate:P_mapTask;
+      toAggregate:P_chainTask;
       timeout:double;
   begin
     if firstToAggregate<>nil then begin
@@ -1070,7 +1070,7 @@ PROCEDURE T_parallelMapGenerator.cleanup(CONST literalRecycler:P_literalRecycler
         toAggregate:=P_mapTask(firstToAggregate); firstToAggregate:=firstToAggregate^.nextToAggregate;
         while (now<timeout) and not(toAggregate^.canGetResult) do sleep(1);
         if toAggregate^.canGetResult then begin
-          if toAggregate^.mapTaskResult<>nil then outputQueue.append(toAggregate^.mapTaskResult);
+          if toAggregate^.getResult<>nil then outputQueue.append(toAggregate^.getResult);
           dispose(toAggregate,destroy);
         end;
       end;

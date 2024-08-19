@@ -20,6 +20,7 @@ TYPE
       CONSTRUCTOR createChainTask(CONST taskEnv:P_context);
       PROCEDURE cancelAllInAggregationChain;
       FUNCTION canGetResult:boolean;
+      FUNCTION getResult:P_literal; virtual; abstract;
   end;
 
   P_mapTask=^T_mapTask;
@@ -34,6 +35,7 @@ TYPE
     FUNCTION define(CONST x:P_literal; CONST mapLocation:T_tokenLocation):P_mapTask;
     PROCEDURE evaluate(CONST recycler:P_recycler); virtual;
     DESTRUCTOR destroy; virtual;
+    FUNCTION getResult:P_literal; virtual;
   end;
 
   P_filterTask=^T_filterTask;
@@ -48,6 +50,7 @@ TYPE
     FUNCTION define(CONST x:P_literal; CONST filterLocation:T_tokenLocation):P_filterTask;
     PROCEDURE evaluate(CONST recycler:P_recycler); virtual;
     DESTRUCTOR destroy; virtual;
+    FUNCTION getResult:P_literal; virtual;
   end;
 
   P_futureLiteral=^T_futureLiteral;
@@ -428,7 +431,12 @@ DESTRUCTOR T_filterTask.destroy;
     inherited destroy;
   end;
 
-PROCEDURE T_mapTask.evaluate(CONST recycler:P_recycler);
+FUNCTION T_filterTask.getResult: P_literal;
+  begin
+    result:=mapTaskResult;
+  end;
+
+PROCEDURE T_mapTask.evaluate(CONST recycler: P_recycler);
   begin
     context^.beginEvaluation;
     if not(isCancelled) and (context^.continueEvaluation)
@@ -443,6 +451,11 @@ DESTRUCTOR T_mapTask.destroy;
   begin
     assert(mapPayload.mapParameter=nil);
     inherited destroy;
+  end;
+
+FUNCTION T_mapTask.getResult: P_literal;
+  begin
+    result:=mapTaskResult;
   end;
 
 CONSTRUCTOR T_eachTask.createEachTask(CONST taskEnv:P_context);

@@ -894,7 +894,7 @@ PROCEDURE T_customText.setAnchor(CONST s: string);
       cs:T_charSet=[];
       c:char;
   begin
-    for c in s do include(cs,upCase(c));
+    for c in s do include(cs,UpCase(c));
     if ('T' in cs) then alY:=top;
     if ('B' in cs) then alY:=Bottom;
     if ('L' in cs) then alX:=Left;
