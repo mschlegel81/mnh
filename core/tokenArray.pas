@@ -632,20 +632,18 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
       end;
 
       case tok^.tokType of
-        tt_beginBlock:
-          localIdStack.scopePush(tok,sc_block);
-        tt_endBlock:
-          localIdStack.scopePop(context,tok^.location,recycler,nextStatement,tok,true);
-        tt_braceOpen,tt_expBraceOpen,tt_listBraceOpen:
-          localIdStack.scopePush(tok,sc_bracketOnly);
-        tt_iifCheck:
-          localIdStack.scopePush(tok,sc_inlineIfThen);
-        tt_while:
-          localIdStack.scopePush(tok,sc_while);
-        tt_repeat:
-          localIdStack.scopePush(tok,sc_repeat);
-        tt_if:
-          localIdStack.scopePush(tok,sc_if);
+        tt_beginBlock:                                  localIdStack.scopePush(tok,sc_block);
+        tt_braceOpen,tt_expBraceOpen,tt_listBraceOpen:  localIdStack.scopePush(tok,sc_bracketOnly);
+        tt_iifCheck:                                    localIdStack.scopePush(tok,sc_inlineIfThen);
+        tt_while:                                       localIdStack.scopePush(tok,sc_while);
+        tt_repeat:                                      localIdStack.scopePush(tok,sc_repeat);
+        tt_if:                                          localIdStack.scopePush(tok,sc_if);
+        tt_each,tt_parallelEach,tt_for:begin
+          localIdStack.scopePush(tok,sc_each);
+          localIdStack.addId(EACH_INDEX_IDENTIFIER,tok^.location,tt_eachIndex);
+          localIdStack.addId(tok^.txt             ,tok^.location,tt_eachParameter);
+        end;
+        tt_endBlock,tt_separatorComma,
         tt_braceClose,tt_expBraceClose,tt_listBraceClose,tt_iifElse,tt_do,tt_until,tt_then,tt_else,
         tt_endOfPatternDeclare,tt_endOfPatternAssign,tt_aggregatorConstructor:
           localIdStack.scopePop(context,tok^.location,recycler,nextStatement,tok,true);
@@ -654,13 +652,6 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
             localIdStack.scopePop(context,tok^.location,recycler,nextStatement,tok,true);
             if localIdStack.scopeBottom then exit(true);
           end;
-        tt_separatorComma:
-          localIdStack.scopePop(context,tok^.location,recycler,nextStatement,tok,true);
-        tt_each,tt_parallelEach,tt_for:begin
-          localIdStack.scopePush(tok,sc_each);
-          localIdStack.addId(EACH_INDEX_IDENTIFIER,tok^.location,tt_eachIndex);
-          localIdStack.addId(tok^.txt             ,tok^.location,tt_eachParameter);
-        end;
         tt_assign: begin
           if (nextStatement.token.last<>nil) and (nextStatement.token.last^.tokType=tt_identifier) and localIdStack.hasBeginItem
           then begin
@@ -709,10 +700,16 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
             recycler^.disposeToken(tok);
             exit;
           end;
+          if (nextStatement.token.last=nil)
+          then context^.raiseError('Invalid assignment',tok^.location)
+          else if not (nextStatement.token.last^.tokType in [tt_listBraceClose,tt_blockLocalVariable,tt_globalVariable])
+               and not((nextStatement.token.last^.tokType in [tt_userRule,tt_intrinsicRule]) and localIdStack.scopeBottom)
+          then context^.raiseError('Invalid assignment; Left hand side: '+tokenTypeName(nextStatement.token.last^.tokType),tok^.location);
         end;
         tt_identifier,tt_userRule,tt_intrinsicRule,tt_globalVariable,tt_customType:begin
           if (nextStatement.token.last<>nil) and (nextStatement.token.last^.tokType=tt_modifier) and (nextStatement.token.last^.getModifier=modifier_local) then begin
-            if (tok^.tokType=tt_identifier) and not(localIdStack.hasId(tok^.txt,idType,idLoc)) then context^.messages^.postTextMessage(mt_el1_note,nextStatement.token.last^.location,'Obsolete local modifier.');
+            if (tok^.tokType=tt_identifier) and not(localIdStack.hasId(tok^.txt,idType,idLoc))
+            then context^.messages^.postTextMessage(mt_el1_note,nextStatement.token.last^.location,'Obsolete local modifier.');
             tok^.tokType:=tt_blockLocalVariable;
             air:=localIdStack.addId(tok^.txt,tok^.location,tt_blockLocalVariable);
             if context^.messages<>nil then case air of
