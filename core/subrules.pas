@@ -1640,7 +1640,7 @@ FUNCTION T_inlineExpression.usedGlobalVariables: T_arrayOfPointer;
   end;
 
 {$ifdef fullVersion}
-FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):T_dataRow;
+FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; CONST scalingOptions:T_scalingOptions):T_dataRow;
   VAR tRow :T_arrayOfDouble;
       TList:P_listLiteral=nil;
       dataRow:T_dataRow;
@@ -1710,18 +1710,18 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       end;
     end;
 
+  VAR tAxisIsLogarithmic:boolean=false;
+
   PROCEDURE refineDataRow;
     VAR i,j,k:longint;
         oldTimes,newTimes:T_arrayOfDouble;
         oldRow  ,newRow  :T_dataRow;
         t:double;
         stillOk:boolean=true;
-        scalingOptions:T_scalingOptions;
 
         refinementSteps:T_arrayOfLongint;
         refinementRun:byte=0;
     begin
-      scalingOptions:=getOptionsViaAdapters(context^.messages);
       while stillOk and (dataRow.size<samples) and (refinementRun<6) do begin
         //Prepare threshold:----------------------------------------------------
         case refinementRun of
@@ -1739,12 +1739,22 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
         //Prepare new time samples:---------------------------------------------
         setLength(newTimes,0);
         TList:=recycler^.newListLiteral;
-        for i:=0 to dataRow.size-2 do
-        for j:=1 to refinementSteps[i] do begin
-          t:=j/(refinementSteps[i]+1);
-          t:=tRow[i]*(1-t)+tRow[i+1]*t;
-          TList^.appendReal(recycler,t);
-          append(newTimes,t);
+        if tAxisIsLogarithmic then begin
+          for i:=0 to dataRow.size-2 do
+          for j:=1 to refinementSteps[i] do begin
+            t:=j/(refinementSteps[i]+1);
+            t:=exp(ln(tRow[i]*(1-t))+ln(tRow[i+1]*t));
+            TList^.appendReal(recycler,t);
+            append(newTimes,t);
+          end;
+        end else begin
+          for i:=0 to dataRow.size-2 do
+          for j:=1 to refinementSteps[i] do begin
+            t:=j/(refinementSteps[i]+1);
+            t:=tRow[i]*(1-t)+tRow[i+1]*t;
+            TList^.appendReal(recycler,t);
+            append(newTimes,t);
+          end;
         end;
         //---------------------------------------------:Prepare new time samples
         //Prepare new point samples:--------------------------------------------
@@ -1808,6 +1818,7 @@ FUNCTION generateRow(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST s
       if resultLiteral^.literalType in [lt_intList,lt_realList,lt_numList]
       then dataRow:=newDataRow(resultLiteral,TList)
       else dataRow:=newDataRow(resultLiteral);
+      tAxisIsLogarithmic:=(resultLiteral^.literalType in [lt_intList,lt_realList,lt_numList]) and (scalingOptions.axisTrafo['x'].logscale);
       recycler^.disposeLiteral(resultLiteral);
       recycler^.disposeLiteral(TList);
       refineDataRow;

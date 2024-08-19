@@ -13,7 +13,7 @@ USES sysutils,math,
      mnh_messages,
      recyclers,
      mnh_plotData,plotstyles,plotMath;
-TYPE F_generateRow=FUNCTION(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):T_dataRow;
+TYPE F_generateRow=FUNCTION(CONST f:P_expressionLiteral; CONST t0,t1:T_myFloat; CONST samples:longint; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; CONST scalingOptions:T_scalingOptions):T_dataRow;
 FUNCTION newDataRow(CONST y:P_listLiteral; CONST x:P_listLiteral=nil):T_dataRow;
 VAR generateRow:F_generateRow;
 IMPLEMENTATION
@@ -99,6 +99,8 @@ FUNCTION plotRasterImage intFuncSignature;
 FUNCTION addPlot intFuncSignature;
   VAR options: ansistring = '';
       sizeWithoutOptions: longint;
+      scaling_options:T_scalingOptions;
+      axis: char;
   FUNCTION addRowMessage(CONST dataRow:T_dataRow):P_addRowMessage;
     begin
       new(result,create(options,dataRow));
@@ -132,13 +134,17 @@ FUNCTION addPlot intFuncSignature;
          (arg1^.literalType in [lt_smallint,lt_bigint,lt_real]) and
          (arg2^.literalType in [lt_smallint,lt_bigint,lt_real]) and (arg2^.isInRelationTo(tt_comparatorGrt,arg1)) and
          (arg3^.literalType in [lt_smallint,lt_bigint]) and (int3^.isBetween(2,maxLongint)) then begin
-        //TODO: Take scaling into account
+
+        scaling_options:=getOptionsViaAdapters(context^.getGlobals^.primaryContext.messages);
+        scaling_options.axisTrafo['x'].prepare;
+        scaling_options.axisTrafo['y'].prepare;
+
         context^.messages^.postCustomMessage(addRowMessage(generateRow(P_expressionLiteral(arg0),
-                                                                fReal(arg1),
-                                                                fReal(arg2),
-                                                                int3^.intValue,
-                                                                tokenLocation,
-                                                                context,recycler)),true);
+                                                           fReal(arg1),
+                                                           fReal(arg2),
+                                                           int3^.intValue,
+                                                           tokenLocation,
+                                                           context,recycler,scaling_options)),true);
         exit(newVoidLiteral);
       end;
     end;

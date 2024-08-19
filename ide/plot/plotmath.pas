@@ -55,7 +55,6 @@ TYPE
       screenRange:array[0..1] of longint;
 
       factor,offset:double;
-      PROCEDURE prepare;
       PROCEDURE setLogScale(CONST value:boolean);
       PROCEDURE setWorldMin(CONST value:double);
       PROCEDURE setWorldMax(CONST value:double);
@@ -67,6 +66,7 @@ TYPE
     public
       autoscale:boolean;
       PROCEDURE reset;
+      PROCEDURE prepare;
 
       PROPERTY logscale:boolean read logs write setLogScale;
       PROPERTY worldMin:double read rangeByUser[0] write setWorldMin;
@@ -1382,7 +1382,7 @@ FUNCTION T_scalingOptions.transformRow(CONST row: T_dataRow; CONST yBaseLine:lon
   end;
 
 FUNCTION T_scalingOptions.getRefinementSteps(CONST row:T_dataRow; CONST samplesToDistribute:longint):T_arrayOfLongint;
-  FUNCTION heightOfTriangle(CONST x,y,z:T_point):double; inline;
+  FUNCTION heightOfTriangle(CONST x,y,z:T_point):double; {$ifndef debugMode} inline; {$endif}
     VAR a,b:T_point;
         t:double;
     begin
@@ -1766,6 +1766,8 @@ FUNCTION T_sampleRow.getFullClone: P_plotPrimitive;
 PROCEDURE T_axisTrafo.prepare;
   VAR x0,x1:double;
   begin
+    if not(isValidMinimum(rangeByAutosize[0])) then rangeByAutosize[0]:=MIN_VALUE_FOR[logs];
+    if not(isValidMaximum(rangeByAutosize[1])) then rangeByAutosize[1]:=MAX_VALUE_FOR[logs];
     //t(x) = (x-worldRangeMin)/(worldRangeMax-worldRangeMin)*(screenRangeMax-screenRangeMin)+screenRangeMin;
     //     = x/(worldRangeMax-worldRangeMin)*(screenRangeMax-screenRangeMin) + screenRangeMin - worldRangeMin/(worldRangeMax-worldRangeMin)*(screenRangeMax-screenRangeMin);
     //       x*factor                                                        + offset
