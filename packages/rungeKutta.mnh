@@ -38,7 +38,7 @@ end;
 private embeddedRungeKuttaStepper(Tableau:ERK_ButcherTableau,order:Int)->begin
   intermediate   :=Tableau.leading(2);
   summationStages:=Tableau.trailing(2);
-  code:=['(y0_,f,dtMacro,errorTolerance)->begin local microStep:=(y0,dt)->begin'             ,rkCodeStart       (intermediate),
+  code:=['(y0_,f,dtMacro,errorTolerance)->begin microStep:=(y0,dt)->begin'             ,rkCodeStart       (intermediate),
                    '[result:=',summationStageCode(summationStages[0]),',',
                                 '((',summationStageCode(summationStages[1]),'-result).flatten.abs.max/errorTolerance)^',1/order,']; end;'&//!~
     dtSub:=dtMacro;
