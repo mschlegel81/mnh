@@ -1719,19 +1719,8 @@ PROCEDURE T_sampleRow.render(CONST opt: T_scalingOptions; CONST screenBox: T_bou
       end;
     end;
 
-  {$ifdef debugMode}
-  VAR startTicks: qword;
-  {$endif}
-
   begin
-    {$ifdef debugMode}
-    startTicks:=GetTickCount64;
-    {$endif}
     screenRow:=opt.transformRow(sample,yBaseLine,style);
-    {$ifdef debugMode}
-    writeln('     -- row transformation: ',GetTickCount64-startTicks,' ticks');
-    startTicks:=GetTickCount64;
-    {$endif}
     scaleAndColor:=style.getLineScaleAndColor(target.width,target.height);
 
     if ds_continuous in style.drawStyles then begin
@@ -1744,11 +1733,6 @@ PROCEDURE T_sampleRow.render(CONST opt: T_scalingOptions; CONST screenBox: T_bou
     if ds_impulse  in style.drawStyles then drawImpulses;
     if ds_box      in style.drawStyles then drawBoxes;
     if ds_ellipse  in style.drawStyles then drawEllipses;
-
-    {$ifdef debugMode}
-    writeln('     -- plot execution: ',GetTickCount64-startTicks,' in style: "',style.toString,'"');
-    {$endif}
-
   end;
 
 DESTRUCTOR T_sampleRow.destroy;

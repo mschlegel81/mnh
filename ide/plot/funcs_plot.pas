@@ -132,6 +132,7 @@ FUNCTION addPlot intFuncSignature;
          (arg1^.literalType in [lt_smallint,lt_bigint,lt_real]) and
          (arg2^.literalType in [lt_smallint,lt_bigint,lt_real]) and (arg2^.isInRelationTo(tt_comparatorGrt,arg1)) and
          (arg3^.literalType in [lt_smallint,lt_bigint]) and (int3^.isBetween(2,maxLongint)) then begin
+        //TODO: Take scaling into account
         context^.messages^.postCustomMessage(addRowMessage(generateRow(P_expressionLiteral(arg0),
                                                                 fReal(arg1),
                                                                 fReal(arg2),

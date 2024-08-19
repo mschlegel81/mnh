@@ -427,7 +427,7 @@ PROCEDURE T_plot.prepareImage(CONST width,height:longint);
 
 {$ifdef enable_render_threads}
 PROCEDURE T_plotPreparationThread.execute;
-  VAR destroyPlot:boolean;
+  VAR destroyPlot:boolean=false;
       errorText:string='';
   begin
     try
@@ -1276,19 +1276,9 @@ PROCEDURE T_plot.drawCoordSys(CONST target: TBGRACanvas; VAR gridTic: T_ticInfos
 PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
   VAR gridTics:T_ticInfos;
       bgrabmp:TBGRABitmap;
-      {$ifdef debugMode}
-      startTicks: qword;
-      {$endif}
   begin
-    {$ifdef debugMode}
-    startTicks:=GetTickCount64;
-    {$endif}
     if (plotImage.width<5) or (plotImage.height<5) then exit;
     system.enterCriticalSection(plotCs);
-    {$ifdef debugMode}
-    writeln('   -- renderPlot: waited ',GetTickCount64-startTicks,' ticks for the critical section');
-    startTicks:=GetTickCount64;
-    {$endif}
     try
       if (length(row)=0) then begin
         plotImage.Canvas.clear;
@@ -1308,10 +1298,6 @@ PROCEDURE T_plot.renderPlot(VAR plotImage: TImage);
         bgrabmp.draw(plotImage.Canvas,0,0,false);
         bgrabmp.free;
       end;
-      {$ifdef debugMode}
-      writeln('   -- renderPlot: plotted in ',GetTickCount64-startTicks,' ticks');
-      startTicks:=GetTickCount64;
-      {$endif}
     finally
       system.leaveCriticalSection(plotCs);
     end;
@@ -1396,18 +1382,12 @@ FUNCTION T_plot.renderToRawData(CONST width,height:longint):P_collectionLiteral;
       literal_lookup:T_arrayOfLiteral;
       pixelList:P_listLiteral;
       recycler: P_recycler;
-      {$ifdef debugMode}
-      startTicks:qword;
-      {$endif}
   begin
     recycler:=newRecycler;
     setLength(literal_lookup,256);
     for x:=0 to 255 do literal_lookup[x]:=recycler^.newRealLiteral(x/255);
 
     storeImage:=obtainPlot(width,height);
-    {$ifdef debugMode}
-    startTicks:=GetTickCount64;
-    {$endif}
     ScanLineImage:=TLazIntfImage.create(storeImage.width,storeImage.height);
     ImgFormatDescription.Init_BPP24_B8G8R8_BIO_TTB(storeImage.width,storeImage.height);
     ImgFormatDescription.ByteOrder:=riboMSBFirst;
@@ -1415,11 +1395,6 @@ FUNCTION T_plot.renderToRawData(CONST width,height:longint):P_collectionLiteral;
     tempIntfImage:=storeImage.picture.Bitmap.CreateIntfImage;
     ScanLineImage.CopyPixels(tempIntfImage);
     pixelList:=recycler^.newListLiteral(width*height);
-    {$ifdef debugMode}
-    writeln('   -- renderToRawData: laz copy       done in ',GetTickCount64-startTicks,' ticks');
-    startTicks:=GetTickCount64;
-    {$endif}
-
     for y:=0 to storeImage.height-1 do begin
       pix:=ScanLineImage.GetDataLineStart(y);
       for x:=0 to storeImage.width-1 do begin
@@ -1436,9 +1411,6 @@ FUNCTION T_plot.renderToRawData(CONST width,height:longint):P_collectionLiteral;
       ^.append(recycler,pixelList,false)
       ^.appendInt(recycler,storeImage.width)
       ^.appendInt(recycler,storeImage.height);
-    {$ifdef debugMode}
-    writeln('   -- renderToRawData: pixelwise copy done in ',GetTickCount64-startTicks,' ticks');
-    {$endif}
     ScanLineImage.free;
     tempIntfImage.free;
     storeImage.destroy;
