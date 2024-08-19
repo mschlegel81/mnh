@@ -245,7 +245,7 @@ FUNCTION inspect_imp intFuncSignature;
       id:=P_stringLiteral(arg0)^.value;
       obtainPackage(P_package(tokenLocation.package),tokenLocation,id);
       if tempPackage<>nil then begin
-        if inspectedPackageIsTemporary then loadTemporaryPackage({$ifdef fullVersion}functionCallInfos{$endif});
+        if inspectedPackageIsTemporary then {$ifdef fullVersion} loadMessages:=getMessagesForInspection(tempPackage^.getPath); {$else} loadTemporaryPackage(); {$endif}
         result:=tempPackage^.inspect(not(inspectedPackageIsTemporary),context,recycler{$ifdef fullVersion},functionCallInfos{$endif});
         if loadMessages<>nil then mapResult^.put(recycler,'messages',loadMessages,false);
         if inspectedPackageIsTemporary

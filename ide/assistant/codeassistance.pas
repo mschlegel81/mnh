@@ -10,6 +10,7 @@ USES
   basicTypes,
   mnh_constants,
   fileWrappers,
+  litVar,
   tokenArray,
   mnh_messages,
   out_adapters,
@@ -75,6 +76,7 @@ PROCEDURE postAssistanceRequest    (CONST scriptPath:string);
 FUNCTION  getAssistanceResponseSync(CONST editorMeta:P_codeProvider):P_codeAssistanceResponse;
 FUNCTION findScriptsUsing(CONST scriptName:string):T_arrayOfString;
 FUNCTION findRelatedScriptsTransitive(CONST scriptName:string):T_arrayOfString;
+FUNCTION getMessagesForInspection(CONST scriptPath:string):P_listLiteral;
 
 VAR preparedResponses:specialize G_threadsafeQueue<P_codeAssistanceResponse>;
 IMPLEMENTATION
@@ -269,8 +271,7 @@ PROCEDURE T_codeAssistanceThread.execute;
             sleep(sleepBetweenRunsMillis);
           end;
         end;
-      end
-      else begin
+      end else begin
         sleepBetweenRunsMillis:=0;
         {$ifdef debugMode}
         writeln('  processing ',length(requests),' code assistance requests');
@@ -553,6 +554,32 @@ FUNCTION getAssistanceResponseSync(CONST editorMeta:P_codeProvider):P_codeAssist
     dispose(request,destroy);
   end;
 
+FUNCTION getMessagesForInspection(CONST scriptPath:string):P_listLiteral;
+  VAR request:P_codeAssistanceRequest;
+      recycler:P_recycler;
+      response: P_codeAssistanceResponse;
+      allErrors: T_storedMessages;
+      i:longint;
+
+  begin
+    new(request,create(scriptPath));
+    recycler:=newRecycler;
+    response:=request^.execute(recycler);
+    dispose(request,destroy);
+
+    setLength(allErrors,length(response^.localErrors)+length(response^.externalErrors));
+    for i:=0 to length(response^.localErrors)-1 do
+      allErrors[i]:=response^.localErrors[i];
+    for i:=0 to length(response^.externalErrors)-1 do
+      allErrors[i+length(response^.localErrors)]:=response^.externalErrors[i];
+
+    result:=messagesToLiteralForSandbox(recycler,allErrors,C_textMessages,SUPPRESS_EXIT_CODE);
+    setLength(allErrors,0);
+    freeRecycler(recycler);
+    response^.unreference;
+    dispose(response,destroy);
+  end;
+
 PROCEDURE ensureDefaultFiles(CONST progressCallback:F_simpleCallback; CONST overwriteExisting: boolean; CONST createHtmlDat: boolean);
   {$i res_defaultFiles.inc}
   VAR baseDir:string;
@@ -798,6 +825,7 @@ INITIALIZATION
   initialize(codeAssistanceCs);
   initCriticalSection(codeAssistanceCs);
   initialize(scriptUsage);
+  packages.getMessagesForInspection:=@getMessagesForInspection;
   with scriptUsage do begin
     setLength(dat,0);
     setLength(scriptsScanned,0);

@@ -150,8 +150,11 @@ TYPE
       {$endif}
   end;
 
+CONST SUPPRESS_EXIT_CODE=maxLongint-159; //just some large, reasonably improbable code
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
+FUNCTION messagesToLiteralForSandbox(CONST literalRecycler:P_literalRecycler; CONST messages:T_storedMessages; CONST toInclude:T_messageTypeSet; CONST ExitCode:longint):P_listLiteral;
 FUNCTION sandbox:P_sandbox;
+VAR getMessagesForInspection: FUNCTION(CONST scriptPath:string):P_listLiteral;
 {$undef include_interface}
 VAR newCodeProvider:F_newCodeProvider;
 IMPLEMENTATION
@@ -314,7 +317,6 @@ FUNCTION T_sandbox.loadForCodeAssistance(VAR packageToInspect:T_package; CONST r
     enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
   end;
 
-CONST SUPPRESS_EXIT_CODE=maxLongint-159; //just some large, reasonably improbable code
 FUNCTION messagesToLiteralForSandbox(CONST literalRecycler:P_literalRecycler; CONST messages:T_storedMessages; CONST toInclude:T_messageTypeSet; CONST ExitCode:longint):P_listLiteral;
   FUNCTION headByMessageType(CONST message:P_storedMessage):P_listLiteral;
     begin
