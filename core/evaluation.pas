@@ -971,7 +971,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
             stack.push(first);
             didSubstitution:=true;
           end;
-        tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse:
+        tt_braceClose,tt_listBraceClose,tt_EOL,tt_separatorComma,tt_semicolon, tt_separatorCnt, tt_iifCheck, tt_iifElse, tt_do, tt_until:
           if (cTokType[1]=tt_iifCheck) and (cTokType[-1]=tt_operatorConcatAlt) then begin
             //Special handling for nested assignment directly followed by inline-if, e.g.: x[3] := condition ? thenValue : elseValue;
             stack.push(first);
