@@ -769,6 +769,9 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
         end;
       end else appendTokenToResultYieldsClosingSemicolon(nextToProcess);
     end;
+    //Add trailing semicolon(s) if necessary;
+    while not(localIdStack.scopeBottom)
+          do localIdStack.scopePop(context,lastLocation,recycler,nextStatement,nil,not(hasSuppressedUnusedAttribute),true);
     result:=nextStatement;
     //debugPrintNextStatement;
     if result.token.first=nil
@@ -873,9 +876,9 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
         if scope[topIdx].scopeStartToken^.tokType = tt_then then begin
           scope[topIdx].scopeStartToken^.tokType:=tt_iifCheck;
           t:=workingIn.token.last;
-          t^.next:=recycler^.newToken(closeToken^.location,C_tokenDefaultId[tt_iifElse],tt_iifElse);
+          t^.next:=recycler^.newToken(location,C_tokenDefaultId[tt_iifElse],tt_iifElse);
           t:=t^.next;
-          t^.next:=recycler^.newToken(closeToken^.location,LITERAL_TEXT_VOID,tt_literal,newVoidLiteral);
+          t^.next:=recycler^.newToken(location,LITERAL_TEXT_VOID,tt_literal,newVoidLiteral);
           workingIn.token.last:=t^.next;
         end;
         performPop;
@@ -894,9 +897,9 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
       namedParamter: T_patternElementLocation;
       i: longint;
   begin
-    if (closeToken<>nil) and (closeToken^.tokType in [tt_semicolon,tt_separatorComma]) then begin
+    if (closeToken<>nil) and (closeToken^.tokType in [tt_semicolon,tt_separatorComma]) or forcePop then begin
       popSpecialIfPresent;
-      exit;
+      if (not forcePop) or (forcePop and (topIdx<0)) then exit;
     end;
     if (closeToken=nil) and not forcePop then exit;
     topIdx:=length(scope)-1;
