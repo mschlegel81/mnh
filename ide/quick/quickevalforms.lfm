@@ -4,13 +4,13 @@ object QuickEvalForm: TQuickEvalForm
   Top = 165
   Width = 320
   Caption = 'Quick evaluation'
-  ClientHeight = 220
+  ClientHeight = 240
   ClientWidth = 320
   Menu = OutputMainMenu
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   PopupMenu = OutputPopupMenu
-  LCLVersion = '2.0.10.0'
+  LCLVersion = '3.0.0.3'
   object cbEvaluateInCurrentPackage: TCheckBox
     Left = 0
     Height = 19
@@ -530,7 +530,7 @@ object QuickEvalForm: TQuickEvalForm
   end
   inline quickOutputSynEdit: TSynEdit
     Left = 0
-    Height = 46
+    Height = 66
     Top = 174
     Width = 320
     Align = alClient

@@ -47,6 +47,7 @@ TYPE
     PROCEDURE quickOutputSynEditMouseDown(Sender: TObject;
       button: TMouseButton; Shift: TShiftState; X, Y: integer);
   private
+    evaluationStart:double;
     evaluatedFor:T_hashInt;
     inputMeta:T_quickEvalEditorMeta;
     quickEvaluation:T_quickEvaluation;
@@ -78,7 +79,10 @@ PROCEDURE stopQuickEvaluation;
   VAR form:T_mnhComponentForm;
   begin
     form:=getFormOfType(icQuickEval);
-    if (form<>nil) then TQuickEvalForm(form).quickEvaluation.haltEvaluation;
+    if (form<>nil) and isQuickEvaluationRunning then begin
+      TQuickEvalForm(form).quickEvaluation.haltEvaluation;
+      TQuickEvalForm(form).quickEvaluation.postOutputMessage(mt_el2_warning,'Cancelled by user');
+    end;
   end;
 
 {$R *.lfm}
@@ -146,6 +150,10 @@ PROCEDURE TQuickEvalForm.FormDestroy(Sender: TObject);
 
 PROCEDURE TQuickEvalForm.performSlowUpdate(CONST isEvaluationRunning: boolean);
   begin
+    if quickEvaluation.isRunning and (now-evaluationStart>ONE_SECOND*30) then begin
+      quickEvaluation.postHalt;
+      quickEvaluation.postOutputMessage(mt_el2_warning,'Evaluation aborted due to 30 second timeout');
+    end;
   end;
 
 PROCEDURE TQuickEvalForm.performFastUpdate;
@@ -165,14 +173,17 @@ PROCEDURE TQuickEvalForm.performFastUpdate;
     end else inputMeta.updateAssistanceResponse(nil);
 
     quickEvaluation.flushMessages;
-    if evaluatedFor<>stateHash then begin
+    if (evaluatedFor<>stateHash) then begin
       if (meta<>nil) and cbEvaluateInCurrentPackage.enabled and cbEvaluateInCurrentPackage.checked
       then proxy:=newFixatedFileProxy(meta^.getPath)
       else proxy:=nil;
-      quickEvaluation.postEvaluation(proxy,
-                                      cbEvaluateInCurrentPackage.enabled and cbEvaluateInCurrentPackage.checked,
-                                      inputMeta.getLines);
-      evaluatedFor:=stateHash;
+      if not(quickEvaluation.isRunning) then begin
+        evaluationStart:=now;
+        quickEvaluation.postEvaluation(proxy,
+                                       cbEvaluateInCurrentPackage.enabled and cbEvaluateInCurrentPackage.checked,
+                                       inputMeta.getLines);
+        evaluatedFor:=stateHash;
+      end;
     end;
     if now-startTime>ONE_SECOND then postIdeMessage('Update of quick-evaluation form took a long time: '+myTimeToStr(now-startTime),true);
   end;

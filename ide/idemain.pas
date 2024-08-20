@@ -790,7 +790,7 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
     PROCEDURE enableItems;
       VAR unlocked:boolean;
       begin
-        miHaltEvaluation.enabled:=runnerModel.anyRunning();
+        miHaltEvaluation.enabled:=runnerModel.anyRunning() or quickEvalForms.isQuickEvaluationRunning;
         unlocked:=not(runnerModel.areEditorsLocked);
         miSave     .enabled:=unlocked;
         miSaveAs   .enabled:=unlocked;

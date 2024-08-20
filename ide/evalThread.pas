@@ -105,6 +105,7 @@ TYPE
       CONSTRUCTOR create(CONST quickStdout:P_eagerInitializedOutAdapter);
       FUNCTION postEvaluation(CONST parent:P_codeProvider; CONST evaluateInParent:boolean; CONST input:T_arrayOfString):boolean;
       DESTRUCTOR destroy; virtual;
+      PROCEDURE postOutputMessage(CONST kind:T_messageType; CONST txt:string);
   end;
 
   T_ideScriptEvaluation = object (T_abstractEvaluation)
@@ -184,6 +185,11 @@ DESTRUCTOR T_quickEvaluation.destroy;
     if (parentProvider<>nil) and (parentProvider^.disposeOnPackageDestruction) then dispose(parentProvider,destroy);
     setLength(toEvaluate,0);
     inherited destroy;
+  end;
+
+PROCEDURE T_quickEvaluation.postOutputMessage(CONST kind:T_messageType; CONST txt:string);
+  begin
+    globals.primaryContext.messages^.postTextMessage(kind,C_nilSearchTokenLocation,txt);
   end;
 
 CONSTRUCTOR T_standardEvaluation.create(CONST mainForm:T_mnhIdeForm);
