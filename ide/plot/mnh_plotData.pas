@@ -1122,8 +1122,7 @@ PROCEDURE T_plot.zoomOnPoint(CONST pixelX, pixelY: longint;
     end;
   end; end;
 
-PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint;
-  VAR plotImage: TImage);
+PROCEDURE T_plot.panByPixels(CONST pixelDX, pixelDY: longint; VAR plotImage: TImage);
   VAR rectA, rectB: TRect;
   begin with scalingOptions do begin
     system.enterCriticalSection(plotCs);
@@ -1248,8 +1247,6 @@ PROCEDURE T_plot.drawCoordSys(CONST target: TBGRACanvas; VAR gridTic: T_ticInfos
     //-------------------------------------------------------------------:axis
     //tics:-------------------------------------------------------------------
     if (gse_tics in scalingOptions.axisStyle['y']) or (gse_tics in scalingOptions.axisStyle['x']) then begin
-      try
-        enterCriticalSection(globalTextRenderingCs);
         target.Font.height:=scalingOptions.absoluteFontSize(target.width,target.height);
         target.Font.color:=clBlack;
         if (gse_tics in scalingOptions.axisStyle['y']) then for i:=0 to length(gridTic['y'])-1 do with gridTic['y'][i] do if major then begin
@@ -1265,9 +1262,6 @@ PROCEDURE T_plot.drawCoordSys(CONST target: TBGRACanvas; VAR gridTic: T_ticInfos
           target.LineTo(x, cSysY);
           target.textOut(x-target.textWidth(txt) shr 1, cSysY+5, txt);
         end;
-      finally
-        leaveCriticalSection(globalTextRenderingCs);
-      end;
     end;
     //-------------------------------------------------------------------:tics
     //======================================================:coordinate system

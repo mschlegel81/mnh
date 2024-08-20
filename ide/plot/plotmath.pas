@@ -177,7 +177,6 @@ TYPE
 
   FUNCTION boundingBoxOf(CONST x0,y0,x1,y1:double):T_boundingBox;
 
-VAR globalTextRenderingCs:TRTLCriticalSection;
 IMPLEMENTATION
 USES math;
 FUNCTION intersect(CONST b1,b2:T_boundingBox):boolean;
@@ -835,8 +834,6 @@ PROCEDURE T_customText.render(CONST opt: T_scalingOptions;
       x:=round(screenLoc[0]);
       y:=round(screenLoc[1]);
     end;
-    enterCriticalSection(globalTextRenderingCs);
-    try
       oldFont     :=target.Font;
 
       if (fontName<>'') and (fontName<>target.Font.name) then target.Font.name:=fontName;
@@ -883,9 +880,6 @@ PROCEDURE T_customText.render(CONST opt: T_scalingOptions;
         end;
       end;
       target.Font:=oldFont;
-    finally
-      leaveCriticalSection(globalTextRenderingCs);
-    end;
   end;
 
 PROCEDURE T_customText.setAnchor(CONST s: string);
@@ -1228,17 +1222,12 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST primit
   FUNCTION updateBorders:boolean;
     VAR newX0,newY0:longint;
     begin
-      enterCriticalSection(globalTextRenderingCs);
-      try
         if gse_tics in axisStyle['y']
         then newX0:=Canvas.textWidth(ticSampleText)+5
         else newX0:=0;
         if gse_tics in axisStyle['x']
         then newY0:=Canvas.height-Canvas.textHeight(ticSampleText)-5
         else newY0:=Canvas.height;
-      finally
-        leaveCriticalSection(globalTextRenderingCs);
-      end;
 
       result:=(axisTrafo['x'].screenRange[0]<newX0-20) or
               (axisTrafo['x'].screenRange[0]>newX0   ) or
@@ -1274,8 +1263,6 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST primit
 
   VAR axis:char;
   begin
-    enterCriticalSection(globalTextRenderingCs);
-    try
       Canvas.Font.height:=absoluteFontSize(Canvas.width,Canvas.height);
       ticSampleText:='.0E12';
       updateBorders;
@@ -1287,9 +1274,6 @@ PROCEDURE T_scalingOptions.updateForPlot(CONST Canvas: TBGRACanvas; CONST primit
         for axis:='x' to 'y' do if axisStyle[axis]<>[] then initTics(axis);
       end;
       transformTics;
-    finally
-      leaveCriticalSection(globalTextRenderingCs);
-    end;
   end;
 
 FUNCTION T_scalingOptions.transformRow(CONST row: T_dataRow; CONST yBaseLine:longint; CONST style:T_style): T_rowToPaintArr;
@@ -1942,10 +1926,6 @@ FUNCTION T_axisTrafo.equals(CONST other:T_axisTrafo):boolean;
             (rangeByUser[1]=other.rangeByUser[1]);
   end;
 
-INITIALIZATION
-  initCriticalSection(globalTextRenderingCs);
-FINALIZATION
-  doneCriticalSection(globalTextRenderingCs);
 
 end.
 
