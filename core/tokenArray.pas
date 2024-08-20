@@ -959,8 +959,12 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
           if (localIdInfos<>nil) and collectHighlightingInfo then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
           {$endif}
           pre:=workingIn.token.first;
-          while (pre<>nil) and (pre^.next<>scope[topIdx].scopeStartToken) do pre:=pre^.next;
-          pre^.next:=recycler^.disposeToken(scope[topIdx].scopeStartToken);
+          if pre = scope[topIdx].scopeStartToken
+          then workingIn.token.first:=recycler^.disposeToken(workingIn.token.first)
+          else begin
+            while (pre<>nil) and (pre^.next<>nil) and (pre^.next<>scope[topIdx].scopeStartToken) do pre:=pre^.next;
+            pre^.next:=recycler^.disposeToken(scope[topIdx].scopeStartToken);
+          end;
           scope[topIdx].scopeStartToken:=closeToken;
           exit;
         end

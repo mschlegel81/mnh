@@ -315,10 +315,15 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
           prev:=p;
           p:=p^.next;
         end;
-        closingToken:=p;
-        prev^.next:=nil;
-        setLength(bodyRule,length(bodyRule)+1);
-        new(P_inlineExpression(bodyRule[length(bodyRule)-1]),createForEachBody(first^.txt,bodyRuleStart,first^.location,context,recycler));
+        if (bodyRuleStart=nil) or (bodyRuleStart^.tokType=tt_do) then begin
+          context^.raiseError('Invalid for-construct',first^.location);
+          exit;
+        end else begin
+          closingToken:=p;
+          prev^.next:=nil;
+          setLength(bodyRule,length(bodyRule)+1);
+          new(P_inlineExpression(bodyRule[length(bodyRule)-1]),createForEachBody(first^.txt,bodyRuleStart,first^.location,context,recycler));
+        end;
       until (p=nil) or (p^.tokType<>tt_do) or not(p^.getDoType in [dt_for_related_do,dt_for_related_do_parallel]);
 
       if (p<>nil) and (p^.tokType=tt_aggregatorConstructor) then begin
@@ -375,7 +380,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
         prev:=first;
         p:=firstTokenOfHead;
         //Error case: repeat until ...
-        if p^.tokType=tt_until then begin
+        if (p=nil) or (p^.tokType=tt_until) then begin
           context^.raiseError('Invalid repeat-construct.',errorLocation);
           exit(false);
         end;
@@ -411,8 +416,6 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
           new(conditionRule,createForWhile(firstTokenOfCondition,firstTokenOfCondition^.location,context,recycler));
         end;
         //Unlink head:
-        assert(p<>nil);
-        assert(p^.tokType=tt_semicolon);
         first^.next:=p;
         lastTokenOfHead^.next:=nil;
 
@@ -497,7 +500,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
         prev:=first;
         p:=firstTokenOfCondition;
         //Error case: while do ...
-        if p^.tokType=tt_do then begin
+        if (p=nil) or (p^.tokType=tt_do) then begin
           context^.raiseError('Invalid while-construct; Empty entry condition.',errorLocation);
           exit(false);
         end;
