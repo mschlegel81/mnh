@@ -323,7 +323,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
 
       if (p<>nil) and (p^.tokType=tt_aggregatorConstructor) then begin
         bodyRuleStart:=p;
-        while (p<>nil) and (bracketLevel>=0) do begin
+        while (p<>nil) and (bracketLevel>=0) and not((p^.tokType = tt_semicolon) and (bracketLevel=0)) do begin
           if      (p^.tokType in C_openingBrackets) then inc(bracketLevel)
           else if (p^.tokType in C_closingBrackets) then dec(bracketLevel);
           prev:=p;
