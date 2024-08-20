@@ -65,12 +65,12 @@ private sbExecute([])->void;
 private sbExecute(code:StringList)->begin
   note("Examples test code:  \n"&code.join("  \n"));
   printCase(EXAMPLES_LOG_NAME&' '&shorter(code.head));
+  resetRandom;
   sandBoxExecute(code,WHITELIST_FOR_EXAMPLES).processSandboxOutput(EXAMPLE_EXCLUDES);
 end;
 
 private executeExamples(doLog:Boolean)->begin
   printCase(EXAMPLES_LOG_NAME);
-  resetRandom;
   output:=[];
   collectOut:=true;
   codeToExecute:=[];

@@ -1,3 +1,46 @@
+#I tt_if tt_then tt_else
+x:=3;
+if (x and 1)=0 then 'even' else 'odd';
+
+#I tt_while
+begin
+  L:=[5..1];
+  while L.size<10 do L|=0;
+  L;
+end;
+
+#I tt_while
+begin
+  x:=0;
+  while (x+=pi)<10;
+  x;
+end;
+
+#I tt_repeat
+begin
+  x:=10;
+  repeat print(x+=1) until x>0;
+end;
+
+#I tt_repeat
+begin
+  output:=[];
+  x:=10;
+  repeat output|=x; x-=1; until x<=0;
+  output;
+end;
+
+
+#I tt_for
+for x in ['A'..'C'] do print(x);
+
+#I tt_for
+for x in [1..4] do 0|x do x|0;
+
+#I tt_for
+for i in [1..10000] do parallel  1/i² aggregator(+);"
+
+
 #I OPERATOR_STRCONCAT
 #S OPERATOR_STRCONCAT(a,b);
 #S a & b
@@ -948,6 +991,7 @@ typeOf([1..5,7.5]);
 #I typeOf
 typeOf({$x^2+$y});
 
+#I transpose
 #S transpose(L,filler);
 #C Returns list L transposed. If sub lists of L have different lengths, filler is used.
 #S transpose(L);
@@ -1630,6 +1674,7 @@ powMod(2988348162058574136915891421498819466320163312926952423791023078876139,23
 #I randomGenerator
 randomGenerator(123).head(10);
 
+#I intRandomGenerator
 intRandomGenerator(123,5).head(10);
 
 #I isaacRandomGenerator
@@ -1906,10 +1951,13 @@ void orElse 42; //orElse returns the right-hand-side if the left-hand-side is vo
 
 7 mod 3;
 
+#I OPERATOR_MOD
 -7 mod 3;
 
+#I OPERATOR_MOD
 7 mod -3;
 
+#I OPERATOR_MOD
 -7 mod -3;
 
 #I OPERATOR_MULT
@@ -2493,21 +2541,24 @@ ln(3);
 #S plotRasterImage(colors:List;width>=1,scale:Numeric,offsetX:Numeric,offsetY:Numeric);
 #C Plots a raster image with custom scaling
 
-DFT([1..10..1]);
+#I DFT
 #S DFT(x:List);
 #C Returns the Discrete Fourier Transform of x
+DFT([1..10..1]);
 
-iDFT([[10..0],[0..10]].transpose);
+#I iDFT
 #S iDFT(x:List);
 #C Returns the inverse Discrete Fourier Transform of x
+iDFT([[10..0],[0..10]].transpose);
 
 FFT([1..10..1]);
 #S FFT(x:List);
 #C Returns the Fast Fourier Transform of x
 
-iFFT([[10..0],[0..10]].transpose);
+#I iFFT
 #S iFFT(x:List);
 #C Returns the inverse Fast Fourier Transform of x
+iFFT([[10..0],[0..10]].transpose);
 
 
 #I math.calculateFourierCoefficients

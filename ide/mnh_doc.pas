@@ -25,13 +25,14 @@ TYPE
   end;
   F_simpleCallback = PROCEDURE of object;
 
-PROCEDURE makeHtmlFromTemplate(CONST progressCallback:F_simpleCallback);
+PROCEDURE makeHtmlFromTemplate;
 PROCEDURE registerDoc(CONST qualifiedId:ansistring; CONST qualifiedOnly:boolean);
 FUNCTION getDocIndexLinkForBrowser(CONST suffix:string=''):ansistring;
 FUNCTION getHtmlRoot:ansistring;
 FUNCTION getDemosRoot:ansistring;
 FUNCTION getPackagesRoot:ansistring;
 VAR functionDocMap:specialize G_stringKeyMap<P_intrinsicFunctionDocumentation>;
+    tokenDocumentation:array[T_tokenType] of P_intrinsicFunctionDocumentation;
     htmlDocGeneratedForCodeHash:string;
 
 PROCEDURE finalizeFunctionDocMap;
@@ -74,18 +75,27 @@ PROCEDURE registerDoc(CONST qualifiedId:ansistring; CONST qualifiedOnly:boolean)
     if replaceQualified and replaceUnqualified then dispose(outdatedDoc,destroy);
   end;
 
-PROCEDURE ensureBuiltinDocExamples(CONST progressCallback:F_simpleCallback);
+PROCEDURE ensureBuiltinDocExamples;
   {$include res_examples.inc}
   VAR code:T_arrayOfString=();
       i:longint;
       keys:T_arrayOfString=();
       allDocs:array of P_intrinsicFunctionDocumentation=();
 
+  FUNCTION string_to_tokenType(CONST s:string):T_tokenType;
+    VAR t:T_tokenType;
+    begin
+      for t in T_tokenType do if s=tokenTypeName(t) then exit(t);
+      result:=tt_EOL;
+    end;
+
   FUNCTION addExample(CONST exampleSource,txt,idList:T_arrayOfString):T_arrayOfString;
     VAR ids:T_arrayOfString;
         i:longint;
         doc:P_intrinsicFunctionDocumentation;
-        {$ifdef debugMode} first:boolean=true; j:longint; {$endif}
+        first:boolean=true;
+        tokenType:T_tokenType;
+        {$ifdef debugMode}j:longint; {$endif}
     begin
       {$ifdef debugMode}
       writeln('Adding example: ');
@@ -111,7 +121,15 @@ PROCEDURE ensureBuiltinDocExamples(CONST progressCallback:F_simpleCallback);
         end;
         {$endif}
         doc^.addExample(txt);
+      end else begin
+        tokenType:=string_to_tokenType(ids[i]);
+        if tokenType<>tt_EOL then begin
+          if tokenDocumentation[tokenType]=nil then new(tokenDocumentation[tokenType],create(tokenTypeName(tokenType)));
+          tokenDocumentation[tokenType]^.addExample(txt);
+          first:=false;
+        end;
       end;
+      if first then setLength(ids,0);
       result:=ids;
     end;
 
@@ -219,14 +237,11 @@ PROCEDURE ensureBuiltinDocExamples(CONST progressCallback:F_simpleCallback);
       for i:=0 to length(decompressed_examples)-1 do begin
         if trim(decompressed_examples[i])='' then processExample
                                              else append(code,decompressed_examples[i]);
-        if progressCallback<>nil then progressCallback();
       end;
       processExample;
       //---------------------------------------------------------------------:Read examples
       storeExamples;
       setLength(examplesToStore,0);
-    end else begin
-      if progressCallback<>nil then for i:=0 to length(decompressed_examples)-1 do progressCallback();
     end;
     functionDocExamplesReady:=true;
     freeRecycler(recycler);
@@ -310,7 +325,7 @@ PROCEDURE T_intrinsicFunctionDocumentation.addExample(CONST txt:T_arrayOfString)
     append(docTxt ,txt);
   end;
 
-PROCEDURE makeHtmlFromTemplate(CONST progressCallback:F_simpleCallback);
+PROCEDURE makeHtmlFromTemplate;
   VAR builtInDoc: array[T_namespace] of array of P_intrinsicFunctionDocumentation;
 
   PROCEDURE prepareBuiltInDocs;
@@ -329,7 +344,7 @@ PROCEDURE makeHtmlFromTemplate(CONST progressCallback:F_simpleCallback);
         swapTmp: P_intrinsicFunctionDocumentation;
     begin
       if not(DirectoryExists(getHtmlRoot)) then CreateDir(getHtmlRoot);
-      ensureBuiltinDocExamples(progressCallback);
+      ensureBuiltinDocExamples;
       //Prepare and sort data:-------------------------------------------------------------
       for n:=low(T_namespace) to high(T_namespace) do setLength(builtInDoc[n],0);
       ids:=functionDocMap.keySet;
@@ -473,7 +488,6 @@ PROCEDURE makeHtmlFromTemplate(CONST progressCallback:F_simpleCallback);
     setLength(includes,0);
     context.mode:=none;
     decompressedTemplate:=split(decompressString(html_template_txt),C_lineBreakChar);
-    if progressCallback<>nil then progressCallback();
     for templateLine in decompressedTemplate do begin
       case context.mode of
         none:            if not(handleCommand(templateLine)) and outFile.isOpen then writeln(outFile.handle,templateLine);
@@ -484,7 +498,6 @@ PROCEDURE makeHtmlFromTemplate(CONST progressCallback:F_simpleCallback);
     end;
     htmlDocGeneratedForCodeHash:=CODE_HASH;
     with outFile do if isOpen then close(handle);
-    if progressCallback<>nil then progressCallback();
     {$ifdef debugMode} writeln(stdErr,'        DEBUG: documentation is ready; ',templateLineCount,' lines processed');{$endif}
     setLength(demoFiles,0);
   end;
@@ -494,6 +507,7 @@ PROCEDURE finalizeFunctionDocMap;
   VAR entries:functionDocMap.KEY_VALUE_LIST=();
       values:T_arrayOfPointer=();
       i:longint;
+      t:T_tokenType;
   begin
     if docMapIsFinalized then exit;
     docMapIsFinalized:=true;
@@ -502,10 +516,18 @@ PROCEDURE finalizeFunctionDocMap;
     for i:=0 to length(entries)-1 do appendIfNew(values,entries[i].value);
     for i:=0 to length(values)-1 do dispose(P_intrinsicFunctionDocumentation(values[i]),destroy);
     functionDocMap.destroy;
+    for t in T_tokenType do if tokenDocumentation[t]<>nil then dispose(tokenDocumentation[t],destroy);
+  end;
+
+PROCEDURE initTokenDoc;
+  VAR t:T_tokenType;
+  begin
+    for t in T_tokenType do tokenDocumentation[t]:=nil;
   end;
 
 INITIALIZATION
   functionDocMap.create();
+  initTokenDoc;
 FINALIZATION
   finalizeFunctionDocMap;
 

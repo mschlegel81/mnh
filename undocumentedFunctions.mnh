@@ -23,7 +23,7 @@ main->begin
     then context
     else begin
       c:=inspect('example.mnh',collectedCode)['called builtin'];
-      if c.size>1 then warn('Ambiguous context: ',c," caused by code: \n",collectedCode.join("\n"));
+      if (c.size>1) and context.isVoid then warn('Ambiguous context: ',c," caused by code: \n",collectedCode.join("\n"));
       collectedCode:=[];
       call_found|=c;
       context:=context orElse c;
@@ -50,7 +50,6 @@ main->begin
   .join("\n")
   .print;
 end;
-
 
 while true do begin
   lastInfo:='resources\examples.txt'.fileInfo;

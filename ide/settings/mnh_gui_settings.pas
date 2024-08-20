@@ -359,7 +359,7 @@ PROCEDURE TSettingsForm.togglePortableButtonClick(Sender: TObject);
     workspace.postSaveRequest;
     ensureDefaultFiles(nil,true,true);
     htmlDocGeneratedForCodeHash:='';
-    makeHtmlFromTemplate(nil);
+    makeHtmlFromTemplate;
     togglePortableButton.caption:=PORTABLE_BUTTON_CAPTION[APP_STYLE=APP_STYLE_NORMAL];
   end;
   {$else}begin end;{$endif}

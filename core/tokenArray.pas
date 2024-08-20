@@ -1629,6 +1629,7 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
         result.shortInfo:=ansiReplaceStr(C_typeCheckInfo[token^.getTypeCheck].helpText,'#',C_lineBreakChar);
       tt_modifier:
         result.shortInfo:=ansiReplaceStr(C_modifierInfo[token^.getModifier].helpText,'#',C_lineBreakChar);
+      else if tokenDocumentation[token^.tokType]<>nil then tokenDocumentation[token^.tokType]^.getStructuredInfo(result.exampleText);
     end;
   end;
 {$endif}
