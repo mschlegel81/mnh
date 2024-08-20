@@ -19,7 +19,7 @@ main->begin
    \     X     X     X     /
     \___/ \___/ \___/ \___/~);
   print('The solutions for 1..7 (unique) are: ');
-  local filterAndPrintSolutions:=(source:Iterable)->source.pFilter((p)->isSolution@p).agg((s)->print('  ',s));
+  filterAndPrintSolutions:=(source:Iterable)->source.pFilter((p)->isSolution@p).agg((s)->print('  ',s));
   permutationIterator([1..7]).filterAndPrintSolutions;
   print('The solutions for 3..9 (unique) are: ');
   permutationIterator([3..9]).filterAndPrintSolutions;
@@ -29,7 +29,7 @@ main->begin
       isPartialSolution@abcd
       ? cross([0..9],[0..9]).each(ef,
           begin
-            local abcdef:=abcd|ef;
+            abcdef:=abcd|ef;
             isPartialSolution@abcdef AND (0<=(findG@abcdef)<=9);
           end).trueCount
       : void;

@@ -12,7 +12,7 @@ private consolidate(ListOfSets,consolidationPoints)->
   consolidationPoints==[]
   ? ListOfSets
   : begin
-      local mask:=ListOfSets.each(set,consolidationPoints.head in set);
+      mask:=ListOfSets.each(set,consolidationPoints.head in set);
       consolidate([ListOfSets.get( mask).flatten.unique.sort]|
                    ListOfSets.get(!mask),consolidationPoints.tail);
     end;

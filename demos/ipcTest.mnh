@@ -22,7 +22,7 @@ end;
 main->begin
   //Start server in separate instance
   ensureServer;
-  local localId:=serverId+'X';
+  localId:=serverId+'X';
   //Start server in same instance
   startIpcServer(localId,::serve);
   //Send request to separate instance

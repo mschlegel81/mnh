@@ -11,9 +11,9 @@ private multiplyAndSelect(parent:String,offspringCount, mutateProb)->
    .head.head;
 
 private evolve(mutationFalloff,offspringCount,generationLimit)->begin
-  local parent:=[0..length(target)-1].each(i,randomCharacter,&);
-  local generationCount:=0;
-  local mutationRate:=1;
+  parent:=[0..length(target)-1].each(i,randomCharacter,&);
+  generationCount:=0;
+  mutationRate:=1;
   while parent<>target AND generationCount<generationLimit do
   begin
     parent:=multiplyAndSelect(parent,offspringCount,mutationRate);

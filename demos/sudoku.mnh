@@ -22,8 +22,8 @@ private difficulty(Board)->Board.each(cell,cell.isInt ? 0 : 1,+);
 
 private
 initialBoard->begin
-  local values:=1+random(9).sortPerm;
-  local indexes:=[0..8]*9+random(9).sortPerm;
+  values:=1+random(9).sortPerm;
+  indexes:=[0..8]*9+random(9).sortPerm;
   [0..80].each(i,i in indexes ? values[indexes=i,0] : [1..9]);
 end;
 
@@ -54,19 +54,19 @@ printBoard(B)->BOARD_FORMAT_STRING.printf@(B.map((x)->x.isInt ? x : ' '));
 
 private
 solve(B)->begin
-  local needRun:=isValid(B);
-  local Board:=B;
+  needRun:=isValid(B);
+  Board:=B;
   while needRun do
   begin
     needRun:=false;
     //intsOnly are the fixed/solved cells
-    local intsOnly:=Board.pEach(c,c.isInt ? c : []);
+    intsOnly:=Board.pEach(c,c.isInt ? c : []);
     Board:=Board.each(cell,
       cell.isInt //is cell already fixed/solved ?
       ? cell
       : begin
           //first try to solve the cell by restricting values based on already fixed/solved cells
-          local newList:=drop(cell,intsOnly[connectedIdx(index)].flatten);
+          newList:=drop(cell,intsOnly[connectedIdx(index)].flatten);
           size(newList)=1
           ? begin
               needRun:=true;
@@ -74,7 +74,7 @@ solve(B)->begin
             end
           : components(index).each(COMP,begin
               //try to solve based on all cells (including unsolved)
-              local tmp:=cell.drop(Board[COMP].flatten);
+              tmp:=cell.drop(Board[COMP].flatten);
               size(tmp)=1
               ? begin
                   needRun:=true;
@@ -90,9 +90,9 @@ end;
 private randomFromSet(s:IntCollection)->s.toList[intRandom(s.size)];
 
 private restrictRandom(B)->begin
-  local listIndexes:=[0..80].each(i,B[i].isInt ? void : i);
+  listIndexes:=[0..80].each(i,B[i].isInt ? void : i);
   listIndexes==[] ? B : begin
-    local randomListIdx:=listIndexes[intRandom(size(listIndexes))];
+    randomListIdx:=listIndexes[intRandom(size(listIndexes))];
     [0..80].each(i,i=randomListIdx ? B[i].randomFromSet : B[i]);
   end;
 end;
@@ -111,9 +111,9 @@ randomSolution->begin
 end;
 
 randomRiddle->begin
-  local riddle:=randomSolution;
+  riddle:=randomSolution;
   random(81).sortPerm.each(undefIdx,begin
-    local previousRiddle:=riddle;
+    previousRiddle:=riddle;
     riddle:=[0..80].each(i,i=undefIdx ? [1..9] : riddle[i]);
     riddle.solve.isSolved ? void : riddle:=previousRiddle;
     void;
@@ -128,7 +128,7 @@ main->randomRiddle.printBoard;
 @demo_for=puzzle
 //*Create count riddles
 main(count)->begin
-  local iCount:=count.toInt;
+  iCount:=count.toInt;
   assert(iCount>0,'count must be >0');
   [1..iCount].pMap(::randomRiddle).each(r,print('============================='),r.printBoard);
 end;

@@ -4,14 +4,14 @@ private isValidReal(x)->x.isNumeric AND !x.isNan and !x.isInfinite;
 memoized
 pageSet(rawParameters,parameters)->begin
   //extract parameters in string form
-  local f_ :=(parameters['f'] orElse "sin(x)").toString.replace('$','');
-  local x0_:=parameters['x0'] orElse "-3";
-  local x1_:=parameters['x1'] orElse "3";
-  local sp_:=parameters['samples'] orElse "1000";
+  f_ :=(parameters['f'] orElse "sin(x)").toString.replace('$','');
+  x0_:=parameters['x0'] orElse "-3";
+  x1_:=parameters['x1'] orElse "3";
+  sp_:=parameters['samples'] orElse "1000";
 
-  local validationMessages:=[];
+  validationMessages:=[];
   //transform function in string form to expression
-  local f:=void;
+  f:=void;
   print('Function input: ',escape(f_));
   try({begin
         //replace "x" by valid expression variable "$x"
@@ -25,27 +25,27 @@ pageSet(rawParameters,parameters)->begin
       end},
       {validationMessages|=(escape(f_)&' is not a valid function.')});
 
-  isValidReal(local x0:=softCast(x0_))
+  isValidReal(x0:=softCast(x0_))
   ? void
   : validationMessages|=(escape(x0_)&' is not a valid value for x0.');
 
-  isValidReal(local x1:=softCast(x1_))
+  isValidReal(x1:=softCast(x1_))
   ? void
   : validationMessages|=(escape(x1_)&' is not a valid value for x1.');
 
-  local sp:=softCast(sp_);
+  sp:=softCast(sp_);
   sp.isInt AND 2<=sp<=10000
   ? void
   : validationMessages|=(escape(sp_)&' is not a valid value for samples.');
 
-  local htmlCode:='<HTML><HEAD><TITLE>Simple HTML function plotter</TITLE></HEAD><BODY><FORM name="myForm"><table>'&
+  htmlCode:='<HTML><HEAD><TITLE>Simple HTML function plotter</TITLE></HEAD><BODY><FORM name="myForm"><table>'&
     format(FIELD_FMT,'Function','f',f_)&
     format(FIELD_FMT,'x0','x0',x0_)&
     format(FIELD_FMT,'x1','x1',x1_)&
     format(FIELD_FMT,'samples','samples',sp_)&
     '</table></FORM>';
 
-  local imageCode:='';
+  imageCode:='';
   validationMessages==[]
   ? begin
       //if there are no validation messages, add link to image and generate image
@@ -70,14 +70,14 @@ memoized unhandled(requestMap)->begin
 end;
 
 serve(requestMap:Map)->begin
-  local request:=requestMap['request','path'];
+  request:=requestMap['request','path'];
   pageSet(request.extractRawParameters,request.extractParameters)[request.extractPath]
   orElse unhandled(requestMap);
 end;
 
 @demo_for=httpServer, plotting
 main->begin
-  local URL:='localhost:43210';
+  URL:='localhost:43210';
   startHttpServer(URL,::serve,0);
   URL:='http://'&URL&'/page.html';
   ask('Open URL '&URL&' ?',['yes','no'])='yes'

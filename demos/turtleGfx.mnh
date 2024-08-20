@@ -25,7 +25,7 @@ turtle(startAngle:Numeric,rotAngleInDegrees:Numeric,drawChars:String,s:String,al
   posStack:=[];
   dirStack:=[];
   rotAngle:=rotAngleInDegrees*degToRad;
-  OP:=toMap([['0', {begin local oldPos:=turtlePos; turtlePos+=    [cos(turtleDir),sin(turtleDir)]; oldPos; end}],
+  OP:=toMap([['0', {begin oldPos:=turtlePos; turtlePos+=    [cos(turtleDir),sin(turtleDir)]; oldPos; end}],
              ['+', {begin turtleDir-=rotAngle; void; end}],
              ['-', {begin turtleDir+=rotAngle; void; end}],
              ['[', {begin

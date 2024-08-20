@@ -2,10 +2,10 @@ private deg45:=arctan(1);
 
 @demo_for=fractal, plotting
 sc(depth)->begin
-  local result:=[];
-  local position:=[0.353553390593275,0.707106781186549]*2;
-  local direction:=deg45;
-  local half:={$level <=0 ? result|=[position+=[cos(direction),sin(direction)]] : begin
+  result:=[];
+  position:=[0.353553390593275,0.707106781186549]*2;
+  direction:=deg45;
+  half:={$level <=0 ? result|=[position+=[cos(direction),sin(direction)]] : begin
     half($level-1);
     direction+=deg45;
     result|=[position+=[cos(direction),sin(direction)]*sqrt(2)];

@@ -1,6 +1,6 @@
 //*Encrypts an arbitrary literal
 isaacEncrypt(seed:Int,message:String)->begin
-  local gen:=isaacRandomGenerator(seed,256);
+  gen:=isaacRandomGenerator(seed,256);
   message.bytes.ord
   .map({$b xor gen()})
   .byteToChar
@@ -9,7 +9,7 @@ end;
 
 //*Returns a tuple [decryptedMessage,validationOk]
 isaacDecrypt(seed:Int,message:String)->begin
-  local gen:=isaacRandomGenerator(seed,256);
+  gen:=isaacRandomGenerator(seed,256);
   message.bytes.ord.map({$b xor gen()}).byteToChar.join;
 end;
 

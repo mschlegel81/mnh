@@ -1,10 +1,10 @@
 @SuppressUnusedWarning
 jaroDistance("","")->1;
 jaroDistance(A:String,B:String)->begin
-  local matchDistance:=max(A.length,B.length) div 2-1;
-                   local aChars:=A.chars;
-  local bMatches:=(local bChars:=B.chars).each(c,false);
-  local aMatches:=
+  matchDistance:=max(A.length,B.length) div 2-1;
+                   aChars:=A.chars;
+  bMatches:=(bChars:=B.chars).each(c,false);
+  aMatches:=
   aChars.each(a,
     [max(0      ,index-matchDistance  )..
      min(bChars.size-1,index+matchDistance-1)].each(k,
@@ -13,8 +13,8 @@ jaroDistance(A:String,B:String)->begin
        : false
     ,OR)
   );
-  (local matchCount:=aMatches.trueCount)==0 ? 0 : begin
-    local transpositions:=trueCount(aChars[aMatches]<>bChars[bMatches]);
+  (matchCount:=aMatches.trueCount)==0 ? 0 : begin
+    transpositions:=trueCount(aChars[aMatches]<>bChars[bMatches]);
     (matchCount/A.length+
      matchCount/B.length+
      (matchCount-transpositions/2)/matchCount)/3;

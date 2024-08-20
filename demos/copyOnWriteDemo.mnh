@@ -1,12 +1,12 @@
 addElement(L:List,newElement)->begin
-  local newList:=L;
+  newList:=L;
   newList|=newElement;
   print('after adding element ',newElement,' the list is: ',newList);
   newList;
 end;
 
 removeElement(L:List,indexToDrop:Int)->begin
-  local newList:=L;
+  newList:=L;
   newList[indexToDrop]:=void;
   print('after removing element #',indexToDrop,' the list is: ',newList);
   newList;

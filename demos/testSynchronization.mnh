@@ -7,7 +7,7 @@ synchronized addToSum(i:Int)->begin
 end;
 
 newAggregator->{begin
-  local total:=0;
+  total:=0;
 save;
   total+=$0;
 end};
@@ -38,19 +38,19 @@ assertOk((PAR_ASYNC),(PAYLOAD_MUTABLE))->begin
 end;
 
 assertOk((PAR_MAP),(PAYLOAD_STATEFUL))->begin
-  local A:=newAggregator;
+  A:=newAggregator;
   [1..1000].map(A);
   assert(A(0)==500500,A(0));
 end;
 
 assertOk((PAR_PMAP),(PAYLOAD_STATEFUL))->begin
-  local A:=newAggregator;
+  A:=newAggregator;
   [1..1000].pMap(A);
   assert(A(0)==500500,A(0));
 end;
 
 assertOk((PAR_ASYNC),(PAYLOAD_STATEFUL))->begin
-  local A:=newAggregator;
+  A:=newAggregator;
   [1..1000].map((i)->localAsync(A,[i]))
            .map((task)->while task().isVoid do sleep(1E-3));
   assert(A(0)==500500,A(0));

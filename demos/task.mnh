@@ -6,11 +6,11 @@ private datastore runningTask:=[];
 @demo_for=datastores
 private endTask->runningTask==[] ? void : //If there is no running task, there is nothing to do
 begin
-  local timeSpentNow   :=systime- runningTask[1];
+  timeSpentNow   :=systime- runningTask[1];
   printf("Task %s finished after %{formatTime('hh:nn:ss',$1)}s; total time spent: %{formatTime('hh:nn:ss',$2)}s",
          runningTask[0],
          timeSpentNow,
-         local timeSpentTotal:=timeSpentNow+(allTasks[runningTask[0]] orElse 0));
+         timeSpentTotal:=timeSpentNow+(allTasks[runningTask[0]] orElse 0));
   allTasks[runningTask[0]]:=timeSpentTotal;
   runningTask:=[];
 end;

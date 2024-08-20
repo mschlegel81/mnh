@@ -15,8 +15,8 @@ B:=[['Jonah','Whales'],
 private TabToMap(Table:List,KeyIndex:Int)->begin
   local map:=[].toMap;
   Table.each(row,begin
-    local key:=row[KeyIndex];
-    local value:=(map.get(key) orElse [])|[row];
+    key:=row[KeyIndex];
+    value:=(map.get(key) orElse [])|[row];
     map[key]:=value;
     void;
   end);
@@ -26,10 +26,10 @@ end;
 @Algorithm name=Inner hash join
 innerJoin(Tab1:List,KeyIndex1:Int,Tab2:List,KeyIndex2:Int)->
   begin
-    local Map2:=TabToMap(Tab2,KeyIndex2);
+    Map2:=TabToMap(Tab2,KeyIndex2);
     Tab1.each(row,begin
-      local key:=row[KeyIndex1];
-      local toJoin:=Map2[key] orElse [];
+      key:=row[KeyIndex1];
+      toJoin:=Map2[key] orElse [];
       toJoin==[] ? void : toJoin.each(row2,row|row2);
     end,|);
   end;
@@ -37,13 +37,13 @@ innerJoin(Tab1:List,KeyIndex1:Int,Tab2:List,KeyIndex2:Int)->
 @Algorithm name=Outer hash join
 outerJoin(Tab1:List,KeyIndex1:Int,Tab2:List,KeyIndex2:Int)->
   begin
-    local tab1Substitute:=[1..Tab1.each(row,row.size,max)].each(n,'');
-    local Map2:=TabToMap(Tab2,KeyIndex2);
-    local mappedKeys:=[];
+    tab1Substitute:=[1..Tab1.each(row,row.size,max)].each(n,'');
+    Map2:=TabToMap(Tab2,KeyIndex2);
+    mappedKeys:=[];
     Tab1.each(row,begin
-      local key:=row[KeyIndex1];
+      key:=row[KeyIndex1];
       mappedKeys|=key;
-      local toJoin:=Map2[key] orElse [];
+      toJoin:=Map2[key] orElse [];
       toJoin==[] ? [row] : toJoin.each(row2,row|row2);
     end,|)|
     Map2.getInner(0).minus(mappedKeys).each(key,

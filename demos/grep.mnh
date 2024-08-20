@@ -1,8 +1,8 @@
 private showIndex(matchMask:BooleanList, additional=0)->indexOf(matchMask).map({['',$x]});
 private showIndex(matchMask:BooleanList, additional:Int)->begin
-  local matchIndex:=indexOf(matchMask);
+  matchIndex:=indexOf(matchMask);
   matchIndex:=[-additional..additional].each(offset,matchIndex+offset).flatten.unique;
-  local lastX:=-1;
+  lastX:=-1;
   matchIndex[0<=matchIndex<matchMask.size].each(
     lineIndex,
     [(lastX+1==(lastX:=lineIndex) OR index==0 ? '' : "\n")&
@@ -18,11 +18,11 @@ end;
 //*         -l  only list files
 //*         -r  recurse subdirectories
 main(searchPattern,...)->begin
-  local filePatterns:=[];
-  local additionalLines   :=0;
-  local matchCaseSensitive:=true;
-  local listOnly          :=false;
-  local recurseDirs       :=false;
+  filePatterns:=[];
+  additionalLines   :=0;
+  matchCaseSensitive:=true;
+  listOnly          :=false;
+  recurseDirs       :=false;
   //Parse:
   ... .each(e,e='-i' ? matchCaseSensitive:=false :
               e='-l' ? listOnly          :=true  :
@@ -34,8 +34,8 @@ main(searchPattern,...)->begin
   allFiles('.',filePatterns,recurseDirs)
   .sort
   .each(file,begin
-    local lines:=fileLines(file);
-    local toShow:=lines.matches((matchCaseSensitive ? '' : '(?i)')& searchPattern).showIndex(additionalLines);
+    lines:=fileLines(file);
+    toShow:=lines.matches((matchCaseSensitive ? '' : '(?i)')& searchPattern).showIndex(additionalLines);
     toShow==[]
     ? void
     : print(file) orElse listOnly

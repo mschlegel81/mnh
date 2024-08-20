@@ -10,7 +10,7 @@ tryParseTime(s:String)->
 
 tryParseInterval(s:String)->
   begin
-    local S:=s.upper.clean(['0'..'9',':','H','M','S'],'');
+    S:=s.upper.clean(['0'..'9',':','H','M','S'],'');
     (pos(['H','M','S'],S)>=0).agg(OR)
     ? try({interpret(S.replace(['H','M','S'],['/24+','/(24*60)+','/(24*60*60)+'])&'0')+systime},void)
     : (S:=tryParseTime(s)).isVoid
@@ -19,12 +19,12 @@ tryParseInterval(s:String)->
   end;
 
 begin
-  local formattedTime    :='';
-  local formattedTimeOut :=''; local timeOut:=void;
-  local formattedRemainig:='';
-  local timerAction:='beep';
+  formattedTime    :='';
+  formattedTimeOut :=''; timeOut:=void;
+  formattedRemainig:='';
+  timerAction:='beep';
 
-  local AFTER_METHOD:=
+  AFTER_METHOD:=
     [['lock'    ,{(timeOut:=void) orElse execPipeless('rundll32.exe',['User32.dll,LockWorkStation'])}],
      ['suspend' ,{(timeOut:=void) orElse execPipeless('rundll32.exe',['powrprof.dll,SetSuspendState','0,1,0'])}],
      ['restart' ,{(timeOut:=void) orElse execPipeless('Shutdown.exe',['-r','-t','00'])}],

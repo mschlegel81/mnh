@@ -36,8 +36,8 @@ private len4(a,b,c,d)->euklideanNorm(b-a)+euklideanNorm(c-b)+euklideanNorm(d-c);
 
 //*Sierpinski-Curve sorting
 scSort(L)->begin
-  x:=L.getInner(0); local xr:=[min(x),max(x)];
-  y:=L.getInner(1); local yr:=[min(y),max(y)];
+  x:=L.getInner(0); xr:=[min(x),max(x)];
+  y:=L.getInner(1); yr:=[min(y),max(y)];
   h:=max(xr.get(1)-xr.get(0),yr.get(1)-yr.get(0))/2;
   xr:=(xr.get(1)+xr.get(0))*0.5;
   yr:=(yr.get(1)+yr.get(0))*0.5;

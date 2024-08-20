@@ -1,19 +1,19 @@
 USE '..\packages\formattingUtils.mnh';
 
 toGray(l:BooleanList)->begin
-  local last:=false;
+  last:=false;
   l.each(b,last xor (last:=b));
 end;
 
 fromGray(l:BooleanList)->begin
-  local last:=false;
+  last:=false;
   l.each(g,last:=(g xor last));
 end;
 
 private testGray(i:Int)->begin
-  local b :=digits(i,2)=1;
-  local g :=b.toGray;
-  local b2:=g.fromGray;
+  b :=digits(i,2)=1;
+  g :=b.toGray;
+  b2:=g.fromGray;
   assert(b2==b,'Reconstruction was invalid!');
   [i,b.ord.join,g.ord.join];
 end;

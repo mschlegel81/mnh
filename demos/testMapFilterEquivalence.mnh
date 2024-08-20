@@ -2,7 +2,7 @@ accept(x:Int)->trueCount(0=(x mod [2,3,5,7]))=0;
 acceptOrVoid(x:Int)->x.accept ? x : void;
 
 testAndCompare(includeTiming:Boolean)->begin
-  local results:=[
+  results:=[
   print('gen.filter.toList')  orElse time({rangeGenerator(0,1000)       . filter(::accept      ).toList}),
   print('gen.pFilter.toList') orElse time({rangeGenerator(0,1000)       .pFilter(::accept      ).toList}),
   print('gen.map.toList')     orElse time({rangeGenerator(0,1000)       .    map(::acceptOrVoid).toList}),
@@ -18,7 +18,7 @@ testAndCompare(includeTiming:Boolean)->begin
 
   includeTiming
   ? begin
-      local timedInfo:=results.map({$r.getAll(['time','expression'])});
+      timedInfo:=results.map({$r.getAll(['time','expression'])});
       printf("%8.3f\vms\t%s",
         timedInfo.getInner(0)*1000,
         timedInfo.getInner(1));

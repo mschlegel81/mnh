@@ -10,8 +10,8 @@ private POP  :='pop'  ;
 //This definition is the core stack
 //all the rest is just syntactic sugar
 newStack->{begin
-  local items:=[];
-  local method:=
+  items:=[];
+  method:=
   [DEPTH => () ->items.size,
    TOP   => () ->items.trailing,
    PUSH  => (x)->items|=x,
@@ -35,7 +35,7 @@ pop  (s:Stack)  ->s(POP);
 
 //----------------------------------------------
 main->begin
-  local s:=newStack;
+  s:=newStack;
   //push the primes below 10 to the stack
   primes(10).map((p)->s.push(210/p));
   while s.depth>0 do begin

@@ -5,9 +5,9 @@ private memoized
 
 //*Encodes i
 zeckendorfEncode(i:Int)->begin
-  local k:=0;
+  k:=0;
   while fib(k)<i do k+=1;
-  local j:=i;
+  j:=i;
   fib([k..0]).each(f,j>=f ? begin j-=f; 1; end : 0).composeDigits(2);
 end;
 zeckendorfEncode(I:IntList)->I.pMap(::zeckendorfEncode);
