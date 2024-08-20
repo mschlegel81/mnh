@@ -195,7 +195,8 @@ PROCEDURE ensureBuiltinDocExamples;
         for i:=0 to length(result)-1 do result[i]:=wrapper.readAnsiString;
       end;
 
-    VAR txt,ids:T_arrayOfString;
+    VAR txt,ids, ids_successful:T_arrayOfString;
+        {$ifdef debugMode} id:string;{$endif}
     begin
       if not(fileExists(getHtmlRoot+EXAMPLES_CACHE_FILE)) then exit(false);
       wrapper.createToReadFromFile(getHtmlRoot+EXAMPLES_CACHE_FILE);
@@ -212,7 +213,14 @@ PROCEDURE ensureBuiltinDocExamples;
           txt :=readArrayOfString;
           ids :=readArrayOfString;
           {$ifdef debugMode} if length(ids)=0 then wrapper.logWrongTypeError; {$endif}
-          addExample(C_EMPTY_STRING_ARRAY,txt ,ids);
+          ids_successful:=addExample(C_EMPTY_STRING_ARRAY,txt ,ids);
+
+          {$ifdef debugMode}
+          if length(ids_successful)<>length(ids) then begin
+            write('Example previously assigned to: '); for id in ids do write(id,', '); writeln;
+            write('       is now only assigned to: '); for id in ids_successful do write(id,', '); writeln;
+          end;
+          {$endif}
         end;
       end;
       result:=result and wrapper.allOkay;

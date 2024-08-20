@@ -8,7 +8,6 @@ save;
 end;
 
 main->begin
-
   collectedCode:=[];
 
   print('Documentation gaps:');

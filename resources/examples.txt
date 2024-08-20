@@ -2,6 +2,13 @@
 x:=3;
 if (x and 1)=0 then 'even' else 'odd';
 
+#I tt_if tt_then
+if false then 'o.k.'; //If the else-branch is missing it returns void
+
+#I tt_if tt_then tt_else
+f(a,b,c)->if a then b else c; //Internally, if-then-else is mapped to inline-if
+::f;
+
 #I tt_while
 begin
   L:=[5..1];
@@ -16,20 +23,19 @@ begin
   x;
 end;
 
-#I tt_repeat
+#I tt_repeat tt_until
 begin
   x:=10;
   repeat print(x+=1) until x>0;
 end;
 
-#I tt_repeat
+#I tt_repeat tt_until
 begin
   output:=[];
   x:=10;
   repeat output|=x; x-=1; until x<=0;
   output;
 end;
-
 
 #I tt_for
 for x in ['A'..'C'] do print(x);
@@ -38,8 +44,29 @@ for x in ['A'..'C'] do print(x);
 for x in [1..4] do 0|x do x|0;
 
 #I tt_for
-for i in [1..10000] do parallel  1/i² aggregator(+);"
+for i in [1..10000] do parallel 1/i² aggregator(+);"
 
+#I tt_each
+cross([1..3],[1..3]).each(x, x-0.5, x+0.5); //useful for plotting with style "ellipse"
+
+#I tt_each
+[1..10].each(v,cos(v),+); //If the last argument is an aggregation marker, aggregation is performed
+
+#I tt_each tt_aggregatorConstructor
+random(3).each(y,sqr(y),aggregator((x)->print(x))); //You can use unary custom aggregators using the aggregator constructors
+
+#I tt_each tt_aggregatorConstructor
+random(100).each(t,sin(t),aggregator((x,y)->max(x,y)/y)); //You can use binary custom aggregators using the aggregator constructors
+
+#I tt_save
+counter->begin
+  c:=0;
+save;
+  c+=1;
+end;
+counter();
+counter();
+counter();
 
 #I OPERATOR_STRCONCAT
 #S OPERATOR_STRCONCAT(a,b);
