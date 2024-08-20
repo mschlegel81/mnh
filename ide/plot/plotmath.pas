@@ -1926,6 +1926,5 @@ FUNCTION T_axisTrafo.equals(CONST other:T_axisTrafo):boolean;
             (rangeByUser[1]=other.rangeByUser[1]);
   end;
 
-
 end.
 
