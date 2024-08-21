@@ -394,8 +394,8 @@ expectations:=
  ['27^5 + 84^5 + 110^5 + 133^5 = 144^5'],
  'examples_from_file'=>
  ['FDWin64'=>
-  ['in> x :=3;',"in> (x and 1)=0 ?'even' :'odd';","out> 'odd';","in> false ?'o.k.' : void;",'out> void;',
-   'in> f(a, b, c)->a ? b : c;','in> :: f;','out> (a, b, c)->a ? b : c;',
+  ["in> [2=>'A', 4=>'B'].toMap.map2list('-');","out> ['-','-','A','-','B'];",'in> x :=3;',"in> (x and 1)=0 ?'even' :'odd';",
+   "out> 'odd';","in> false ?'o.k.' : void;",'out> void;','in> f(a, b, c)->a ? b : c;','in> :: f;','out> (a, b, c)->a ? b : c;',
    'in> begin local L:=[5..1]; while L.size<10 do L|=0; L; end;','out> [5,4,3,2,1,0,0,0,0,0];',
    'in> begin local x:=0; while(x+=pi)<10; x; end;','out> 12.566370614359172;',
    'in> begin local x:=10; repeat print(x+=1)until x>0; end;','11','out> void;',
@@ -666,8 +666,8 @@ expectations:=
    "out> ['class' => [0,0,0,0,1,1,2,1,1,0,1,2,0,1,1,2,0,1,2,0,2,0,1,2,0,1,2,2,0,0,2,0,0,1,2,1,2,0,2,0,0,0,2,0,2,0,0,0,2,2,0,0,1,1,1,1,0,0,0,0,2,2,0,0,0,2,2,2,1,2,1,0,2,1,0,2,0,2,2,0,1,0,1,1,2,0,1,2,1,1,1,1,1,1,1,0,2,0,1,0],'centers'=>[[0.39514006246463396,0.37581241712905467,0.76517500355839729],[0.30430735578580248,0.79431195316776149,0.44410747202533868],[0.74462707083800739,0.4206992971614517,0.38883330364679469]]].toMap;"
   ],
   'FOWin64'=>
-  ['in> x :=3;',"in> (x and 1)=0 ?'even' :'odd';","out> 'odd';","in> false ?'o.k.' : void;",'out> void;',
-   'in> f(a, b, c)->a ? b : c;','in> :: f;','out> (a, b, c)->a ? b : c;',
+  ["in> [2=>'A', 4=>'B'].toMap.map2list('-');","out> ['-','-','A','-','B'];",'in> x :=3;',"in> (x and 1)=0 ?'even' :'odd';",
+   "out> 'odd';","in> false ?'o.k.' : void;",'out> void;','in> f(a, b, c)->a ? b : c;','in> :: f;','out> (a, b, c)->a ? b : c;',
    'in> begin local L:=[5..1]; while L.size<10 do L|=0; L; end;','out> [5,4,3,2,1,0,0,0,0,0];',
    'in> begin local x:=0; while(x+=pi)<10; x; end;','out> 12.566370614359172;',
    'in> begin local x:=10; repeat print(x+=1)until x>0; end;','11','out> void;',
@@ -938,8 +938,8 @@ expectations:=
    "out> ['class' => [0,0,0,0,1,1,2,1,1,0,1,2,0,1,1,2,0,1,2,0,2,0,1,2,0,1,2,2,0,0,2,0,0,1,2,1,2,0,2,0,0,0,2,0,2,0,0,0,2,2,0,0,1,1,1,1,0,0,0,0,2,2,0,0,0,2,2,2,1,2,1,0,2,1,0,2,0,2,2,0,1,0,1,1,2,0,1,2,1,1,1,1,1,1,1,0,2,0,1,0],'centers'=>[[0.39514006246463396,0.37581241712905467,0.76517500355839729],[0.30430735578580248,0.79431195316776149,0.44410747202533868],[0.74462707083800739,0.4206992971614517,0.38883330364679469]]].toMap;"
   ],
   'LDWin64'=>
-  ['in> x :=3;',"in> (x and 1)=0 ?'even' :'odd';","out> 'odd';","in> false ?'o.k.' : void;",'out> void;',
-   'in> f(a, b, c)->a ? b : c;','in> :: f;','out> (a, b, c)->a ? b : c;',
+  ["in> [2=>'A', 4=>'B'].toMap.map2list('-');","out> ['-','-','A','-','B'];",'in> x :=3;',"in> (x and 1)=0 ?'even' :'odd';",
+   "out> 'odd';","in> false ?'o.k.' : void;",'out> void;','in> f(a, b, c)->a ? b : c;','in> :: f;','out> (a, b, c)->a ? b : c;',
    'in> begin local L:=[5..1]; while L.size<10 do L|=0; L; end;','out> [5,4,3,2,1,0,0,0,0,0];',
    'in> begin local x:=0; while(x+=pi)<10; x; end;','out> 12.566370614359172;',
    'in> begin local x:=10; repeat print(x+=1)until x>0; end;','11','out> void;',
@@ -1208,8 +1208,8 @@ expectations:=
    "out> ['class' => [0,0,0,0,1,1,2,1,1,0,1,2,0,1,1,2,0,1,2,0,2,0,1,2,0,1,2,2,0,0,2,0,0,1,2,1,2,0,2,0,0,0,2,0,2,0,0,0,2,2,0,0,1,1,1,1,0,0,0,0,2,2,0,0,0,2,2,2,1,2,1,0,2,1,0,2,0,2,2,0,1,0,1,1,2,0,1,2,1,1,1,1,1,1,1,0,2,0,1,0],'centers'=>[[0.39514006246463396,0.37581241712905467,0.76517500355839729],[0.30430735578580248,0.79431195316776149,0.44410747202533868],[0.74462707083800739,0.4206992971614517,0.38883330364679469]]].toMap;"
   ],
   'LOWin64'=>
-  ['in> x :=3;',"in> (x and 1)=0 ?'even' :'odd';","out> 'odd';","in> false ?'o.k.' : void;",'out> void;',
-   'in> f(a, b, c)->a ? b : c;','in> :: f;','out> (a, b, c)->a ? b : c;',
+  ["in> [2=>'A', 4=>'B'].toMap.map2list('-');","out> ['-','-','A','-','B'];",'in> x :=3;',"in> (x and 1)=0 ?'even' :'odd';",
+   "out> 'odd';","in> false ?'o.k.' : void;",'out> void;','in> f(a, b, c)->a ? b : c;','in> :: f;','out> (a, b, c)->a ? b : c;',
    'in> begin local L:=[5..1]; while L.size<10 do L|=0; L; end;','out> [5,4,3,2,1,0,0,0,0,0];',
    'in> begin local x:=0; while(x+=pi)<10; x; end;','out> 12.566370614359172;',
    'in> begin local x:=10; repeat print(x+=1)until x>0; end;','11','out> void;',
@@ -1932,10 +1932,10 @@ expectations:=
   'imig.renderPlotToCurrentImage','imig.resizeImage','imig.saveImage','imig.validateWorkflow','ipc.assertUniqueInstance',
   'ipc.isIpcServerRunning','ipc.sendIpcRequest','ipc.startIpcServer','lists.chunkMap','lists.cross','lists.elementFrequency',
   'lists.filter','lists.flatMap','lists.flatten','lists.get','lists.getAll','lists.getInner','lists.head','lists.indexOf',
-  'lists.intersect','lists.isSubsetOf','lists.leading','lists.map','lists.mergeMaps','lists.minus','lists.pFilter','lists.pMap',
-  'lists.reverseList','lists.size','lists.sort','lists.sortPerm','lists.tail','lists.trailing','lists.transpose',
-  'lists.trueCount','lists.union','lists.unique','lists.vectorIfThenElse','lists.zip','math.DFT','math.FFT','math.abs',
-  'math.arccos','math.arcsin','math.arctan','math.arctan2','math.argMax','math.argMin','math.bitXor',
+  'lists.intersect','lists.isSubsetOf','lists.leading','lists.map','lists.map2list','lists.mergeMaps','lists.minus',
+  'lists.pFilter','lists.pMap','lists.reverseList','lists.size','lists.sort','lists.sortPerm','lists.tail','lists.trailing',
+  'lists.transpose','lists.trueCount','lists.union','lists.unique','lists.vectorIfThenElse','lists.zip','math.DFT','math.FFT',
+  'math.abs','math.arccos','math.arcsin','math.arctan','math.arctan2','math.argMax','math.argMin','math.bitXor',
   'math.calculateFourierCoefficients','math.ceil','math.composeDigits','math.convolve1D','math.cos','math.digits','math.divMod',
   'math.euklideanNorm','math.exp','math.factorize','math.floor','math.gcd','math.hammingWeight','math.iDFT','math.iFFT',
   'math.integrate','math.isInfinite','math.isNan','math.isPrime','math.isqrt','math.kMeans','math.ln','math.max','math.min',

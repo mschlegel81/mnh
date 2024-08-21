@@ -353,7 +353,9 @@ FUNCTION isSubsetOf_imp   intFuncSignature;
       end else result:=newBoolLiteral(false);
     end else result:=nil;
   end;
-FUNCTION mergeMaps_imp    intFuncSignature; begin result:=mapMerge    (recycler,params,tokenLocation,context,recycler); end;
+
+FUNCTION mergeMaps_imp intFuncSignature; begin result:=mapMerge(recycler,params,tokenLocation,context,recycler); end;
+FUNCTION map2list_imp intFuncSignature;  begin result:=map2list(recycler,params,tokenLocation,context,recycler); end;
 
 FUNCTION get_imp intFuncSignature;
   VAR tmpPar:T_listLiteral;
@@ -764,4 +766,5 @@ INITIALIZATION
   builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'toGenerator'   ,
   builtinFunctionMap.registerRule(TYPECAST_NAMESPACE,'toIterableExpression',@toGenerator_imp,ak_unary),ak_unary);
   builtinFunctionMap.registerRule(LIST_NAMESPACE,'vectorIfThenElse',@vectorIfThenElse_imp,ak_ternary);
+  builtinFunctionMap.registerRule(LIST_NAMESPACE,'map2list',@map2list_imp,ak_binary);
 end.

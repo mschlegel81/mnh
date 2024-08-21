@@ -1,3 +1,8 @@
+#I map2list
+#S map2list(m:Map, defaultValue)
+#C Converts a map with nonnegative integers as keys to a list, using the keys as list indexes and the default value as fallback.
+[2=>'A',4=>'B'].toMap.map2list('-');
+
 #I tt_if tt_then tt_else
 x:=3;
 if (x and 1)=0 then 'even' else 'odd';

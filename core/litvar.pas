@@ -485,7 +485,8 @@ TYPE
 {$undef include_interface}
 
 CONST
-  NIL_EVAL_RESULT:T_evaluationResult=(literal:nil; reasonForStop:rr_ok);
+  NIL_EVAL_RESULT:T_evaluationResult=(literal:nil; reasonForStop:rr_fail);
+  PRELIMINARY_OK_RESULT:T_evaluationResult=(literal:nil; reasonForStop:rr_ok);
   NO_ARITY_INFO  :T_arityInfo       =(minPatternLength:-1; maxPatternLength:-2);
 VAR
   resolveOperatorCallback: FUNCTION (CONST LHS: P_literal; CONST op: T_tokenType; CONST RHS: P_literal; CONST tokenLocation: T_tokenLocation; CONST threadContext:P_abstractContext; CONST recycler:pointer): P_literal;
@@ -509,6 +510,7 @@ FUNCTION setUnion    (CONST literalRecycler:P_literalRecycler; CONST params:P_li
 FUNCTION setIntersect(CONST literalRecycler:P_literalRecycler; CONST params:P_listLiteral):P_setLiteral;
 FUNCTION setMinus    (CONST literalRecycler:P_literalRecycler; CONST params:P_listLiteral):P_setLiteral;
 FUNCTION mapMerge    (CONST literalRecycler:P_literalRecycler; CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:P_abstractContext; CONST recycler:pointer):P_mapLiteral;
+FUNCTION map2list    (CONST literalRecycler:P_literalRecycler; CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:P_abstractContext; CONST recycler:pointer):P_listLiteral;
 FUNCTION mutateVariable(CONST literalRecycler:P_literalRecycler; VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
 FUNCTION divideInts(CONST literalRecycler:P_literalRecycler; CONST LHS,RHS:P_abstractIntLiteral):P_numericLiteral;
 FUNCTION typeCheckAccept(CONST valueToCheck:P_literal; CONST check:T_typeCheck; CONST modifier:longint=-1):boolean; inline;
@@ -3299,43 +3301,82 @@ FUNCTION setMinus(CONST literalRecycler:P_literalRecycler; CONST params:P_listLi
   end;
 
 FUNCTION mapMerge(CONST literalRecycler:P_literalRecycler; CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:P_abstractContext; CONST recycler:pointer):P_mapLiteral;
-  VAR map1,map2:P_mapLiteral;
+  VAR otherMap:P_mapLiteral;
       merger:P_expressionLiteral;
       entry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
       pTargetEntry:T_literalKeyLiteralValueMap.P_CACHE_ENTRY;
       M:P_literal;
+      k:longint;
   begin
-    if (params=nil) or (params^.size<>3) or
+    if (params=nil) or (params^.size<3) or
        not(params^.value[0]^.literalType in [lt_map,lt_emptyMap]) or
        not(params^.value[1]^.literalType in [lt_map,lt_emptyMap]) or
-       (params^.value[2]^.literalType<>lt_expression) then exit(nil);
-    map1:=P_mapLiteral(params^.value[0]);
-    map2:=P_mapLiteral(params^.value[1]);
-    merger:=P_expressionLiteral(params^.value[2]);
+       (params^.value[params^.size-1]^.literalType<>lt_expression) then exit(nil);
+    merger:=P_expressionLiteral(params^.value[params^.size-1]);
     if not(merger^.canApplyToNumberOfParameters(2)) then exit(nil);
+    for k:=2 to params^.size-2 do if not(params^.value[k]^.literalType in [lt_map,lt_emptyMap]) then exit(nil);
 
-    if map2^.size=0 then exit(P_mapLiteral(map1^.rereferenced));
-    new(result,createClone(map1^));
+    result:=P_mapLiteral(P_mapLiteral(params^.value[0])^.clone(literalRecycler));
 
-    for entry in map2^.dat.keyValueList do begin
-      pTargetEntry:=result^.dat.getEntry(entry.key);
-      if pTargetEntry=nil then begin
-        result^.dat.putNew(entry,M);
-        entry.key  ^.rereference;
-        entry.value^.rereference;
-      end else begin
-        M:=evaluteExpression(merger,location,contextPointer,recycler,pTargetEntry^.value,entry.value).literal;
-        if (M=nil) or (M^.literalType=lt_void) then begin
-          literalRecycler^.disposeLiteral(result);
-          exit(nil);
+    for k:=1 to params^.size-2 do begin
+      otherMap:=P_mapLiteral(params^.value[k]);
+      if otherMap^.dat.fill>0 then for entry in otherMap^.dat.keyValueList do begin
+        pTargetEntry:=result^.dat.getEntry(entry.key);
+        if pTargetEntry=nil then begin
+          result^.dat.putNew(entry,M);
+          entry.key  ^.rereference;
+          entry.value^.rereference;
+        end else begin
+          M:=evaluteExpression(merger,location,contextPointer,recycler,pTargetEntry^.value,entry.value).literal;
+          if (M=nil) or (M^.literalType=lt_void) then begin
+            literalRecycler^.disposeLiteral(result);
+            exit(nil);
+          end;
+          literalRecycler^.disposeLiteral(pTargetEntry^.value);
+          pTargetEntry^.value:=M;
         end;
-        literalRecycler^.disposeLiteral(pTargetEntry^.value);
-        pTargetEntry^.value:=M;
       end;
     end;
     result^.dat.polish;
     if result^.dat.fill>0 then result^.literalType:=lt_map
                           else result^.literalType:=lt_emptyMap;
+  end;
+
+FUNCTION map2list(CONST literalRecycler:P_literalRecycler; CONST params:P_listLiteral; CONST location:T_tokenLocation; CONST contextPointer:P_abstractContext; CONST recycler:pointer):P_listLiteral;
+  VAR maxKey : longint=-1;
+      intKey : longint;
+      listRes:P_listLiteral;
+      map: P_mapLiteral;
+      k, binIdx: integer;
+      defaultValue:P_literal;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=2) and (params^.dat[0]^.literalType in [lt_map,lt_emptyMap]) then begin
+      map         :=P_mapLiteral(params^.dat[0]);
+      defaultValue:=             params^.dat[1];
+      for binIdx:=0 to length(map^.dat.bin)-1 do with map^.dat.bin[binIdx] do for k:=0 to binFill-1 do begin
+        intKey:=-1;
+        if arr[k].key^.literalType=lt_smallint
+        then intKey:=P_smallIntLiteral(arr[k].key)^.value;
+        if (intKey<0) or (intKey>=268435456) then begin
+          contextPointer^.raiseError('Invalid key for operation: '+arr[k].key^.toString,location);
+          exit(nil);
+        end;
+        if intKey>maxKey then maxKey:=intKey;
+      end;
+      listRes:=literalRecycler^.newListLiteral(maxKey+1);
+      listRes^.fill:=maxKey+1;
+      //first fill list with default value
+      for k:=0 to maxKey do listRes^.dat[k]:=defaultValue^.rereferenced;
+      for binIdx:=0 to length(map^.dat.bin)-1 do with map^.dat.bin[binIdx] do for k:=0 to binFill-1 do begin
+        intKey:=P_smallIntLiteral(arr[k].key)^.value;
+        listRes^.dat[intKey]^.unreference;
+        listRes^.dat[intKey]:=arr[k].value^.rereferenced;
+        listRes^.modifyType(listRes^.dat[intKey]);
+      end;
+      for k:=0 to MaxKey do if listRes^.dat[k]=defaultValue then listRes^.modifyType(listRes^.dat[k]);
+      result:=listRes;
+    end;
   end;
 
 FUNCTION mutateVariable(CONST literalRecycler:P_literalRecycler; VAR toMutate:P_literal; CONST mutation:T_tokenType; CONST parameters:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
