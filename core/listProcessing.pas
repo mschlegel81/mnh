@@ -107,6 +107,7 @@ TYPE
     CONSTRUCTOR createEachTask(CONST taskEnv:P_context);
     FUNCTION define(CONST payload_:T_eachPayload):P_eachTask;
     PROCEDURE evaluate(CONST recycler:P_recycler); virtual;
+    FUNCTION getResult: P_literal; virtual;
   end;
 
   P_futureTask=^T_futureTask;
@@ -483,6 +484,11 @@ PROCEDURE T_eachTask.evaluate(CONST recycler:P_recycler);
     end;
     if payloads.eachParameter<>nil then recycler^.disposeLiteral(payloads.eachParameter);
     context^.finalizeTaskAndDetachFromParent(recycler);
+  end;
+
+FUNCTION T_eachTask.getResult: P_literal;
+  begin
+    result:=evaluationResult.literal;
   end;
 
 CONSTRUCTOR T_chainTask.createChainTask(CONST taskEnv:P_context);

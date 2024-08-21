@@ -103,7 +103,7 @@ TYPE
         fill:longint;
     CONSTRUCTOR create(CONST expectedSize:longint=0);
     PROCEDURE prepareForSize(CONST expectedSize:longint);
-    CONSTRUCTOR createClone(VAR map:MY_TYPE);
+    PROCEDURE cloneFrom(VAR map:MY_TYPE);
     DESTRUCTOR destroy;
     PROCEDURE clear;
     PROCEDURE polish;
@@ -423,7 +423,7 @@ TYPE
     private
       dat:T_literalKeyBooleanValueMap;
       CONSTRUCTOR create(CONST expectedSize:longint);
-      CONSTRUCTOR createClone(VAR original:T_setLiteral);
+      PROCEDURE cloneFrom(VAR original:T_setLiteral);
       PROCEDURE modifyType(CONST L:P_literal); {$ifndef profilingFlavour}inline;{$endif}
     public
       DESTRUCTOR destroy; virtual;
@@ -450,7 +450,7 @@ TYPE
     private
       dat:T_literalKeyLiteralValueMap;
       CONSTRUCTOR create(CONST expectedSize:longint);
-      CONSTRUCTOR createClone(VAR original:T_mapLiteral);
+      PROCEDURE cloneFrom(VAR original:T_mapLiteral);
     public
       DESTRUCTOR destroy; virtual;
       FUNCTION leqForSorting(CONST other: P_literal): boolean; virtual;
@@ -957,7 +957,7 @@ PROCEDURE G_literalKeyMap.prepareForSize(CONST expectedSize:longint);
     fill:=0;
   end;
 
-CONSTRUCTOR G_literalKeyMap.createClone(VAR map:MY_TYPE);
+PROCEDURE G_literalKeyMap.cloneFrom(VAR map:MY_TYPE);
   VAR i,j:longint;
   begin
     fill:=map.fill;
@@ -1268,17 +1268,17 @@ CONSTRUCTOR T_setLiteral.create(CONST expectedSize:longint);
     dat.create(expectedSize);
   end;
 
-CONSTRUCTOR T_setLiteral.createClone(VAR original:T_setLiteral);
+PROCEDURE T_setLiteral.cloneFrom(VAR original:T_setLiteral);
   VAR key:P_literal;
   begin
-    inline_init(original.literalType);
+    literalType:=original.literalType;
     myHash  :=original.myHash  ;
     ints    :=original.ints    ;
     reals   :=original.reals   ;
     strings :=original.strings ;
     booleans:=original.booleans;
     others  :=original.others  ;
-    dat.createClone(original.dat);
+    dat.cloneFrom(original.dat);
     for key in dat.keySet do key^.rereference;
   end;
 
@@ -1289,12 +1289,12 @@ CONSTRUCTOR T_mapLiteral.create(CONST expectedSize:longint);
     dat.create(expectedSize);
   end;
 
-CONSTRUCTOR T_mapLiteral.createClone(VAR original:T_mapLiteral);
+PROCEDURE T_mapLiteral.cloneFrom(VAR original:T_mapLiteral);
   VAR entry:T_literalKeyLiteralValueMap.CACHE_ENTRY;
   begin
-    inline_init(original.literalType);
+    literalType:=original.literalType;
     myHash:=original.myHash;
-    dat.createClone(original.dat);
+    dat.cloneFrom(original.dat);
     for entry in dat.keyValueList do begin
       entry.key  ^.rereference;
       entry.value^.rereference;
@@ -3092,13 +3092,19 @@ FUNCTION T_listLiteral.clone(CONST literalRecycler:P_literalRecycler): P_compoun
   end;
 
 FUNCTION T_setLiteral.clone(CONST literalRecycler:P_literalRecycler): P_compoundLiteral;
+  VAR s:P_setLiteral;
   begin
-    new(P_setLiteral(result),createClone(self));
+    s:=literalRecycler^.newSetLiteral(1);
+    s^.cloneFrom(self);
+    result:=s;
   end;
 
 FUNCTION T_mapLiteral.clone(CONST literalRecycler:P_literalRecycler): P_compoundLiteral;
+  VAR m:P_mapLiteral;
   begin
-    new(P_mapLiteral(result),createClone(self));
+    m:=literalRecycler^.newMapLiteral(1);
+    m^.cloneFrom(self);
+    result:=m;
   end;
 
 FUNCTION T_listLiteral.tempIterableList: T_arrayOfLiteral;
