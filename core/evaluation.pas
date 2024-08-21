@@ -447,7 +447,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       end;
 
     begin
-      returnValue:=NIL_EVAL_RESULT;
+      returnValue:=PRELIMINARY_OK_RESULT;
       repeatLocation:=first^.location;
       if not(parseBodyOk) then exit;
       {$ifdef fullVersion}
@@ -560,7 +560,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       end;
 
     begin
-      returnValue:=NIL_EVAL_RESULT;
+      returnValue:=PRELIMINARY_OK_RESULT;
       whileLocation:=first^.location;
       if not(parseBodyOk) then exit;
       {$ifdef fullVersion}
