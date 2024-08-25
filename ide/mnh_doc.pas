@@ -133,9 +133,7 @@ PROCEDURE ensureBuiltinDocExamples;
       result:=ids;
     end;
 
-  CONST EXAMPLES_CACHE_FILE= '/examples.dat';
-  VAR examplesToStore:array of record docTxt,ids:T_arrayOfString; end;
-      recycler:P_recycler;
+  VAR recycler:P_recycler;
 
   PROCEDURE processExample;
     VAR txt,ids:T_arrayOfString;
@@ -153,78 +151,8 @@ PROCEDURE ensureBuiltinDocExamples;
         for s in code do writeln('  ',s);
         writeln;
         {$endif}
-      end else begin
-        setLength(examplesToStore,length(examplesToStore)+1);
-        examplesToStore[length(examplesToStore)-1].docTxt:=txt;
-        examplesToStore[length(examplesToStore)-1].ids   :=ids;
       end;
-
       code:=C_EMPTY_STRING_ARRAY;
-    end;
-
-  PROCEDURE storeExamples;
-    VAR wrapper:T_bufferedOutputStreamWrapper;
-        i:longint;
-    PROCEDURE writeArrayOfString(CONST a:T_arrayOfString);
-      VAR s:string;
-      begin
-        wrapper.writeNaturalNumber(length(a));
-        for s in a do wrapper.writeAnsiString(s);
-      end;
-
-    begin
-      wrapper.createToWriteToFile(getHtmlRoot+EXAMPLES_CACHE_FILE);
-      wrapper.writeAnsiString(CODE_HASH);
-      wrapper.writeNaturalNumber(length(examplesToStore));
-      for i:=0 to length(examplesToStore)-1 do begin
-        writeArrayOfString(examplesToStore[i].docTxt);
-        writeArrayOfString(examplesToStore[i].ids);
-      end;
-      wrapper.destroy;
-    end;
-
-  FUNCTION canRestoreExamples:boolean;
-    VAR wrapper:T_bufferedInputStreamWrapper;
-        exampleCount,ei:longint;
-
-    FUNCTION readArrayOfString:T_arrayOfString;
-      VAR i:longint;
-      begin
-        //NOTE: initialize(result); leads to memory leak
-        setLength(result,wrapper.readNaturalNumber);
-        for i:=0 to length(result)-1 do result[i]:=wrapper.readAnsiString;
-      end;
-
-    VAR txt,ids, ids_successful:T_arrayOfString;
-        {$ifdef debugMode} id:string;{$endif}
-    begin
-      if not(fileExists(getHtmlRoot+EXAMPLES_CACHE_FILE)) then exit(false);
-      wrapper.createToReadFromFile(getHtmlRoot+EXAMPLES_CACHE_FILE);
-      if not(wrapper.allOkay) then begin
-        wrapper.destroy;
-        exit(false);
-      end;
-      result:=(wrapper.readAnsiString=CODE_HASH);
-      exampleCount:=wrapper.readNaturalNumber;
-      result:=result and wrapper.allOkay;
-      if result then begin
-        {$ifdef debugMode} writeln(stdErr,'        DEBUG: restoring built-in documentation');{$endif}
-        for ei:=0 to exampleCount-1 do begin
-          txt :=readArrayOfString;
-          ids :=readArrayOfString;
-          {$ifdef debugMode} if length(ids)=0 then wrapper.logWrongTypeError; {$endif}
-          ids_successful:=addExample(C_EMPTY_STRING_ARRAY,txt ,ids);
-
-          {$ifdef debugMode}
-          if length(ids_successful)<>length(ids) then begin
-            write('Example previously assigned to: '); for id in ids do write(id,', '); writeln;
-            write('       is now only assigned to: '); for id in ids_successful do write(id,', '); writeln;
-          end;
-          {$endif}
-        end;
-      end;
-      result:=result and wrapper.allOkay;
-      wrapper.destroy;
     end;
 
   VAR decompressed_examples:T_arrayOfString;
@@ -237,20 +165,18 @@ PROCEDURE ensureBuiltinDocExamples;
       setLength(allDocs,length(allDocs)+1);
       allDocs[length(allDocs)-1]:=functionDocMap.get(keys[i]);
     end;
-    if not(canRestoreExamples) then begin
-      {$ifdef debugMode} writeln(stdErr,'        DEBUG: preparing built-in documentation');{$endif}
-      setLength(examplesToStore,0);
-      //Read examples:---------------------------------------------------------------------
-      setLength(code,0);
-      for i:=0 to length(decompressed_examples)-1 do begin
-        if trim(decompressed_examples[i])='' then processExample
-                                             else append(code,decompressed_examples[i]);
-      end;
-      processExample;
-      //---------------------------------------------------------------------:Read examples
-      storeExamples;
-      setLength(examplesToStore,0);
+
+    {$ifdef debugMode} writeln(stdErr,'        DEBUG: preparing built-in documentation');{$endif}
+    //Read examples:---------------------------------------------------------------------
+    setLength(code,0);
+    for i:=0 to length(decompressed_examples)-1 do begin
+      if trim(decompressed_examples[i])=''
+      then processExample
+      else append(code,decompressed_examples[i]);
     end;
+    processExample;
+    //---------------------------------------------------------------------:Read examples
+
     functionDocExamplesReady:=true;
     freeRecycler(recycler);
   end;

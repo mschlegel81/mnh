@@ -305,12 +305,12 @@ FUNCTION T_mnhExecutionOptions.parseSingleMnhParameter(CONST param: string; VAR 
         if param=FLAG_STDOUT       then begin include(flags,clf_FORCE_STDOUT); Exclude(flags,clf_FORCE_STDERR); exit(true); end;
         if param=FLAG_PRINT_AS_LOG then begin include(flags,clf_TREAT_PRINT_AS_LOG); exit(true); end;
         //state changes:
-        if param=MARK_OUT_REWRITE  then begin parsingState.parsingState:=pst_parsingOutFileRewrite;       exit(true); end;
-        if param=MARK_OUT_APPEND   then begin parsingState.parsingState:=pst_parsingOutFileAppend;        exit(true); end;
-        if param=MARK_LOG_REWRITE  then begin parsingState.parsingState:=pst_parsingLogFileRewrite;       exit(true); end;
-        if param=MARK_LOG_APPEND   then begin parsingState.parsingState:=pst_parsingLogFileAppend;        exit(true); end;
-        if param=MARK_RESTRICT     then begin parsingState.parsingState:=pst_parsingSideEffectProfile;    exit(true); end;
-        if param=MARK_DATE_FMT     then begin parsingState.parsingState:=pst_parsingLogDateFormat;        exit(true); end;
+        if param=MARK_OUT_REWRITE  then begin parsingState.parsingState:=pst_parsingOutFileRewrite;    exit(true); end;
+        if param=MARK_OUT_APPEND   then begin parsingState.parsingState:=pst_parsingOutFileAppend;     exit(true); end;
+        if param=MARK_LOG_REWRITE  then begin parsingState.parsingState:=pst_parsingLogFileRewrite;    exit(true); end;
+        if param=MARK_LOG_APPEND   then begin parsingState.parsingState:=pst_parsingLogFileAppend;     exit(true); end;
+        if param=MARK_RESTRICT     then begin parsingState.parsingState:=pst_parsingSideEffectProfile; exit(true); end;
+        if param=MARK_DATE_FMT     then begin parsingState.parsingState:=pst_parsingLogDateFormat;     exit(true); end;
         if param=MARK_LOCLEN       then begin parsingState.parsingState:=pst_parsingLogLocationLength; exit(true); end;
       end;
       pst_parsingLogDateFormat: begin
