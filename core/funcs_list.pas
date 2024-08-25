@@ -287,7 +287,7 @@ FUNCTION size_imp intFuncSignature;
     if (params<>nil) and (params^.size=1) then begin
       if arg0^.literalType in C_compoundTypes
       then result:=recycler^.newIntLiteral(compound0^.size)
-      else if (arg0^.literalType=lt_expression)  and (P_expressionLiteral(arg0)^.typ=et_builtinIterable) and (P_builtinGeneratorExpression(arg0)^.getBultinGeneratorType=bgt_queue)
+      else if (arg0^.literalType=lt_expression)  and (P_expressionLiteral(arg0)^.typ=et_builtinIterable) and (P_builtinGeneratorExpression(arg0)^.typeString=QUEUE_TYPE_NAME)
       then result:=recycler^.newIntLiteral(P_queue(arg0)^.getQueuedCount)
       else result:=recycler^.newIntLiteral(1);
     end;

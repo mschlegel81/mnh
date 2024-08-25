@@ -756,8 +756,8 @@ PROCEDURE T_context.finalizeTaskAndDetachFromParent(CONST recycler:P_recycler);
       if valueScope<>nil then valueScope^.checkVariablesOnPop(recycler,C_nilSearchTokenLocation,@self);
       recycler^.disposeScope(valueScope);
       assert(valueScope=nil,'valueScope must be nil at this point');
-      state:=fts_finished;
     finally
+      state:=fts_finished;
       leaveCriticalSection(contextCS);
     end;
   end;

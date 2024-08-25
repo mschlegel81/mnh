@@ -71,7 +71,6 @@ TYPE
       PROCEDURE executeInContext(CONST context:P_context; CONST recycler:P_recycler);
       PROPERTY isFuture:boolean read isBlocking;
       FUNCTION isDone:boolean;
-      FUNCTION getBultinGeneratorType: T_builtinGeneratorType; virtual;
   end;
 
 PROCEDURE processListSerial  (CONST input:P_literal; CONST rulesList:T_expressionList; CONST aggregator:P_aggregator;
@@ -611,8 +610,6 @@ FUNCTION T_futureLiteral.isDone:boolean;
     result:=(state=fls_done);
     leaveCriticalSection(criticalSection);
   end;
-
-FUNCTION T_futureLiteral.getBultinGeneratorType: T_builtinGeneratorType; begin result:=bgt_future; end;
 
 end.
 

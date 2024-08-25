@@ -12,6 +12,7 @@ USES sysutils,Classes,
      recyclers,
      subrules;
 
+CONST CONCAT_ITERATOR_ID = 'ConcatIterator';
 IMPLEMENTATION
 USES mnh_settings,
      typinfo,
@@ -28,7 +29,6 @@ TYPE
     FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
     PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
     DESTRUCTOR destroy; virtual;
-    FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_listIterator.create(CONST literalRecycler:P_literalRecycler; CONST v: P_compoundLiteral; CONST location:T_tokenLocation);
@@ -76,7 +76,6 @@ TYPE
     FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
     PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
     DESTRUCTOR destroy; virtual;
-    FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_zipIterator.create(CONST location: T_tokenLocation);
@@ -135,6 +134,7 @@ FUNCTION T_zipIterator.evaluate(CONST location:T_tokenLocation; CONST context:P_
       element:T_evaluationResult;
       ex:P_expressionLiteral;
   begin
+    if not(context^.continueEvaluation) then exit(GENERATOR_END_EVAL_RESULT);
     listOutput:=P_literalRecycler(recycler)^.newListLiteral(length(underlying));
     for ex in underlying do begin
       element:=ex^.evaluate(location,context,recycler);
@@ -172,7 +172,6 @@ TYPE
     FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
     PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
     DESTRUCTOR destroy; virtual;
-    FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_singleValueIterator.create(CONST v: P_literal; CONST location:T_tokenLocation);
@@ -227,7 +226,6 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_rangeGenerator.create(CONST first,last: P_abstractIntLiteral; CONST loc: T_tokenLocation);
@@ -337,7 +335,6 @@ TYPE
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_permutationIterator.create(CONST literalRecycler:P_literalRecycler;CONST i: int64; CONST loc: T_tokenLocation);
@@ -372,6 +369,7 @@ FUNCTION T_permutationIterator.evaluate(CONST location:T_tokenLocation; CONST co
   VAR i,k,l:longint;
       swapTmp:P_literal;
   begin
+    if not(context^.continueEvaluation) then exit(GENERATOR_END_EVAL_RESULT);
     result.reasonForStop:=rr_ok;
     if first then begin
       result.literal:=P_recycler(recycler)^.newListLiteral(length(nextPermutation));
@@ -444,7 +442,6 @@ TYPE
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_filterGenerator.create(CONST source,filter: P_expressionLiteral; CONST loc:T_tokenLocation);
@@ -504,7 +501,6 @@ TYPE
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_mapGenerator.create(CONST source,mapEx: P_expressionLiteral; CONST loc: T_tokenLocation);
@@ -557,6 +553,95 @@ DESTRUCTOR T_mapGenerator.destroy;
   end;
 
 TYPE
+  P_concatIterator=^T_concatIterator;
+  T_concatIterator=object(T_builtinGeneratorExpression)
+    private
+      sources:array of P_expressionLiteral;
+    public
+      CONSTRUCTOR create(CONST literalRecycler: P_literalRecycler;  CONST source: P_literal; CONST loc: T_tokenLocation);
+      PROCEDURE addSource(CONST literalRecycler:P_literalRecycler; CONST input:P_literal; CONST location:T_tokenLocation);
+      FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
+      FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
+      PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
+      FUNCTION typeString: string; virtual;
+      DESTRUCTOR destroy; virtual;
+  end;
+
+CONSTRUCTOR T_concatIterator.create(CONST literalRecycler:P_literalRecycler; CONST source: P_literal; CONST loc: T_tokenLocation);
+  begin
+    inherited create(loc);
+    setLength(sources,1);
+    sources[0]:=newIterator(literalRecycler,source,loc);
+  end;
+
+PROCEDURE T_concatIterator.addSource(CONST literalRecycler:P_literalRecycler; CONST input:P_literal; CONST location:T_tokenLocation);
+  VAR toAdd:P_expressionLiteral;
+      i:longint;
+  begin
+    toAdd:=newIterator(literalRecycler,input,location);
+    i:=length(sources);
+    setLength(sources,i+1);
+    sources[i]:=toAdd;
+  end;
+
+FUNCTION T_concatIterator.toString(CONST lengthLimit: longint): string;
+  VAR i:longint=0;
+  begin
+    result:=CONCAT_ITERATOR_ID+'(';
+    while (length(result)<lengthLimit) and (i<length(sources)) do begin
+      if i>0 then result+=', ';
+      result+=sources[i]^.toString(lengthLimit-length(result));
+      i+=1;
+    end;
+    if i<length(sources) then result+=', ...';
+    result+=')';
+  end;
+
+FUNCTION T_concatIterator.evaluate(CONST location: T_tokenLocation; CONST context: P_abstractContext; CONST recycler: P_literalRecycler; CONST parameters: P_listLiteral): T_evaluationResult;
+  VAR i:longint;
+  begin
+    result:=GENERATOR_END_EVAL_RESULT;
+    while (length(sources)>0) and (result.reasonForStop=rr_endOfGenerator) do begin
+      result:=sources[0]^.evaluate(location,context,recycler,parameters);
+      if result.reasonForStop=rr_endOfGenerator then begin
+        recycler^.disposeLiteral(sources[0]);
+        for i:=0 to length(sources)-2 do sources[i]:=sources[i+1];
+        setLength(sources,length(sources)-1);
+      end;
+    end;
+  end;
+
+PROCEDURE T_concatIterator.cleanup(CONST literalRecycler: P_literalRecycler);
+  VAR i:longint;
+  begin
+    for i:=0 to length(sources)-1 do literalRecycler^.disposeLiteral(sources[i]);
+    setLength(sources,0)
+  end;
+
+FUNCTION T_concatIterator.typeString: string;
+  begin
+    result:=CONCAT_ITERATOR_ID;
+  end;
+
+DESTRUCTOR T_concatIterator.destroy;
+  begin
+    assert(length(sources)=0);
+  end;
+
+FUNCTION concatIterators_Impl(CONST Left,Right:P_literal; CONST tokenLocation:T_tokenLocation; CONST recycler:P_recycler):P_builtinGeneratorExpression;
+  begin
+    if (Left^.literalType=lt_expression) and (P_expressionLiteral(Left)^.typ=et_builtinIterable) and (Left^.typeString=CONCAT_ITERATOR_ID)
+    then begin
+      P_concatIterator(Left)^.addSource(recycler,Right,tokenLocation);
+      Left^.rereference;
+      result:=P_builtinGeneratorExpression(Left);
+    end else begin
+      new(P_concatIterator(result),create(recycler,Left ,tokenLocation));
+      P_concatIterator(result)^.addSource(recycler,Right,tokenLocation);
+    end;
+  end;
+
+TYPE
   P_flatMapGenerator=^T_flatMapGenerator;
   T_flatMapGenerator=object(T_builtinGeneratorExpression)
     private
@@ -571,7 +656,6 @@ TYPE
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_flatMapGenerator.create(CONST source, mapEx: P_expressionLiteral;CONST loc: T_tokenLocation);
@@ -679,7 +763,10 @@ FUNCTION T_flatMapGenerator.evaluate(CONST location:T_tokenLocation; CONST conte
       result.literal:=newVoidLiteral;
       if doneFetching then result.reasonForStop:=rr_endOfGenerator;
     end
-    else result.literal:=queue.next;
+    else begin
+      result.literal:=queue.next;
+      result.reasonForStop:=rr_ok;
+    end;
   end;
 
 PROCEDURE T_flatMapGenerator.cleanup(CONST literalRecycler:P_literalRecycler);
@@ -730,7 +817,6 @@ TYPE
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_chunkIterator.create(CONST source:P_expressionLiteral; CONST elementsPerChunk:longint; CONST mapEx:P_expressionLiteral; CONST loc:T_tokenLocation);
@@ -842,7 +928,6 @@ TYPE
       DESTRUCTOR destroy; virtual;
       PROCEDURE collectResults(CONST container:P_collectionLiteral; CONST loc: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
       FUNCTION mustBeDroppedBeforePop:boolean; virtual;
-      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
   P_parallelFilterGenerator=^T_parallelFilterGenerator;
@@ -852,7 +937,6 @@ TYPE
     public
       CONSTRUCTOR create(CONST source,filterEx:P_expressionLiteral; CONST loc:T_tokenLocation);
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
-      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_parallelMapGenerator.create(CONST source, mapEx: P_expressionLiteral; CONST loc: T_tokenLocation);
@@ -1190,7 +1274,6 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 FUNCTION T_fileLineIterator.fillQueue:boolean;
@@ -1327,7 +1410,6 @@ TYPE
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
       PROCEDURE cleanup(CONST literalRecycler: P_literalRecycler); virtual;
-      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 FUNCTION T_byteStreamIterator.fillQueue(CONST recycler: P_literalRecycler): boolean;
@@ -1477,7 +1559,6 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_primeGenerator.create(CONST loc: T_tokenLocation);
@@ -1563,7 +1644,6 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 CONSTRUCTOR T_stringIterator.create(CONST loc:T_tokenLocation; CONST chars:T_charSet; CONST minLength,maxLength:longint);
@@ -1672,7 +1752,6 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
   T_abstractRandomGenerator=object(T_builtinGeneratorExpression)
@@ -1698,7 +1777,6 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION getNext(CONST recycler:P_literalRecycler):P_literal; virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
   P_isaacRandomGenerator=^T_isaacRandomGenerator;
@@ -1710,7 +1788,6 @@ TYPE
       FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
       FUNCTION getNext(CONST recycler:P_literalRecycler):P_literal; virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
   end;
 
 PROCEDURE T_abstractRandomGenerator.setRange(CONST maxValExclusive:P_abstractIntLiteral);
@@ -1879,7 +1956,6 @@ T_vanDerCorputGenerator=object(T_builtinGeneratorExpression)
     CONSTRUCTOR create(CONST base_:longint; CONST loc:T_tokenLocation);
     FUNCTION toString(CONST lengthLimit:longint=maxLongint):string; virtual;
     FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
-    FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
 end;
 
 CONSTRUCTOR T_vanDerCorputGenerator.create(CONST base_: longint; CONST loc: T_tokenLocation);
@@ -1923,32 +1999,6 @@ FUNCTION vanDerCorputGenerator_impl intFuncSignature;
       new(P_vanDerCorputGenerator(result),create(int0^.intValue,tokenLocation));
   end;
 
-FUNCTION T_listIterator.getBultinGeneratorType:T_builtinGeneratorType;
-  begin result:=bgt_listIterator; end;
-
-FUNCTION T_zipIterator.getBultinGeneratorType: T_builtinGeneratorType;
-  begin
-    result:=bgt_zipIterator;
-  end;
-
-FUNCTION T_singleValueIterator.getBultinGeneratorType:T_builtinGeneratorType;     begin result:=bgt_singleValueIterator;     end;
-FUNCTION T_rangeGenerator.getBultinGeneratorType:T_builtinGeneratorType;          begin result:=bgt_rangeGenerator;          end;
-FUNCTION T_permutationIterator.getBultinGeneratorType:T_builtinGeneratorType;     begin result:=bgt_permutationIterator;     end;
-FUNCTION T_filterGenerator.getBultinGeneratorType:T_builtinGeneratorType;         begin result:=bgt_filterGenerator;         end;
-FUNCTION T_mapGenerator.getBultinGeneratorType:T_builtinGeneratorType;            begin result:=bgt_mapGenerator;            end;
-FUNCTION T_flatMapGenerator.getBultinGeneratorType:T_builtinGeneratorType;        begin result:=bgt_flatMapGenerator;        end;
-FUNCTION T_chunkIterator.getBultinGeneratorType:T_builtinGeneratorType;           begin result:=bgt_chunkMapGenerator;       end;
-FUNCTION T_parallelMapGenerator.getBultinGeneratorType:T_builtinGeneratorType;    begin result:=bgt_parallelMapGenerator;    end;
-FUNCTION T_parallelFilterGenerator.getBultinGeneratorType:T_builtinGeneratorType; begin result:=bgt_parallelFilterGenerator; end;
-FUNCTION T_primeGenerator.getBultinGeneratorType:T_builtinGeneratorType;          begin result:=bgt_primeGenerator;          end;
-FUNCTION T_vanDerCorputGenerator.getBultinGeneratorType:T_builtinGeneratorType;   begin result:=bgt_vanDerCorputGenerator;   end;
-FUNCTION T_fileLineIterator    .getBultinGeneratorType:T_builtinGeneratorType;    begin result:=bgt_fileLineIterator;        end;
-FUNCTION T_byteStreamIterator  .getBultinGeneratorType:T_builtinGeneratorType;    begin result:=bgt_byteStreamIterator;      end;
-FUNCTION T_stringIterator      .getBultinGeneratorType:T_builtinGeneratorType;    begin result:=bgt_stringIterator;          end;
-FUNCTION T_realRandomGenerator .getBultinGeneratorType:T_builtinGeneratorType;    begin result:=bgt_realRandomGenerator;     end;
-FUNCTION T_intRandomGenerator  .getBultinGeneratorType:T_builtinGeneratorType;    begin result:=bgt_xorIntRandomGenerator;   end;
-FUNCTION T_isaacRandomGenerator.getBultinGeneratorType:T_builtinGeneratorType;    begin result:=bgt_isaacIntRandomGenerator; end;
-
 FUNCTION zip_imp intFuncSignature;
   VAR i:longint;
       zip:P_zipIterator;
@@ -1968,6 +2018,7 @@ FUNCTION zip_imp intFuncSignature;
 
 INITIALIZATION
   createLazyMap:=@createLazyMapImpl;
+  concatIterators:=@concatIterators_Impl;
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'rangeGenerator',@rangeGenerator,ak_binary);
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'permutationIterator',@permutationIterator,ak_binary);
   builtinFunctionMap.registerRule(LIST_NAMESPACE,'map',    @map_imp   ,ak_binary);

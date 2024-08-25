@@ -36,13 +36,12 @@ TYPE
       FUNCTION evaluate(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler; CONST parameters:P_listLiteral=nil):T_evaluationResult; virtual;
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler); virtual;
       DESTRUCTOR destroy; virtual;
-      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual;
       PROPERTY getQueuedCount:longint read queuedCount;
   end;
 
+CONST QUEUE_TYPE_NAME='Queue';
 IMPLEMENTATION
 {$i func_defines.inc}
-CONST QUEUE_TYPE_NAME='Queue';
 
 CONSTRUCTOR T_queue.create(CONST location: T_tokenLocation);
   begin
@@ -100,7 +99,7 @@ FUNCTION queue_put intFuncSignature;
     if (params<>nil) and (params^.size>=2)
     and (params^.value[0]^.literalType=lt_expression)
     and (P_expressionLiteral(params^.value[0])^.typ=et_builtinIterable)
-    and (P_builtinGeneratorExpression(params^.value[0])^.getBultinGeneratorType=bgt_queue) then begin
+    and (P_builtinGeneratorExpression(params^.value[0])^.typeString=QUEUE_TYPE_NAME) then begin
       queue:=P_queue(params^.value[0]);
       with queue^ do begin
         enterCriticalSection(queueCs);
@@ -132,7 +131,7 @@ FUNCTION queue_close intFuncSignature;
     if (params<>nil) and (params^.size=1)
     and (params^.value[0]^.literalType=lt_expression)
     and (P_expressionLiteral(params^.value[0])^.typ=et_builtinIterable)
-    and (P_builtinGeneratorExpression(params^.value[0])^.getBultinGeneratorType=bgt_queue) then begin
+    and (P_builtinGeneratorExpression(params^.value[0])^.typeString=QUEUE_TYPE_NAME) then begin
       queue:=P_queue(params^.value[0]);
       with queue^ do begin
         enterCriticalSection(queueCs);
@@ -170,11 +169,6 @@ PROCEDURE T_queue.cleanup(CONST literalRecycler: P_literalRecycler);
 DESTRUCTOR T_queue.destroy;
   begin
     doneCriticalSection(queueCs);
-  end;
-
-FUNCTION T_queue.getBultinGeneratorType: T_builtinGeneratorType;
-  begin
-    result:=bgt_queue;
   end;
 
 INITIALIZATION

@@ -184,28 +184,6 @@ TYPE
       FUNCTION clone(CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_literalRecycler):P_expressionLiteral; virtual;
     end;
 
-  T_builtinGeneratorType=(bgt_future,
-                          bgt_listIterator,
-                          bgt_singleValueIterator,
-                          bgt_rangeGenerator,
-                          bgt_permutationIterator,
-                          bgt_filterGenerator,
-                          bgt_mapGenerator,
-                          bgt_parallelMapGenerator,
-                          bgt_fileLineIterator,
-                          bgt_primeGenerator,
-                          bgt_stringIterator,
-                          bgt_realRandomGenerator,
-                          bgt_xorIntRandomGenerator,
-                          bgt_isaacIntRandomGenerator,
-                          bgt_vanDerCorputGenerator,
-                          bgt_parallelFilterGenerator,
-                          bgt_flatMapGenerator,
-                          bgt_chunkMapGenerator,
-                          bgt_queue,
-                          bgt_byteStreamIterator,
-                          bgt_zipIterator);
-
   P_builtinGeneratorExpression=^T_builtinGeneratorExpression;
   T_builtinGeneratorExpression=object(T_expressionLiteral)
     public
@@ -216,7 +194,6 @@ TYPE
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual;
       FUNCTION getId:T_idString; virtual;
       FUNCTION referencesAnyUserPackage:boolean; virtual;
-      FUNCTION getBultinGeneratorType:T_builtinGeneratorType; virtual; abstract;
   end;
 
 PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST messages:P_messages);
@@ -228,6 +205,7 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
 FUNCTION evaluteExpressionMap   (CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_literalRecycler; CONST arg0:P_literal):T_evaluationResult;
 FUNCTION evaluteExpressionFilter(CONST e:P_expressionLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_literalRecycler; CONST arg0:P_literal):boolean;
 VAR createLazyMap:FUNCTION(CONST generator,mapping:P_expressionLiteral; CONST tokenLocation:T_tokenLocation):P_builtinGeneratorExpression;
+    concatIterators:FUNCTION(CONST Left,Right:P_literal; CONST tokenLocation:T_tokenLocation; CONST recycler:P_recycler):P_builtinGeneratorExpression;
     identifiedInternalFunctionTally:longint=0;
     BUILTIN_PMAP:P_intFuncCallback;
     FORMAT_FUNCTION:P_intFuncCallback=nil;
@@ -988,6 +966,8 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
       LHSinstead:P_literal=nil;
       RHSinstead:P_literal=nil;
   begin
+    if op=tt_operatorConcat then exit(concatIterators(LHS,RHS,tokenLocation,recycler));
+
     if (LHS<>nil) and (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_iterableExpressionTypes) and not(RHS^.literalType=lt_expression) then begin
       // generator+3 -> lazyMap(generator,{$x+3})
       LHSinstead:=newIdentityRule(P_context(threadContext),tokenLocation,recycler);
@@ -1010,7 +990,7 @@ FUNCTION subruleApplyOpImpl(CONST LHS:P_literal; CONST op:T_tokenType; CONST RHS
     end;
     if (LHS<>nil) and (LHS^.literalType=lt_expression) and (P_expressionLiteral(LHS)^.typ in C_statefulExpressionTypes) or
                       (RHS^.literalType=lt_expression) and (P_expressionLiteral(RHS)^.typ in C_statefulExpressionTypes) then begin
-      P_context(threadContext)^.raiseError('Cannot perform direct operations on stateful expressions.',tokenLocation);
+      P_context(threadContext)^.raiseError('Cannot perform direct operations ('+C_tokenDefaultId[op]+') on stateful expressions.',tokenLocation);
       exit(newVoidLiteral);
     end;
     if LHS<>nil then begin
