@@ -3,7 +3,6 @@ mean    (X:NumericList)->X.agg(+)/size(X);
 //*Returns the (statistical) variance X
 variance(X:NumericList)->mean(X²)-mean(X)²;
 //*Returns the standardVariation of X
-@SuppressUnusedWarning=all
 standardVariation(X:NumericList)->sqrt(X.variance);
 //*Returns the median of numeric list X
 median(X:NumericCollection)->sort(X)[size(X) div 2];

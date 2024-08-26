@@ -3,7 +3,6 @@ private plain datastore versionInfo:=['MajorVersionNr'=>0,'MinorVersionNr'=>0,'R
 
 maxLoggedBuildNumber->try({max(LOG.getInner(1).getInner(0))},0);
 
-@SuppressUnusedWarning
 getVersionInfoTag(fullVersion:Boolean,buildNr:Int,version:IntList(3))->begin
   format(//!~    <VersionInfo>
       <UseVersionInfo Value="True"/>

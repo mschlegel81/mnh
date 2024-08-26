@@ -20,7 +20,6 @@ save;
   method[$params[0]]($params[1]);
 end}.toStack;
 
-@SuppressUnusedWarning=all
 //*Returns the number of elements on s
 depth(s:Stack)  ->s(DEPTH);
 

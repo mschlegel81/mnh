@@ -1,11 +1,10 @@
 memoized primesBelow(threshold)->primes(threshold).toSet;
 
-@SuppressUnusedWarning=used in format
 memoized safePrimesBelow(threshold)->begin
   P:=primesBelow(threshold);
   intersect(P,(P-1) div 2).size;
 end;
-@SuppressUnusedWarning=used in format
+
 unsafePrimesBelow(threshold)->begin
   P:=primesBelow(threshold);
   P.size-safePrimesBelow(threshold);

@@ -32,7 +32,6 @@ runSandboxed(parameter)->
      ? format('Exit code: %s',message)
      : kind=='printline'
        ? message
-          @SuppressUnusedWarning=Used in format statement
        : (prefix:=PREFIX_OF_MESSAGE_TYPE[kind]).isVoid
          ? void
          : f"{prefix} {location.replace(myPath.systemSpecificFilename,myPath.extractFileNameOnly)} {COLOR_OF_MESSAGE_TYPE[kind]}{message}\e[0m";

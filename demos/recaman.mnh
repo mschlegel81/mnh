@@ -10,7 +10,6 @@ save;
   i;
 end}.toIterableExpression;
 
-@SuppressUnusedWarning=all
 recamanDuplicatesGenerator->{begin
   visited:=[].toSet;
   i:= 0;

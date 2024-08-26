@@ -62,7 +62,6 @@ hashFiles
 .agg(+)
 .get([0,2])/1024));
 
-@SuppressUnusedWarning
 packSets(builtNoAndVersion:List(2))->
   BUILDS.filter((B)->B['distro'])
         .map({[$B['targetDest'].extractFileDirectory.extractFileNameOnly,$B['platform']!='Linux',$B['targetDest']]})
@@ -78,7 +77,6 @@ memoized sevenZipExe->
   .each(file,file.fileExists ? file : void,head)
   orElse fail('7-Zip could not be located!');
 
-@SuppressUnusedWarning
 call7z(fileList:StringList,builtNo,suffix)->begin
   fileExists(fileList).agg(and)
   ? void

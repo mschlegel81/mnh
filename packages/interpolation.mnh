@@ -1,5 +1,4 @@
 USE linAlg;
-@SuppressUnusedWarning=all
 //*Returns a polynomial function in x, interpolating the given points
 interpolatePolynomial(X:NumericList,Y:NumericList)->
   X.size<>Y.size

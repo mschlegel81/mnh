@@ -5,7 +5,6 @@ TRUE :=[1  ].toTriBool;
 TRI_VALUES:=[FALSE,MAYBE,TRUE];
 
 @Override
-@SuppressUnusedWarning
 toString(b==FALSE)->'FALSE';
 toString(b==MAYBE)->'MAYBE';
 toString(b==TRUE )->'TRUE ';

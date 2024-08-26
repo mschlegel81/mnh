@@ -20,14 +20,6 @@ private F:={begin
               -f40-f42];
             end};
 
-@SuppressUnusedWarning
-private asymmetryOf(x:List(6))->begin
-  A:=[sqr(x[0]-x[2]).agg(+),
-      sqr(x[4]-x[2]).agg(+),
-      sqr(x[0]-x[4]).agg(+)];
-  max(A)-min(A);
-end;
-
 private newTrailPlotter(style)->{begin
   trace:=[];
 save;

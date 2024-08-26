@@ -62,7 +62,7 @@ private serve(pid,(PUT),key,value)->begin
   value;
 end;
 
-@SuppressUnusedWarning
+@SuppressUnusedWarning=all
 //*Put an entry to the store
 //*The entry will not be persisted unless storeCommit is called
 storePut(key,value)->sendRequest(PUT,key,value);
@@ -74,7 +74,7 @@ private serve(pid,(GET),key)->begin
   ? void
   : pendingUpdates[pid,key] orElse store[key];
 end;
-@SuppressUnusedWarning
+
 //*Get an entry with the specified key from the store
 storeGet(key)->sendRequest(GET,key);
 
@@ -84,7 +84,7 @@ private serve(pid,(DELETE),key)->begin
   pendingDeletes[pid]|=key;
   pendingUpdates[pid,key]:=void;
 end;
-@SuppressUnusedWarning
+
 //*Delete an entry from the store
 //*The changes will not be persisted unless storeCommit is called
 storeDelete(key)->sendRequest(DELETE,key);
@@ -95,7 +95,7 @@ private serve(pid,(COMMIT))->begin
   (pendingUpdates[pid] orElse []).each(entry      ,store[entry[0]]:=entry[1]);
   serve(pid,ROLLBACK);
 end;
-@SuppressUnusedWarning
+
 //*Commits the pending changes and clears the stage
 storeCommit->sendRequest(COMMIT);
 
@@ -104,7 +104,7 @@ private serve(pid,(ROLLBACK))->begin
   pendingDeletes[pid]:=void;
   pendingUpdates[pid]:=void;
 end;
-@SuppressUnusedWarning
+
 //*Clears the stage, rolling back the changes
 //*This is done automatically when the script stops
 storeRollback->sendRequest(ROLLBACK);

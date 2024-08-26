@@ -1,5 +1,4 @@
 //Demonstrates use of printf with expressions and "here doc" strings
-@SuppressUnusedWarning=Used in format string
 private B(0)->"no more bottles";
 private B(1)->"1 bottle";
 private B(n)->n&" bottles";

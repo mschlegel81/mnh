@@ -1,8 +1,6 @@
-@SuppressUnusedWarning=Used in printf
 private monteCarloPi  (sampleSize>0)->
   trueCount(random(sampleSize)²+random(sampleSize)²<1)/sampleSize*4;
 
-@SuppressUnusedWarning=Used in printf
 private vanDerCorputPi(sampleSize>0)->
   trueCount(vanDerCorputGenerator(2).head(sampleSize)²+
             vanDerCorputGenerator(3).head(sampleSize)²<1)/sampleSize*4;
