@@ -134,7 +134,7 @@ TYPE
       FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
       {$ifdef fullVersion}
       FUNCTION getUsedParameters:T_arrayOfLongint;
-      PROCEDURE checkParameters(CONST distinction:T_arrayOfLongint; CONST context:P_context);
+      PROCEDURE checkParameters(CONST distinction:T_arrayOfLongint; CONST context:P_context; CONST callInfos:P_callAndIdInfos);
       PROCEDURE fillCallInfos(CONST infos:P_callAndIdInfos);
       {$endif}
       PROPERTY isPublic:boolean read publicSubrule;
@@ -1485,14 +1485,21 @@ FUNCTION T_subruleExpression.getUsedParameters: T_arrayOfLongint;
     for t in preparedBody do with t do if (parIdx<>NO_PARAMETERS_IDX) then append(result,parIdx);
   end;
 
-PROCEDURE T_subruleExpression.checkParameters(CONST distinction:T_arrayOfLongint; CONST context:P_context);
+PROCEDURE T_subruleExpression.checkParameters(CONST distinction:T_arrayOfLongint; CONST context:P_context; CONST callInfos:P_callAndIdInfos);
   VAR t:T_preparedToken;
       used:T_arrayOfLongint;
+      named_parameters: T_patternElementLocations;
+      k: integer;
   begin
     if meta.hasAttribute(SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE) then exit;
     setLength(used,0);
     append(used,distinction);
+    named_parameters:=pattern.getNamedParameters;
+    for k:=0 to length(named_parameters)-1 do
+      if callInfos^.isParameterReferenced(named_parameters[k].location)
+      then appendIfNew(used,k);
     for t in preparedBody do with t do if (parIdx<>NO_PARAMETERS_IDX) then append(used,parIdx);
+
     pattern.complainAboutUnusedParameters(used,context,getLocation);
   end;
 
@@ -1898,9 +1905,9 @@ FUNCTION stringToTokens(CONST s:ansistring; CONST location:T_tokenLocation; CONS
       statement:T_enhancedStatement;
   begin
     lexer.create(s,location,package);
-    statement:=lexer.getNextStatement(context,recycler,false);
+    statement:=lexer.getNextStatement(context,recycler);
     result:=statement.token.first;
-    statement:=lexer.getNextStatement(context,recycler,false);
+    statement:=lexer.getNextStatement(context,recycler);
     if statement.token.first<>nil then begin
       context^.raiseError('Unexpected additional statement: '+tokensToString(statement.token.first,50),location);
       recycler^.cascadeDisposeToken(statement.token.first);
@@ -1920,9 +1927,9 @@ FUNCTION listToTokens(CONST l:P_listLiteral; CONST location:T_tokenLocation; CON
   begin
     result:=nil;
     lexer.create(l^.forcedIterableList(nil),location,package);
-    statement:=lexer.getNextStatement(context,recycler,false);
+    statement:=lexer.getNextStatement(context,recycler);
     result:=statement.token.first;
-    statement:=lexer.getNextStatement(context,recycler,false);
+    statement:=lexer.getNextStatement(context,recycler);
     if statement.token.first<>nil then begin
       context^.raiseError('Unexpected additional statement: '+tokensToString(statement.token.first,50),location);
       recycler^.cascadeDisposeToken(statement.token.first);

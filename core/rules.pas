@@ -29,7 +29,7 @@ TYPE
     PROCEDURE resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext); virtual;
     {$ifdef fullVersion}
     PROCEDURE fillCallInfos(CONST callInfos:P_callAndIdInfos); virtual; abstract;
-    PROCEDURE checkParameters(CONST context:P_context); virtual;
+    PROCEDURE checkParameters(CONST context:P_context; CONST callInfos:P_callAndIdInfos); virtual;
     {$endif}
     FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST p1,p2:P_literal;       CONST recycler:P_recycler; CONST context:P_abstractContext):P_literal; virtual;
     FUNCTION evaluateToLiteral(CONST callLocation:T_tokenLocation; CONST parList:P_listLiteral; CONST recycler:P_recycler; CONST context:P_abstractContext):P_literal; virtual;
@@ -58,7 +58,7 @@ TYPE
       PROCEDURE fillCallInfos(CONST callInfos:P_callAndIdInfos); virtual;
       FUNCTION hasAnnotationMarkingAsUsed:boolean; virtual;
       FUNCTION getStructuredInfo:T_structuredRuleInfoList; virtual;
-      PROCEDURE checkParameters(CONST context:P_context); virtual;
+      PROCEDURE checkParameters(CONST context:P_context; CONST callInfos:P_callAndIdInfos); virtual;
       {$endif}
       {Returns the common arity of all subrules or -1 if arity differs or any subrule has optional parameters}
       FUNCTION arity:T_arityInfo; virtual;
@@ -87,7 +87,7 @@ TYPE
       PROCEDURE fillCallInfos(CONST callInfos:P_callAndIdInfos); virtual;
       FUNCTION hasAnnotationMarkingAsUsed:boolean; virtual;
       FUNCTION getStructuredInfo:T_structuredRuleInfoList; virtual;
-      PROCEDURE checkParameters(CONST context:P_context); virtual;
+      PROCEDURE checkParameters(CONST context:P_context; CONST callInfos:P_callAndIdInfos); virtual;
       {$endif}
       {Returns the common arity of all subrules or -1 if arity differs or any subrule has optional parameters}
       FUNCTION arity:T_arityInfo; virtual;
@@ -1001,10 +1001,10 @@ FUNCTION T_variable.isPure:boolean;
   end;
 
 {$ifdef fullVersion}
-PROCEDURE T_rule.checkParameters(CONST context:P_context);
+PROCEDURE T_rule.checkParameters(CONST context:P_context; CONST callInfos:P_callAndIdInfos);
   begin end;
 
-PROCEDURE T_ruleWithSubrules.checkParameters(CONST context:P_context);
+PROCEDURE T_ruleWithSubrules.checkParameters(CONST context:P_context; CONST callInfos:P_callAndIdInfos);
   VAR s:P_subruleExpression;
       patterns:T_arrayOfPpattern;
       distinction:T_arrayOfLongint;
@@ -1017,14 +1017,14 @@ PROCEDURE T_ruleWithSubrules.checkParameters(CONST context:P_context);
       for s in subrules do append(distinction,s^.getUsedParameters);
     end else distinction:=C_EMPTY_LONGINT_ARRAY;
     sortUnique(distinction);
-    for s in subrules do s^.checkParameters(distinction,context);
+    for s in subrules do s^.checkParameters(distinction,context,callInfos);
   end;
 
-PROCEDURE T_delegatorRule.checkParameters(CONST context:P_context);
+PROCEDURE T_delegatorRule.checkParameters(CONST context:P_context; CONST callInfos:P_callAndIdInfos);
   VAR r:P_rule;
   begin
-    if localRule<>nil then localRule^.checkParameters(context);
-    for r in imported do           r^.checkParameters(context);
+    if localRule<>nil then localRule^.checkParameters(context,callInfos);
+    for r in imported do           r^.checkParameters(context,callInfos);
   end;
 {$endif}
 

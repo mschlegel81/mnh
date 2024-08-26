@@ -114,7 +114,11 @@ PROCEDURE postIdeMessage(CONST messageText: string; CONST warn: boolean);
   begin
     if eventsAdapterSingleton=nil then exit;
     new(message,create(warn,messageText));
-    eventsAdapterSingleton^.append(message);
+    try
+      eventsAdapterSingleton^.append(message);
+    except
+      dispose(message,destroy);
+    end;
   end;
 
 {$R *.lfm}

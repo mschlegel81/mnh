@@ -484,6 +484,9 @@ PROCEDURE demoCallInterpretation(CONST input:T_arrayOfString; OUT textOut,usedBu
 
 PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR globals:T_evaluationGlobals; CONST recycler:P_recycler; CONST parentUsecase:T_packageLoadUsecase);
   VAR i:longint;
+      {$ifdef fullVersion}
+      callAndIdInfos:P_callAndIdInfos=nil;
+      {$endif}
   begin
     with containingPackage^.mainPackage^ do begin
       if containingPackage^.mainPackage^.getCodeProvider^.id=id then begin
@@ -496,8 +499,11 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
               (secondaryPackages[i]^.codeChanged)
           then secondaryPackages[i]^.readyForUsecase:=lu_NONE;
           if secondaryPackages[i]^.readyForUsecase<>lu_beingLoaded then begin
-            if secondaryPackages[i]^.readyForUsecase<>C_packageLoadUsecaseMeta[parentUsecase].import_usecase then
-            secondaryPackages[i]^.load(C_packageLoadUsecaseMeta[parentUsecase].import_usecase,globals,recycler,C_EMPTY_STRING_ARRAY);
+            if secondaryPackages[i]^.readyForUsecase<>C_packageLoadUsecaseMeta[parentUsecase].import_usecase then begin
+              {$ifdef fullVersion}if parentUsecase in [lu_forCodeAssistance,lu_forCodeAssistanceSecondary] then new(callAndIdInfos,create);{$endif}
+              secondaryPackages[i]^.load(C_packageLoadUsecaseMeta[parentUsecase].import_usecase,globals,recycler,C_EMPTY_STRING_ARRAY{$ifdef fullVersion} ,callAndIdInfos{$endif});
+              {$ifdef fullVersion}if parentUsecase in [lu_forCodeAssistance,lu_forCodeAssistanceSecondary] then dispose(callAndIdInfos,destroy);{$endif}
+            end;
             pack:=secondaryPackages[i];
             exit;
           end else begin
@@ -509,7 +515,9 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
       new(pack,create(newCodeProvider(path),containingPackage^.mainPackage));
       setLength(secondaryPackages,length(secondaryPackages)+1);
       secondaryPackages[length(secondaryPackages)-1]:=pack;
-      pack^.load(C_packageLoadUsecaseMeta[parentUsecase].import_usecase,globals,recycler,C_EMPTY_STRING_ARRAY);
+      {$ifdef fullVersion}if parentUsecase in [lu_forCodeAssistance,lu_forCodeAssistanceSecondary] then new(callAndIdInfos,create);{$endif}
+      pack^.load(C_packageLoadUsecaseMeta[parentUsecase].import_usecase,globals,recycler,C_EMPTY_STRING_ARRAY{$ifdef fullVersion} ,callAndIdInfos{$endif});
+      {$ifdef fullVersion}if parentUsecase in [lu_forCodeAssistance,lu_forCodeAssistanceSecondary] then dispose(callAndIdInfos,destroy);{$endif}
     end;
   end;
 
@@ -583,7 +591,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
       if (callAndIdInfos<>nil) and (first^.next<>nil) then begin
         clauseEnd:=first^.last^.location;
         inc(clauseEnd.column);
-        callAndIdInfos^.addLocalIdInfo(first^.next^.singleTokenToString,first^.next^.location,clauseEnd,tt_include);
+        callAndIdInfos^.addLocalIdInfo(first^.next^.singleTokenToString,first^.next^.location,clauseEnd,tt_include,true);
       end;
       {$endif}
       if extendsLevel>=32 then begin
@@ -608,11 +616,11 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
 
       helperUse.destroy;
       lexer.createForExtendedPackage(importWrapper,@self{$ifdef fullVersion},callAndIdInfos{$endif});
-      stmt:=lexer.getNextStatement(@globals.primaryContext,recycler,usecase=lu_forCodeAssistance);
+      stmt:=lexer.getNextStatement(@globals.primaryContext,recycler);
       inc(extendsLevel);
       while (globals.primaryContext.continueEvaluation) and (stmt.token.first<>nil) do begin
         interpret(stmt,usecase,globals,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
-        stmt:=lexer.getNextStatement(@globals.primaryContext,recycler,usecase=lu_forCodeAssistance);
+        stmt:=lexer.getNextStatement(@globals.primaryContext,recycler);
       end;
       if (stmt.token.first<>nil) then recycler^.cascadeDisposeToken(stmt.token.first);
       dec(extendsLevel);
@@ -682,7 +690,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         if first^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule] then begin
           newId:=first^.txt;
           {$ifdef fullVersion}
-          if callAndIdInfos<>nil then callAndIdInfos^.addLocalIdInfo(first^.txt,first^.location,clauseEnd,tt_use);
+          if callAndIdInfos<>nil then callAndIdInfos^.addLocalIdInfo(first^.txt,first^.location,clauseEnd,tt_use,true);
           {$endif}
           if (newId=FORCE_GUI_PSEUDO_PACKAGE) then begin
             if (gui_started=NO) and not(C_packageLoadUsecaseMeta[usecase].assistanceRun) then globals.primaryContext.messages^.logGuiNeeded;
@@ -696,7 +704,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
           end;
         end else if (first^.tokType=tt_literal) and (P_literal(first^.data)^.literalType=lt_string) then begin
           {$ifdef fullVersion}
-          if callAndIdInfos<>nil then callAndIdInfos^.addLocalIdInfo(first^.singleTokenToString,first^.location,clauseEnd,tt_use);
+          if callAndIdInfos<>nil then callAndIdInfos^.addLocalIdInfo(first^.singleTokenToString,first^.location,clauseEnd,tt_use,true);
           {$endif}
           newId:=P_stringLiteral(first^.data)^.value;
           j:=length(packageUses);
@@ -1049,10 +1057,10 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
           pack:P_package;
       begin
         for rule in ruleMap.getAllLocalRules do
-          rule^.checkParameters(@globals.primaryContext);
+          rule^.checkParameters(@globals.primaryContext,callAndIdInfos);
         for pack in secondaryPackages do
           for rule in pack^.ruleMap.getAllLocalRules do
-            rule^.checkParameters(@globals.primaryContext);
+            rule^.checkParameters(@globals.primaryContext,callAndIdInfos);
       end;
 
     begin
@@ -1075,7 +1083,7 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
     if profile then globals.timeBaseComponent(pc_tokenizing);
     lexer.createForPackageParsing(@self{$ifdef fullVersion},callAndIdInfos{$endif});
     if profile then globals.timeBaseComponent(pc_tokenizing);
-    stmt:=lexer.getNextStatement(@globals.primaryContext,recycler,usecase=lu_forCodeAssistance);
+    stmt:=lexer.getNextStatement(@globals.primaryContext,recycler);
     isPlainScript:=isPlainScriptStatement;
     if isPlainScript then begin
       case usecase of
@@ -1084,14 +1092,14 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
       end;
       commentOnPlainMain:=join(stmt.comments,C_lineBreakChar);
       recycler^.cascadeDisposeToken(stmt.token.first);
-      stmt:=lexer.getNextStatement(@globals.primaryContext,recycler,usecase=lu_forCodeAssistance);
+      stmt:=lexer.getNextStatement(@globals.primaryContext,recycler);
     end;
     if profile then globals.timeBaseComponent(pc_tokenizing);
 
     while (C_packageLoadUsecaseMeta[usecase].assistanceRun or globals.primaryContext.continueEvaluation) and (stmt.token.first<>nil) do begin
       interpret(stmt,usecase,globals,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
       if profile then globals.timeBaseComponent(pc_tokenizing);
-      stmt:=lexer.getNextStatement(@globals.primaryContext,recycler,usecase=lu_forCodeAssistance);
+      stmt:=lexer.getNextStatement(@globals.primaryContext,recycler);
       if profile then globals.timeBaseComponent(pc_tokenizing);
     end;
     if (stmt.token.first<>nil) then recycler^.cascadeDisposeToken(stmt.token.first);
@@ -1099,7 +1107,7 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
     if  C_packageLoadUsecaseMeta[usecase].assistanceRun then begin
       readyForUsecase:=usecase;
       {$ifdef fullVersion}
-      if (usecase=lu_forCodeAssistance) and isMain then afterLoadForAssistance;
+      if (usecase in [lu_forCodeAssistance,lu_forCodeAssistanceSecondary]) and isMain then afterLoadForAssistance;
       {$endif}
       exit;
     end else if globals.primaryContext.continueEvaluation then begin

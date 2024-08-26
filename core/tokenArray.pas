@@ -120,6 +120,7 @@ TYPE
                   name:string;
                   validFrom,validUntil:T_tokenLocation;
                   tokenType:T_tokenType;
+                  used:boolean;
                 end;
 
   T_simpleTokenRange=record x,y,width:longint; end;
@@ -150,6 +151,7 @@ TYPE
       FUNCTION  getBuiltinSideEffects:T_sideEffects;
       FUNCTION  whoReferencesLocation(CONST loc:T_searchTokenLocation):T_searchTokenLocations;
       FUNCTION  isLocationReferenced(CONST loc:T_searchTokenLocation):boolean;
+      FUNCTION  isParameterReferenced(CONST loc:T_searchTokenLocation):boolean;
       FUNCTION  isPackageReferenced(CONST packagePath:string):boolean;
       FUNCTION  isEmpty:boolean;
       PROCEDURE includeUsages(CONST other:P_callAndIdInfos);
@@ -159,7 +161,7 @@ TYPE
 
       FUNCTION localTypeOf(CONST id:T_idString; CONST line,col:longint; OUT declaredAt:T_tokenLocation):T_tokenType;
       FUNCTION allLocalIdsAt(CONST line,col:longint):T_arrayOfString;
-      PROCEDURE addLocalIdInfo(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType);
+      PROCEDURE addLocalIdInfo(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType; CONST used:boolean);
       PROCEDURE markBlobLine(CONST lineIndex:longint; CONST closer:char);
       FUNCTION getBlobCloserOrZero(CONST lineIndex:longint):char;
       PROCEDURE copyFrom(CONST original:P_callAndIdInfos);
@@ -244,7 +246,7 @@ TYPE
     public
       CONSTRUCTOR create(CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
       DESTRUCTOR destroy; virtual;
-      FUNCTION getNextStatement(CONST context:P_context; CONST recycler:P_recycler; CONST collectHighlightingInfo:boolean):T_enhancedStatement;
+      FUNCTION getNextStatement(CONST context:P_context; CONST recycler:P_recycler):T_enhancedStatement;
   end;
 
   { T_singleStringLexer }
@@ -330,8 +332,6 @@ T_scopeType=(sc_block,        // begin ... end
 
 T_addIdResult=(air_ok,air_reintroduce,air_notInBlock);
 
-{ T_idStack }
-
 T_idStack=object
   scope:array of record
     scopeType:T_scopeType;
@@ -339,19 +339,20 @@ T_idStack=object
     ids:array of record name:T_idString; used:boolean; location:T_tokenLocation; idType:T_tokenType; end;
     delayedErrorMessages:T_storedMessages;
   end;
+  doSuppressAllUnusedWarnings:boolean;
   suppressUnusedWarningInLines:T_arrayOfLongint;
   {$ifdef fullVersion}
-  collectHighlightingInfo:boolean;
   localIdInfos:P_callAndIdInfos;
   {$endif}
 
-  CONSTRUCTOR create({$ifdef fullVersion}CONST info:P_callAndIdInfos; CONST collectHighlightingInfo_:boolean{$endif});
+  CONSTRUCTOR create({$ifdef fullVersion}CONST info:P_callAndIdInfos{$endif});
   DESTRUCTOR destroy;
   PROCEDURE clear;
   PROCEDURE suppressUnusedWarningInLine(CONST lineIndex:longint);
+  PROCEDURE suppressAllUnusedWarnings;
 
   PROCEDURE scopePush(CONST openToken:P_token; CONST scopeType: T_scopeType);
-  PROCEDURE scopePop(CONST context:P_context; CONST location:T_tokenLocation; CONST recycler:P_recycler; VAR workingIn:T_enhancedStatement; CONST closeToken:P_token; CONST warnAboutUnused:boolean; CONST forcePop:boolean=false);
+  PROCEDURE scopePop(CONST context:P_context; CONST location:T_tokenLocation; CONST recycler:P_recycler; VAR workingIn:T_enhancedStatement; CONST closeToken:P_token; CONST forcePop:boolean=false);
   {$ifdef fullVersion}
   PROCEDURE popRemaining(CONST lastLocation: T_tokenLocation);
   {$endif}
@@ -571,7 +572,7 @@ OPERATOR=(CONST A, B: T_relatedTokens): boolean;
   end;
 {$endif}
 
-FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycler:P_recycler; CONST collectHighlightingInfo:boolean): T_enhancedStatement;
+FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycler:P_recycler): T_enhancedStatement;
   VAR localIdStack:T_idStack;
       earlierSuppressedUnusedAttribute:boolean=false;
       attributeSectionBeforeBody:boolean=true;
@@ -590,6 +591,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
       idType: T_tokenType;
       idLoc: T_tokenLocation;
     begin
+
       if localIdStack.localIdInfos<>nil then begin
         ft:=getFormatTokens(P_stringLiteral(tok^.data)^.value,tok^.location,context,recycler);
         while (ft<>nil) do begin
@@ -610,7 +612,6 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
       air: T_addIdResult;
       idType: T_tokenType;
       idLoc: T_tokenLocation;
-      ft:P_token;
       beforeLast:P_token=nil;
 
     FUNCTION ensureBeforeLast:P_token;
@@ -670,10 +671,10 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
         tt_endBlock,tt_separatorComma,
         tt_braceClose,tt_expBraceClose,tt_listBraceClose,tt_iifElse,tt_do,tt_until,tt_then,tt_else,
         tt_endOfPatternDeclare,tt_endOfPatternAssign,tt_aggregatorConstructor:
-          localIdStack.scopePop(context,tok^.location,recycler,nextStatement,tok,true);
+          localIdStack.scopePop(context,tok^.location,recycler,nextStatement,tok);
         tt_semicolon:
           begin
-            localIdStack.scopePop(context,tok^.location,recycler,nextStatement,tok,true);
+            localIdStack.scopePop(context,tok^.location,recycler,nextStatement,tok);
             if localIdStack.scopeBottom then exit(true);
           end;
         tt_assign: begin
@@ -764,21 +765,10 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
       end;
     end;
 
-  PROCEDURE debugPrintNextStatement;
-    VAR p:P_token;
-        i:longint=0;
-    begin
-      p:=nextStatement.token.first;
-      while (p<>nil) and (i<100) do begin
-        writeln('Next statement ',i:2,': ',p^.tokType:50,p^.singleTokenToString);
-        p:=p^.next; inc(i);
-      end;
-    end;
-
   VAR nextToProcess:P_token=nil;
       lastLocation:T_tokenLocation;
   begin
-    localIdStack.create({$ifdef fullVersion}callAndIdInfos,collectHighlightingInfo{$endif});
+    localIdStack.create({$ifdef fullVersion}callAndIdInfos{$endif});
     while tokenQueue.hasNext or (fetchNext(context^.messages,recycler) and tokenQueue.hasNext) do begin
       nextToProcess:=tokenQueue.next;
       lastLocation:=nextToProcess^.location;
@@ -787,7 +777,6 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
           if nextStatement.token.first=nil then context^.messages^.raiseSimpleError('Empty statement!',nextToProcess^.location);
           recycler^.disposeToken(nextToProcess);
           result:=nextStatement;
-          //debugPrintNextStatement;
           if not(context^.continueEvaluation) then recycler^.cascadeDisposeToken(result.token.first);
           if result.token.first=nil
           then result.token.last:=nil
@@ -799,10 +788,10 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
       end else appendTokenToResultYieldsClosingSemicolon(nextToProcess);
     end;
     //Add trailing semicolon(s) if necessary;
+    if hasSuppressedUnusedAttribute then localIdStack.suppressAllUnusedWarnings;
     while not(localIdStack.scopeBottom)
-          do localIdStack.scopePop(context,lastLocation,recycler,nextStatement,nil,not(hasSuppressedUnusedAttribute),true);
+          do localIdStack.scopePop(context,lastLocation,recycler,nextStatement,nil,true);
     result:=nextStatement;
-    //debugPrintNextStatement;
     if result.token.first=nil
     then result.token.last:=nil
     else result.token.last:=result.token.first^.last;
@@ -813,16 +802,15 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
       recycler^.cascadeDisposeToken(result.token.first);
     end;
     resetTemp;
-    while not(localIdStack.scopeBottom) do localIdStack.scopePop(context,lastLocation,recycler,nextStatement,nil,not(hasSuppressedUnusedAttribute),true);
+    while not(localIdStack.scopeBottom) do localIdStack.scopePop(context,lastLocation,recycler,nextStatement,nil,true);
     localIdStack.destroy;
   end;
 
-CONSTRUCTOR T_idStack.create({$ifdef fullVersion}CONST info:P_callAndIdInfos; CONST collectHighlightingInfo_:boolean{$endif});
+CONSTRUCTOR T_idStack.create({$ifdef fullVersion}CONST info:P_callAndIdInfos{$endif});
   begin
     setLength(scope,0);
     {$ifdef fullVersion}
     localIdInfos:=info;
-    collectHighlightingInfo:=collectHighlightingInfo_;
     {$endif}
     clear;
   end;
@@ -838,11 +826,17 @@ PROCEDURE T_idStack.clear;
     for i:=0 to length(scope)-1 do setLength(scope[i].ids,0);
     setLength(scope,0);
     setLength(suppressUnusedWarningInLines,0);
+    doSuppressAllUnusedWarnings:=false;
   end;
 
 PROCEDURE T_idStack.suppressUnusedWarningInLine(CONST lineIndex:longint);
   begin
     append(suppressUnusedWarningInLines,lineIndex);
+  end;
+
+PROCEDURE T_idStack.suppressAllUnusedWarnings;
+  begin
+    doSuppressAllUnusedWarnings:=true;
   end;
 
 PROCEDURE T_idStack.scopePush(CONST openToken:P_token; CONST scopeType:T_scopeType);
@@ -856,7 +850,7 @@ PROCEDURE T_idStack.scopePush(CONST openToken:P_token; CONST scopeType:T_scopeTy
     scope[newTopIdx].scopeStartToken:=openToken;
   end;
 
-PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLocation; CONST recycler:P_recycler; VAR workingIn:T_enhancedStatement; CONST closeToken:P_token; CONST warnAboutUnused:boolean; CONST forcePop:boolean=false);
+PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLocation; CONST recycler:P_recycler; VAR workingIn:T_enhancedStatement; CONST closeToken:P_token; CONST forcePop:boolean=false);
   VAR topIdx:longint;
   PROCEDURE postDelayedMismatchError;
     VAR message: string;
@@ -885,12 +879,14 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
     VAR i:longint;
         msg: P_storedMessage;
     begin
+      {$ifdef fullVersion}
+      if (localIdInfos<>nil) then
       with scope[topIdx] do for i:=0 to length(ids)-1 do begin
-        if warnAboutUnused and not(ids[i].used) and (context<>nil) and not(arrContains(suppressUnusedWarningInLines,ids[i].location.line)) then context^.messages^.postTextMessage(mt_el2_warning,ids[i].location,'Unused local variable '+ids[i].name);
-        {$ifdef fullVersion}
-        if localIdInfos<>nil then localIdInfos^.addLocalIdInfo(ids[i].name,ids[i].location,location,ids[i].idType);
-        {$endif}
+        if not(ids[i].used) and (context<>nil) and not(arrContains(suppressUnusedWarningInLines,ids[i].location.line)) and (ids[i].idType=tt_blockLocalVariable)
+        then context^.messages^.postTextMessage(mt_el2_warning,ids[i].location,'Unused local variable '+ids[i].name);
+        localIdInfos^.addLocalIdInfo(ids[i].name,ids[i].location,location,ids[i].idType,ids[i].used);
       end;
+      {$endif}
       setLength(scope[topIdx].ids,0);
       for msg in scope[topIdx].delayedErrorMessages do context^.messages^.postCustomMessage(msg,true);
       setLength(scope,topIdx);
@@ -992,7 +988,7 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
         if scope[topIdx].scopeStartToken^.tokType = tt_if
         then begin
           {$ifdef fullVersion}
-          if (localIdInfos<>nil) and collectHighlightingInfo then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
+          if (localIdInfos<>nil) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
           {$endif}
           pre:=workingIn.token.first;
           if pre = scope[topIdx].scopeStartToken
@@ -1009,7 +1005,7 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
         if scope[topIdx].scopeStartToken^.tokType=tt_then
         then begin
           {$ifdef fullVersion}
-          if (localIdInfos<>nil) and collectHighlightingInfo then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
+          if (localIdInfos<>nil) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
           {$endif}
           scope[topIdx].scopeStartToken^.tokType:=tt_iifCheck;
           closeToken                   ^.tokType:=tt_iifElse;
@@ -1018,8 +1014,7 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
         popSpecialIfPresent; if stackIsEmpty then exit;
         if scope[topIdx].scopeStartToken^.tokType=tt_iifCheck then begin
           {$ifdef fullVersion}
-          if (localIdInfos<>nil) and collectHighlightingInfo
-          then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
+          if (localIdInfos<>nil) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
           {$endif}
         end else begin
           postDelayedMismatchError;
@@ -1030,33 +1025,33 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
         popSpecialIfPresent; if stackIsEmpty then exit;
         if scope[topIdx].scopeStartToken^.tokType=tt_beginBlock then begin
           {$ifdef fullVersion}
-          if (localIdInfos<>nil) and collectHighlightingInfo then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
+          if (localIdInfos<>nil) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
           {$endif}
         end else raiseMismatchError;
       end;
       tt_do:
         if scope[topIdx].scopeStartToken^.tokType=tt_for then begin
           {$ifdef fullVersion}
-          if (localIdInfos<>nil) and collectHighlightingInfo then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
+          if (localIdInfos<>nil) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
           {$endif}
           if closeToken^.getDoType=dt_unknown then closeToken^.setDoType(dt_for_related_do);
           exit; //This is not a pop...
         end else if scope[topIdx].scopeStartToken^.tokType=tt_while then begin
           {$ifdef fullVersion}
-          if (localIdInfos<>nil) and collectHighlightingInfo then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
+          if (localIdInfos<>nil) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
           {$endif}
           if closeToken^.getDoType=dt_unknown then closeToken^.setDoType(dt_while_related_do);
         end else raiseMismatchError;
       tt_aggregatorConstructor: begin
         {$ifdef fullVersion}
-        if (scope[topIdx].scopeStartToken^.tokType in [tt_for,tt_each,tt_parallelEach]) and (localIdInfos<>nil) and collectHighlightingInfo then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
+        if (scope[topIdx].scopeStartToken^.tokType in [tt_for,tt_each,tt_parallelEach]) and (localIdInfos<>nil) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
         {$endif}
         exit;
       end;
       tt_until: begin
         if scope[topIdx].scopeStartToken^.tokType=tt_repeat then begin
           {$ifdef fullVersion}
-          if (localIdInfos<>nil) and collectHighlightingInfo then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
+          if (localIdInfos<>nil) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken);
           {$endif}
         end else raiseMismatchError;
       end;
@@ -1073,7 +1068,7 @@ PROCEDURE T_idStack.popRemaining(CONST lastLocation: T_tokenLocation);
     topIdx:=length(scope)-1;
     while topIdx>=0 do begin
       with scope[topIdx] do for i:=0 to length(ids)-1 do begin
-        if localIdInfos<>nil then localIdInfos^.addLocalIdInfo(ids[i].name,ids[i].location,lastLocation,ids[i].idType);
+        if localIdInfos<>nil then localIdInfos^.addLocalIdInfo(ids[i].name,ids[i].location,lastLocation,ids[i].idType,ids[i].used);
       end;
       setLength(scope[topIdx].ids,0);
       topIdx-=1;
@@ -1111,7 +1106,7 @@ FUNCTION T_idStack.addId(CONST id:T_idString; CONST location:T_tokenLocation; CO
       j:=length(ids);
       setLength(ids,j+1);
       ids[j].name:=id;
-      ids[j].used:=idType<>tt_blockLocalVariable;
+      ids[j].used:=not(idType in [tt_blockLocalVariable,tt_parameterIdentifier]);
       ids[j].location:=location;
       ids[j].idType:=idType;
       result:=air_ok;
@@ -1237,6 +1232,14 @@ FUNCTION T_callAndIdInfos.isLocationReferenced(CONST loc:T_searchTokenLocation):
   begin
     if usageInfoFill<>length(usageInfos) then cleanup;
     for info in usageInfos do if info.targetLocation=loc then exit(true);
+    result:=false;
+  end;
+
+FUNCTION T_callAndIdInfos.isParameterReferenced(CONST loc:T_searchTokenLocation):boolean;
+  VAR
+    info: T_localIdInfo;
+  begin
+    for info in localIdInfos do if (info.tokenType=tt_parameterIdentifier) and (info.validFrom=loc) then exit(true);
     result:=false;
   end;
 
@@ -1368,7 +1371,7 @@ FUNCTION T_callAndIdInfos.allLocalIdsAt(CONST line,col:longint):T_arrayOfString;
       end;
   end;
 
-PROCEDURE T_callAndIdInfos.addLocalIdInfo(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType);
+PROCEDURE T_callAndIdInfos.addLocalIdInfo(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType; CONST used:boolean);
   VAR i:longint;
   begin
     i:=length(localIdInfos);
@@ -1377,6 +1380,7 @@ PROCEDURE T_callAndIdInfos.addLocalIdInfo(CONST id:T_idString; CONST validFrom,v
     localIdInfos[i].validFrom :=validFrom;
     localIdInfos[i].validUntil:=validUntil;
     localIdInfos[i].tokenType :=typ;
+    localIdInfos[i].used      :=used;
   end;
 
 PROCEDURE T_callAndIdInfos.markBlobLine(CONST lineIndex:longint; CONST closer:char);
