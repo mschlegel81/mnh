@@ -107,6 +107,7 @@ TYPE
       FUNCTION containsReturnToken:boolean; virtual;
       FUNCTION referencesAnyUserPackage:boolean; virtual;
       FUNCTION getSideEffects:T_sideEffects;
+      FUNCTION getResolvableTokens(CONST recycler:P_recycler):P_token;
   end;
 
   P_subruleExpression=^T_subruleExpression;
@@ -1604,6 +1605,28 @@ FUNCTION T_inlineExpression.getSideEffects:T_sideEffects;
       result:=meta.sideEffects;
     finally
       leaveCriticalSection(subruleCallCs);
+    end;
+  end;
+
+FUNCTION T_inlineExpression.getResolvableTokens(CONST recycler:P_recycler):P_token;
+  VAR prep:T_preparedToken;
+      last:P_token=nil;
+  begin
+    result:=nil;
+    for prep in preparedBody do if (prep.parIdx=NO_PARAMETERS_IDX) and (prep.token.tokType in [tt_identifier, tt_parameterIdentifier, tt_userRule,
+      tt_intrinsicRule,
+      tt_customType,
+      tt_globalVariable,
+      tt_blockLocalVariable,
+      tt_eachParameter])
+    then begin
+      if result=nil then begin
+        result:=recycler^.newToken(prep.token);
+        last:=result;
+      end else begin
+        last^.next:=recycler^.newToken(prep.token);
+        last:=last^.next;
+      end;
     end;
   end;
 

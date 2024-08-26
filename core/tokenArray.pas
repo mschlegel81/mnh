@@ -303,7 +303,8 @@ TYPE
 OPERATOR =(CONST A,B:T_relatedTokens):boolean;
 {$endif}
 FUNCTION isOperatorName(CONST id:T_idString):boolean;
-VAR BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
+VAR getFormatTokens: FUNCTION (CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_token;
+    BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
     BUILTIN_WRITE_DATA_STORES,
     BUILTIN_WRITE_ALL_DATA_STORES,
@@ -583,11 +584,33 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
       result:=earlierSuppressedUnusedAttribute;
     end;
 
+  {$ifdef fullVersion}
+  PROCEDURE validateFormatString(CONST tok:P_token);
+    VAR ft:P_token;
+      idType: T_tokenType;
+      idLoc: T_tokenLocation;
+    begin
+      if localIdStack.localIdInfos<>nil then begin
+        ft:=getFormatTokens(P_stringLiteral(tok^.data)^.value,tok^.location,context,recycler);
+        while (ft<>nil) do begin
+          if localIdStack.hasId(ft^.txt,idType,idLoc)
+          then ft^.tokType:=idType
+          else associatedPackage^.resolveId(ft^,nil);
+          if ft^.tokType=tt_identifier
+          then context^.raiseError('Unresolvable identifier in format string: "'+ft^.txt+'"',tok^.location)
+          else localIdStack.localIdInfos^.add(ft);
+          ft:=recycler^.disposeToken(ft);
+        end;
+      end;
+    end;
+  {$endif}
+
   FUNCTION appendTokenToResultYieldsClosingSemicolon(tok:P_token):boolean;
     VAR
       air: T_addIdResult;
       idType: T_tokenType;
       idLoc: T_tokenLocation;
+      ft:P_token;
       beforeLast:P_token=nil;
 
     FUNCTION ensureBeforeLast:P_token;
@@ -724,6 +747,11 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
             associatedPackage^.resolveId(tok^,nil);
           end;
         end;
+        {$ifdef fullVersion}
+        tt_formatString: validateFormatString(tok);
+        tt_literal: if (P_literal(tok^.data)^.literalType=lt_string) and (nextStatement.token.last<>nil) and (nextStatement.token.last^.tokType=tt_braceOpen) and (ensureBeforeLast<>nil) and (beforeLast^.tokType=tt_intrinsicRule) and ((beforeLast^.txt='format') or (beforeLast^.txt='printf'))
+                    then validateFormatString(tok);
+        {$endif}
       end;
 
       if tok^.tokType=tt_blank

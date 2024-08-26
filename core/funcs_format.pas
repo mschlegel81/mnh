@@ -13,7 +13,7 @@ USES sysutils,
 
 PROCEDURE formatMetaData(VAR meta:T_ruleMetaData; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
 IMPLEMENTATION
-USES out_adapters,LazUTF8;
+USES out_adapters,LazUTF8,tokens;
 TYPE
   T_format=object
     category:(fmtCat_decimal,
@@ -182,6 +182,16 @@ PROCEDURE formatMetaData(VAR meta:T_ruleMetaData; CONST tokenLocation:T_tokenLoc
 FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_preparedFormatStatement;
   begin;
     new(result,create(formatString,tokenLocation,context,recycler));
+  end;
+
+FUNCTION getFormatTokens(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_token;
+  VAR temp_format: P_preparedFormatStatement;
+  begin
+    temp_format:=getFormat(formatString,tokenLocation,context,recycler);
+    if temp_format^.formatSubrule=nil
+    then result:=nil
+    else result:=temp_format^.formatSubrule^.getResolvableTokens(recycler);
+    dispose(temp_format,destroy);
   end;
 
 CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
@@ -555,5 +565,5 @@ INITIALIZATION
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE       ,'format'           ,@format_imp    ,ak_variadic_1);
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE       ,'formatTime'       ,@formatTime_imp,ak_binary    );
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE       ,'parseTime'        ,@parseTime_imp ,ak_binary    );
-
+  tokenArray.getFormatTokens:=@getFormatTokens;
 end.
