@@ -224,7 +224,7 @@ CONSTRUCTOR T_quickEvaluation.create(CONST quickStdout:P_eagerInitializedOutAdap
     messages.addOutAdapter(newTreeAdapter      ('Quick tree view')     ,true);
   end;
 
-CONST C_messagesForwardedToOutput:T_messageTypeSet=[mt_clearConsole,mt_printdirect,mt_printline,mt_el2_warning,mt_el2_userWarning,mt_el3_evalError,mt_el3_userDefined,mt_el4_systemError];
+CONST C_messagesForwardedToOutput:T_messageTypeSet=[mt_clearConsole,mt_printdirect,mt_printline,mt_el2_warning,mt_el2_userWarning,mt_el3_evalError,mt_el3_trace,mt_el3_userDefined,mt_el4_systemError];
 CONSTRUCTOR T_ideScriptEvaluation.create(CONST mainForm:T_mnhIdeForm);
   begin
     inherited init(ek_editScript);

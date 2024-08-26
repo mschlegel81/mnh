@@ -20,6 +20,7 @@ TYPE
                   mc_note   ,
                   mc_warning,
                   mc_error  ,
+                  mc_trace  ,
                   mc_fatal
                   {$ifdef fullVersion},
                   mc_plot   ,
@@ -49,6 +50,7 @@ CONST
     {mc_note   } (guiMarker:NOTE_MARKER;    levelTxt:'Note';  levelColor:#27'[3m';  triggeredFlags:[]              ),
     {mc_warning} (guiMarker:WARNING_MARKER; levelTxt:'Warn';  levelColor:#27'[93m'; triggeredFlags:[]              ),
     {mc_error  } (guiMarker:ERROR_MARKER;   levelTxt:'Error'; levelColor:#27'[91m'; triggeredFlags:[FlagError]     ),
+    {mc_trace  } (guiMarker:ERROR_MARKER;   levelTxt:'Trace'; levelColor:#27'[91m'; triggeredFlags:[FlagError]     ),
     {mc_fatal  } (guiMarker:ERROR_MARKER;   levelTxt:'Fatal'; levelColor:#27'[91;5m'; triggeredFlags:[FlagFatalError])
     {$ifdef fullVersion},
     {mc_plot   } (guiMarker:''; levelTxt:''; levelColor:''; triggeredFlags:[]),
@@ -70,6 +72,7 @@ TYPE
     mt_el2_warning,
     mt_el2_userWarning,
     mt_el3_evalError,
+    mt_el3_trace,
     mt_el3_noMatchingMain,
     mt_el3_userDefined,
     mt_el4_systemError,
@@ -125,8 +128,9 @@ TYPE
 
 CONST
   C_textMessages:T_messageTypeSet=[mt_clearConsole..mt_el4_systemError,mt_timing_info];
-  C_errorsAndWarnings:T_messageTypeSet=[mt_el2_warning,mt_el2_userWarning,mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError];
+  C_errorsAndWarnings:T_messageTypeSet=[mt_el2_warning,mt_el2_userWarning,mt_el3_evalError,mt_el3_trace,mt_el3_noMatchingMain,mt_el3_userDefined,mt_el4_systemError];
   C_messagesSuppressedOnQuietHalt:T_messageTypeSet=[mt_el3_evalError,
+                                                    mt_el3_trace,
                                                     mt_el3_noMatchingMain,
                                                     mt_el3_userDefined];
   C_messageTypeMeta:array[T_messageType] of record
@@ -147,6 +151,7 @@ CONST
 {mt_el2_warning       }  (level: 2; mClass:mc_warning; systemErrorLevel:0),
 {mt_el2_userWarning   }  (level: 2; mClass:mc_warning; systemErrorLevel:0),
 {mt_el3_evalError     }  (level: 3; mClass:mc_error;   systemErrorLevel:3),
+{mt_el3_trace         }  (level: 3; mClass:mc_trace;   systemErrorLevel:2),
 {mt_el3_noMatchingMain}  (level: 3; mClass:mc_error;   systemErrorLevel:1),
 {mt_el3_userDefined   }  (level: 3; mClass:mc_error;   systemErrorLevel:2),
 {mt_el4_systemError   }  (level: 4; mClass:mc_fatal;   systemErrorLevel:5),
@@ -186,7 +191,7 @@ CONST
   C_errorMessageTypes:array[1..4] of T_messageTypeSet=(
     [mt_el1_note,mt_el1_userNote],
     [mt_el2_warning,mt_el2_userWarning],
-    [mt_el3_evalError,mt_el3_noMatchingMain,mt_el3_userDefined],
+    [mt_el3_evalError,mt_el3_trace,mt_el3_noMatchingMain,mt_el3_userDefined],
     [mt_el4_systemError]);
 
 TYPE
@@ -293,9 +298,9 @@ OPERATOR :=(CONST x:T_ideMessageConfig):T_messageTypeSet;
     if x.show_all_userMessages then result+=[mt_log,mt_el1_userNote,mt_el2_userWarning,mt_el3_userDefined];
     case x.suppressWarningsUnderLevel of
         4: begin end;
-        3: result+=[mt_el3_evalError,mt_el3_userDefined];
-        2: result+=[mt_el3_evalError,mt_el3_userDefined,mt_el2_warning,mt_el2_userWarning];
-      else result+=[mt_el3_evalError,mt_el3_userDefined,mt_el2_warning,mt_el2_userWarning,mt_el1_note,mt_el1_userNote];
+        3: result+=[mt_el3_evalError,mt_el3_trace,mt_el3_userDefined];
+        2: result+=[mt_el3_evalError,mt_el3_trace,mt_el3_userDefined,mt_el2_warning,mt_el2_userWarning];
+      else result+=[mt_el3_evalError,mt_el3_trace,mt_el3_userDefined,mt_el2_warning,mt_el2_userWarning,mt_el1_note,mt_el1_userNote];
     end;
   end;
 

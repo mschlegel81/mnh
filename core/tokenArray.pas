@@ -72,6 +72,7 @@ TYPE
       PROPERTY getCodeState:T_hashInt read readyForCodeState;
       PROPERTY customOperatorRule:T_customOperatorArray read customOperatorRules;
       FUNCTION resolveId(VAR token:T_token; CONST adaptersOrNil:P_messages):boolean; virtual;
+      FUNCTION resolveLocationForStackTrace(CONST location:T_tokenLocation):string; virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
       FUNCTION literalToString(CONST L:P_literal; {$WARN 5024 OFF}CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_recycler):string; virtual;
       {$ifdef fullVersion}
@@ -2136,6 +2137,22 @@ FUNCTION T_abstractPackage.resolveId(VAR token: T_token; CONST adaptersOrNil: P_
     end;
     if adaptersOrNil<>nil then adaptersOrNil^.raiseSimpleError('Cannot resolve ID "'+token.txt+'"',token.location);
     result:=false;
+  end;
+
+FUNCTION T_abstractPackage.resolveLocationForStackTrace(CONST location:T_tokenLocation):string;
+  VAR lines: T_arrayOfString;
+  begin
+    if location.package=@self then begin
+      lines:=codeProvider^.getLines;
+      if (location.line>=1) and (location.line<=length(lines))
+      then begin
+        result:=lines[location.line-1];
+        if (location.column>=1) and (location.column<length(result)) then begin
+          result:=copy(result,location.column,maxLongint);
+          if location.column>=5 then result:='... '+result;
+        end;
+      end else exit('(?)');
+    end else result:='(?)';
   end;
 
 FUNCTION T_extendedPackage.resolveId(VAR token: T_token; CONST adaptersOrNil: P_messages):boolean;

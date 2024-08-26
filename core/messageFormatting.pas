@@ -590,6 +590,7 @@ PROCEDURE T_guiFormatter.formatMessageAndLocation(CONST message: P_storedMessage
       mc_note   ,
       mc_warning,
       mc_error  ,
+      mc_trace  ,
       mc_fatal  : begin
         if length(P_storedMessageWithText(message)^.txt)=1 then begin
           if length(C_messageClassMeta[message^.messageClass].levelTxt)+2+length(locationPart)+length(P_storedMessageWithText(message)^.txt[0])<preferredLineLength
@@ -670,6 +671,7 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
       mc_note   ,
       mc_warning,
       mc_error  ,
+      mc_trace  ,
       mc_fatal  : begin
         if length(P_storedMessageWithText(message)^.txt)=1 then begin
           if length(C_messageClassMeta[message^.messageClass].levelTxt)+2+length(locationPart)+length(P_storedMessageWithText(message)^.txt[0])<preferredLineLength
@@ -756,6 +758,7 @@ FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage)
       mc_note   ,
       mc_warning,
       mc_error  ,
+      mc_trace  ,
       mc_fatal  : begin
         if length(P_storedMessageWithText(message)^.txt)=1 then begin
           result:=C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart+C_messageClassMeta[message^.messageClass].levelColor + P_storedMessageWithText(message)^.txt[0] + C_ANSI_CODE_RESET;

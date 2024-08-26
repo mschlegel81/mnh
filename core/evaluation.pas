@@ -1205,9 +1205,19 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
 
   VAR initialScope:P_valueScope;
   PROCEDURE cleanupStackAndExpression;
+    VAR p:P_token;
     begin
       while context^.valueScope<>initialScope do recycler^.scopePop(context^.valueScope);
-      recycler^.cascadeDisposeToken(stack.top);
+      if tco_stackTrace in context^.threadOptions
+      then recycler^.cascadeDisposeToken(stack.top)
+      else begin
+        p:=stack.top;
+        while p<>nil do begin
+          if p^.tokType=tt_beginRule then context^.messages^.postTextMessage(mt_el3_trace,p^.location,P_abstractPackage(p^.location.package)^.resolveLocationForStackTrace(p^.location));
+          p:=recycler^.disposeToken(p);
+        end;
+        stack.top:=nil;
+      end;
       recycler^.cascadeDisposeToken(first);
     end;
 

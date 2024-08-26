@@ -14,34 +14,36 @@ end;
 PREFIX_OF_MESSAGE_TYPE:=['el1_userNote'   =>'Note',
                          'el2_userWarning'=>'Warn',
                          'el3_userDefined'=>'Error',
+                         'el3_trace'      =>'Trace',
                          'el3_evalError'  =>'Error'].toMap;
-COLOR_OF_MESSAGE_TYPE:=['el1_userNote'   =>#27'[3m',
-                        'el2_userWarning'=>#27'[93m',
-                        'el3_userDefined'=>#27'[91m',
-                        'el3_evalError'  =>#27'[91m'].toMap;
+COLOR_OF_MESSAGE_TYPE:=['el1_userNote'   =>"\e[3m",
+                        'el2_userWarning'=>"\e[93m",
+                        'el3_userDefined'=>"\e[91m",
+                        'el3_trace'      =>"\e[91m",
+                        'el3_evalError'  =>"\e[91m"].toMap;
 runSandboxed(parameter)->
   [format('Calling %s %s',myPath.extractFileName,parameter),
    ['name'=>myPath,
     'parameters'=>[parameter],
     'side effects'=>['alter package state','output','alter context state']].toMap
    .runScript
-   .map({$message.head=='exitCode'
-        ? format('Exit code: %s',$message.trailing)
-        : $message.head=='printline'
-          ? $message.trailing
-            : PREFIX_OF_MESSAGE_TYPE[$message.head].isVoid
-              ? void
-              : format('%s %s %s',PREFIX_OF_MESSAGE_TYPE[$message[0]],
-                                  $message[1].replace(myPath.systemSpecificFilename,myPath.extractFileNameOnly),
-                                  COLOR_OF_MESSAGE_TYPE[$message[0]] & $message[2] & #27'[0m')})].flatten;
+   .map((kind,location,message)->begin
+     kind=='exitCode'
+     ? format('Exit code: %s',message)
+     : kind=='printline'
+       ? message
+          @SuppressUnusedWarning=Used in format statement
+       : (prefix:=PREFIX_OF_MESSAGE_TYPE[kind]).isVoid
+         ? void
+         : f"{prefix} {location.replace(myPath.systemSpecificFilename,myPath.extractFileNameOnly)} {COLOR_OF_MESSAGE_TYPE[kind]}{message}\e[0m";
+   end)].flatten;
 
-main->
-  ['print','note','warn','fail','40','41','x'].each(parameter,begin
-    ext:=runExternally(parameter);
+main->['print','note','warn','fail','40','41','x']
+  .pMap((p)->[p,runExternally(p),runSandboxed(p)])
+  .map((parameter,ext,int)->begin
     printf("%s",ext);
-    int:=runSandboxed(parameter);
     ext==int
     ? print('Sandbox produces the same output')
     : warn("SANDBOXED OUTPUT IS DIFFERENT: \n",int.join("\n"));
     print;
-  end);
+   end);

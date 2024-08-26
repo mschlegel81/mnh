@@ -94,6 +94,7 @@ TYPE
       FUNCTION getHelpOnMain:ansistring;
       PROCEDURE finalize(CONST context:P_context; CONST recycler:P_recycler);
       FUNCTION resolveId(VAR token:T_token; CONST messagesOrNil:P_messages):boolean; virtual;
+      FUNCTION resolveLocationForStackTrace(CONST location:T_tokenLocation):string; virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
       FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_recycler):string; virtual;
       FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral; virtual;
@@ -1393,6 +1394,12 @@ FUNCTION T_package.resolveId(VAR token: T_token; CONST messagesOrNil:P_messages)
     end;
     if messagesOrNil<>nil then messagesOrNil^.raiseSimpleError('Cannot resolve ID "'+token.txt+'"',token.location);
     result:=false;
+  end;
+
+FUNCTION T_package.resolveLocationForStackTrace(CONST location:T_tokenLocation):string;
+  begin
+    //TODO: Find a better solution based on rule-map
+    result:=inherited;
   end;
 
 {$ifdef fullVersion}
