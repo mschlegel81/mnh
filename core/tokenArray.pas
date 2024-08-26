@@ -880,6 +880,10 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
           t:=t^.next;
           t^.next:=recycler^.newToken(location,LITERAL_TEXT_VOID,tt_literal,newVoidLiteral);
           workingIn.token.last:=t^.next;
+        end else if scope[topIdx].scopeStartToken^.tokType = tt_for then begin
+          t:=workingIn.token.last;
+          t^.next:=recycler^.newToken(location,C_tokenDefaultId[tt_end_for],tt_end_for);
+          workingIn.token.last:=t^.next;
         end;
         performPop;
       end;

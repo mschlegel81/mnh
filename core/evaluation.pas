@@ -309,7 +309,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       repeat
         p:=recycler^.disposeToken(p); (**)
         bodyRuleStart:=p;
-        while (p<>nil) and (bracketLevel>=0) and not(((p^.tokType in [tt_aggregatorConstructor,tt_aggregatorExpressionLiteral,tt_semicolon]) or (p^.tokType=tt_do) and (p^.getDoType in [dt_for_related_do_parallel,dt_for_related_do])) and (bracketLevel=0)) do begin
+        while (p<>nil) and (bracketLevel>=0) and not(((p^.tokType in [tt_aggregatorConstructor,tt_aggregatorExpressionLiteral,tt_semicolon,tt_end_for]) or (p^.tokType=tt_do) and (p^.getDoType in [dt_for_related_do_parallel,dt_for_related_do])) and (bracketLevel=0)) do begin
           if      (p^.tokType in C_openingBrackets) then inc(bracketLevel)
           else if (p^.tokType in C_closingBrackets) then dec(bracketLevel);
           prev:=p;
@@ -324,11 +324,10 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
           setLength(bodyRule,length(bodyRule)+1);
           new(P_inlineExpression(bodyRule[length(bodyRule)-1]),createForEachBody(first^.txt,bodyRuleStart,first^.location,context,recycler));
         end;
-      until (p=nil) or (p^.tokType<>tt_do) or not(p^.getDoType in [dt_for_related_do,dt_for_related_do_parallel]);
-
+      until (p=nil) or (p^.tokType in [tt_end_for,tt_aggregatorConstructor]);
       if (p<>nil) and (p^.tokType=tt_aggregatorConstructor) then begin
         bodyRuleStart:=p;
-        while (p<>nil) and (bracketLevel>=0) and not((p^.tokType = tt_semicolon) and (bracketLevel=0)) do begin
+        while (p<>nil) and (bracketLevel>=0) and not((p^.tokType in [tt_end_for,tt_semicolon]) and (bracketLevel=0)) do begin
           if      (p^.tokType in C_openingBrackets) then inc(bracketLevel)
           else if (p^.tokType in C_closingBrackets) then dec(bracketLevel);
           prev:=p;
@@ -340,6 +339,8 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
         p:=bodyRuleStart;
       end;
       if not context^.continueEvaluation then exit;
+      if (closingToken<>nil) and (closingToken^.tokType=tt_end_for) then
+        closingToken:=recycler^.disposeToken(closingToken);
 
       if (p<>nil) and (p^.tokType=tt_aggregatorExpressionLiteral)
       then aggregator:=newCustomAggregator(P_expressionLiteral(p^.data),p^.location,context)

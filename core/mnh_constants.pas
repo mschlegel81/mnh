@@ -207,6 +207,7 @@ TYPE
     tt_formatString,
     tt_do,     //while <statement> do <statement>
     tt_for,    //for <id> in <iterable> do <statement> do <statement> aggregate <statement>
+    tt_end_for, //invisible_token, automatically added to ease evaluation
     tt_repeat, //repeat <statement> until <statement>
     tt_until,
     tt_if,
@@ -231,8 +232,8 @@ CONST
   C_operators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorConcatAlt];
   C_unaryOperators: T_tokenTypeSet=[tt_unaryOpNegate,tt_unaryOpPlus,tt_unaryOpMinus];
   C_comparators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorNotIn];
-  C_openingBrackets:T_tokenTypeSet=[tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck,tt_startOfPattern];
-  C_closingBrackets:T_tokenTypeSet=[tt_endBlock,tt_endRule,tt_endExpression,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse,tt_endOfPatternAssign,tt_endOfPatternDeclare];
+  C_openingBrackets:T_tokenTypeSet=[tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck,tt_startOfPattern,tt_for];
+  C_closingBrackets:T_tokenTypeSet=[tt_endBlock,tt_endRule,tt_endExpression,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse,tt_endOfPatternAssign,tt_endOfPatternDeclare,tt_end_for];
   C_matchingClosingBracket:array[tt_each..tt_iifCheck] of T_tokenType=
     {tt_each}              (tt_braceClose,
     {tt_parallelEach}       tt_braceClose,
@@ -413,6 +414,7 @@ CONST
   {tt_formatString}               '',
   {tt_do}                         'do',
   {tt_for}                        'for',
+  {tt_end_for}                    '',
   {tt_repeat}                     'repeat',
   {tt_until}                      'until',
   {tt_if}                         'if',
@@ -537,6 +539,7 @@ CONST
 {tt_formatString}               (reservedWordClass:rwc_not_reserved;     helpText:'Format string'; helpLink:''),
 {tt_do}                         (reservedWordClass:rwc_specialConstruct; helpText:'Special construct: do#Used in "for" and "while" constructs'; helpLink:'/specials.html#while'),
 {tt_for}                        (reservedWordClass:rwc_specialConstruct; helpText:'Special construct: for ... in ... do [parallel] ... #Used in "for" construct'; helpLink:''),
+{tt_end_for}                    (reservedWordClass:rwc_specialConstruct; helpText:''; helpLink:''),
 {tt_repeat}                     (reservedWordClass:rwc_specialConstruct; helpText:'Special construct: repeat ... until'; helpLink:''),
 {tt_until}                      (reservedWordClass:rwc_specialConstruct; helpText:'Special construct: repeat ... until'; helpLink:''),
 {tt_if}                         (reservedWordClass:rwc_specialConstruct; helpText:'Special construct: if ... then ... else'; helpLink:''),
