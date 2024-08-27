@@ -1,3 +1,4 @@
+@SuppressUnusedParameterWarning=Added as help for memoization
 private memoized memExeInfo(exe,exeFileInfo)->
   exe=executor
   ? mnh.mnhInfo

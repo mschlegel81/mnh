@@ -5,7 +5,7 @@
 //  - find the last element via findG and accept if it is in the allowed range
 private isPartialSolution(a,b,c,d      )-> a+b = b+c+d;
 private isPartialSolution(a,b,c,d,e,f  )-> a+b = b+c+d = d+e+f;
-private findG            (a,b,c,d,e,f  )-> a+b-f;
+private findG            (a,b,f        )-> a+b-f;
 private isSolution       (a,b,c,d,e,f,g)-> a+b = b+c+d = d+e+f = f+g;
 
 //*See: http://rosettacode.org/wiki/4-rings_or_4-squares_puzzle
@@ -23,14 +23,11 @@ main->begin
   print('The solutions for 3..9 (unique) are: ');
   permutationIterator([3..9]).filterAndPrintSolutions;
   print('The number of solutions for 0..9 (nonunique) is: ',
-  cross([0..9],[0..9],[0..9],[0..9]).pEach(abcd,
-    begin
-      isPartialSolution@abcd
-      ? cross([0..9],[0..9]).each(ef,
-          begin
-            abcdef:=abcd|ef;
-            isPartialSolution@abcdef AND (0<=(findG@abcdef)<=9);
-          end).trueCount
-      : void;
-    end,+));
+    cross([0..9],[0..9],[0..9],[0..9])
+    .pFilter((a,b,c,d)->isPartialSolution(a,b,c,d))
+    .pMap((a,b,c,d)->cross([0..9],[0..9])
+                     .map((e,f)->isPartialSolution(a,b,c,d,e,f)
+                                 AND 0<=findG(a,b,f)<=9)
+                     .trueCount)
+    .agg(+));
 end;
