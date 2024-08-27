@@ -76,7 +76,6 @@ PROCEDURE postAssistanceRequest    (CONST scriptPath:string);
 FUNCTION  getAssistanceResponseSync(CONST editorMeta:P_codeProvider):P_codeAssistanceResponse;
 FUNCTION findScriptsUsing(CONST scriptName:string):T_arrayOfString;
 FUNCTION findRelatedScriptsTransitive(CONST scriptName:string):T_arrayOfString;
-FUNCTION getMessagesForInspection(CONST scriptPath:string):P_listLiteral;
 
 VAR preparedResponses:specialize G_threadsafeQueue<P_codeAssistanceResponse>;
 IMPLEMENTATION
@@ -554,16 +553,13 @@ FUNCTION getAssistanceResponseSync(CONST editorMeta:P_codeProvider):P_codeAssist
     dispose(request,destroy);
   end;
 
-FUNCTION getMessagesForInspection(CONST scriptPath:string):P_listLiteral;
+FUNCTION getMessagesForInspection(CONST context:P_context; CONST recycler:P_recycler; CONST scriptPath:string):P_mapLiteral;
   VAR request:P_codeAssistanceRequest;
-      recycler:P_recycler;
       response: P_codeAssistanceResponse;
       allErrors: T_storedMessages;
       i:longint;
-
   begin
     new(request,create(scriptPath));
-    recycler:=newRecycler;
     response:=request^.execute(recycler);
     dispose(request,destroy);
 
@@ -573,9 +569,12 @@ FUNCTION getMessagesForInspection(CONST scriptPath:string):P_listLiteral;
     for i:=0 to length(response^.externalErrors)-1 do
       allErrors[i+length(response^.localErrors)]:=response^.externalErrors[i];
 
-    result:=messagesToLiteralForSandbox(recycler,allErrors,C_textMessages,SUPPRESS_EXIT_CODE);
+    if response^.package=nil
+    then result:=recycler^.newMapLiteral(1)
+    else result:=response^.package^.inspect(false,context,recycler,response^.callAndIdInfos);
+    result^.put(recycler,'messages',messagesToLiteralForSandbox(recycler,allErrors,C_textMessages,SUPPRESS_EXIT_CODE),false);
+
     setLength(allErrors,0);
-    freeRecycler(recycler);
     response^.unreference;
     dispose(response,destroy);
   end;

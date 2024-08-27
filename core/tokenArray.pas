@@ -79,7 +79,7 @@ TYPE
       FUNCTION getImport({$WARN 5024 OFF}CONST idOrPath:string):P_abstractPackage; virtual;
       FUNCTION getExtended(CONST idOrPath:string):P_abstractPackage; virtual;
       {$endif}
-      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral; virtual;
+      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral; virtual;
       FUNCTION isMain:boolean; virtual;
   end;
 
@@ -91,7 +91,7 @@ TYPE
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST extender_:P_abstractPackage);
       FUNCTION isImportedOrBuiltinPackage(CONST id:string):boolean; virtual;
       FUNCTION resolveId(VAR token:T_token; CONST adaptersOrNil:P_messages):boolean; virtual;
-      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral; virtual;
+      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral; virtual;
   end;
 
   P_mnhSystemPseudoPackage=^T_mnhSystemPseudoPackage;
@@ -1239,7 +1239,7 @@ FUNCTION T_callAndIdInfos.isParameterReferenced(CONST loc:T_searchTokenLocation)
   VAR
     info: T_localIdInfo;
   begin
-    for info in localIdInfos do if (info.tokenType=tt_parameterIdentifier) and (info.validFrom=loc) then exit(true);
+    for info in localIdInfos do if (info.tokenType=tt_parameterIdentifier) and (info.validFrom=loc) then exit(info.used);
     result:=false;
   end;
 
@@ -2192,11 +2192,8 @@ FUNCTION T_extendedPackage.resolveId(VAR token: T_token; CONST adaptersOrNil: P_
     result:=extender^.resolveId(token,adaptersOrNil);
   end;
 
-FUNCTION T_abstractPackage.inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral;
+FUNCTION T_abstractPackage.inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral;
   begin
-    {$ifdef fullVersion}
-    if functionCallInfos<>nil then new(functionCallInfos,create);
-    {$endif}
     result:=recycler^.newMapLiteral(0);
   end;
 
@@ -2205,11 +2202,8 @@ FUNCTION T_abstractPackage.isMain:boolean;
     result:=true;
   end;
 
-FUNCTION T_extendedPackage.inspect(CONST includeRulePointer: boolean; CONST context: P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}): P_mapLiteral;
+FUNCTION T_extendedPackage.inspect(CONST includeRulePointer: boolean; CONST context: P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_callAndIdInfos{$endif}): P_mapLiteral;
   begin
-    {$ifdef fullVersion}
-    if functionCallInfos=nil then new(functionCallInfos,create);
-    {$endif}
     result:=extender^.inspect(includeRulePointer,context,recycler{$ifdef fullVersion},functionCallInfos{$endif});
   end;
 

@@ -97,7 +97,7 @@ TYPE
       FUNCTION resolveLocationForStackTrace(CONST location:T_tokenLocation):string; virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
       FUNCTION literalToString(CONST L:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:P_recycler):string; virtual;
-      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral; virtual;
+      FUNCTION inspect(CONST includeRulePointer:boolean; CONST context:P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_callAndIdInfos{$endif}):P_mapLiteral; virtual;
       {$ifdef fullVersion}
       FUNCTION getSubrulesByAttribute(CONST attributeKeys:T_arrayOfString; CONST caseSensitive:boolean=true):T_subruleArray;
       PROCEDURE reportVariables(VAR variableReport:T_variableTreeEntryCategoryNode);
@@ -155,7 +155,7 @@ CONST SUPPRESS_EXIT_CODE=maxLongint-159; //just some large, reasonably improbabl
 FUNCTION packageFromCode(CONST code:T_arrayOfString; CONST nameOrPseudoName:string):P_package;
 FUNCTION messagesToLiteralForSandbox(CONST literalRecycler:P_literalRecycler; CONST messages:T_storedMessages; CONST toInclude:T_messageTypeSet; CONST ExitCode:longint):P_listLiteral;
 FUNCTION sandbox:P_sandbox;
-VAR getMessagesForInspection: FUNCTION(CONST scriptPath:string):P_listLiteral;
+VAR getMessagesForInspection: FUNCTION(CONST context:P_context; CONST recycler:P_recycler; CONST scriptPath:string):P_mapLiteral;
 {$undef include_interface}
 VAR newCodeProvider:F_newCodeProvider;
 IMPLEMENTATION
@@ -1310,7 +1310,7 @@ PROCEDURE T_package.reportVariables(VAR variableReport: T_variableTreeEntryCateg
   end;
 {$endif}
 
-FUNCTION T_package.inspect(CONST includeRulePointer: boolean; CONST context: P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; VAR functionCallInfos:P_callAndIdInfos{$endif}): P_mapLiteral;
+FUNCTION T_package.inspect(CONST includeRulePointer: boolean; CONST context: P_abstractContext; CONST recycler:P_recycler{$ifdef fullVersion}; CONST functionCallInfos:P_callAndIdInfos{$endif}): P_mapLiteral;
   FUNCTION usesList:P_listLiteral;
     VAR i:longint;
     begin
@@ -1338,16 +1338,14 @@ FUNCTION T_package.inspect(CONST includeRulePointer: boolean; CONST context: P_a
     VAR builtin:P_builtinFunctionMetaData;
     begin
       result:=recycler^.newListLiteral();
+      if functionCallInfos<>nil then
       for builtin in functionCallInfos^.calledBuiltinFunctions do result^.appendString(recycler,builtin^.qualifiedId);
     end;
   {$endif}
 
   begin
     {$ifdef fullVersion}
-    if (functionCallInfos=nil) or functionCallInfos^.isEmpty then begin
-      if functionCallInfos=nil then new(functionCallInfos,create);
-      ruleMap.fillCallInfos(functionCallInfos);
-    end;
+    if (functionCallInfos<>nil) then ruleMap.fillCallInfos(functionCallInfos);
     {$endif}
 
     result:=recycler^.newMapLiteral(7)^
@@ -1359,10 +1357,7 @@ FUNCTION T_package.inspect(CONST includeRulePointer: boolean; CONST context: P_a
         .put(recycler, 'declares',ruleMap.inspect(P_context(context),recycler,includeRulePointer),false)^
         .put(recycler, 'plain script',newBoolLiteral(isPlainScript),false);
     {$ifdef fullVersion}
-    functionCallInfos^.cleanup;
     result^.put(recycler,'called builtin',builtinCallList,false);
-    dispose(functionCallInfos,destroy);
-    functionCallInfos:=nil;
     {$endif}
   end;
 

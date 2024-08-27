@@ -245,12 +245,17 @@ FUNCTION inspect_imp intFuncSignature;
       id:=P_stringLiteral(arg0)^.value;
       obtainPackage(P_package(tokenLocation.package),tokenLocation,id);
       if tempPackage<>nil then begin
-        if inspectedPackageIsTemporary then {$ifdef fullVersion} loadMessages:=getMessagesForInspection(tempPackage^.getPath); {$else} loadTemporaryPackage(); {$endif}
-        result:=tempPackage^.inspect(not(inspectedPackageIsTemporary),context,recycler{$ifdef fullVersion},functionCallInfos{$endif});
+        {$ifdef fullVersion}
+        result:=getMessagesForInspection(context,recycler,tempPackage^.getPath);
+        {$else}
+        if inspectedPackageIsTemporary then loadTemporaryPackage();
+        result:=tempPackage^.inspect(not(inspectedPackageIsTemporary),context,recycler);
         if loadMessages<>nil then mapResult^.put(recycler,'messages',loadMessages,false);
+        {$endif}
+
         if inspectedPackageIsTemporary
         then dispose(tempPackage,destroy);
-      end else result:=recycler^.newListLiteral;
+      end else result:=recycler^.newMapLiteral(0);
     end else if (params<>nil) and (params^.size=2) and (arg0^.literalType=lt_string) and (arg1^.literalType=lt_stringList) then begin
       setLength(source,list1^.size);
       for i:=0 to list1^.size-1 do source[i]:=P_stringLiteral(list1^.value[i])^.value;
