@@ -648,12 +648,12 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
 
       if (nextStatement.token.last<>nil) then begin
         if (nextStatement.token.last^.tokType in [tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_list_constructor,tt_expBraceOpen,tt_iifCheck]) and
-           (tok                     ^.tokType in [tt_endBlock  ,tt_endRule  ,tt_endExpression                                                     ,tt_expBraceClose,tt_iifElse]) then begin
-          context^.messages^.raiseSimpleError('Empty '+nextStatement.token.last^.singleTokenToString+'-'+tok^.singleTokenToString+' block',tok^.location);
-        end;
-        if (nextStatement.token.last^.tokType in [tt_separatorCnt,tt_separatorComma]) and (tok^.tokType in C_closingBrackets) then begin
-          context^.messages^.raiseSimpleError('Missing element in '+nextStatement.token.last^.singleTokenToString+'-separated list',tok^.location);
-        end;
+           (tok                     ^.tokType in [tt_endBlock  ,tt_endRule  ,tt_endExpression                                                     ,tt_expBraceClose,tt_iifElse])
+        then context^.messages^.raiseSimpleError('Empty '+nextStatement.token.last^.singleTokenToString+'-'+tok^.singleTokenToString+' block',tok^.location);
+        if (nextStatement.token.last^.tokType in [tt_separatorCnt,tt_separatorComma]) and (tok^.tokType in C_closingBrackets)
+        then context^.messages^.raiseSimpleError('Missing element in '+nextStatement.token.last^.singleTokenToString+'-separated list',tok^.location);
+        if (nextStatement.token.last^.tokType<>tt_semicolon) and (tok^.tokType in [tt_endBlock,tt_endRule])
+        then context^.messages^.raiseSimpleError('Missing ";" before "end"',tok^.location);
       end;
 
       case tok^.tokType of
