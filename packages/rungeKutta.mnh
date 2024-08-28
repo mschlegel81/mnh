@@ -155,33 +155,28 @@ FEHLBERG_RK12->(y0_, f, dtMacro, errorTolerance)->
 
 BOGACKI_SHAMPINE->(y0_, f, dtMacro, errorTolerance)->
   begin
-    F0:=void;
+    F0:=f(y0_);
     F3:=void;
     microStep:=(y0, dt)->begin
-            F0:=F0 orElse dt*f(y0);
-      F1:=dt*f(y0+0.5*F0);
-      F2:=dt*f(y0+0.75*F1);
-            F3:=dt*f(result:=y0+0.2222222222222222*F0+0.3333333333333333*F1+0.4444444444444444*F2);
-      [result,((y0+0.29166666666666669*F0+0.25*F1+0.3333333333333333*F2+0.125*F3-result).flatten.abs.max/errorTolerance)^0.3333333333333333];
+      F1:=f(y0+0.5*dt*F0);
+      F2:=f(y0+0.75*dt*F1);
+      F3:=f(result:=y0+dt*(0.2222222222222222 *F0+0.3333333333333333*F1+0.4444444444444444*F2));
+      [result,((result-y0+dt*(0.29166666666666669*F0+0.25*F1+0.3333333333333333*F2+0.125*F3)).flatten.abs.max/errorTolerance)];
     end;
     dtSub:=dtMacro;
   save;
     y:=y0_;
     dtRest:=dtMacro;
-    dtSub:=dtRest/max(1, ceil(min(1000, dtRest/dtSub)));
     while dtRest>0 do begin
       y1:=microStep(y, dtSub);
       errorEstimate:=y1[1];
-      errorEstimate<1
-      ? begin
-          y:=y1[0];
-          dtRest-=dtSub;
-          F0:=F3;
-        end
-      : void;
-      dtRest>0
-      ? dtSub:=dtRest/max(1, ceil(min(1000, dtRest/dtSub*errorEstimate)));
-      : dtSub/=errorEstimate;
+      if (errorEstimate<1)
+      then begin
+        y:=y1[0];
+        F0:=F3;
+        dtRest-=dtSub;
+      end;
+      if dtRest>0 then dtSub:=dtRest/max(1,ceil(dtRest/dtSub*errorEstimate));
     end;
     y;
   end;
