@@ -394,11 +394,13 @@ sqrt(3);
 sqrt({1+$x});
 
 #I isqrt
-#S isqrt(n);
-#C Returns [floor(sqrt(n)),isSquare(n)]
+#S isqrt(n:Int);
+#C Returns [round(sqrt(n)), isSquare(n)]
+#S isqrt(n:Int,rounding in [-1,0,1]);
+#C Returns the integer square root with custom rounding. -1: down, 0: even, 1: up
 isqrt(121);
 
-isqrt(255);
+isqrt(255,1);
 
 #I sign
 #S sign(n);

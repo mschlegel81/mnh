@@ -48,21 +48,34 @@ FUNCTION isqrt_imp intFuncSignature;
   VAR intRoot:int64;
       bigRoot:T_bigInt;
       isSquare:boolean;
+      roundingMode:T_roundingMode=RM_DEFAULT;
   begin
-    if (params<>nil) and (params^.size=1) then case arg0^.literalType of
-      lt_smallint:begin
-        intRoot:=trunc(sqrt(P_smallIntLiteral(arg0)^.value));
-        result:=recycler^.newListLiteral(2)^
-          .appendInt (recycler, intRoot)^
-          .appendBool(recycler, P_smallIntLiteral(arg0)^.value=intRoot*intRoot);
+    if (params<>nil) and (params^.size>=1) and (params^.size<=2) then begin
+      if params^.size=2 then begin
+        if arg1^.literalType = lt_smallint then begin
+          if P_smallIntLiteral(arg1)^.value<0 then roundingMode:=RM_DOWN else
+          if P_smallIntLiteral(arg1)^.value>0 then roundingMode:=RM_UP;
+        end else exit(nil);
       end;
-      lt_bigint: begin
-        bigRoot:=P_bigIntLiteral(arg0)^.value.iSqrt(true,RM_DOWN,isSquare);
-        result:=recycler^.newListLiteral(2)^
-          .append    (recycler, recycler^.newIntLiteral(bigRoot),false)^
-          .appendBool(recycler, isSquare);
+      case arg0^.literalType of
+        lt_smallint:begin
+          case roundingMode of
+            RM_UP:      intRoot:=ceil64(sqrt(P_smallIntLiteral(arg0)^.value));
+            RM_DOWN:    intRoot:=trunc (sqrt(P_smallIntLiteral(arg0)^.value));
+            RM_DEFAULT: intRoot:=round (sqrt(P_smallIntLiteral(arg0)^.value));
+          end;
+          result:=recycler^.newListLiteral(2)^
+            .appendInt (recycler, intRoot)^
+            .appendBool(recycler, P_smallIntLiteral(arg0)^.value=intRoot*intRoot);
+        end;
+        lt_bigint: begin
+          bigRoot:=P_bigIntLiteral(arg0)^.value.iSqrt(true,roundingMode,isSquare);
+          result:=recycler^.newListLiteral(2)^
+            .append    (recycler, recycler^.newIntLiteral(bigRoot),false)^
+            .appendBool(recycler, isSquare);
+        end;
+        else result:=genericVectorization('isqrt',params,tokenLocation,context,recycler);
       end;
-      else result:=genericVectorization('isqrt',params,tokenLocation,context,recycler);
     end else result:=nil;
   end;
 
