@@ -49,6 +49,7 @@ TYPE
   private
     evaluationStart:double;
     evaluatedFor:T_hashInt;
+    highlightedFor:T_hashInt;
     inputMeta:T_quickEvalEditorMeta;
     quickEvaluation:T_quickEvaluation;
     quickOutput:T_eagerInitializedOutAdapter;
@@ -135,6 +136,7 @@ PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);
       miErrorL4.checked:=suppressWarningsUnderLevel=4;
     end;
     evaluatedFor:=0;
+    highlightedFor:=0;
     initDockMenuItems(OutputMainMenu,miDockMenuInMain);
     initDockMenuItems(OutputPopupMenu,nil);
     quickOutput.wrapEcho:=miWrapEcho.checked;
@@ -165,12 +167,15 @@ PROCEDURE TQuickEvalForm.performFastUpdate;
     startTime:=now;
     meta:=workspace.currentEditor;
     cbEvaluateInCurrentPackage.enabled:=(meta<>nil) and (meta^.language=LANG_MNH);
-    if (meta<>nil) and (cbEvaluateInCurrentPackage.enabled and cbEvaluateInCurrentPackage.checked)
-    then begin
-      assistanceData:=meta^.getAssistanceResponse;
+
+    if highlightedFor<>stateHash then begin
+      if (meta<>nil) and (cbEvaluateInCurrentPackage.enabled and cbEvaluateInCurrentPackage.checked)
+      then assistanceData:=getAssistanceResponseSync(@inputMeta,meta)
+      else assistanceData:=getAssistanceResponseSync(@inputMeta);
       inputMeta.updateAssistanceResponse(assistanceData);
       disposeMessage(assistanceData);
-    end else inputMeta.updateAssistanceResponse(nil);
+      highlightedFor:=stateHash;
+    end;
 
     quickEvaluation.flushMessages;
     if (evaluatedFor<>stateHash) then begin

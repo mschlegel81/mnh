@@ -73,7 +73,7 @@ TYPE
 PROCEDURE finalizeCodeAssistance;
 PROCEDURE ensureDefaultFiles(CONST progressCallback:F_simpleCallback; CONST overwriteExisting:boolean=false; CONST createHtmlDat:boolean=false);
 PROCEDURE postAssistanceRequest    (CONST scriptPath:string);
-FUNCTION  getAssistanceResponseSync(CONST editorMeta:P_codeProvider):P_codeAssistanceResponse;
+FUNCTION  getAssistanceResponseSync(CONST editorMeta:P_codeProvider; CONST secondary:P_codeProvider=nil):P_codeAssistanceResponse;
 FUNCTION findScriptsUsing(CONST scriptName:string):T_arrayOfString;
 FUNCTION findRelatedScriptsTransitive(CONST scriptName:string):T_arrayOfString;
 
@@ -93,7 +93,7 @@ TYPE
     private
       //Input:
       scriptPath             :string;
-      provider               :P_codeProvider;
+      provider,secondaryProvider:P_codeProvider;
 
       FUNCTION execute(CONST recycler:P_recycler; CONST givenGlobals:P_evaluationGlobals=nil; CONST givenAdapters:P_messagesErrorHolder=nil):P_codeAssistanceResponse; virtual;
     public
@@ -380,7 +380,7 @@ FUNCTION T_codeAssistanceRequest.execute(CONST recycler:P_recycler; CONST givenG
 
     for script in additionalScriptsToScan do loadSecondaryPackage(script);
     globals^.primaryContext.messages^.clear();
-    package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,callAndIdInfos);
+    package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,callAndIdInfos,secondaryProvider);
     if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(true)
                          else loadMessages:=adapters      .storedMessages(true);
     globals^.afterEvaluation(recycler,packageTokenLocation(package));
@@ -542,12 +542,13 @@ FUNCTION stringsEqual(CONST a,b:string):boolean;
     result:=a=b;
   end;
 
-FUNCTION getAssistanceResponseSync(CONST editorMeta:P_codeProvider):P_codeAssistanceResponse;
+FUNCTION getAssistanceResponseSync(CONST editorMeta:P_codeProvider; CONST secondary:P_codeProvider=nil):P_codeAssistanceResponse;
   VAR request:P_codeAssistanceRequest;
       recycler:P_recycler;
   begin
     new(request,createWithProvider(editorMeta));
     recycler:=newRecycler;
+    request^.secondaryProvider:=secondary;
     result:=request^.execute(recycler);
     freeRecycler(recycler);
     dispose(request,destroy);
@@ -606,6 +607,7 @@ CONSTRUCTOR T_codeAssistanceRequest.createWithProvider(CONST editorMeta:P_codePr
   begin
     scriptPath:=editorMeta^.getPath;
     provider:=editorMeta;
+    secondaryProvider:=nil;
   end;
 
 CONSTRUCTOR T_codeAssistanceRequest.create(CONST path:string);

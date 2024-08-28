@@ -39,6 +39,7 @@ TYPE
 
   T_packageReference=object
     id,path:ansistring;
+    explicitlyGivenCodeProvider:P_codeProvider;
     pack:P_package;
     locationOfDeclaration:T_tokenLocation;
     {$ifdef fullVersion}
@@ -87,7 +88,7 @@ TYPE
       PROCEDURE clear(CONST includeSecondaries:boolean);
       CONSTRUCTOR create(CONST provider:P_codeProvider; CONST mainPackage_:P_package);
       FUNCTION getSecondaryPackageById(CONST id:ansistring):ansistring;
-      PROCEDURE load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals; CONST recycler:P_recycler; CONST mainParameters:T_arrayOfString{$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
+      PROCEDURE load(usecase:T_packageLoadUsecase; VAR globals:T_evaluationGlobals; CONST recycler:P_recycler; CONST mainParameters:T_arrayOfString{$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil; CONST secondaryProvider:P_codeProvider=nil{$endif});
 
       DESTRUCTOR destroy; virtual;
 
@@ -512,7 +513,9 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
           end;
         end;
       end;
-      new(pack,create(newCodeProvider(path),containingPackage^.mainPackage));
+      if explicitlyGivenCodeProvider<>nil
+      then new(pack,create(explicitlyGivenCodeProvider,containingPackage^.mainPackage))
+      else new(pack,create(newCodeProvider(path)      ,containingPackage^.mainPackage));
       setLength(secondaryPackages,length(secondaryPackages)+1);
       secondaryPackages[length(secondaryPackages)-1]:=pack;
       {$ifdef fullVersion}if parentUsecase in [lu_forCodeAssistance,lu_forCodeAssistanceSecondary] then new(callAndIdInfos,create);{$endif}
@@ -528,6 +531,7 @@ CONSTRUCTOR T_packageReference.create(CONST root,packId:ansistring; CONST tokenL
     if not(fileCache.canLocateSource(extractFilePath(root),id,path)) then path:='';
     if (messages<>nil) and (path='') then messages^.raiseSimpleError('Cannot locate package for id "'+id+'"',tokenLocation);
     pack:=nil;
+    explicitlyGivenCodeProvider:=nil;
   end;
 
 CONSTRUCTOR T_packageReference.createWithSpecifiedPath(CONST path_:ansistring; CONST tokenLocation:T_tokenLocation; CONST messages:P_messages);
@@ -539,6 +543,7 @@ CONSTRUCTOR T_packageReference.createWithSpecifiedPath(CONST path_:ansistring; C
     if not(fileExists(path))
     then messages^.raiseSimpleError('Cannot locate package "'+path+'"',tokenLocation);
     pack:=nil;
+    explicitlyGivenCodeProvider:=nil;
   end;
 
 {$ifdef fullVersion}
@@ -987,7 +992,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
     statement.token.first:=nil;
   end;
 
-PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluationGlobals; CONST recycler:P_recycler; CONST mainParameters: T_arrayOfString{$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
+PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluationGlobals; CONST recycler:P_recycler; CONST mainParameters: T_arrayOfString{$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil; CONST secondaryProvider:P_codeProvider=nil{$endif});
   VAR profile:boolean=false;
   PROCEDURE executeMain;
     VAR mainRule:P_rule;
@@ -1069,6 +1074,19 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
       complainAboutUnused(globals.primaryContext.messages,callAndIdInfos);
       checkParameters;
     end;
+
+  PROCEDURE loadSecondaryProvider;
+    begin
+      setLength(packageUses,1);
+      packageUses[0].create('',secondaryProvider^.id,packageTokenLocation(@self),nil);
+      packageUses[0].explicitlyGivenCodeProvider:=secondaryProvider;
+      packageUses[0].loadPackage(@self,packageTokenLocation(@self),globals,recycler,usecase);
+      ruleMap.clearImports;
+      if globals.primaryContext.continueEvaluation
+      then ruleMap.addImports(@packageUses[0].pack^.ruleMap);
+      customOperatorRules:=ruleMap.getOperators;
+    end;
+
   {$endif}
 
   begin
@@ -1078,8 +1096,8 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
     if usecase = lu_beingLoaded then raise Exception.create('Invalid usecase: lu_beingLoaded');
     clear(false);
     readyForUsecase:=lu_beingLoaded;
+    if secondaryProvider<>nil then loadSecondaryProvider;
     logReady(getCodeProvider^.stateHash);
-
     if profile then globals.timeBaseComponent(pc_tokenizing);
     lexer.createForPackageParsing(@self{$ifdef fullVersion},callAndIdInfos{$endif});
     if profile then globals.timeBaseComponent(pc_tokenizing);

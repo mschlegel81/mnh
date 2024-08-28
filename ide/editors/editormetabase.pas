@@ -289,20 +289,8 @@ DESTRUCTOR T_quickEvalEditorMeta.destroy;
 PROCEDURE T_quickEvalEditorMeta.updateAssistanceResponse(CONST assistanceDataFromEditorUsedAsInput:P_codeAssistanceResponse);
   begin
     completionLogic.assignEditor(editor_,assistanceDataFromEditorUsedAsInput,true);
-    if (assistanceDataFromEditorUsedAsInput= nil) and (paintedWithStateHash<>0) or
-       (assistanceDataFromEditorUsedAsInput<>nil) and (paintedWithStateHash<>assistanceDataFromEditorUsedAsInput^.stateHash) then begin
-      if assistanceDataFromEditorUsedAsInput=nil
-      then paintedWithStateHash:=0
-      else paintedWithStateHash:=assistanceDataFromEditorUsedAsInput^.stateHash;
-      if assistanceDataFromEditorUsedAsInput=nil
-      then highlighter.highlightingData.clear
-      else begin
-        assistanceDataFromEditorUsedAsInput^.updateHighlightingData(highlighter.highlightingData);
-        highlighter.highlightingData.clearLocalIdInfos; //local id infos are not applicable to quick evaluation editor
-      end;
-      editor.highlighter:=highlighter;
-      editor.repaint;
-    end;
+    assistanceDataFromEditorUsedAsInput^.updateHighlightingData(highlighter.highlightingData);
+    editor.Invalidate;
   end;
 
 PROCEDURE T_basicEditorMeta.processUserCommand(Sender: TObject;

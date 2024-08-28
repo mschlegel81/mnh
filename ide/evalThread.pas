@@ -473,29 +473,11 @@ FUNCTION T_quickEvaluation.postEvaluation(CONST parent: P_codeProvider; CONST ev
   end;
 
 PROCEDURE T_quickEvaluation.execute(CONST recycler: P_recycler);
-  VAR lexer:T_linesLexer;
-      stmt :T_enhancedStatement;
   begin
-    if parentProvider=nil then begin
-      package.replaceCodeProvider(newVirtualFileCodeProvider(C_QuickEvalPseudoPackageName,toEvaluate));
-      globals.resetForEvaluation(@package,nil,C_allSideEffects,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
-      package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY);
-      globals.afterEvaluation(recycler,packageTokenLocation(@package));
-    end else begin
-      package.replaceCodeProvider(parentProvider);
-      globals.resetForEvaluation(@package,nil,C_allSideEffects,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
-      package.load(lu_forImport,globals,recycler,C_EMPTY_STRING_ARRAY);
-      messages.postSingal(mt_clearConsole,C_nilSearchTokenLocation);
-      lexer.create(toEvaluate,packageTokenLocation(@package),@package);
-      stmt:=lexer.getNextStatement(@globals.primaryContext,recycler);
-      while (globals.primaryContext.continueEvaluation) and (stmt.token.first<>nil) do begin
-        package.interpret(stmt,lu_forDirectExecution,globals,recycler);
-        stmt:=lexer.getNextStatement(@globals.primaryContext,recycler);
-      end;
-      if (stmt.token.first<>nil) then recycler^.cascadeDisposeToken(stmt.token.first);
-      lexer.destroy;
-      globals.afterEvaluation(recycler,packageTokenLocation(@package));
-    end;
+    package.replaceCodeProvider(newVirtualFileCodeProvider(C_QuickEvalPseudoPackageName,toEvaluate));
+    globals.resetForEvaluation(@package,nil,C_allSideEffects,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+    package.load(lu_forDirectExecution,globals,recycler,C_EMPTY_STRING_ARRAY,nil,parentProvider);
+    globals.afterEvaluation(recycler,packageTokenLocation(@package));
   end;
 
 PROCEDURE T_standardEvaluation.evaluate(CONST provider: P_codeProvider; CONST contextType: T_evaluationContextType; CONST executeInFolder:string);
