@@ -757,10 +757,6 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
   PROCEDURE parseRule;
     VAR p:P_token; //iterator
         ruleDeclarationStart:T_tokenLocation;
-        {$ifdef fullVersion}
-        ruleDeclarationEnd:T_tokenLocation;
-        parameterId:T_patternElementLocation;
-        {$endif}
         //rule meta data
         ruleModifiers:T_modifierSet=[];
         metaData:T_ruleMetaData;

@@ -255,9 +255,6 @@ DESTRUCTOR T_messagesAndLocations.destroy;
 
 PROCEDURE T_messagesAndLocations.appendPrint(CONST message:string);
   CONST noLocation:T_searchTokenLocation=(fileName:'';line:-1; column:-1);
-  VAR cleanedUp:string;
-      c: char;
-      state:(init,read27,reading_escape)=init;
   begin
     //TODO: Process and remove ansi escapes
     // Ansi escape: \e[...m , e.g. \e[0m Reset colors

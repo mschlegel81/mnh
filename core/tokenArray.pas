@@ -876,7 +876,9 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
     end;
 
   PROCEDURE performPop;
-    VAR i:longint;
+    VAR {$ifdef fullVersion}
+        i:longint;
+        {$endif}
         msg: P_storedMessage;
     begin
       {$ifdef fullVersion}

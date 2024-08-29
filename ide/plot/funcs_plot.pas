@@ -100,7 +100,7 @@ FUNCTION addPlot intFuncSignature;
   VAR options: ansistring = '';
       sizeWithoutOptions: longint;
       scaling_options:T_scalingOptions;
-      axis: char;
+
   FUNCTION addRowMessage(CONST dataRow:T_dataRow):P_addRowMessage;
     begin
       new(result,create(options,dataRow));

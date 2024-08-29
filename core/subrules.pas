@@ -740,7 +740,7 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
 
     begin
       enterCriticalSection(subruleCallCs);
-      if (indexOfSave>=0) and currentlyEvaluating then begin
+      if currentlyEvaluating then begin
         recycler^.cascadeDisposeToken(output.first);
         output.first:=nil;
         output.last:=nil;
