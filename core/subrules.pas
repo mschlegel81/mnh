@@ -1495,6 +1495,7 @@ PROCEDURE T_subruleExpression.checkParameters(CONST distinction:T_arrayOfLongint
     setLength(used,0);
     append(used,distinction);
     named_parameters:=pattern.getNamedParameters;
+    if callInfos<>nil then
     for k:=0 to length(named_parameters)-1 do
       if callInfos^.isParameterReferenced(named_parameters[k].location)
       then appendIfNew(used,k);
