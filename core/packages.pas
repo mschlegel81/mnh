@@ -1096,7 +1096,9 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
     if usecase = lu_beingLoaded then raise Exception.create('Invalid usecase: lu_beingLoaded');
     clear(false);
     readyForUsecase:=lu_beingLoaded;
+    {$ifdef fullVersion}
     if secondaryProvider<>nil then loadSecondaryProvider;
+    {$endif}
     logReady(getCodeProvider^.stateHash);
     if profile then globals.timeBaseComponent(pc_tokenizing);
     lexer.createForPackageParsing(@self{$ifdef fullVersion},callAndIdInfos{$endif});
