@@ -35,13 +35,13 @@ BOARD_FORMAT_STRING:=
 ║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
 ╟───┼───┼───╫───┼───┼───╫───┼───┼───╢
 ║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
-╠═══╪═══╪═══╬═══╪═══╪═══╬═══╪═══╪═══║
+╠═══╪═══╪═══╬═══╪═══╪═══╬═══╪═══╪═══╣
 ║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
 ╟───┼───┼───╫───┼───┼───╫───┼───┼───╢
 ║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
 ╟───┼───┼───╫───┼───┼───╫───┼───┼───╢
 ║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
-╠═══╪═══╪═══╬═══╪═══╪═══╬═══╪═══╪═══║
+╠═══╪═══╪═══╬═══╪═══╪═══╬═══╪═══╪═══╣
 ║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
 ╟───┼───┼───╫───┼───┼───╫───┼───┼───╢
 ║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
@@ -49,8 +49,8 @@ BOARD_FORMAT_STRING:=
 ║ x │ x │ x ║ x │ x │ x ║ x │ x │ x ║
 ╚═══╧═══╧═══╩═══╧═══╧═══╩═══╧═══╧═══╝~.replace('x','%s');
 
-private
-printBoard(B)->BOARD_FORMAT_STRING.printf@(B.map((x)->x.isInt ? x : ' '));
+formatBoard(B)->BOARD_FORMAT_STRING.format@(B.map((x)->x.isInt ? x : ' '));
+printBoard(B)->formatBoard(B).print;
 
 private
 solve(B)->begin
@@ -130,5 +130,12 @@ main->randomRiddle.printBoard;
 main(count)->begin
   iCount:=count.toInt;
   assert(iCount>0,'count must be >0');
-  [1..iCount].pMap(::randomRiddle).each(r,print('============================='),r.printBoard);
+  [1..iCount].pMap(()->randomRiddle.formatBoard.split("\n"))
+             .chunkMap(3,(chunk)->(chunk.size in [2,3]
+                                   ? chunk.transpose.map((line)->line.join(" "))
+                                   : chunk))
+             .flatMap
+             .toList
+             .join("\n")
+             .print;
 end;
