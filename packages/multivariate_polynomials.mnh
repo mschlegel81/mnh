@@ -82,6 +82,8 @@ OPERATOR_POT(x:Polynomial,i<0)->begin
   [invTerm].toPolynomial^(-i);
 end;
 
+let(poly:Polynomial,var:String,polyAsString:String)->let(poly,var,parsePoly(polyAsString));
+
 let(poly:Polynomial,var:String,value:GeneralNumber)->begin
   poly.each(term,begin
     factor:=term[0];
@@ -249,9 +251,10 @@ findRoot(poly:Polynomial,variable:String)->begin
 end;
 
 toRealCoeff(poly:Polynomial)->poly.map((p)->[p[0].isInt ? p[0] : p[0].toReal,p[1]]).toPolynomial;
-horner(poly:Polynomial)->begin
-  toExtract:=poly.getInner(1).agg(|).min;
-  toExtract.isVoid ? return poly.toString : void;
+horner(poly:Polynomial,...)->begin
+  toExtract:=poly.getInner(1).agg(|).sort(1).sort((entry)->indexOf(entry[0]=...).min orElse size(...))[0];
+  if toExtract.isVoid
+  then return poly.toString;
   without:=[];
   within:=
   poly.each(term,begin
@@ -271,14 +274,14 @@ horner(poly:Polynomial)->begin
   ? without.size==0
     ? within.toPolynomial*[[1,[toExtract]]].toPolynomial
     : format('%s + %s',
-        without.toPolynomial.horner,
+        without.toPolynomial.horner@...,
         within.toPolynomial*[[1,[toExtract]]].toPolynomial)
   : without.size==0
     ? format('%s * (%s)',
         powerToString([toExtract]),
-        within.toPolynomial.horner)
+        within.toPolynomial.horner@...)
     : format('%s + %s * (%s)',
-        without.toPolynomial.horner,
+        without.toPolynomial.horner@...,
         powerToString([toExtract]),
-        within.toPolynomial.horner);
+        within.toPolynomial.horner@...);
 end;

@@ -1248,6 +1248,11 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
 
 {$MACRO ON}
 {$define COMMON_CASES:=
+tt_userRule, tt_intrinsicRule, tt_rulePutCacheValue: begin
+  stack.push(first);
+  stack.pushFreshlyCreatedToken(recycler^.newToken(stack.top^.location,C_tokenDefaultId[tt_operatorMult],tt_operatorMult));
+  didSubstitution:=true;
+end;
 tt_pow2,tt_pow3: process_pow2_pow3;
 tt_listBraceOpen: begin
   first^.next^.data:=recycler^.newListLiteral;
@@ -1594,7 +1599,8 @@ end}
             didSubstitution:=true;
           end else applyRule(first^.next,first^.next^.next);
           tt_braceClose,tt_listBraceClose,tt_separatorMapItem..tt_operatorConcatAlt,tt_EOL,tt_iifCheck,tt_iifElse,tt_separatorCnt,tt_separatorComma,tt_semicolon,
-          tt_do,tt_ponFlipper, tt_each,tt_parallelEach,tt_pow2,tt_pow3: applyRule(nil,first^.next);
+          tt_do,tt_ponFlipper, tt_each,tt_parallelEach,tt_pow2,tt_pow3,
+          tt_userRule, tt_intrinsicRule, tt_rulePutCacheValue: applyRule(nil,first^.next);
         end;
 {cT[0]=}tt_while: resolveWhile;
 {cT[0]=}tt_repeat: resolveRepeat;

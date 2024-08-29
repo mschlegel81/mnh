@@ -25,6 +25,7 @@ TYPE
     DESTRUCTOR destroy;
     PROCEDURE popLink(VAR first:P_token); inline;
     PROCEDURE push(VAR first:P_token); inline;
+    PROCEDURE pushFreshlyCreatedToken(CONST t:P_token);
     FUNCTION toString(CONST first:P_token; CONST lengthLimit:longint=maxLongint):ansistring;
     {$ifdef fullVersion}
     FUNCTION toDebuggerString(CONST first:P_token; CONST lengthLimit:longint;
@@ -177,6 +178,12 @@ PROCEDURE T_TokenStack.push(VAR first: P_token);
     first:=first^.next;
     toPush^.next:=top;
     top:=toPush;
+  end;
+
+PROCEDURE T_TokenStack.pushFreshlyCreatedToken(CONST t:P_token);
+  begin
+    t^.next:=top;
+    top:=t;
   end;
 
 FUNCTION T_TokenStack.toString(CONST first: P_token; CONST lengthLimit: longint): ansistring;
