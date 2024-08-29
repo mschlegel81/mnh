@@ -527,35 +527,6 @@ FUNCTION group_imp intFuncSignature;
       recycler^.disposeLiteral(dummy);
     end;
 
-  PROCEDURE addToAggregation(CONST groupKey:P_literal; CONST L:P_literal); {$ifndef debugMode} inline; {$endif}
-    VAR newLit:P_literal;
-        resultLiteral:P_literal;
-    begin
-      resultLiteral:=groupMap^.get(groupKey,nil);
-      if aggregator=nil then begin
-        if resultLiteral=nil then begin
-          resultLiteral:=recycler^.newListLiteral;
-          groupMap^.put(groupKey^.rereferenced,resultLiteral);
-        end;
-        P_listLiteral(resultLiteral)^.append(recycler,L,true);
-      end else begin
-        if resultLiteral=nil then begin
-          groupKey^.rereference;
-          resultLiteral:=L; L^.rereference;
-        end else begin
-          newLit:=evaluteExpression(aggregator,tokenLocation,context,recycler,resultLiteral,L).literal;
-          if newLit<>nil then begin
-            recycler^.disposeLiteral(resultLiteral);
-            resultLiteral:=newLit;
-          end else begin
-            context^.raiseError('Error performing aggregation in group-construct with aggregator '+arg2^.toString,tokenLocation);
-            exit;
-          end;
-        end;
-        groupMap^.put(groupKey,resultLiteral);
-      end;
-    end;
-
   VAR inputIndex:longint;
       newLit:P_literal;
       resultLiteral:P_literal;
@@ -594,16 +565,19 @@ FUNCTION group_imp intFuncSignature;
           resultLiteral:=groupMap^.get(keyList[inputIndex],nil);
           if resultLiteral=nil then begin
             keyList[inputIndex]^.rereference;
-            resultLiteral:=listToGroup^.value[inputIndex]; listToGroup^.value[inputIndex]^.rereference;
+            resultLiteral:=listToGroup^.value[inputIndex]^.rereferenced;
           end else begin
             newLit:=evaluteExpression(aggregator,tokenLocation,context,recycler,resultLiteral,listToGroup^.value[inputIndex]).literal;
             if newLit<>nil then begin
-              recycler^.disposeLiteral(resultLiteral);
-              resultLiteral:=newLit;
-            end else begin
+              if newLit^.literalType=lt_void then begin
+                context^.raiseError('Error performing aggregation in group-construct with aggregator '+arg2^.toString+'; call with parameters ('+resultLiteral^.toString+', '+listToGroup^.value[inputIndex]^.toString+') yields void result',tokenLocation);
+                newLit^.unreference;
+              end else begin
+                recycler^.disposeLiteral(resultLiteral);
+                resultLiteral:=newLit;
+              end;
+            end else
               context^.raiseError('Error performing aggregation in group-construct with aggregator '+arg2^.toString,tokenLocation);
-              exit;
-            end;
           end;
           groupMap^.put(keyList[inputIndex],resultLiteral);
         end;
