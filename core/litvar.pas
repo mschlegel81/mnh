@@ -559,8 +559,8 @@ FUNCTION evaluateToBoolean_strict(CONST e:P_expressionLiteral; CONST location:T_
       parameterList:T_listLiteral;
   begin
     parameterList.create(2);
-    parameterList.dat[0]:=arg0; if arg0<>nil then inc(parameterList.fill);
-    parameterList.dat[1]:=arg1; if arg1<>nil then inc(parameterList.fill);
+    if arg0<>nil then parameterList.append(recycler,arg0,false);
+    if arg1<>nil then parameterList.append(recycler,arg1,false);
     evResult:=e^.evaluate(location,context,recycler,@parameterList);
     if (evResult.literal<>nil) and (evResult.literal^.literalType=lt_boolean) then begin
       result:=P_boolLiteral(evResult.literal)^.value;
@@ -579,8 +579,8 @@ FUNCTION evaluateToBoolean_tolerant(CONST e:P_expressionLiteral; CONST location:
       parameterList:T_listLiteral;
   begin
     parameterList.create(2);
-    parameterList.dat[0]:=arg0; if arg0<>nil then inc(parameterList.fill);
-    parameterList.dat[1]:=arg1; if arg1<>nil then inc(parameterList.fill);
+    if arg0<>nil then parameterList.append(recycler,arg0,false);
+    if arg1<>nil then parameterList.append(recycler,arg1,false);
     evResult:=e^.evaluate(location,context,recycler,@parameterList);
     result:=evResult.literal=(@boolLit[true]);
     parameterList.fill:=0;
@@ -592,8 +592,8 @@ FUNCTION evaluteExpression(CONST e:P_expressionLiteral; CONST location:T_tokenLo
   VAR parameterList:T_listLiteral;
   begin
     parameterList.create(2);
-    parameterList.dat[0]:=arg0; if arg0<>nil then inc(parameterList.fill);
-    parameterList.dat[1]:=arg1; if arg1<>nil then inc(parameterList.fill);
+    if arg0<>nil then parameterList.append(recycler,arg0,false);
+    if arg1<>nil then parameterList.append(recycler,arg1,false);
     result:=e^.evaluate(location,context,recycler,@parameterList);
     parameterList.fill:=0;
     parameterList.destroy;
