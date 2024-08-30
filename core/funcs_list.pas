@@ -289,6 +289,8 @@ FUNCTION size_imp intFuncSignature;
       then result:=recycler^.newIntLiteral(compound0^.size)
       else if (arg0^.literalType=lt_expression)  and (P_expressionLiteral(arg0)^.typ=et_builtinIterable) and (P_builtinGeneratorExpression(arg0)^.typeString=QUEUE_TYPE_NAME)
       then result:=recycler^.newIntLiteral(P_queue(arg0)^.getQueuedCount)
+      else if (arg0^.literalType=lt_expression)  and (P_expressionLiteral(arg0)^.typ=et_builtinIterable) and (P_builtinGeneratorExpression(arg0)^.typeString=STACK_TYPE_NAME)
+      then result:=recycler^.newIntLiteral(P_stack(arg0)^.getStackedCount)
       else result:=recycler^.newIntLiteral(1);
     end;
   end;
