@@ -1,3 +1,29 @@
+S:=newStack;
+S.push('A');
+S.push('B');
+S.top;
+S.size;
+S.pop;
+S.pop;
+S.pop;
+
+#I newStack
+#S newStack()
+#C Returns a new stack, which is an iterable expression. Iterating means calling stack.pop until the stack is empty.
+#C Operations defined on stacks: push, pop, top and size
+
+#I push
+#S push(S:Stack,value)
+#C Pushes value to stack S
+
+#I top
+#S top(S:Stack)
+#C Returns the top element of S, or void if the stack is empty
+
+#I pop
+#S pop(S:Stack)
+#C Returns the top element of S after removing it from the stack. If the stack is empty, void is returned.
+
 #I map2list
 #S map2list(m:Map, defaultValue)
 #C Converts a map with nonnegative integers as keys to a list, using the keys as list indexes and the default value as fallback.
@@ -957,6 +983,7 @@ printf("%x is %d in hexadecimal form",123,123);
 //You can adress placeholders by their zero based index
 printf("%{$0}x is %{$0}d in hexadecimal form",123);
 
+#I printf
 //Placeholders can be complex expressions
 printf("sin(%{$0}s)=%{sin($0)}4.4g",1);
 #S printf(formatString:String,...);
