@@ -737,49 +737,42 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
 
     VAR firstCallOfResumable:boolean=false;
         previousValueScope:P_valueScope;
-
     begin
-      enterCriticalSection(subruleCallCs);
       if currentlyEvaluating then begin
         recycler^.cascadeDisposeToken(output.first);
         output.first:=nil;
         output.last:=nil;
-        leaveCriticalSection(subruleCallCs);
         context^.raiseError('Expressions/subrules containing a "save" construct must not be called recursively.',callLocation);
       end else begin
-        try
-          currentlyEvaluating:=true;
-          if saveValueStore=nil then begin
-            saveValueStore:=recycler^.newValueScopeAsChildOf(context^.valueScope);
-            firstCallOfResumable:=true;
-          end else begin
-            saveValueStore^.attachParent(context^.valueScope);
-          end;
-          //WARNING: At this point we have (temporary) cyclic referencing (@self -> saveValueStore -> context.valueScope -> ... -> @self)
-          previousValueScope:=context^.valueScope;
-          context^.valueScope:=saveValueStore;
-          context^.reduceExpression(output.first,recycler);
-          if output.first=nil
-          then output.last:=nil
-          else output.last:=output.first^.last;
-          context^.valueScope:=previousValueScope;
-          if firstCallOfResumable then begin
-            if context^.messages^.continueEvaluation then begin
-              updateBody;
-              //We have to detach the parent after evaluation to resolve temporary cyclic referencing
-              saveValueStore^.detachParent;
-            end else begin
-              recycler^.disposeScope(saveValueStore);
-            end;
-          end else saveValueStore^.detachParent;
-          {$ifdef fullVersion}
-          context^.callStackPop(output.first);
-          {$endif}
-
-        finally
-          currentlyEvaluating:=false;
-          leaveCriticalSection(subruleCallCs);
+        currentlyEvaluating:=true;
+        if saveValueStore=nil then begin
+          saveValueStore:=recycler^.newValueScopeAsChildOf(context^.valueScope);
+          firstCallOfResumable:=true;
+        end else begin
+          saveValueStore^.attachParent(context^.valueScope);
         end;
+        //WARNING: At this point we have (temporary) cyclic referencing (@self -> saveValueStore -> context.valueScope -> ... -> @self)
+        previousValueScope:=context^.valueScope;
+        context^.valueScope:=saveValueStore;
+        context^.reduceExpression(output.first,recycler);
+        if output.first=nil
+        then output.last:=nil
+        else output.last:=output.first^.last;
+        context^.valueScope:=previousValueScope;
+        if firstCallOfResumable then begin
+          if context^.messages^.continueEvaluation then begin
+            updateBody;
+            //We have to detach the parent after evaluation to resolve temporary cyclic referencing
+            saveValueStore^.detachParent;
+          end else begin
+            recycler^.disposeScope(saveValueStore);
+          end;
+        end else saveValueStore^.detachParent;
+        {$ifdef fullVersion}
+        context^.callStackPop(output.first);
+        {$endif}
+
+        currentlyEvaluating:=false;
       end;
     end;
 
@@ -850,8 +843,15 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
     if (param= nil) and pattern.matchesNilPattern or
        (param<>nil) and pattern.matches(param^,callLocation,context,recycler) then begin
       if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then resolveIds(context^.messages,ON_EVALUATION);
-      prepareResult;
-      if indexOfSave>=0 then evaluateExpressionWithSave;
+      if indexOfSave>=0 then begin
+        enterCriticalSection(subruleCallCs);
+        try
+          prepareResult;
+          evaluateExpressionWithSave;
+        finally
+          leaveCriticalSection(subruleCallCs);
+        end;
+      end else prepareResult;
       result:=output.last<>nil;
     end else begin
       result:=false;
