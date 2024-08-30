@@ -1671,6 +1671,8 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
         setLength(result.userDefRuleInfo,1);
         result.userDefRuleInfo[0]:=P_subruleExpression(P_typedef(token^.data)^.getDuckTypeRule)^.getStructuredInfo;
       end;
+      tt_identifier:
+        if arrContains(validStringTypes,token^.txt) then result.shortInfo:='builtin type';
       tt_type,tt_typeCheck:
         result.shortInfo:=ansiReplaceStr(C_typeCheckInfo[token^.getTypeCheck].helpText,'#',C_lineBreakChar);
       tt_modifier:

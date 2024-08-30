@@ -802,9 +802,10 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
       //:plausis
       ruleId:=trim(statement.token.first^.txt);
       statement.token.first:=recycler^.disposeToken(statement.token.first);
-      if isPlainScript and (ruleId=MAIN_RULE_ID) then begin
+      if isPlainScript and (ruleId=MAIN_RULE_ID) then
         globals.primaryContext.raiseError('plain scripts must not have main rules',ruleDeclarationStart);
-      end;
+      if arrContains(validStringTypes,ruleId) then
+        globals.primaryContext.raiseError('You cannot override builtin types',ruleDeclarationStart);
       if not(statement.token.first^.tokType in [tt_functionPattern,tt_assign,tt_declare])  then begin
         globals.primaryContext.messages^.raiseSimpleError('Invalid declaration head.',statement.token.first^.location);
         recycler^.cascadeDisposeToken(statement.token.first);
@@ -940,6 +941,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         {$endif}
       end else if statement.token.first^.tokType=tt_modifier then begin
         if not(se_alterPackageState in globals.primaryContext.sideEffectWhitelist) then begin
+          //TODO: This message comes in strange places, even if no "datastore" modifier is given
           globals.primaryContext.messages^.raiseSimpleError('Datastore declaration is not allowed here',statement.token.first^.location);
           recycler^.cascadeDisposeToken(statement.token.first);
           exit;
