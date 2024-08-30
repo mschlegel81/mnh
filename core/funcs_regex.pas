@@ -193,7 +193,7 @@ FUNCTION regexMatchComposite_imp intFuncSignature;
               appendInt   (recycler,regex^.RegExpr.MatchPos[i])^.
               appendInt   (recycler,regex^.RegExpr.MatchLen[i]),false);
           end;
-        until not(regex^.RegExpr.ExecNext);
+        until not(regex^.RegExpr.ExecNext) or not(context^.continueEvaluation);
       except
         on e:Exception do begin
           context^.raiseError(e.message,tokenLocation,mt_el4_systemError);
