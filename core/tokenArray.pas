@@ -1227,6 +1227,7 @@ FUNCTION T_callAndIdInfos.whoReferencesLocation(CONST loc: T_searchTokenLocation
       setLength(result,length(result)+1);
       result[length(result)-1]:=info.referencedAt;
     end;
+    sortLocations(result);
   end;
 
 FUNCTION T_callAndIdInfos.isLocationReferenced(CONST loc:T_searchTokenLocation):boolean;

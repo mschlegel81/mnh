@@ -59,6 +59,8 @@ FUNCTION stepForward(CONST x:T_tokenLocation; CONST stepChars:longint; CONST ste
 
 PROCEDURE writeSearchTokenLocation(VAR stream:T_bufferedOutputStreamWrapper; CONST loc:T_searchTokenLocation);
 FUNCTION readSearchTokenLocation(VAR stream:T_bufferedInputStreamWrapper):T_searchTokenLocation;
+PROCEDURE sortLocations(VAR loc:T_searchTokenLocations);
+
 IMPLEMENTATION
 FUNCTION packageTokenLocation(CONST package:P_objectWithPath):T_tokenLocation;
   begin
@@ -192,6 +194,16 @@ FUNCTION readSearchTokenLocation(VAR stream:T_bufferedInputStreamWrapper):T_sear
     result.fileName:=stream.readAnsiString;
     result.line    :=stream.readLongint;
     result.column  :=stream.readLongint;
+  end;
+
+PROCEDURE sortLocations(VAR loc:T_searchTokenLocations);
+  VAR i,j:longint;
+      tmp: T_searchTokenLocation;
+  begin
+    //TODO: Implement more efficient sort-algorithm
+    for i:=1 to length(loc)-1 do for j:=0 to i-1 do if loc[i]<loc[j] then begin
+      tmp:=loc[i]; loc[i]:=loc[j]; loc[j]:=tmp;
+    end;
   end;
 
 end.
