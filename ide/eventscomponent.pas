@@ -238,7 +238,10 @@ INITIALIZATION
   fileWrappers.notify_event:=@postIdeMessage;
 
 FINALIZATION
-  if eventsAdapterSingleton<>nil then dispose(eventsAdapterSingleton,destroy);
+  if eventsAdapterSingleton<>nil then begin
+    dispose(eventsAdapterSingleton,destroy);
+    eventsAdapterSingleton:=nil;
+  end;
 
 end.
 
