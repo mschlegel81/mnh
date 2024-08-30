@@ -286,7 +286,7 @@ TYPE
   end;
 
 FUNCTION canExtractExecParameters(CONST params:P_listLiteral; CONST allowTee,allowStderr:boolean; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST id_for_side_effect_checking:string; OUT exec_params:T_execParameters):boolean;
-  var k: Integer;
+  VAR k: integer;
       i:longint;
   begin
     result:=false;
@@ -325,7 +325,6 @@ FUNCTION canExtractExecParameters(CONST params:P_listLiteral; CONST allowTee,all
   end;
 
 FUNCTION internalExec(CONST params:T_execParameters; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; CONST tee:boolean):P_literal;
-  VAR teeRoutine:P_expressionLiteral=nil;
   FUNCTION runCommand(OUT output: TStringList): int64;
     CONST READ_BYTES = 8192;
     VAR ReadBuffer:array[0..READ_BYTES-1] of char;
@@ -339,10 +338,10 @@ FUNCTION internalExec(CONST params:T_execParameters; CONST tokenLocation:T_token
       begin
         if (length(teebuffer)>0) and (teebuffer[length(teebuffer)]=#13)
         then setLength(teebuffer,length(teebuffer)-1);
-        if teeRoutine=nil then writeln(teebuffer)
+        if params.teeRoutine=nil then writeln(teebuffer)
         else begin
           wrappedTeeBuffer:=recycler^.newStringLiteral(teebuffer);
-          teeCallResult:=evaluteExpression(teeRoutine,tokenLocation,context,recycler,wrappedTeeBuffer);
+          teeCallResult:=evaluteExpression(params.teeRoutine,tokenLocation,context,recycler,wrappedTeeBuffer);
           if teeCallResult.literal<>nil then recycler^.disposeLiteral(teeCallResult.literal);
           recycler^.disposeLiteral(wrappedTeeBuffer);
         end;
@@ -416,7 +415,7 @@ FUNCTION internalExec(CONST params:T_execParameters; CONST tokenLocation:T_token
       i:longint;
       processExitCode:int64;
   begin
-    if tee and (teeRoutine=nil) and not(mySys.isConsoleShowing) then mySys.showConsole;
+    if tee and (params.teeRoutine=nil) and not(mySys.isConsoleShowing) then mySys.showConsole;
     processExitCode:=runCommand(output);
     outputLit:=recycler^.newListLiteral(output.count);
     for i:=0 to output.count-1 do outputLit^.appendString(recycler,output[i]);
@@ -427,7 +426,7 @@ FUNCTION internalExec(CONST params:T_execParameters; CONST tokenLocation:T_token
   end;
 
 FUNCTION execSync_impl    intFuncSignature;
-  var exec_params: T_execParameters;
+  VAR exec_params: T_execParameters;
   begin
     if canExtractExecParameters(params,false,true,tokenLocation,context,'exec',exec_params)
     then result:=internalExec(exec_params,tokenLocation,context,recycler,false)
@@ -435,7 +434,7 @@ FUNCTION execSync_impl    intFuncSignature;
   end;
 
 FUNCTION teeExecSync_impl intFuncSignature;
-  var exec_params: T_execParameters;
+  VAR exec_params: T_execParameters;
   begin
     if canExtractExecParameters(params,true,true,tokenLocation,context,'teeExec',exec_params)
     then result:=internalExec(exec_params,tokenLocation,context,recycler,true)
@@ -443,21 +442,21 @@ FUNCTION teeExecSync_impl intFuncSignature;
   end;
 
 FUNCTION execAsyncOrPipeless(CONST exec_params: T_execParameters; CONST doAsynch:boolean; CONST literalRecycler:P_literalRecycler):P_literal;
-  VAR PID:longint;
+  VAR pid:longint;
       processExitCode:int64;
       consoleShowedBefore:boolean;
   begin
     consoleShowedBefore:=mySys.isConsoleShowing;
     if not consoleShowedBefore then mySys.showConsole;
-    processExitCode:=runCommandAsyncOrPipeless(exec_params.executable,exec_params.cmdLinePar,exec_params.prio,doAsynch,PID);
+    processExitCode:=runCommandAsyncOrPipeless(exec_params.executable,exec_params.cmdLinePar,exec_params.prio,doAsynch,pid);
     if doAsynch
-    then result:=literalRecycler^.newIntLiteral(PID)
+    then result:=literalRecycler^.newIntLiteral(pid)
     else result:=literalRecycler^.newIntLiteral(processExitCode);
     if not consoleShowedBefore then mySys.hideConsole;
   end;
 
 FUNCTION execAsync_impl intFuncSignature;
-  var exec_params: T_execParameters;
+  VAR exec_params: T_execParameters;
   begin
     if canExtractExecParameters(params,false,false,tokenLocation,context,'execAsync',exec_params)
     then result:=execAsyncOrPipeless(exec_params,true,recycler)
@@ -465,7 +464,7 @@ FUNCTION execAsync_impl intFuncSignature;
   end;
 
 FUNCTION execPipeless_impl intFuncSignature;
-  var exec_params: T_execParameters;
+  VAR exec_params: T_execParameters;
   begin
    if canExtractExecParameters(params,false,false,tokenLocation,context,'execPipeless',exec_params)
    then result:=execAsyncOrPipeless(exec_params,false,recycler)

@@ -2413,14 +2413,16 @@ fileInfo(executor);
 #C Starts the specified program and returns the process id
 #C Optional parameters are interpreted by type:
 #C   List: command line parameters
-#C   Int : Priority (-1 for low, 0 for normal, 1 for high)
+#C   Int : Priority (-1 for low, 0 (default) for normal, 1 for high)
+execAsync(executor,['-h'],-1);
 
 #I execPipeless
 #S execPipeless(programPath:String,...);
 #C Executes the specified program, waiting for exit and returns the exit code
 #C Optional parameters are interpreted by type:
 #C   List: command line parameters
-#C   Int : Priority (-1 for low, 0 for normal, 1 for high)
+#C   Int : Priority (-1 for low, 0 (default) for normal, 1 for high)
+execPipeless(executor,['-h'],-1);
 
 #I deleteFile
 #S deleteFile(filename:String);
@@ -2469,6 +2471,7 @@ print('Execution returned with code ',
 #S teeExec(...);
 #C Behaves as exec but additionally prints out to stdout
 #C You can add an additional expression to use instead of printing to stdout
+teeExec('cmd',['/C','echo','Hello!'],(x)->print(x));
 
 #I inspect
 #S inspect;
