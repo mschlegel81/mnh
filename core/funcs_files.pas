@@ -276,10 +276,57 @@ FUNCTION setFileDate_impl intFuncSignature;
     end else result:=genericVectorization('setFileDate',params,tokenLocation,context,recycler);
   end;
 
-FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; CONST tee:boolean):P_literal;
+TYPE
+  T_execParameters=record
+    executable:string;
+    cmdLinePar:T_arrayOfString;
+    prio:TProcessPriority;
+    teeRoutine:P_expressionLiteral;
+    includeStdErr:boolean;
+  end;
+
+FUNCTION canExtractExecParameters(CONST params:P_listLiteral; CONST allowTee,allowStderr:boolean; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST id_for_side_effect_checking:string; OUT exec_params:T_execParameters):boolean;
+  var k: Integer;
+      i:longint;
+  begin
+    result:=false;
+    if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string)
+       and context^.checkSideEffects('id_for_side_effect_checking',tokenLocation,[se_executingExternal]) then begin
+      exec_params.prio:=ppNormal;
+      exec_params.teeRoutine:=nil;
+      exec_params.includeStdErr:=false;
+      setLength(exec_params.cmdLinePar,0);
+      exec_params.executable:=str0^.value;
+      for k:=1 to params^.size-1 do case params^.value[k]^.literalType of
+        lt_booleanList,lt_intList,lt_realList,lt_stringList: if k=1 then begin
+          setLength(exec_params.cmdLinePar,list1^.size);
+          for i:=0 to list1^.size-1 do begin
+            if list1^.value[i]^.literalType=lt_string
+            then exec_params.cmdLinePar[i]:=P_stringLiteral(list1^.value[i])^.value
+            else exec_params.cmdLinePar[i]:=list1^.value[i]^.toString();
+          end;
+        end else exit(false);
+        lt_boolean:
+          if allowStderr
+          then exec_params.includeStdErr:=P_boolLiteral(params^.value[k])^.value
+          else exit(false);
+        lt_expression:
+          if allowTee
+          then exec_params.teeRoutine:=P_expressionLiteral(params^.value[k])
+          else exit(false);
+        lt_smallint: begin
+          if      P_smallIntLiteral(params^.value[k])^.value<0 then exec_params.prio:=ppIdle
+          else if P_smallIntLiteral(params^.value[k])^.value>0 then exec_params.prio:=ppHigh;
+        end
+        else exit(false);
+      end;
+      result:=true;
+    end;
+  end;
+
+FUNCTION internalExec(CONST params:T_execParameters; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; CONST tee:boolean):P_literal;
   VAR teeRoutine:P_expressionLiteral=nil;
-      includeStdErr:boolean=true;
-  FUNCTION runCommand(CONST executable: ansistring; CONST parameters: T_arrayOfString; OUT output: TStringList): int64;
+  FUNCTION runCommand(OUT output: TStringList): int64;
     CONST READ_BYTES = 8192;
     VAR ReadBuffer:array[0..READ_BYTES-1] of char;
         memStream  : TMemoryStream;
@@ -320,7 +367,7 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
             end;
           end;
         end;
-        if not(includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do begin
+        if not(params.includeStdErr) then while tempProcess.stdErr.NumBytesAvailable>0 do begin
           tempProcess.stdErr.read(ReadBuffer,READ_BYTES);
           result:=true;
         end;
@@ -331,10 +378,12 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
       initialize(ReadBuffer);
       memStream := TMemoryStream.create;
       tempProcess := TProcessUTF8.create(nil);
-      tempProcess.executable := executable;
-      for i := 0 to length(parameters)-1 do tempProcess.parameters.add(parameters[i]);
-      if includeStdErr then tempProcess.options := [poUsePipes, poStderrToOutPut]
-                       else tempProcess.options := [poUsePipes];
+      tempProcess.Priority:=params.prio;
+      tempProcess.executable := params.executable;
+      for i := 0 to length(params.cmdLinePar)-1 do tempProcess.parameters.add(params.cmdLinePar[i]);
+      if params.includeStdErr
+      then tempProcess.options := [poUsePipes, poStderrToOutPut]
+      else tempProcess.options := [poUsePipes];
       tempProcess.ShowWindow := swoHIDE;
       try
         tempProcess.execute;
@@ -362,86 +411,64 @@ FUNCTION internalExec(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLoc
       if tee and (length(teebuffer)>0) then flushTeeBuffer;
     end;
 
-  VAR executable:ansistring;
-      cmdLinePar:T_arrayOfString;
-      output:TStringList;
+  VAR output:TStringList;
       outputLit:P_listLiteral;
-      k:longint;
       i:longint;
       processExitCode:int64;
   begin
-    result:=nil;
-    if (params<>nil) and (params^.size>=1) and (params^.size<=4) and (arg0^.literalType=lt_string)
-       and context^.checkSideEffects('exec',tokenLocation,[se_executingExternal]) then begin
-      setLength(cmdLinePar,0);
-      executable:=str0^.value;
-      for k:=1 to params^.size-1 do case params^.value[k]^.literalType of
-        lt_booleanList,lt_intList,lt_realList,lt_stringList: if k=1 then begin
-          setLength(cmdLinePar,list1^.size);
-          for i:=0 to list1^.size-1 do begin
-            if list1^.value[i]^.literalType=lt_string
-            then cmdLinePar[i]:=P_stringLiteral(list1^.value[i])^.value
-            else cmdLinePar[i]:=list1^.value[i]^.toString();
-          end;
-        end else exit(nil);
-        lt_boolean: includeStdErr:=P_boolLiteral(params^.value[k])^.value;
-        lt_expression: if tee then teeRoutine:=P_expressionLiteral(params^.value[k]) else exit(nil);
-        else exit(nil);
-      end;
-
-      if tee and (teeRoutine=nil) and not(mySys.isConsoleShowing) then mySys.showConsole;
-      processExitCode:=runCommand(executable,cmdLinePar,output);
-      outputLit:=recycler^.newListLiteral(output.count);
-      for i:=0 to output.count-1 do outputLit^.appendString(recycler,output[i]);
-      result:=recycler^.newListLiteral(2)^
-        .append   (recycler,outputLit,false)^
-        .appendInt(recycler,processExitCode);
-      output.free;
-    end;
+    if tee and (teeRoutine=nil) and not(mySys.isConsoleShowing) then mySys.showConsole;
+    processExitCode:=runCommand(output);
+    outputLit:=recycler^.newListLiteral(output.count);
+    for i:=0 to output.count-1 do outputLit^.appendString(recycler,output[i]);
+    result:=recycler^.newListLiteral(2)^
+      .append   (recycler,outputLit,false)^
+      .appendInt(recycler,processExitCode);
+    output.free;
   end;
 
-FUNCTION execSync_impl    intFuncSignature; begin result:=internalExec(params,tokenLocation,context,recycler,false); end;
-FUNCTION teeExecSync_impl intFuncSignature; begin result:=internalExec(params,tokenLocation,context,recycler,true);  end;
+FUNCTION execSync_impl    intFuncSignature;
+  var exec_params: T_execParameters;
+  begin
+    if canExtractExecParameters(params,false,true,tokenLocation,context,'exec',exec_params)
+    then result:=internalExec(exec_params,tokenLocation,context,recycler,false)
+    else result:=nil;
+  end;
 
-FUNCTION execAsyncOrPipeless(CONST params:P_listLiteral; CONST doAsynch:boolean; CONST literalRecycler:P_literalRecycler):P_literal;
-  VAR executable:ansistring;
-      cmdLinePar:T_arrayOfString;
-      i:longint;
+FUNCTION teeExecSync_impl intFuncSignature;
+  var exec_params: T_execParameters;
+  begin
+    if canExtractExecParameters(params,true,true,tokenLocation,context,'teeExec',exec_params)
+    then result:=internalExec(exec_params,tokenLocation,context,recycler,true)
+    else result:=nil;
+  end;
+
+FUNCTION execAsyncOrPipeless(CONST exec_params: T_execParameters; CONST doAsynch:boolean; CONST literalRecycler:P_literalRecycler):P_literal;
+  VAR PID:longint;
       processExitCode:int64;
       consoleShowedBefore:boolean;
   begin
-    result:=nil;
-    if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string)
-      and ((params^.size=1) or (params^.size=2) and (arg1^.literalType in [lt_booleanList,lt_intList,lt_realList,lt_stringList])) then begin
-      setLength(cmdLinePar,0);
-      executable:=str0^.value;
-      if params^.size=2 then begin
-        setLength(cmdLinePar,list1^.size);
-        for i:=0 to list1^.size-1 do if list1^.value[i]^.literalType=lt_string
-          then cmdLinePar[i]:=P_stringLiteral(list1^.value[i])^.value
-          else cmdLinePar[i]:=list1^.value[i]^.toString();
-      end;
-      consoleShowedBefore:=mySys.isConsoleShowing;
-      if not consoleShowedBefore then mySys.showConsole;
-      processExitCode:=runCommandAsyncOrPipeless(executable,cmdLinePar,doAsynch,i);
-      if doAsynch
-      then result:=literalRecycler^.newIntLiteral(i)
-      else result:=literalRecycler^.newIntLiteral(processExitCode);
-      if not consoleShowedBefore then mySys.hideConsole;
-    end;
+    consoleShowedBefore:=mySys.isConsoleShowing;
+    if not consoleShowedBefore then mySys.showConsole;
+    processExitCode:=runCommandAsyncOrPipeless(exec_params.executable,exec_params.cmdLinePar,exec_params.prio,doAsynch,PID);
+    if doAsynch
+    then result:=literalRecycler^.newIntLiteral(PID)
+    else result:=literalRecycler^.newIntLiteral(processExitCode);
+    if not consoleShowedBefore then mySys.hideConsole;
   end;
 
 FUNCTION execAsync_impl intFuncSignature;
+  var exec_params: T_execParameters;
   begin
-    if context^.checkSideEffects('execAsync',tokenLocation,[se_executingExternal])
-    then result:=execAsyncOrPipeless(params,true,recycler)
+    if canExtractExecParameters(params,false,false,tokenLocation,context,'execAsync',exec_params)
+    then result:=execAsyncOrPipeless(exec_params,true,recycler)
     else result:=nil;
   end;
 
 FUNCTION execPipeless_impl intFuncSignature;
+  var exec_params: T_execParameters;
   begin
-   if context^.checkSideEffects('execPipeless',tokenLocation,[se_executingExternal])
-   then result:=execAsyncOrPipeless(params,false,recycler)
+   if canExtractExecParameters(params,false,false,tokenLocation,context,'execPipeless',exec_params)
+   then result:=execAsyncOrPipeless(exec_params,false,recycler)
    else result:=nil;
   end;
 

@@ -106,7 +106,7 @@ FUNCTION writeFileLines(CONST name: ansistring; CONST textToWrite: T_arrayOfStri
 FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs: boolean): T_arrayOfString;
 FUNCTION filenameToPackageId(CONST filenameOrPath:ansistring):ansistring;
 PROCEDURE moveSafely(CONST source,dest:string);
-FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean; OUT pid:longint; CONST customFolder:string=''): int64;
+FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST prio:TProcessPriority; CONST asynch:boolean; OUT pid:longint; CONST customFolder:string=''): int64;
 PROCEDURE ensurePath(CONST path:ansistring);
 
 VAR fileCache:T_fileCache;
@@ -353,7 +353,7 @@ FUNCTION find(CONST pattern: ansistring; CONST filesAndNotFolders,recurseSubDirs
     sysutils.findClose(info);
   end;
 
-FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST asynch:boolean; OUT pid:longint; CONST customFolder:string=''): int64;
+FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameters: T_arrayOfString; CONST prio:TProcessPriority; CONST asynch:boolean; OUT pid:longint; CONST customFolder:string=''): int64;
   VAR tempProcess: TProcessUTF8;
       i: longint;
   begin
@@ -364,6 +364,7 @@ FUNCTION runCommandAsyncOrPipeless(CONST executable: ansistring; CONST parameter
       writeln('async: ',asynch,'; in folder: "',customFolder,'"');
       {$endif}
       tempProcess := TProcessUTF8.create(nil);
+      tempProcess.Priority:=prio;
       tempProcess.executable := executable;
       if customFolder<>'' then tempProcess.CurrentDirectory:=customFolder;
       if asynch or not(isConsoleShowing) then tempProcess.options:=tempProcess.options +[poNewConsole];

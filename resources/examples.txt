@@ -2409,12 +2409,18 @@ getOptions;
 fileInfo(executor);
 
 #I execAsync
-#S execAsync(programPath:String,parameters ...);
+#S execAsync(programPath:String,...);
 #C Starts the specified program and returns the process id
+#C Optional parameters are interpreted by type:
+#C   List: command line parameters
+#C   Int : Priority (-1 for low, 0 for normal, 1 for high)
 
 #I execPipeless
-#S execPipeless(programPath:String,parameters ...);
+#S execPipeless(programPath:String,...);
 #C Executes the specified program, waiting for exit and returns the exit code
+#C Optional parameters are interpreted by type:
+#C   List: command line parameters
+#C   Int : Priority (-1 for low, 0 for normal, 1 for high)
 
 #I deleteFile
 #S deleteFile(filename:String);
@@ -2444,14 +2450,12 @@ getEnv.toList.head;
 fileStats(executor);
 
 #I exec
-#S exec(programPath:String);
+#S exec(programPath:String,...);
 #C Executes the specified program and returns the text output including stdErr output and the exitcode as a nested list: [[output,...],exitCode]
-#S exec(programPath:String,parameters:flatList);
-#C Executes the specified program with given command line parameters#
-#S exec(programPath:String,includeStdErr:boolean);
-#C Executes the specified program and returns the text output optionally including stdErr output#
-#S exec(programPath:String,parameters:flatList,parameters:flatList);
-#C Executes the specified program with given command line parameters and returns the text output optionally including stdErr output
+#C Optional parameters are interpreted by type:
+#C   List: command line parameters
+#C   Int : Priority (-1 for low, 0 for normal, 1 for high)
+#C   Boolean: include stdErr (default: False)
 ExecutionResult:=executor.exec(['-h']);
 print('Execution returned with code ',
       ExecutionResult[1],"\n",
