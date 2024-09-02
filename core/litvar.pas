@@ -3732,8 +3732,11 @@ FUNCTION newLiteralFromStream(CONST inputStream: P_inputStreamWrapper; CONST loc
   VAR deserializer:T_literalDeserializer;
   begin
     deserializer.create(typeMap,location,adapters,inputStream);
-    result:=deserializer.getLiteral;
-    deserializer.destroy;
+    try
+      result:=deserializer.getLiteral;
+    finally
+      deserializer.destroy;
+    end;
   end;
 
 FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_literal;

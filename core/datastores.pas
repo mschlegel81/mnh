@@ -60,7 +60,7 @@ TYPE
 FUNCTION isBinaryDatastore(CONST fileName:string; OUT dataAsStringList:T_arrayOfString):boolean;
 {$endif}
 IMPLEMENTATION
-USES FileUtil;
+USES FileUtil, mnh_messages;
 VAR globalDatastoreCs:TRTLCriticalSection;
 CONST TEMP_FILE_SUFFIX='_tmp';
 {$ifdef fullVersion}
@@ -264,7 +264,17 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; CONST context
       wrapper.readAnsiString;
       result:=nil;
       typeMap:=P_abstractPackage(location.package)^.getTypeMap;
-      if wrapper.allOkay then result:=newLiteralFromStream(@wrapper,location,context^.messages,typeMap);
+      if wrapper.allOkay then begin
+        try
+          result:=newLiteralFromStream(@wrapper,location,context^.messages,typeMap);
+        except
+          setLength(fileLines,2);
+          fileLines[0]:='Severe error trying to deserialize datastore '+fileName;
+          fileLines[1]:='It is strongly recommended to delete the file';
+          context^.messages^.postTextMessage(mt_el4_systemError,location,fileLines);
+          result:=nil;
+        end;
+      end;
       typeMap.destroy;
       if not(wrapper.allOkay) then begin
         if result<>nil then recycler^.disposeLiteral(result);
