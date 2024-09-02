@@ -19,7 +19,7 @@ checkout(commitHash)->begin
   exec('git',['submodule','update','--init','--recursive'])[0].map(::print);
 end;
 
-build(tag)->begin
+build(tag,executeTests:Boolean)->begin
   prefix:=0;
 save;
   writeFileLines('core\res_version.inc',
@@ -31,20 +31,29 @@ save;
   myBuilds.each(b,begin
     fileExists(b['compilate']) ? deleteFile(b['compilate']) : void;
     buildResult:=exec@(b['compilerCall']);
-    buildResult[1]==0
-    ? moveFile(b['compilate'],changeFileExt(b['targetDest'],'_'+format('%3.3d',prefix+=1)+'_'+tag+b['targetDest'].extractFileExt))
-    : warn('COMPILATION FAILED: ',"\n",buildResult[0].join("\n"));
+    targetFileName:=changeFileExt(b['targetDest'],'_'+format('%3.3d',prefix+=1)+'_'+tag+b['targetDest'].extractFileExt);
+    if buildResult[1]==0 then begin
+      moveFile(b['compilate'],targetFileName);
+      if executeTests then execPipeless(targetFileName,['regTest\regTest.mnh']);
+    end else warn('COMPILATION FAILED: ',"\n",buildResult[0].join("\n"));
   end);
 end;
 
 TARGETS:=('target/Win'&[32,64].toSet&'/mnh'&['','_light'].toSet&'.exe');
 
-main->tagsAfterIntroductionOfFPC3.each(tagAndRevision,begin
-  tag:=tagAndRevision[0];
-  rev:=tagAndRevision[1];
-  print;
-  print(formatTime(systime),' TAG: ',tag);
-  checkout(rev);
-  TARGETS.filter(::fileExists).map(::deleteFile);
-  build(tag);
-end);
+rebuildAll(executeTests:Boolean)->
+  for tagAndRevision in  tagsAfterIntroductionOfFPC3 do begin
+    tag:=tagAndRevision[0];
+    rev:=tagAndRevision[1];
+    print;
+    print(formatTime(systime),' TAG: ',tag);
+    checkout(rev);
+    TARGETS.filter(::fileExists).map(::deleteFile);
+    build(tag,executeTests);
+  end;
+
+//*Rebuild all without executing tests
+main->rebuildAll(false);
+
+//*Rebuild and test all
+main('test')->rebuildAll(true);
