@@ -1116,9 +1116,12 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
 
     while (C_packageLoadUsecaseMeta[usecase].assistanceRun or globals.primaryContext.continueEvaluation) and (stmt.token.first<>nil) do begin
       interpret(stmt,usecase,globals,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
-      if profile then globals.timeBaseComponent(pc_tokenizing);
-      stmt:=lexer.getNextStatement(@globals.primaryContext,recycler);
-      if profile then globals.timeBaseComponent(pc_tokenizing);
+      if C_packageLoadUsecaseMeta[usecase].assistanceRun or globals.primaryContext.continueEvaluation
+      then begin
+        if profile then globals.timeBaseComponent(pc_tokenizing);
+        stmt:=lexer.getNextStatement(@globals.primaryContext,recycler);
+        if profile then globals.timeBaseComponent(pc_tokenizing);
+      end else stmt.token.first:=nil;
     end;
     if (stmt.token.first<>nil) then recycler^.cascadeDisposeToken(stmt.token.first);
     lexer.destroy;
