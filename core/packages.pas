@@ -620,7 +620,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
       extendedPackages[length(extendedPackages)-1]:=importWrapper;
 
       helperUse.destroy;
-      lexer.createForExtendedPackage(importWrapper,@self{$ifdef fullVersion},callAndIdInfos{$endif});
+      lexer.createForExtendedPackage(importWrapper,@self{$ifdef fullVersion},C_packageLoadUsecaseMeta[usecase].assistanceRun,callAndIdInfos{$endif});
       stmt:=lexer.getNextStatement(@globals.primaryContext,recycler);
       inc(extendsLevel);
       while (globals.primaryContext.continueEvaluation) and (stmt.token.first<>nil) do begin
@@ -1099,7 +1099,7 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
     {$endif}
     logReady(getCodeProvider^.stateHash);
     if profile then globals.timeBaseComponent(pc_tokenizing);
-    lexer.createForPackageParsing(@self{$ifdef fullVersion},callAndIdInfos{$endif});
+    lexer.createForPackageParsing(@self{$ifdef fullVersion},C_packageLoadUsecaseMeta[usecase].assistanceRun,callAndIdInfos{$endif});
     if profile then globals.timeBaseComponent(pc_tokenizing);
     stmt:=lexer.getNextStatement(@globals.primaryContext,recycler);
     isPlainScript:=isPlainScriptStatement;

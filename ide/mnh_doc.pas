@@ -417,23 +417,27 @@ PROCEDURE makeHtmlFromTemplate;
       templateLineCount:longint=0;
       decompressedTemplate:T_arrayOfString;
   begin
-    prepareBuiltInDocs;
-    outFile.isOpen:=false;
-    setLength(includes,0);
-    context.mode:=none;
-    decompressedTemplate:=split(decompressString(html_template_txt),C_lineBreakChar);
-    for templateLine in decompressedTemplate do begin
-      case context.mode of
-        none:            if not(handleCommand(templateLine)) and outFile.isOpen then writeln(outFile.handle,templateLine);
-        beautifying:     if not(contextEnds(templateLine))   and outFile.isOpen then writeln(outFile.handle,lineToHtml(templateLine,true));
-        definingInclude: if not(contextEnds(templateLine))   then append(context.include.content,templateLine);
+    try
+      prepareBuiltInDocs;
+      outFile.isOpen:=false;
+      setLength(includes,0);
+      context.mode:=none;
+      decompressedTemplate:=split(decompressString(html_template_txt),C_lineBreakChar);
+      for templateLine in decompressedTemplate do begin
+        case context.mode of
+          none:            if not(handleCommand(templateLine)) and outFile.isOpen then writeln(outFile.handle,templateLine);
+          beautifying:     if not(contextEnds(templateLine))   and outFile.isOpen then writeln(outFile.handle,lineToHtml(templateLine,true));
+          definingInclude: if not(contextEnds(templateLine))   then append(context.include.content,templateLine);
+        end;
+        inc(templateLineCount);
       end;
-      inc(templateLineCount);
+      htmlDocGeneratedForCodeHash:=CODE_HASH;
+      with outFile do if isOpen then close(handle);
+      {$ifdef debugMode} writeln(stdErr,'        DEBUG: documentation is ready; ',templateLineCount,' lines processed');{$endif}
+      setLength(demoFiles,0);
+    except
+      //Ignore all exceptions. We have another go at the next program start.
     end;
-    htmlDocGeneratedForCodeHash:=CODE_HASH;
-    with outFile do if isOpen then close(handle);
-    {$ifdef debugMode} writeln(stdErr,'        DEBUG: documentation is ready; ',templateLineCount,' lines processed');{$endif}
-    setLength(demoFiles,0);
   end;
 
 VAR docMapIsFinalized:boolean=false;

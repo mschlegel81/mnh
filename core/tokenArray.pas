@@ -238,13 +238,14 @@ TYPE
       end;
       associatedPackage:P_abstractPackage;
       {$ifdef fullVersion}
+      assistanceRun:boolean;
       callAndIdInfos:P_callAndIdInfos;
       {$endif}
       FUNCTION getToken(CONST line: ansistring; VAR inputLocation: T_tokenLocation; CONST messages:P_messages; CONST recycler:P_recycler): P_token;
       FUNCTION fetchNext(                                                           CONST messages:P_messages; CONST recycler:P_recycler):boolean;
       FUNCTION fetch(CONST messages:P_messages; CONST recycler:P_recycler):P_token; virtual; abstract;
     public
-      CONSTRUCTOR create(CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+      CONSTRUCTOR create(CONST package:P_abstractPackage {$ifdef fullVersion};CONST isAssistanceRun:boolean; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
       DESTRUCTOR destroy; virtual;
       FUNCTION getNextStatement(CONST context:P_context; CONST recycler:P_recycler):T_enhancedStatement;
   end;
@@ -294,10 +295,10 @@ TYPE
       FUNCTION fetch(CONST messages:P_messages; CONST recycler:P_recycler):P_token; virtual;
     public
       CONSTRUCTOR create(CONST input_:T_arrayOfString; CONST parseLocation_:T_tokenLocation;
-                         CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+                         CONST package:P_abstractPackage {$ifdef fullVersion};CONST isAssistanceRun:boolean; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
       CONSTRUCTOR createForExtendedPackage(CONST importWrapper:P_extendedPackage;
-                         CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
-      CONSTRUCTOR createForPackageParsing(CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+                         CONST package:P_abstractPackage {$ifdef fullVersion};CONST isAssistanceRun:boolean; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+      CONSTRUCTOR createForPackageParsing(CONST package:P_abstractPackage {$ifdef fullVersion};CONST isAssistanceRun:boolean; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -339,6 +340,7 @@ T_idStack=object
     ids:array of record name:T_idString; used:boolean; location:T_tokenLocation; idType:T_tokenType; end;
     delayedErrorMessages:T_storedMessages;
   end;
+  forAssistance:boolean;
   doSuppressAllUnusedWarnings:boolean;
   suppressUnusedWarningInLines:T_arrayOfLongint;
   {$ifdef fullVersion}
@@ -377,9 +379,9 @@ FUNCTION T_linesLexer.fetch(CONST messages: P_messages; CONST recycler:P_recycle
   end;
 
 CONSTRUCTOR T_linesLexer.create(CONST input_: T_arrayOfString; CONST parseLocation_: T_tokenLocation;
-                                CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+                                CONST package:P_abstractPackage {$ifdef fullVersion};CONST isAssistanceRun:boolean; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
   begin
-    inherited create(package{$ifdef fullVersion},callAndIdInfos_{$endif});
+    inherited create(package{$ifdef fullVersion},isAssistanceRun,callAndIdInfos_{$endif});
     input:=input_;
     inputIndex:=0;
     inputLocation:=parseLocation_;
@@ -387,14 +389,14 @@ CONSTRUCTOR T_linesLexer.create(CONST input_: T_arrayOfString; CONST parseLocati
   end;
 
 CONSTRUCTOR T_linesLexer.createForExtendedPackage(CONST importWrapper: P_extendedPackage;
-                                                  CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+                                                  CONST package:P_abstractPackage {$ifdef fullVersion};CONST isAssistanceRun:boolean; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
   begin
-    create(importWrapper^.getCodeProvider^.getLines,packageTokenLocation(importWrapper),package{$ifdef fullVersion},callAndIdInfos_{$endif});
+    create(importWrapper^.getCodeProvider^.getLines,packageTokenLocation(importWrapper),package{$ifdef fullVersion},isAssistanceRun,callAndIdInfos_{$endif});
   end;
 
-CONSTRUCTOR T_linesLexer.createForPackageParsing(CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+CONSTRUCTOR T_linesLexer.createForPackageParsing(CONST package:P_abstractPackage {$ifdef fullVersion};CONST isAssistanceRun:boolean; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
   begin
-    create(package^.getCodeProvider^.getLines,packageTokenLocation(package),package{$ifdef fullVersion},callAndIdInfos_{$endif});
+    create(package^.getCodeProvider^.getLines,packageTokenLocation(package),package{$ifdef fullVersion},isAssistanceRun,callAndIdInfos_{$endif});
   end;
 
 DESTRUCTOR T_linesLexer.destroy;
@@ -426,7 +428,7 @@ FUNCTION T_variableLexer.fetch(CONST messages: P_messages; CONST recycler:P_recy
 
 CONSTRUCTOR T_variableLexer.create(CONST input: T_arrayOfLiteral; CONST parseLocation_: T_tokenLocation; CONST package: P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
   begin
-    inherited create(package{$ifdef fullVersion},callAndIdInfos_{$endif});
+    inherited create(package{$ifdef fullVersion},false,callAndIdInfos_{$endif});
     data:=input;
     dataIdx:=-1;
     parseLocation:=parseLocation_;
@@ -455,7 +457,7 @@ FUNCTION T_singleStringLexer.fetch(CONST messages: P_messages; CONST recycler:P_
 CONSTRUCTOR T_singleStringLexer.create(CONST inputString: string; CONST parseLocation: T_tokenLocation;
                                        CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
   begin
-    inherited create(package{$ifdef fullVersion},callAndIdInfos_{$endif});
+    inherited create(package{$ifdef fullVersion},false,callAndIdInfos_{$endif});
     text:=inputString;
     inputLocation:=parseLocation;
     inputLocation.column:=1;
@@ -530,12 +532,13 @@ FUNCTION T_abstractPackage.getExtended(CONST idOrPath:string):P_abstractPackage;
 
 { T_abstractLexer }
 
-CONSTRUCTOR T_abstractLexer.create(CONST package: P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+CONSTRUCTOR T_abstractLexer.create(CONST package: P_abstractPackage {$ifdef fullVersion};CONST isAssistanceRun:boolean; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
   begin
     associatedPackage:=package;
 
     {$ifdef fullVersion}
     callAndIdInfos:=callAndIdInfos_;
+    assistanceRun:=isAssistanceRun;
     {$endif}
 
     setLength(blob.lines,0);
@@ -647,8 +650,8 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
       attributeSectionBeforeBody:=false;
 
       if (nextStatement.token.last<>nil) then begin
-        if (nextStatement.token.last^.tokType in [tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_list_constructor,tt_expBraceOpen,tt_iifCheck]) and
-           (tok                     ^.tokType in [tt_endBlock  ,tt_endRule  ,tt_endExpression                                                     ,tt_expBraceClose,tt_iifElse])
+        if (nextStatement.token.last^.tokType in [tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_list_constructor,tt_expBraceOpen,tt_iifCheck]) and
+           (tok                     ^.tokType in [tt_endExpression                                                     ,tt_expBraceClose,tt_iifElse])
         then context^.messages^.raiseSimpleError('Empty '+nextStatement.token.last^.singleTokenToString+'-'+tok^.singleTokenToString+' block',tok^.location);
         if (nextStatement.token.last^.tokType in [tt_separatorCnt,tt_separatorComma]) and (tok^.tokType in C_closingBrackets)
         then context^.messages^.raiseSimpleError('Missing element in '+nextStatement.token.last^.singleTokenToString+'-separated list',tok^.location);
@@ -733,8 +736,10 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
         end;
         tt_identifier,tt_userRule,tt_intrinsicRule,tt_globalVariable,tt_customType:begin
           if (nextStatement.token.last<>nil) and (nextStatement.token.last^.tokType=tt_modifier) and (nextStatement.token.last^.getModifier=modifier_local) then begin
-            if (tok^.tokType=tt_identifier) and not(localIdStack.hasId(tok^.txt,idType,idLoc))
+            {$ifdef fullVersion}
+            if (tok^.tokType=tt_identifier) and not(localIdStack.hasId(tok^.txt,idType,idLoc)) and assistanceRun
             then context^.messages^.postTextMessage(mt_el1_note,nextStatement.token.last^.location,'Obsolete local modifier.');
+            {$endif}
             tok^.tokType:=tt_blockLocalVariable;
             air:=localIdStack.addId(tok^.txt,tok^.location,tt_blockLocalVariable);
             if context^.messages<>nil then case air of
@@ -769,6 +774,9 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
       lastLocation:T_tokenLocation;
   begin
     localIdStack.create({$ifdef fullVersion}callAndIdInfos{$endif});
+    {$ifdef fullVersion}
+    localIdStack.forAssistance:=assistanceRun;
+    {$endif}
     while tokenQueue.hasNext or (fetchNext(context^.messages,recycler) and tokenQueue.hasNext) do begin
       nextToProcess:=tokenQueue.next;
       lastLocation:=nextToProcess^.location;
@@ -882,7 +890,7 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
         msg: P_storedMessage;
     begin
       {$ifdef fullVersion}
-      if (localIdInfos<>nil) then
+      if (localIdInfos<>nil) and forAssistance then
       with scope[topIdx] do for i:=0 to length(ids)-1 do begin
         if not(ids[i].used) and (context<>nil) and not(arrContains(suppressUnusedWarningInLines,ids[i].location.line)) and (ids[i].idType=tt_blockLocalVariable)
         then context^.messages^.postTextMessage(mt_el2_warning,ids[i].location,'Unused local variable '+ids[i].name);
@@ -959,18 +967,18 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
           workingIn.token.last      :=workingIn.token.last^.next;
 
           new(pattern,create);
-          pattern^.parse(scope[topIdx].scopeStartToken,
-                         scope[topIdx].scopeStartToken^.location,
-                         context,
-                         recycler{$ifdef fullVersion},localIdInfos{$endif});
+            pattern^.parse(scope[topIdx].scopeStartToken,
+                           scope[topIdx].scopeStartToken^.location,
+                           context,
+                           recycler{$ifdef fullVersion},localIdInfos{$endif});
           for namedParamter in pattern^.getNamedParameters do begin
             addId(namedParamter.id,
                   namedParamter.location,
                   tt_parameterIdentifier);
           end;
-          //expression changed; need to collect new last token
-          if not(context^.continueEvaluation) then pattern^.cleanup(recycler);
           //TODO: Do we need exception handling here? scopeStartToken might be destroyed/disposed by parsing
+
+          //expression changed; need to collect new last token
           workingIn.token.last:=scope[topIdx].scopeStartToken^.last;
 
           case closeToken^.tokType of
@@ -1748,7 +1756,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
           blob.closer:=commentText[1+length(SPECIAL_COMMENT_BLOB_BEGIN_INFIX)];
           parsedLength:=length(commentOpener+SPECIAL_COMMENT_BLOB_BEGIN_INFIX)+1;
         end else {if commentOpener='#' then blob.closer:='#' else} blob.closer:='''';
-      end else if pos('TODO',commentText)>0 then messages^.postTextMessage(mt_el1_note,inputLocation,commentText);
+      end {$ifdef fullVersion} else if (pos('TODO',commentText)>0) and assistanceRun then messages^.postTextMessage(mt_el1_note,inputLocation,commentText) {$endif};
     end;
 
   {$MACRO ON}

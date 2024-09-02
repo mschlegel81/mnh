@@ -179,10 +179,17 @@ PROCEDURE cleanupRecyclerPoolsHard;
   end;
 
 PROCEDURE finalizeRecyclerPools;
+  VAR tEnd: qword;
   begin
     assert(not(recyclerPoolsFinalized));
     enterCriticalSection(recyclerPoolCs);
     cleanupRecyclerPoolsHard;
+    tEnd:=GetTickCount64+1000;
+    while (length(recyclerPool)>0) and (GetTickCount64<tEnd) do begin
+      leaveCriticalSection(recyclerPoolCs);
+      ThreadSwitch; sleep(1);
+      enterCriticalSection(recyclerPoolCs);
+    end;
     assert(length(recyclerPool)=0);
     recyclerPoolsFinalized:=true;
     leaveCriticalSection(recyclerPoolCs);

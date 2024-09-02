@@ -132,6 +132,7 @@ CONSTRUCTOR T_completionLogic.create;
 
 DESTRUCTOR T_completionLogic.destroy;
   begin
+    if assistanceData<>nil then disposeMessage(assistanceData);
     wordsInEditor.destroy;
     SynCompletion.destroy;
   end;
