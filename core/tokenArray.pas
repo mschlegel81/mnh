@@ -108,6 +108,7 @@ TYPE
     comments,
     attributes:T_arrayOfString;
     token:T_tokenRange;
+    assignmentToken:P_token;
   end;
 
   {$ifdef fullVersion}
@@ -785,6 +786,14 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
           if nextStatement.token.first=nil then context^.messages^.raiseSimpleError('Empty statement!',nextToProcess^.location);
           recycler^.disposeToken(nextToProcess);
           result:=nextStatement;
+          {$ifdef fullVersion}
+          if (callAndIdInfos<>nil) and assistanceRun then begin
+            if result.assignmentToken<>nil
+            then callAndIdInfos^.addAll(result.assignmentToken)
+            else callAndIdInfos^.addAll(result.token.first);
+          end;
+          {$endif}
+
           if not(context^.continueEvaluation) then recycler^.cascadeDisposeToken(result.token.first);
           if result.token.first=nil
           then result.token.last:=nil
@@ -800,6 +809,13 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
     while not(localIdStack.scopeBottom)
           do localIdStack.scopePop(context,lastLocation,recycler,nextStatement,nil,true);
     result:=nextStatement;
+    {$ifdef fullVersion}
+    if (callAndIdInfos<>nil) and assistanceRun then begin
+      if result.assignmentToken<>nil
+      then callAndIdInfos^.addAll(result.assignmentToken)
+      else callAndIdInfos^.addAll(result.token.first);
+    end;
+    {$endif}
     if result.token.first=nil
     then result.token.last:=nil
     else result.token.last:=result.token.first^.last;
@@ -985,6 +1001,7 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
             tt_endOfPatternDeclare: closeToken^.tokType:=tt_declare;
             tt_endOfPatternAssign : closeToken^.tokType:=tt_assign;
           end;
+          if topIdx=0 then workingIn.assignmentToken:=closeToken;
           //We exit early, because we do not want to pop the scope we just modified.
           exit;
 
@@ -1501,7 +1518,7 @@ CONSTRUCTOR T_enhancedToken.create(CONST tok: P_token; CONST callAndIdInfos:P_ca
     references:=token^.location; //default: references itself
 
     tokenText:=safeTokenToString(token);
-    if (token^.tokType in [tt_userRule,tt_customTypeCheck,tt_identifier,tt_literal,tt_globalVariable,tt_customType]) then
+    if (token^.tokType in [tt_userRule,tt_customTypeCheck,tt_identifier,tt_globalVariable,tt_customType]) then
     case callAndIdInfos^.localTypeOf(tokenText,token^.location.line,token^.location.column,references) of
       tt_eachParameter: begin
         token^.tokType:=tt_eachParameter;
@@ -1939,9 +1956,6 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
           (tok^.data=pointer(BUILTIN_WRITE_ALL_DATA_STORES)) or
           (tok^.data=pointer(BUILTIN_WRITE_DATA_STORES)))
       then tok^.location.package:=associatedPackage;
-      {$ifdef fullVersion}
-      if  callAndIdInfos<>nil then callAndIdInfos^.add(tok);
-      {$endif}
       tokenQueue.append(tok);
     end;
 
@@ -2121,6 +2135,7 @@ PROCEDURE T_abstractLexer.resetTemp;
     nextStatement.attributes:=C_EMPTY_STRING_ARRAY;
     nextStatement.comments  :=C_EMPTY_STRING_ARRAY;
     nextStatement.token     :=EMPTY_TOKEN_RANGE;
+    nextStatement.assignmentToken:=nil;
   end;
 
 PROCEDURE T_abstractPackage.clearCustomOperators;

@@ -437,6 +437,8 @@ FUNCTION T_codeAssistanceResponse.explainIdentifier(CONST fullLine: ansistring; 
       loc.line:=CaretY;
       loc.column:=1;
       loc.package:=package;
+      //TODO: There is a bug when UTF8-Symbols are used: The caret is measured in characters, the token location in chars/bytes.
+      //This probably only can happen with string literals and the special operators ², ³
       result:=(fullLine<>info.fullLine) or (CaretX<>info.CaretX);
       if result then begin
         lexer.create(fullLine,loc,package);
