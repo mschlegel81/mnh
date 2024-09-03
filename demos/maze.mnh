@@ -25,16 +25,17 @@ begin
   visited:=visited.toSet;
 
   position:=randomUnvisitedCell(width,height,visited);
-  stack:=steps(width,height,position[0],position[1]);
+  stack:=newStack;
+  for step in steps(width,height,position[0],position[1]) do stack.push(step);
 
   while stack.size>0 do begin
-    next:=stack.trailing; stack:=stack.leading;
+    next:=stack.pop;
     next[1] in visited
     ? void
     : begin
         visitPairs||=next.sort;
         visited|=next;
-        stack|=steps(width,height,next[1,0],next[1,1]);
+        for step in steps(width,height,next[1,0],next[1,1]) do stack.push(step);
       end;
   end;
 
