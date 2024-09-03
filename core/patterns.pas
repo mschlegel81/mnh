@@ -666,11 +666,13 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
               rulePatternElement.restrictionType :=tt_typeCheck;
               rulePatternElement.builtinTypeCheck:=tc_byTypeString;
               rulePatternElement.restrictionId   :=parts[i].first^.next^.txt;
-              if parts[i].first^.next^.next<>nil then fail(parts[i].first);
-              if not isStringTypeValid(rulePatternElement.restrictionId)
-              then context^.raiseError('Invalid pattern element (unknown type): '+tokensToString(parts[i].first),parts[i].first^.location);
-              parts[i].first:=recycler^.disposeToken(parts[i].first);
-              parts[i].first:=recycler^.disposeToken(parts[i].first);
+              if parts[i].first^.next^.next<>nil then fail(parts[i].first)
+              else begin
+                if not isStringTypeValid(rulePatternElement.restrictionId)
+                then context^.raiseError('Invalid pattern element (unknown type): '+tokensToString(parts[i].first),parts[i].first^.location);
+                parts[i].first:=recycler^.disposeToken(parts[i].first);
+                parts[i].first:=recycler^.disposeToken(parts[i].first);
+              end;
             end else if (parts[i].first^.tokType=tt_typeCheck) then begin
               //Type check: f(x:Int)
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
