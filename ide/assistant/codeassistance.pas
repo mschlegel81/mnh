@@ -79,7 +79,7 @@ FUNCTION findRelatedScriptsTransitive(CONST scriptName:string):T_arrayOfString;
 
 VAR preparedResponses:specialize G_threadsafeQueue<P_codeAssistanceResponse>;
 IMPLEMENTATION
-USES FileUtil,sysutils,myStringUtil,commandLineParameters,SynHighlighterMnh,mnh_doc,messageFormatting,mySys;
+USES FileUtil,sysutils,myStringUtil,commandLineParameters,SynHighlighterMnh,mnh_doc,messageFormatting,mySys,LazUTF8;
 TYPE T_usagePair=record usedScript,usingScript:string; end;
 VAR scriptUsage:record
       dat:array of T_usagePair;
@@ -431,19 +431,24 @@ FUNCTION T_codeAssistanceResponse.explainIdentifier(CONST fullLine: ansistring; 
       end;
     end;
 
+  VAR trueCaretX:longint=1;
+      i:longint=1;
   begin
     enterCriticalSection(messageCs);
     try
       loc.line:=CaretY;
       loc.column:=1;
       loc.package:=package;
-      //TODO: There is a bug when UTF8-Symbols are used: The caret is measured in characters, the token location in chars/bytes.
-      //This probably only can happen with string literals and the special operators ², ³
       result:=(fullLine<>info.fullLine) or (CaretX<>info.CaretX);
       if result then begin
+        //In case of multibyte characters, the input caret has to be "translated"
+        while (trueCaretX<=length(fullLine)) and (i<CaretX) do begin
+          trueCaretX+=UTF8CodepointSize(@fullLine[trueCaretX]);
+          i+=1;
+        end;
         lexer.create(fullLine,loc,package);
         enhanced:=lexer.getEnhancedTokens(callAndIdInfos);
-        info:=enhanced.getTokenAtIndex(CaretX).toInfo;
+        info:=enhanced.getTokenAtIndex(trueCaretX).toInfo;
         info.fullLine:=fullLine;
         info.CaretX:=CaretX;
         appendUsageInfo;
