@@ -94,16 +94,26 @@ main->for line in generate_doc_lines(false) do print(line);
 main('test')->for line in generate_doc_lines(true) do print(line);
 main(output_file)->writeFileLines(output_file,generate_doc_lines(false));
 
-begin
-//  generate_doc_lines(false);
+main('validate')->begin
+  generate_doc_lines(false);
   all:=listBuiltin;
   qualified:=(id)->id.matches('\.') ? id : all.each(q_id,q_id.split('.')[1]==id ? q_id : void,orElse);
 
 
-  all;
+  called    :=called    .map(qualified);
+  commented :=commented .map(qualified);
+  signatures:=signatures.map(qualified);
 
+  assert(union(called,commented,signatures).minus(all).size==0,'There are documentations for nonexistent functions: '&union(called,commented,signatures).minus(all).toList.join(', '));
 
+  uncalled   :=all.minus(called);
+  uncommented:=all.minus(commented);
+  unsigned   :=all.minus(signatures);
 
-
+  union(uncalled,uncommented,unsigned)
+  .sort
+  .map((id)->[id,id in called ? '' : 'uncalled', id in commented ? '' :'uncommented', id in signatures ? '': 'missing signature'].join("\t"))
+  .join("\n")
+  .print;
 
 end;
