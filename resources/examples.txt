@@ -7,6 +7,15 @@ S.pop;
 S.pop;
 S.pop;
 
+Q:=newQueue;
+Q.put(1);
+Q.put(2);
+Q.put(3);
+Q.size;
+Q()(); //First call resolves Q, second call calls the queue object
+Q.closeQueue; //You must call this before iterating!
+Q.agg(|);
+
 #I newStack
 #S newStack()
 #C Returns a new stack, which is an iterable expression. Iterating means calling stack.pop until the stack is empty.
