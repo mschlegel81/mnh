@@ -522,10 +522,6 @@ PROCEDURE T_folderContents.scan;
     if length(Files)=0
     then dontScanBefore:=now+ONE_HOUR
     else dontScanBefore:=now+FILE_CACHE_MAX_AGE;
-
-    {$ifdef debugMode}
-    writeln('Path "',folderName,'" scanned. Next scan: ',DateTimeToStr(dontScanBefore));
-    {$endif}
   end;
 
 FUNCTION T_folderContents.canFind(CONST packageId: string; OUT fullPath: string; CONST allowScan:boolean; OUT scanRequired:boolean): boolean;

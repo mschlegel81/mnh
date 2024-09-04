@@ -721,27 +721,46 @@ FUNCTION T_highlightingData.getRelatedLocations(CONST CaretX,CaretY:longint):T_r
   end;
 
 CONSTRUCTOR T_codeAssistanceResponse.create(CONST package_:P_package; CONST messages:T_storedMessages; CONST stateHash_:T_hashInt; CONST callAndIdInfos_:P_callAndIdInfos);
+  PROCEDURE sortByPriorityAndLocation(VAR list:T_storedMessages);
+    VAR i,j:longint;
+        tmp:P_storedMessage;
+    begin
+      for i:=1 to length(list)-1 do for j:=0 to i-1 do
+      if (C_messageTypeMeta[list[i]^.messageType].level>
+          C_messageTypeMeta[list[j]^.messageType].level) or
+         (C_messageTypeMeta[list[i]^.messageType].level=
+          C_messageTypeMeta[list[j]^.messageType].level) and
+         (list[i]^.getLocation<list[j]^.getLocation)
+      then begin
+        tmp:=list[i]; list[i]:=list[j]; list[j]:=tmp;
+      end;
+    end;
+
   VAR m:P_storedMessage;
-      level:longint;
+      localCount:longint=0;
+      externalCount:longint=0;
   begin
     inherited create(mt_ide_codeAssistanceResponse);
     package:=package_;
     responseStateHash:=stateHash_;
     callAndIdInfos:=callAndIdInfos_;
     callAndIdInfos^.cleanup;
-    setLength(localErrors,0);
-    setLength(externalErrors,0);
-    for level:=4 downto 1 do for m in messages do
-    if C_messageTypeMeta[m^.messageType].level=level then begin
+    setLength(localErrors   ,length(messages));
+    setLength(externalErrors,length(messages));
+
+    for m in messages do
       if m^.getLocation.fileName=package_^.getPath
       then begin
-        setLength(localErrors,length(localErrors)+1);
-        localErrors[length(localErrors)-1]:=m^.rereferenced;
+        localErrors[localCount]:=m^.rereferenced;
+        inc(localCount);
       end else begin
-        setLength(externalErrors,length(externalErrors)+1);
-        externalErrors[length(externalErrors)-1]:=m^.rereferenced;
+        externalErrors[externalCount]:=m^.rereferenced;
+        inc(externalCount);
       end;
-    end;
+    setLength(localErrors,localCount);
+    sortByPriorityAndLocation(localErrors);
+    setLength(externalErrors,externalCount);
+    sortByPriorityAndLocation(externalErrors);
   end;
 
 DESTRUCTOR T_codeAssistanceResponse.destroy;
