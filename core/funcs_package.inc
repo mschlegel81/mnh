@@ -264,6 +264,9 @@ FUNCTION inspect_imp intFuncSignature;
       result:=tempPackage^.inspect(false,context,recycler{$ifdef fullVersion},functionCallInfos{$endif})^.put(recycler,'messages',loadMessages,false);
       dispose(tempPackage,destroy);
     end;
+    {$ifdef fullVersion}
+    if functionCallInfos<>nil then dispose(functionCallInfos,destroy);
+    {$endif}
   end;
 
 FUNCTION inspectAll_imp intFuncSignature;

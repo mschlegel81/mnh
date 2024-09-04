@@ -101,7 +101,7 @@ PROCEDURE TSplashForm.FormClose(Sender: TObject; VAR CloseAction: TCloseAction);
 
 FUNCTION prepare_doc_thread(p:pointer):ptrint;
   begin
-    ensureDefaultFiles(nil,CODE_HASH<>htmlDocGeneratedForCodeHash,CODE_HASH<>htmlDocGeneratedForCodeHash);
+    ensureDefaultFiles(nil,CODE_HASH<>htmlDocGeneratedForCodeHash);
     makeHtmlFromTemplate;
     result:=1;
   end;

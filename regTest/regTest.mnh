@@ -58,58 +58,21 @@ testFile(scriptFileName:String,doLog:Boolean)->
         doLog);
   end;
 
-private shorter(s:String)->
-  s.length<30 ? s : copy(s,0,27)&'...';
-private shorter([])->void;
-
-private sbExecute([])->void;
-private sbExecute(code:StringList)->begin
-  note("Examples test code:  \n"&code.join("  \n"));
-  printCase(EXAMPLES_LOG_NAME&' '&shorter(code.head));
-  resetRandom;
-  sandBoxExecute(code,WHITELIST_FOR_EXAMPLES).processSandboxOutput(EXAMPLE_EXCLUDES);
-end;
-
-private executeExamples(doLog:Boolean)->begin
-  printCase(EXAMPLES_LOG_NAME);
-  output:=[];
-  collectOut:=true;
-  codeToExecute:=[];
-  inputLines:=fileLines(myPath.extractFileDirectory&'/../resources/examples.txt');
-  startTime:=scriptTime;
-  inputLines.each(line,
-    line==''
-    ? begin
-        collectOut
-        ? output|=sbExecute(codeToExecute)
-        : void;
-        codeToExecute:=[];
-      end
-    : line.matches('==END REG TEST==')
-      ? collectOut:=false
-      : codeToExecute|=line);
-  checkExpectation(
-        EXAMPLES_LOG_NAME,
-        output,
-        scriptTime-startTime,
-        doLog);
-end;
-
 //*Runs tests and returns true if no test failed
 testAll(logging:Boolean, forceRun:Boolean)->begin
   assertUniqueInstance;
   sandBoxExecute('1');
   toRun:=allDemos
-           .filter({!skipFile($f)})
-           .filter({forceRun OR !isTestAlreadyPassed(extractFileNameOnly($script))});
+           .filter(!::skipFile)
+           .filter((script)->forceRun OR !isTestAlreadyPassed(extractFileNameOnly(script)));
   allPassed:=
-  (toRun.map({testFile($script,logging)})|((runExamples:=forceRun OR !isTestAlreadyPassed(EXAMPLES_LOG_NAME)) ? executeExamples(logging) : void)).agg(AND);
+  (toRun.map((script)->testFile(script,logging))).agg(AND);
   printCase("");
   printDirect("\r");
   printf("Tests total:\t%s\nSkipped:\t%s\nExecuted:\t%s\nFailed:\t%s",
     allDemos.size+1,
-    allDemos.size+1-toRun.size-ord(runExamples),
-                    toRun.size+ord(runExamples),
+    allDemos.size+1-toRun.size,
+                    toRun.size,
     getFailedTests.size);
   allPassed ? print(#27"[92mAll tests ok     ",repeatString(' ',50))
             : print(#27"[91;5mSome tests failed:",repeatString(' ',50),"\n",join(#27"[91;5m    "&getFailedTests,"\n")) orElse setExitCode(99);
@@ -140,16 +103,16 @@ main('only',case)->begin
 
   sandBoxExecute('1');
   toRun:=allDemos
-           .filter({!skipFile($f)})
-           .filter({includeTest($script)});
+           .filter(!::skipFile)
+           .filter(includeTest);
   allPassed:=
-  (toRun.map({testFile($script,false)})|((runExamples:=includeTest(EXAMPLES_LOG_NAME)) ? executeExamples(false) : void)).agg(AND);
+  (toRun.map((script)->testFile(script,false))).agg(AND);
   printCase("");
   printDirect("\r");
   printf("Tests total:\t%s\nSkipped:\t%s\nExecuted:\t%s\nFailed:\t%s",
     allDemos.size+1,
-    allDemos.size+1-toRun.size-ord(runExamples),
-                    toRun.size+ord(runExamples),
+    allDemos.size+1-toRun.size,
+                    toRun.size,
     getFailedTests.size);
   allPassed ? print("All tests ok     ",repeatString(' ',50))
             : print("Some tests failed:",repeatString(' ',50),"\n",join("    "&getFailedTests,"\n")) orElse setExitCode(99);
@@ -162,7 +125,6 @@ main('makebat',exeName)->begin
   batLines:=
   allDemos.filter({!skipFile($f)})
           .map(::extractFileNameOnly)
-          .|(EXAMPLES_LOG_NAME)
           .each(d,exeName&' regTest\regTest.mnh only '&d&f' 2> test_%{index}3.3d_{d}.log',
                   d.matches('oeis') ? '@demos\oeis.mnh stopServer' : void);
   writeFileLines(batname,batLines,"\r\n");

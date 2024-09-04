@@ -6,7 +6,7 @@ private datastore runTimes:=[].toMap;
 private testRootLinux  :=myPath.extractFileDirectory.extractFileDirectory;
 private testRootWindows:=testRootLinux.replace('/','\');
 private testRootPlaceholder:='<#>';
-private pathDependentScripts:=['diff','grep',EXAMPLES_LOG_NAME];
+private pathDependentScripts:=['diff','grep','make_doc_code'];
 
 memoized runTimesAsFlatList->runTimes.each(e0,e0[1].each(e1,e1[1].each(e2,[e0[0],e1[0],e2[1]]),|),|);
 
@@ -27,7 +27,7 @@ private flavourDependentScripts:=
    'fourierDemo',
    'test_rationals',
    'testPackages',
-   EXAMPLES_LOG_NAME];
+   'make_doc_code'];
 private isFlavourDependent(scriptName)->scriptName in flavourDependentScripts;
 
 private memoized allFlavours->BUILDS.filter({$B['doTest']}).map({$B['flavour']});
@@ -154,7 +154,7 @@ showTestTimeInfo->timesOfThisRun.size=0 ? void : begin
   printf('  compared to average (group  ): %6.2f%%',thisRunTotalTime/timesByFlavour[1]*100);
 end;
 
-private expectationNamesForFlavour(flavour)->EXAMPLES_LOG_NAME|
+private expectationNamesForFlavour(flavour)->
   testsToExecuteForFlavour(flavour)
     .filter({!isSmokeTest($case) and
              !skipFile($case,copy(flavour,0,1)=='F')})
@@ -282,7 +282,7 @@ main('cleanup')->begin
   print('Dropped ',droppedTotal   ,' values in total');
 
   runTimes.getInner(0)
-          .minus(testsToExecuteForAnyFlavour.extractFileNameOnly|EXAMPLES_LOG_NAME)
+          .minus(testsToExecuteForAnyFlavour.extractFileNameOnly)
           .each(caseWithoutTest,begin
              runTimes[caseWithoutTest]:=void;
              printf('Dropped timing values for "%s" because there is no corresponding script',caseWithoutTest);

@@ -1,4 +1,3 @@
-#!/usr/bin/mnh_light
 USE mnhExeInfo,formattingUtils,make_config,distroLog,testExpectation;
 tprint(...)->print@(formatTime('hh:nn.ss ',systime)|...);
 //Configuration:=====================================================
@@ -12,8 +11,8 @@ private delp->(isLinux ? 'delp' : DelpPath).exec(
         'consoles/lib/x86_64-linux',
         'consoles/lib/x86_64-win64']);
 
-private templateToInc(inFile,outFile<>inFile)->begin
-  pasId:=clean(inFile.extractFileName,['a'..'z','A'..'Z'],'_');
+private templateToInc(inFile,outFile<>inFile)->templateToInc(inFile,outFile,clean(inFile.extractFileName,['a'..'z','A'..'Z'],'_'));
+private templateToInc(inFile,outFile<>inFile,pasId)->begin
   inLines:=fileLines(inFile).join("\n").compress;
   outText:=
   'CONST '&pasId&': string='&inLines.escapePascal&';';
@@ -54,10 +53,12 @@ currentCodeHash:=begin
   : void;
   tprint('Updating generated files');
   //convert here to ensure these files are considered in code hash calculation
-  templateToInc('resources/examples.txt'                   ,'ide/res_examples.inc');
+  docCodeFuture:=future(::exec,[executor,['make_doc_code.mnh','resources/examples_processed.txt']]);
   templateToInc('resources/html_template.txt'              ,'ide/res_html_template.inc');
   templateToInc('resources/ensureAssoc.mnh'                ,'ide/res_ensureAssoc.inc');
   templateToInc('resources/removeAssoc.mnh'                ,'ide/res_removeAssoc.inc');
+  docCodeFuture();
+  templateToInc('resources/examples_processed.txt'         ,'ide/res_examples.inc','examples_txt');
   ensureDefaultFilesSource;
   ensureFilesToDeleteSource;
   //update code hash
@@ -71,6 +72,7 @@ currentCodeHash:=begin
       printf('  %s',expectedContents);
       writeFileLines('core/res_version.inc',expectedContents);
     end;
+  if not mnhInfo['isFullVersion'] then warn('Generated doc may be erroneous due to light version');
   result;
 end;
 

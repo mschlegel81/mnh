@@ -2,9 +2,8 @@ USE '../demos/inputs/inputs.mnh';
 
 private demosRoot:=expandedFileName(myPath.extractFileDirectory&'/../demos/');
 
-allDemos:=files(demosRoot&'*.mnh').sort;
-
-EXAMPLES_LOG_NAME:='examples_from_file';
+make_doc_code:=myPath.extractFileDirectory&'/../make_doc_code.mnh';
+allDemos:=files(demosRoot&'*.mnh').sort | [make_doc_code];
 
 private plotters:=demosRoot&[
 'barnsleyFern.mnh',
@@ -16,6 +15,7 @@ private plotters:=demosRoot&[
 'turtleGfx.mnh',
 'heart.mnh'];
 
+testParameters((make_doc_code))->['test'];
 testParameters((demosRoot&'24.mnh'             ))->['demo'];
 testParameters((demosRoot&'aliquotSequence.mnh'))->[11, 12, 28, 496, 220, 1184, 12496, 1264460, 790, 909, 562, 1064, 1488].map(::toString);
 testParameters((demosRoot&'asciiCalendar.mnh'  ))->['1966'];
@@ -84,7 +84,6 @@ checkAfterTest(file in plotters)->format('png hash: %x',file.changeFileExt('.png
 checkAfterTest(file)->void;
 
 private DEFAULT_WHITELIST:=['output','sound','sleep','read context state','read package state','alter package state','alter context state'].toSet;
-WHITELIST_FOR_EXAMPLES:=DEFAULT_WHITELIST | ['read GUI state','alter GUI state','write file','detaching'];
 private WHITELIST_FOR_TESTS_FETCHING_INPUT_VIA_HTTP:=DEFAULT_WHITELIST | ['write file','read file','http'];
 allowedSideEffects((demosRoot&'anagram.mnh'       ))->WHITELIST_FOR_TESTS_FETCHING_INPUT_VIA_HTTP;
 allowedSideEffects((demosRoot&'diff.mnh'          ))->WHITELIST_FOR_TESTS_FETCHING_INPUT_VIA_HTTP;
@@ -100,6 +99,7 @@ allowedSideEffects((demosRoot&'logTest.mnh'       ))->DEFAULT_WHITELIST | ['writ
 allowedSideEffects((demosRoot&'testSynchronization.mnh'))->DEFAULT_WHITELIST | ['detaching'];
 
 allowedSideEffects(file in plotters)->DEFAULT_WHITELIST|['read GUI state','alter GUI state','write file'];
+allowedSideEffects((make_doc_code) )->listSideEffects;
 allowedSideEffects(file            )->DEFAULT_WHITELIST;
 
 testConfiguration(file)->["name"=>file,

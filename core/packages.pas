@@ -35,7 +35,7 @@ USES //my utilities:
 {$define include_interface}
 TYPE
   P_package=^T_package;
-  T_packageLoadUsecase=(lu_NONE,lu_beingLoaded,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forCodeAssistance,lu_forCodeAssistanceSecondary,lu_usageScan,lu_docCall);
+  T_packageLoadUsecase=(lu_NONE,lu_beingLoaded,lu_forImport,lu_forCallingMain,lu_forDirectExecution,lu_forCodeAssistance,lu_forCodeAssistanceSecondary,lu_usageScan);
 
   T_packageReference=object
     id,path:ansistring;
@@ -127,8 +127,7 @@ CONST
  {lu_forDirectExecution         }(import_usecase:lu_forImport                 ;collectMetaData:false; createRules:true ; executeStatements:true ; loadUsedPacks:true ;interpretInputStatements:true ; finalizeWorkers:true ),
  {lu_forCodeAssistance          }(import_usecase:lu_forCodeAssistance         ;collectMetaData:true ; createRules:false; executeStatements:false; loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
  {lu_forCodeAssistanceSecondary }(import_usecase:lu_forCodeAssistanceSecondary;collectMetaData:true ; createRules:false; executeStatements:false; loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
- {lu_usageScan                  }(import_usecase:lu_usageScan                 ;collectMetaData:false; createRules:false; executeStatements:false; loadUsedPacks:false;interpretInputStatements:false; finalizeWorkers:false),
- {lu_docCall}                    (import_usecase:lu_NONE                      ;collectMetaData:true ; createRules:true ; executeStatements:true ; loadUsedPacks:false;interpretInputStatements:true ; finalizeWorkers:true ));
+ {lu_usageScan                  }(import_usecase:lu_usageScan                 ;collectMetaData:false; createRules:false; executeStatements:false; loadUsedPacks:false;interpretInputStatements:false; finalizeWorkers:false));
 
 TYPE
   P_sandbox=^T_sandbox;
@@ -151,7 +150,6 @@ TYPE
       {$ifdef fullVersion}
       PROCEDURE runInstallScript;
       PROCEDURE runUninstallScript;
-      PROCEDURE demoCallInterpretation(CONST input:T_arrayOfString; CONST recycler:P_recycler; OUT textOut,usedBuiltinIDs:T_arrayOfString);
       {$endif}
   end;
 
@@ -419,68 +417,6 @@ PROCEDURE T_sandbox.runUninstallScript;
     execute(split(decompressString(removeAssoc_mnh),C_lineBreakChar),C_allSideEffects,recycler,exitDummy);
     freeRecycler(recycler);
   end;
-
-PROCEDURE T_sandbox.demoCallInterpretation(CONST input:T_arrayOfString; CONST recycler:P_recycler; OUT textOut,usedBuiltinIDs:T_arrayOfString);
-  VAR codeInput:T_arrayOfString;
-  FUNCTION executeInternally:T_storedMessages;
-    VAR
-      callAndIdInfos: T_callAndIdInfos;
-      meta: P_builtinFunctionMetaData;
-    begin
-      callAndIdInfos.create;
-      messages.clear;
-      messages.setupMessageRedirection(nil,[]);
-      package.replaceCodeProvider(newVirtualFileCodeProvider('?',input));
-      globals.resetForEvaluation({$ifdef fullVersion}@package,@package.reportVariables,{$endif}C_allSideEffects,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
-      globals.prng.resetSeed(1);
-      package.load(lu_docCall,globals,recycler,C_EMPTY_STRING_ARRAY,@callAndIdInfos);
-      globals.afterEvaluation(recycler,packageTokenLocation(@package));
-      result:=messages.storedMessages(false);
-
-      for meta in callAndIdInfos.calledBuiltinFunctions do append(usedBuiltinIDs,meta^.qualifiedId);
-      callAndIdInfos.destroy;
-    end;
-
-  VAR storedMessages:T_storedMessages;
-      i:longint;
-      tmp:ansistring;
-      m:P_storedMessage;
-      formatter:T_guiFormatter;
-      message:P_storedMessageWithText;
-  begin
-    setLength(codeInput,0);
-    setLength(usedBuiltinIDs,0);
-    setLength(textOut,0);
-    formatter.create(true);
-    formatter.wrapEcho:=true;
-    formatter.preferredLineLength:=80;
-
-    for i:=0 to length(input)-1 do begin
-      tmp:=trim(input[i]);
-      if startsWith(tmp,COMMENT_PREFIX)
-      then append(textOut,ECHO_MARKER+StringOfChar(' ',C_echoPrefixLength)+tmp)
-      else if startsWith(tmp,'#S ') or startsWith(tmp,'#C ') or startsWith(tmp,'#H ')
-      then append(textOut,tmp)
-      else if startsWith(tmp,'#I ') then begin end
-      else append(codeInput,input[i]);
-    end;
-
-    storedMessages:=executeInternally;
-    if length(codeInput)>0 then begin
-      new(message,create(mt_echo_input,C_nilSearchTokenLocation,codeInput));
-      append(textOut,formatter.formatMessage(message));
-      disposeMessage(message);
-    end;
-
-    for m in storedMessages do begin
-      if not(m^.messageType in [mt_timing_info,mt_echo_input]) then append(textOut,formatter.formatMessage(m));
-    end;
-    formatter.destroy;
-    enterCriticalSection(cs); busy:=false; leaveCriticalSection(cs);
-  end;
-
-PROCEDURE demoCallInterpretation(CONST input:T_arrayOfString; OUT textOut,usedBuiltinIDs:T_arrayOfString; CONST recycler:P_recycler);
-  begin sandbox^.demoCallInterpretation(input,recycler,textOut,usedBuiltinIDs); end;
 {$endif}
 
 {$define include_implementation}
@@ -1483,9 +1419,6 @@ INITIALIZATION
   newCodeProvider:=@fileWrappers.newFileCodeProvider;
   setupSandboxes;
 {$define include_initialization}
-  {$ifdef fullVersion}
-  demoCodeInterpretCallback:=@demoCallInterpretation;
-  {$endif}
   {$include funcs_package.inc}
 {$undef include_initialization}
 

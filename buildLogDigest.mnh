@@ -86,6 +86,7 @@ main('files')->begin
            allFiles('common','*.inc'),
            allFiles('3rd_party','*.inc'),
            allFiles('core','*.inc')).minus(['core/res_version.inc','ide/res_toDeleteOnUninstall.inc'])
+    .minus(['ide/res_examples.inc'])
     .sort;
 
   newList==hashFiles

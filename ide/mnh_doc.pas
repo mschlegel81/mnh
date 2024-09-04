@@ -1,15 +1,14 @@
 UNIT mnh_doc;
 INTERFACE
 USES sysutils,
-     myStringUtil, myGenerics, serializationUtil,
+     myStringUtil, myGenerics,
      fileWrappers,
      mnh_messages,
      basicTypes, mnh_constants,recyclers,
      Forms,ComCtrls,
      litVar, mnh_html;
-TYPE T_demoCodeInterpretCallback=PROCEDURE(CONST input:T_arrayOfString; OUT output,usedBuiltinIDs:T_arrayOfString; CONST recycler:P_recycler);
-VAR demoCodeInterpretCallback:T_demoCodeInterpretCallback;
-    lineToHtml:FUNCTION(CONST s:string; CONST forceSyntaxHighlighting:boolean):string=nil;
+
+VAR lineToHtml:FUNCTION(CONST s:string; CONST forceSyntaxHighlighting:boolean):string=nil;
 TYPE
   P_intrinsicFunctionDocumentation = ^T_intrinsicFunctionDocumentation;
   T_intrinsicFunctionDocumentation = object
@@ -89,69 +88,28 @@ PROCEDURE ensureBuiltinDocExamples;
       result:=tt_EOL;
     end;
 
-  FUNCTION addExample(CONST exampleSource,txt,idList:T_arrayOfString):T_arrayOfString;
+  PROCEDURE processExample;
     VAR ids:T_arrayOfString;
         i:longint;
         doc:P_intrinsicFunctionDocumentation;
-        first:boolean=true;
-        tokenType:T_tokenType;
-        {$ifdef debugMode}j:longint; {$endif}
+        tokenType: T_tokenType;
     begin
-      {$ifdef debugMode}
-      writeln('Adding example: ');
-      writeln('  SOURCE:');
-      for i:=0 to length(exampleSource)-1 do writeln('    ',exampleSource[i]);
-      writeln('  TXT: ');
-      for i:=0 to length(txt)-1 do writeln('    ',txt[i]);
-      {$endif}
-
-      if (length(exampleSource)=0) and (length(idList)=0) then exit;
-      if (length(exampleSource)>0) and (copy(exampleSource[0],1,3)='#I ')
-      then ids:=split(trim(copy(exampleSource[0],4,length(exampleSource[0])-3)),' ')
-      else ids:=idList;
+      if (length(code)<=0) then exit;
+      ids:=split(trim(copy(code[0],4,length(code[0])-3)),' ');
       sortUnique(ids);
-      for i:=0 to length(ids)-1 do if functionDocMap.containsKey(ids[i],doc) then begin
-        {$ifdef debugMode}
-        if first then first:=false else begin
-          write('The following example is not uniquely assignable. IDs: ');
-          for j:=0 to length(ids)-1 do write(ids[j],' ');
-          writeln;
-          for j:=0 to length(txt)-1 do writeln('  ',txt[j]);
-          writeln;
-        end;
-        {$endif}
-        doc^.addExample(txt);
-      end else begin
+      dropFirst(code,1);
+
+      for i:=0 to length(ids)-1 do
+      if functionDocMap.containsKey(ids[i],doc)
+      then doc^.addExample(code)
+      else begin
         tokenType:=string_to_tokenType(ids[i]);
         if tokenType<>tt_EOL then begin
           if tokenDocumentation[tokenType]=nil then new(tokenDocumentation[tokenType],create(tokenTypeName(tokenType)));
-          tokenDocumentation[tokenType]^.addExample(txt);
-          first:=false;
+          tokenDocumentation[tokenType]^.addExample(code);
         end;
       end;
-      if first then setLength(ids,0);
-      result:=ids;
-    end;
 
-  VAR recycler:P_recycler;
-
-  PROCEDURE processExample;
-    VAR txt,ids:T_arrayOfString;
-        {$ifdef debugMode}
-        s:string;
-        {$endif}
-    begin
-      if (length(code)<=0) then exit;
-      demoCodeInterpretCallback(code,txt,ids,recycler);
-
-      ids:=addExample(code,txt,ids);
-      if length(ids)=0 then begin
-        {$ifdef debugMode}
-        writeln('Found unassignable example:');
-        for s in code do writeln('  ',s);
-        writeln;
-        {$endif}
-      end;
       code:=C_EMPTY_STRING_ARRAY;
     end;
 
@@ -159,7 +117,6 @@ PROCEDURE ensureBuiltinDocExamples;
   begin
     if functionDocExamplesReady then exit;
     decompressed_examples:=split(decompressString(examples_txt),C_lineBreakChar);
-    recycler:=newRecycler;
     keys:=functionDocMap.keySet;
     for i:=0 to length(keys)-1 do if isQualified(keys[i]) then begin
       setLength(allDocs,length(allDocs)+1);
@@ -178,7 +135,6 @@ PROCEDURE ensureBuiltinDocExamples;
     //---------------------------------------------------------------------:Read examples
 
     functionDocExamplesReady:=true;
-    freeRecycler(recycler);
   end;
 
 FUNCTION shortName(CONST id:T_idString):T_idString;

@@ -2094,8 +2094,6 @@ zip(rangeGenerator(0),primeGenerator).head(10);
 kMeans([1..100].map((i)->random(3)),3);
 kMeans([1..100].map((i)->random(3)),[[0,0,1],[0,1,0],[1,0,0]]);
 
-//==END REG TEST==
-
 #I kMeans
 #S kMeans(inputList:List, k>=2);
 #C Returns a map assigning a class index to each entry of the input list. The centers are initialized by random class assignments.
@@ -2104,6 +2102,8 @@ kMeans([1..100].map((i)->random(3)),[[0,0,1],[0,1,0],[1,0,0]]);
 #C Note that all entries of inputList (and of centers if present) must be NumericList of the same size.
 kMeans([1..100].map((i)->random(3)),3);
 kMeans([1..100].map((i)->random(3)),[[0,0,1],[0,1,0],[1,0,0]]);
+
+//==END REG TEST==
 
 driveInfo;
 #S driveInfo;
@@ -2841,8 +2841,6 @@ bitXor(5,213,10);
 #S freeConsole
 #C Detaches the interpreter from the console.
 #C Intended for GUI and/or headless scripts.
-
-
 
 #I allFiles
 #S allFiles(root);

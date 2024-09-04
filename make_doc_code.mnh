@@ -1,0 +1,109 @@
+ECHO_MARKER   :=#226#128#139;
+NOTE_MARKER   :=#226#128#140;
+ERROR_MARKER  :=#226#129#162;
+WARNING_MARKER:=#226#129#163;
+
+M:=['echo_input'      =>ECHO_MARKER&'  in>',
+    'echo_declaration'=>ECHO_MARKER&'decl>',
+    'echo_output'     =>ECHO_MARKER&' out>',
+    'log'             =>'Log: ',
+    'el1_userNote'    =>NOTE_MARKER&'Note: ',
+    'el2_userWarning' =>WARNING_MARKER&'Warn: ',
+    'printline'       =>'',
+    'el3_evalError'   =>ERROR_MARKER&'Error: ',
+    'el3_userDefined' =>ERROR_MARKER&'Error: '].toMap;
+INPUTS:=['echo_input','echo_declaration'];
+
+IGNORED:=['exitCode','el3_trace'];
+
+mutable called:=[];
+mutable commented:=[];
+mutable signatures:=[];
+
+interpretBlock(s:StringList)->begin
+  ids_by_doc:=void;
+  sig_given:=false;
+  cmt_given:=false;
+  doc_code:=[];
+  code:=[];
+  for line in s do begin
+    if line.hasPrefix('#I') then begin
+      ids_by_doc:=line.copy(3).split(' ').trim.filter((id)->id<>'');
+      doc_code|=line;
+    end else if line.hasPrefix('#S') then begin
+      sig_given:=true;
+      doc_code|=line;
+    end else if line.hasPrefix('#C') then begin
+      cmt_given:=true;
+      doc_code|=line;
+    end else code|=line;
+  end;
+  examples_code:=
+  if code.size>0 then begin
+      i:=-1;
+    sandbox_output:= sandBoxExecute(code,listSideEffects).map((c)->c.size==2 ? c|'void' : c);
+    if sandbox_output.getInner(0).map((t)->t in INPUTS).trueCount == code.size then begin
+      sandbox_output.map((message_type,location,message)->message_type in IGNORED ? void :
+      format('%s %s',
+             M[message_type] orElse fail(message_type),
+             message_type in INPUTS ? code[i+=1] orElse message : message.toString));
+    end else begin
+      ig:=IGNORED|INPUTS;
+      format('%s %s',[0..code.size-1].map((k)->k==0 ? ECHO_MARKER&'  in>' : ECHO_MARKER&' ...>'),code)|
+      sandbox_output.map((message_type,location,message)->message_type in ig ? void :
+      format('%s %s',
+             M[message_type] orElse fail(message_type),
+             message_type in INPUTS ? code[i+=1] orElse message : message.toString));
+    end;
+  end;
+
+  calledHere:=inspect('?',s)['called builtin'];
+  effectiveIds:=ids_by_doc orElse calledHere;
+
+  called|=calledHere;
+  if sig_given then signatures|=effectiveIds;
+  if cmt_given then commented |=effectiveIds;
+
+
+  (ids_by_doc.isVoid
+   ? '#I '&join(calledHere,' ')
+   : void)
+   |doc_code
+   |examples_code;
+end;
+
+generate_doc_lines(testing:Boolean)->begin
+  doc_lines:=[];
+  nextBlock:=[];
+  for line in 'resources\examples.txt'.fileLines do begin
+    if line.trim==''
+    then begin
+      if nextBlock.size>0 then doc_lines|=interpretBlock(nextBlock)|[''];
+      nextBlock:=[];
+    end else if (line.trim=='//==END REG TEST==') then begin
+      if testing then return doc_lines;
+    end else nextBlock|=line;
+  end;
+  doc_lines|=interpretBlock(nextBlock);
+  assert(doc_lines.isStringList);
+  doc_lines;
+end;
+
+
+main->for line in generate_doc_lines(false) do print(line);
+main('test')->for line in generate_doc_lines(true) do print(line);
+main(output_file)->writeFileLines(output_file,generate_doc_lines(false));
+
+begin
+//  generate_doc_lines(false);
+  all:=listBuiltin;
+  qualified:=(id)->id.matches('\.') ? id : all.each(q_id,q_id.split('.')[1]==id ? q_id : void,orElse);
+
+
+  all;
+
+
+
+
+
+end;

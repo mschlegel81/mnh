@@ -71,7 +71,7 @@ TYPE
   F_simpleCallback=PROCEDURE of object;
 
 PROCEDURE finalizeCodeAssistance;
-PROCEDURE ensureDefaultFiles(CONST progressCallback:F_simpleCallback; CONST overwriteExisting:boolean=false; CONST createHtmlDat:boolean=false);
+PROCEDURE ensureDefaultFiles(CONST progressCallback:F_simpleCallback; CONST overwriteExisting:boolean=false);
 PROCEDURE postAssistanceRequest    (CONST scriptPath:string);
 FUNCTION  getAssistanceResponseSync(CONST editorMeta:P_codeProvider; CONST secondary:P_codeProvider=nil):P_codeAssistanceResponse;
 FUNCTION findScriptsUsing(CONST scriptName:string):T_arrayOfString;
@@ -587,7 +587,7 @@ FUNCTION getMessagesForInspection(CONST context:P_context; CONST recycler:P_recy
     dispose(response,destroy);
   end;
 
-PROCEDURE ensureDefaultFiles(CONST progressCallback:F_simpleCallback; CONST overwriteExisting: boolean; CONST createHtmlDat: boolean);
+PROCEDURE ensureDefaultFiles(CONST progressCallback:F_simpleCallback; CONST overwriteExisting: boolean);
   {$i res_defaultFiles.inc}
   VAR baseDir:string;
   PROCEDURE ensureFile(CONST index:longint);
