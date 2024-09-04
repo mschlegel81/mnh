@@ -715,8 +715,10 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
           then context^.raiseError('Invalid assignment',tok^.location)
           else if not (nextStatement.token.last^.tokType in [tt_listBraceClose,tt_identifier])
                and not((nextStatement.token.last^.tokType in [tt_userRule,tt_intrinsicRule]) and localIdStack.scopeBottom)
-          then context^.raiseError('Invalid assignment; Left hand side: '+tokenTypeName(nextStatement.token.last^.tokType),tok^.location);
+          then context^.raiseError('Invalid assignment; Left hand side: '+tokenTypeName(nextStatement.token.last^.tokType),tok^.location)
+          else if localIdStack.scopeBottom then nextStatement.assignmentToken:=tok;
         end;
+        tt_declare: if localIdStack.scopeBottom then nextStatement.assignmentToken:=tok;
         tt_mut_nested_assign..tt_mut_nestedDrop: begin
           if (nextStatement.token.last<>nil) and (nextStatement.token.last^.tokType=tt_blockLocalVariable) then begin
             nextStatement.token.last^.tokType:=tok^.tokType;
