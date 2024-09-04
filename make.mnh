@@ -53,7 +53,10 @@ currentCodeHash:=begin
   : void;
   tprint('Updating generated files');
   //convert here to ensure these files are considered in code hash calculation
-  docCodeFuture:=future(::exec,[executor,['make_doc_code.mnh','resources/examples_processed.txt']]);
+  docCodeFuture:= if mnhInfo['isFullVersion']
+                  then future(::exec,[executor,['make_doc_code.mnh','resources/examples_processed.txt']])
+                  else ()->void;
+
   templateToInc('resources/html_template.txt'              ,'ide/res_html_template.inc');
   templateToInc('resources/ensureAssoc.mnh'                ,'ide/res_ensureAssoc.inc');
   templateToInc('resources/removeAssoc.mnh'                ,'ide/res_removeAssoc.inc');
@@ -213,6 +216,7 @@ end;
 main('beep')->beep;
 
 main('distro')->isLinux ? fail('Must be executed in windows environment') : begin
+  assert(mnhInfo['isFullVersion']);
   BUILDS.each(B,B['canBuild'] AND B['distro'] ? B.testExe : void,AND)
   ? void
   : fail('Cannot make distro because there are failed tests');
