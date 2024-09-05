@@ -233,11 +233,13 @@ PROCEDURE T_codeAssistanceThread.execute;
       writeln('  code assistance processes script ',request^.scriptPath);
       {$endif}
       response:=request^.execute(recycler,globals,@adapters);
-      {$ifdef debugMode}
-      writeln('  code assistance response for     ',request^.scriptPath,' is ',response^.stateHash);
-      {$endif}
-      updateScriptUsage(response^.package^.getPath,response^.usedAndExtendedPackages);
-      preparedResponses.append(response);
+      if response<>nil then begin
+        {$ifdef debugMode}
+        writeln('  code assistance response for     ',request^.scriptPath,' is ',response^.stateHash);
+        {$endif}
+        updateScriptUsage(response^.package^.getPath,response^.usedAndExtendedPackages);
+        preparedResponses.append(response);
+      end;
     end;
 
   VAR pendingFileScans:specialize G_queue<string>;
@@ -345,49 +347,55 @@ FUNCTION T_codeAssistanceRequest.execute(CONST recycler:P_recycler; CONST givenG
       codeProvider:P_codeProvider;
       additionalScriptsToScan:T_arrayOfString;
   begin
-    {$ifdef debugMode}
-    writeln('Code assistance start: ',scriptPath);
-    {$endif}
-    if provider=nil
-    then codeProvider:=newCodeProvider(scriptPath)
-    else codeProvider:=provider;
+    try
+      {$ifdef debugMode}
+      writeln('Code assistance start: ',scriptPath);
+      {$endif}
+      if provider=nil
+      then codeProvider:=newCodeProvider(scriptPath)
+      else codeProvider:=provider;
 
-    new(package,create(codeProvider,nil));
+      new(package,create(codeProvider,nil));
 
-    {$Q-}{$R-}
-    additionalScriptsToScan:=findScriptsUsing(scriptPath);
-    initialStateHash:=codeProvider^.stateHash+length(additionalScriptsToScan)*127;
-    for s in additionalScriptsToScan do initialStateHash:=initialStateHash*31+hashOfAnsiString(s);
-    {$Q+}{$R+}
+      {$Q-}{$R-}
+      additionalScriptsToScan:=findScriptsUsing(scriptPath);
+      initialStateHash:=codeProvider^.stateHash+length(additionalScriptsToScan)*127;
+      for s in additionalScriptsToScan do initialStateHash:=initialStateHash*31+hashOfAnsiString(s);
+      {$Q+}{$R+}
 
-    if givenGlobals=nil then begin
-      adapters.createErrorHolder(nil,C_errorsAndWarnings+[mt_el1_note]);
-      new(globals,create(@adapters));
-    end else begin
-      globals:=givenGlobals;
-      givenAdapters^.clear;
+      if givenGlobals=nil then begin
+        adapters.createErrorHolder(nil,C_errorsAndWarnings+[mt_el1_note]);
+        new(globals,create(@adapters));
+      end else begin
+        globals:=givenGlobals;
+        givenAdapters^.clear;
+      end;
+
+      globals^.resetForEvaluation(nil,nil,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
+      globals^.primaryContext.callDepth:=STACK_DEPTH_LIMIT-100;
+      if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
+      new(callAndIdInfos,create);
+      {$ifdef debugMode}
+      write('Additional scripts to scan :',length(additionalScriptsToScan),': ');
+      for script in additionalScriptsToScan do write(script,',');
+      writeln;
+      {$endif}
+
+      for script in additionalScriptsToScan do loadSecondaryPackage(script);
+      globals^.primaryContext.messages^.clear();
+      package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,callAndIdInfos,secondaryProvider);
+      if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(true)
+                           else loadMessages:=adapters      .storedMessages(true);
+      globals^.afterEvaluation(recycler,packageTokenLocation(package));
+      {$ifdef debugMode}
+      writeln('Code assistance end  : ',scriptPath);
+      {$endif}
+      new(result,create(package,loadMessages,initialStateHash,callAndIdInfos));
+    except on e:Exception do begin
+        result:=nil; //This may cause a memory leak, but what can you do...
+        postIdeMessage('Severe error during code assistance: '+e.toString,true);
+      end;
     end;
-
-    globals^.resetForEvaluation(nil,nil,C_sideEffectsForCodeAssistance,ect_silent,C_EMPTY_STRING_ARRAY,recycler);
-    globals^.primaryContext.callDepth:=STACK_DEPTH_LIMIT-100;
-    if globals^.primaryContext.callDepth<0 then globals^.primaryContext.callDepth:=0;
-    new(callAndIdInfos,create);
-    {$ifdef debugMode}
-    write('Additional scripts to scan :',length(additionalScriptsToScan),': ');
-    for script in additionalScriptsToScan do write(script,',');
-    writeln;
-    {$endif}
-
-    for script in additionalScriptsToScan do loadSecondaryPackage(script);
-    globals^.primaryContext.messages^.clear();
-    package^.load(lu_forCodeAssistance,globals^,recycler,C_EMPTY_STRING_ARRAY,callAndIdInfos,secondaryProvider);
-    if givenGlobals<>nil then loadMessages:=givenAdapters^.storedMessages(true)
-                         else loadMessages:=adapters      .storedMessages(true);
-    globals^.afterEvaluation(recycler,packageTokenLocation(package));
-    {$ifdef debugMode}
-    writeln('Code assistance end  : ',scriptPath);
-    {$endif}
-    new(result,create(package,loadMessages,initialStateHash,callAndIdInfos));
     if givenGlobals=nil then begin
       adapters.destroy;
       dispose(globals,destroy);
@@ -562,7 +570,7 @@ FUNCTION getAssistanceResponseSync(CONST editorMeta:P_codeProvider; CONST second
   end;
 
 FUNCTION getMessagesForInspection(CONST context:P_context; CONST recycler:P_recycler; CONST scriptPath:string):P_mapLiteral;
-  VAR request:P_codeAssistanceRequest;
+  VAR request : P_codeAssistanceRequest;
       response: P_codeAssistanceResponse;
       allErrors: T_storedMessages;
       i:longint;
@@ -570,6 +578,7 @@ FUNCTION getMessagesForInspection(CONST context:P_context; CONST recycler:P_recy
     new(request,create(scriptPath));
     response:=request^.execute(recycler);
     dispose(request,destroy);
+    if response=nil then exit(recycler^.newMapLiteral(1));
 
     setLength(allErrors,length(response^.localErrors)+length(response^.externalErrors));
     for i:=0 to length(response^.localErrors)-1 do

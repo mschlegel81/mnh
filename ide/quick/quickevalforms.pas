@@ -172,8 +172,10 @@ PROCEDURE TQuickEvalForm.performFastUpdate;
       if (meta<>nil) and (cbEvaluateInCurrentPackage.enabled and cbEvaluateInCurrentPackage.checked)
       then assistanceData:=getAssistanceResponseSync(@inputMeta,meta)
       else assistanceData:=getAssistanceResponseSync(@inputMeta);
-      inputMeta.updateAssistanceResponse(assistanceData);
-      disposeMessage(assistanceData);
+      if assistanceData<>nil then begin
+        inputMeta.updateAssistanceResponse(assistanceData);
+        disposeMessage(assistanceData);
+      end;
       highlightedFor:=stateHash;
     end;
 

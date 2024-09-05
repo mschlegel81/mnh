@@ -923,8 +923,10 @@ FUNCTION formatHtmlPage_imp intFuncSignature;
       provider:=newVirtualFileCodeProvider(name,lineData);
       codeAssistanceData:=getAssistanceResponseSync(provider);
       highlighter:=TMnhInputSyn.create(nil);
-      codeAssistanceData^.updateHighlightingData(TMnhInputSyn(highlighter).highlightingData);
-      disposeMessage(codeAssistanceData);
+      if codeAssistanceData<>nil then begin
+        codeAssistanceData^.updateHighlightingData(TMnhInputSyn(highlighter).highlightingData);
+        disposeMessage(codeAssistanceData);
+      end;
     end;
 
   begin
