@@ -558,10 +558,11 @@ CONSTRUCTOR T_subruleExpression.create(CONST pat:T_pattern; CONST rep:P_token; C
   end;
 
 CONSTRUCTOR T_inlineExpression.createForEachBody(CONST parameterId: ansistring; CONST rep: P_token; CONST eachLocation: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
+  VAR id: string;
   begin
     init(et_eachBody,rep^.location);
     pattern.create;
-    pattern.appendFreeId(parameterId,rep^.location);
+    for id in split(parameterId,',') do pattern.appendFreeId(id,rep^.location);
     pattern.appendFreeId(EACH_INDEX_IDENTIFIER,rep^.location);
     constructExpression(rep,context,recycler,eachLocation);
   end;

@@ -94,9 +94,8 @@ USES mySys,tokenArray;
 
 TYPE
   T_eachPayload=record
-    eachIndex:longint;
     eachRule:P_expressionLiteral;
-    eachParameter:P_literal;
+    parameters:P_listLiteral;
   end;
 
   P_eachTask=^T_eachTask;
@@ -117,29 +116,55 @@ TYPE
   end;
 
 PROCEDURE processListSerial(CONST input:P_literal; CONST rulesList: T_expressionList; CONST aggregator: P_aggregator; CONST eachLocation: T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
-{$MACRO ON}
-{$define processX:=begin
-  indexLiteral:=recycler^.newIntLiteral(eachIndex);
-  for rule in rulesList do if proceed then begin
-    addToAggregator(
-      evaluteExpression(rule,eachLocation,context,recycler,x,indexLiteral),
-      true,
-      eachLocation,
-      context,recycler);
-    proceed:=context^.continueEvaluation and not(aggregator^.earlyAbort);
-  end;
-  inc(eachIndex);
-  recycler^.disposeLiteral(indexLiteral);
-end}
-
   VAR addToAggregator: PROCEDURE (er:T_evaluationResult; CONST doDispose:boolean; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler) of object;
-      eachIndex:longint=0;
       indexLiteral:P_abstractIntLiteral;
-      iter:T_arrayOfLiteral;
-      x:P_literal;
+      eachIndex:longint=0;
       proceed:boolean=true;
+      rulesArity:longint=2;
+
+  PROCEDURE processX(x:P_literal);
+    VAR rule:P_expressionLiteral;
+        parameterList:T_listLiteral;
+    begin
+      indexLiteral:=recycler^.newIntLiteral(eachIndex);
+      if rulesArity=2 then begin
+        for rule in rulesList do if proceed then begin
+          addToAggregator(
+            evaluteExpression(rule,eachLocation,context,recycler,x,indexLiteral),
+            true,
+            eachLocation,
+            context,recycler);
+          proceed:=context^.continueEvaluation and not(aggregator^.earlyAbort);
+        end;
+      end else begin
+        if (x^.literalType in C_compoundTypes) and (P_compoundLiteral(x)^.size=rulesArity-1) then begin
+          parameterList.create(rulesArity);
+          parameterList.appendAll(recycler,P_compoundLiteral(x));
+          parameterList.append(recycler,indexLiteral,true);
+          for rule in rulesList do if proceed then begin
+            addToAggregator(
+              rule^.evaluate(eachLocation,context,recycler,@parameterList),
+              true,
+              eachLocation,
+              context,recycler);
+            proceed:=context^.continueEvaluation and not(aggregator^.earlyAbort);
+          end;
+          parameterList.destroy;
+        end else begin
+          context^.raiseError('Cannot apply for/each rule to element '+x^.toString(100),eachLocation);
+          proceed:=false;
+        end;
+      end;
+      inc(eachIndex);
+      recycler^.disposeLiteral(indexLiteral);
+    end;
+
+  VAR iter:T_arrayOfLiteral;
+      x:P_literal;
       rule:P_expressionLiteral;
   begin
+    for rule in rulesList do rulesArity:=rule^.arity.maxPatternLength;
+
     {$ifdef fullVersion}
     if tco_stackTrace in context^.threadOptions then context^.callStackPush(eachLocation,'each',stepForward(eachLocation,5),nil);
     {$endif}
@@ -149,18 +174,18 @@ end}
 
       x:=P_expressionLiteral(input)^.evaluate(eachLocation,context,recycler,nil).literal;
       while (x<>nil) and (x^.literalType<>lt_void) and proceed do begin
-        processX;
+        processX(x);
         recycler^.disposeLiteral(x);
         x:=P_expressionLiteral(input)^.evaluate(eachLocation,context,recycler,nil).literal;
       end;
       if x<>nil then recycler^.disposeLiteral(x);
     end else if input^.literalType in C_compoundTypes then begin
       iter:=P_compoundLiteral(input)^.forcedIterableList(recycler);
-      for x in iter do if proceed then processX;
+      for x in iter do if proceed then processX(x);
       recycler^.disposeLiterals(iter);
     end else begin
       x:=input;
-      processX;
+      processX(x);
     end;
     {$ifdef fullVersion}
     if tco_stackTrace in context^.threadOptions
@@ -201,14 +226,28 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
 
   VAR processed:longint=0;
       toQueueLimit:longint;
+      rulesArity:longint=0;
+      proceed:boolean=true;
+
   PROCEDURE createTask(CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal); {$ifndef debugMode} inline; {$endif}
     VAR nextToEnqueue:T_eachPayload;
         newTask:P_eachTask;
     begin
       with nextToEnqueue do begin
-        eachIndex    :=idx;
         eachRule     :=expr;
-        eachParameter:=x^.rereferenced;
+        parameters:=recycler^.newListLiteral(rulesArity);
+        if rulesArity=2 then begin
+          parameters^.append(recycler,x,true);
+          parameters^.appendInt(recycler,idx);
+        end else begin
+          if (x^.literalType in C_compoundTypes) and (P_compoundLiteral(x)^.size=rulesArity-1) then begin
+            parameters^.appendAll(recycler,P_compoundLiteral(x));
+            parameters^.appendInt(recycler,idx);
+          end else begin
+            context^.raiseError('Cannot apply for/each rule to element '+x^.toString(100),eachLocation);
+            proceed:=false;
+          end;
+        end;
       end;
       inc(processed);
       with recycling do if fill>0 then begin
@@ -233,8 +272,8 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
       eachIndex:longint=0;
       x:P_literal;
       iter:T_arrayOfLiteral;
-      proceed:boolean=true;
 
+{$MACRO ON}
 {$define processX:=
   begin
   for rule in rulesList do if proceed then begin
@@ -246,6 +285,7 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
 end}
 
   begin
+    for rule in rulesList do rulesArity:=rule^.arity.maxPatternLength;
     {$ifdef fullVersion}
     if tco_stackTrace in context^.threadOptions then context^.callStackPush(eachLocation,'pEach',stepForward(eachLocation,6),nil);
     {$endif}
@@ -472,16 +512,13 @@ FUNCTION T_eachTask.define(CONST payload_:T_eachPayload):P_eachTask;
   end;
 
 PROCEDURE T_eachTask.evaluate(CONST recycler:P_recycler);
-  VAR indexLiteral:P_abstractIntLiteral;
   begin
     context^.beginEvaluation;
     evaluationResult.literal:=nil;
     if not(isCancelled) and context^.messages^.continueEvaluation then with payloads do begin
-      indexLiteral:=recycler^.newIntLiteral(eachIndex);
-      evaluationResult:=evaluteExpression(eachRule,eachRule^.getLocation,context,recycler,eachParameter,indexLiteral);
-      recycler^.disposeLiteral(indexLiteral);
+      evaluationResult:=eachRule^.evaluate(eachRule^.getLocation,context,recycler,parameters);
     end;
-    if payloads.eachParameter<>nil then recycler^.disposeLiteral(payloads.eachParameter);
+    if payloads.parameters<>nil then recycler^.disposeLiteral(payloads.parameters);
     context^.finalizeTaskAndDetachFromParent(recycler);
   end;
 

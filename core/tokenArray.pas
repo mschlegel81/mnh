@@ -617,7 +617,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
       idType: T_tokenType;
       idLoc: T_tokenLocation;
       beforeLast:P_token=nil;
-
+      id:T_idString;
     FUNCTION ensureBeforeLast:P_token;
       begin
         beforeLast:=nextStatement.token.first;
@@ -667,10 +667,15 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
         tt_while:                                       localIdStack.scopePush(tok,sc_while);
         tt_repeat:                                      localIdStack.scopePush(tok,sc_repeat);
         tt_if:                                          localIdStack.scopePush(tok,sc_if);
-        tt_each,tt_parallelEach,tt_for:begin
+        tt_each,tt_parallelEach:begin
           localIdStack.scopePush(tok,sc_each);
           localIdStack.addId(EACH_INDEX_IDENTIFIER,tok^.location,tt_eachIndex);
           localIdStack.addId(tok^.txt             ,tok^.location,tt_eachParameter);
+        end;
+        tt_for:begin
+          localIdStack.scopePush(tok,sc_each);
+          localIdStack.addId(EACH_INDEX_IDENTIFIER,tok^.location,tt_eachIndex);
+          for id in split(tok^.txt,',') do localIdStack.addId(id,tok^.location,tt_eachParameter);
         end;
         tt_endBlock,tt_separatorComma,
         tt_braceClose,tt_expBraceClose,tt_listBraceClose,tt_iifElse,tt_do,tt_until,tt_then,tt_else,
@@ -1964,6 +1969,7 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
   VAR nextToken:P_token;
       n:array[1..3] of P_token;
       id:string;
+      inFound:boolean;
   begin
     nextToken:=fetch(messages,recycler);
     if nextToken=nil then exit(false);
@@ -2072,24 +2078,43 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
         nextToken:=nil;
       end;
       tt_for:begin
+        inFound:=false;
         n[1]:=fetch(messages,recycler);
         n[2]:=fetch(messages,recycler);
-        if (n[1]<>nil) and (n[1]^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule]) and
-           (n[2]<>nil) and (n[2]^.tokType = tt_operatorIn)
-        then begin
-          {$ifdef fullVersion}
-          if (callAndIdInfos<>nil) and (associatedPackage^.isMain) then begin
-            callAndIdInfos^.addTokenRelation(nextToken,n[2]);
+        while not(inFound) and
+           (n[1]<>nil) and (n[1]^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule]) and
+           (n[2]<>nil) and (n[2]^.tokType in [tt_operatorIn,tt_separatorComma])
+        do begin
+          if (n[2]^.tokType=tt_operatorIn) then begin
+            inFound:=true;
+            {$ifdef fullVersion}
+            if (callAndIdInfos<>nil) and (associatedPackage^.isMain)  then begin
+              callAndIdInfos^.addTokenRelation(nextToken,n[2]);
+            end;
+            {$endif}
           end;
-          {$endif}
-          nextToken^.txt:=n[1]^.txt;
-          nextToken^.data:=nil;
-        end else messages^.raiseSimpleError('Invalid for construct. Syntax is: for <id> in <iterable> do [parallel] ...',nextToken^.location);
-        recycler^.disposeToken(n[1]);
-        recycler^.disposeToken(n[2]);
-        nextToken^.data:=nil;
-        appendToken(nextToken);
-        nextToken:=nil;
+          if nextToken^.txt='for'
+          then nextToken^.txt:=n[1]^.txt
+          else nextToken^.txt+=','+n[1]^.txt;
+
+          recycler^.disposeToken(n[1]);
+          recycler^.disposeToken(n[2]);
+
+          if inFound then begin
+            nextToken^.data:=nil;
+            appendToken(nextToken);
+            nextToken:=nil;
+          end else begin
+            n[1]:=fetch(messages,recycler);
+            n[2]:=fetch(messages,recycler);
+          end;
+        end;
+        if not inFound then begin
+          appendToken(nextToken);
+          appendToken(n[1]);
+          nextToken:=n[2];
+          messages^.raiseSimpleError('Invalid for construct. Syntax is: for <id> in <iterable> do [parallel] ...',nextToken^.location);
+        end;
       end;
       tt_agg: begin
         n[1]:=fetch(messages,recycler);
