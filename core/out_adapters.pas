@@ -307,8 +307,8 @@ CONST
 PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,options:string);
 {$ifdef fullVersion}VAR{$else}CONST{$endif}
   gui_started:(NO,ide,ide_starting_up,REEVALUATION)=NO;
-FUNCTION stringToMessageTypeSet(CONST s:string;           CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el3_evalError..mt_endOfEvaluation]):T_messageTypeSet;
-FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el3_evalError..mt_endOfEvaluation]):string;
+FUNCTION stringToMessageTypeSet(CONST s:string;           CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el2_warning..mt_endOfEvaluation]):T_messageTypeSet;
+FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el2_warning..mt_endOfEvaluation]):string;
 IMPLEMENTATION
 USES myStringUtil,strutils,fileWrappers,Classes
      {$ifdef Windows},windows{$endif};
@@ -354,7 +354,7 @@ PROCEDURE ensureFileFlushThread;
     leaveCriticalSection(globalAdaptersCs);
   end;
 
-FUNCTION stringToMessageTypeSet(CONST s:string; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el3_evalError..mt_endOfEvaluation]):T_messageTypeSet;
+FUNCTION stringToMessageTypeSet(CONST s:string; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el2_warning..mt_endOfEvaluation]):T_messageTypeSet;
   VAR i,level:longint;
       mt:T_messageType;
   begin
@@ -390,7 +390,7 @@ FUNCTION stringToMessageTypeSet(CONST s:string; CONST toOverride:T_messageTypeSe
     end;
   end;
 
-FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el3_evalError..mt_endOfEvaluation]):string;
+FUNCTION messageTypeSetToString(CONST s:T_messageTypeSet; CONST toOverride:T_messageTypeSet=[mt_clearConsole,mt_printline,mt_printdirect,mt_log,mt_el2_warning..mt_endOfEvaluation]):string;
   VAR toSwitchOn :T_messageTypeSet=[];
       toSwitchOff:T_messageTypeSet=[];
       mt:T_messageType;

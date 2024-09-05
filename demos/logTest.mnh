@@ -1,4 +1,4 @@
-#!/usr/bin -out ?.log(p)
+#!C:\bin\mnh.exe -logLocationLength 14 -log ?.log(1)
 LOG_FILE_NAME:=changeFileExt(myPath,'.log');
 EXIT_CODE:=156; //For Linux, exit codes must be in range 0..255
 main->begin
@@ -12,8 +12,9 @@ main->begin
 end;
 
 main('out')->begin
+  log('script called with parameter ',escape($1));
   note('Creating output...');
-  rangeGenerator(1,1000).map(::factorize).map(::print).agg(|);
+  rangeGenerator(1,100).map(::factorize).map(::print).agg(|);
   warn('This is all...');
-  setExitCode(156);
+  setExitCode(EXIT_CODE);
 end;
