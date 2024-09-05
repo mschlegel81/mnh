@@ -1,27 +1,36 @@
-private center(aPhi,k)->aPhi[0]^k*[cos(aPhi[1]*k),sin(aPhi[1]*k)];
-private memoized rad0(aPhi)->euklideanNorm(center(aPhi,1)-[1,0])/(1+aPhi[0]);
-private radius(aPhi,k)->rad0(aPhi)*aPhi[0]^k;
+USE GUI,downhillSimplex;
 
-private errorFunc(k)->
- {sqr(euklideanNorm(center($aPhi,k  )-[1,0])-(rad0($aPhi)+radius($aPhi,k  )))
- +sqr(euklideanNorm(center($aPhi,k+1)-[1,0])-(rad0($aPhi)+radius($aPhi,k+1)))
- +($aPhi[0]<1 ? 100 : 0)
- +($aPhi[1]<0 ? 100 : 0)};
+center(aPhi,k)->aPhi[0]^k*[cos(aPhi[1]*k),sin(aPhi[1]*k)];
 
-USE downhillSimplex;
-private datastore CONFIG_OF_K:=[[2,downhillSimplex(errorFunc(2),[2.89,2.23],0.001,1E-15)[1]]].toMap;
-findSolution(forK>=2)->CONFIG_OF_K[forK] orElse begin
-  maxK:=CONFIG_OF_K.getInner(0).max;
-  par:=CONFIG_OF_K[maxK];
-  [maxK+1..forK].each(k,begin
-    (k-[99..1]/100).each(subK,par:=downhillSimplex(errorFunc(subK),par,0.001,1E-10,DEFAULT_DOWNHILL_SIMPLEX_OPTIONS.withStepLimit(10) )[1]);
-                              par:=downhillSimplex(errorFunc(k   ),par,0.001,1E-15)[1];
-    note('New solution computed for k=',k,'; ',par);
-    CONFIG_OF_K[k]:=par;
-    void;
-  end);
-  CONFIG_OF_K[forK];
+rad0(aPhi)->euklideanNorm(center(aPhi,1)-[1,0])/(1+aPhi[0]);
+
+errorFunc(k)->(aPhi)->begin
+  r0:=rad0(aPhi);
+  //Consider 3 circles, one at center(aPhi,0) = [-1,0],
+  //                    one at center(aPhi,k)   - a bit under a full circle / spiral segment
+  //                    one at center(aPhi,k+1) - a but over a full circle
+  //The distances of these spheres must be equal to the sums of their radii (so that they touch but not overlap);
+  sqr(euklideanNorm(center(aPhi,k  )-[1,0])-(r0+r0*aPhi[0]^(k  )))
+ +sqr(euklideanNorm(center(aPhi,k+1)-[1,0])-(r0+r0*aPhi[0]^(k+1)))
+ +(aPhi[0]<=1 ? 1E6 : 0)   //Extra penalty if growth factor is below 1
+ +(aPhi[1]<=0 ? 1E6 : 0); //Extra penalty if angle-delta is below 0
 end;
+
+//*Find a solution for given k
+//*A spiral segment will contain k+1/2 circles, so that circle i touches circles i+k and i+k+1
+//*This is so costly to calculate, that we store it for later reference.
+datastore memoized
+findSolution(2)->downhillSimplex(errorFunc(2),[2.89,2.237],1E-3,1E-16)[1];
+//*For larger k, we approach the new solution from the solution for k-1 via interpolation of the error function
+findSolution(k>2)->
+  begin
+    par:=findSolution(k-1);
+    for sub_k in k-[99..1]/100
+    do par:=downhillSimplex(errorFunc(sub_k),par,1E-3,1E-15,DEFAULT_DOWNHILL_SIMPLEX_OPTIONS.withStepLimit(100))[1];
+    solution:=downhillSimplex(errorFunc(k  ),par,1E-3,1E-15);
+    log('Found a solution for k=',k,' with error=',solution[0]);
+    solution[1];
+  end;
 
 plotCircles(k,circleStyle:String,gridStyle:String)->
 plotCircles(k,circleStyle       ,gridStyle       ,   1,     0);
@@ -51,6 +60,9 @@ plotCircles(k,circleStyle:String,gridStyle:String,zoom,rotate)->begin
       [centers.tail(k+1),centers.leading(k+1)].transpose.each(p,p[0],p[1],[Nan,Nan])).addPlot(gridStyle);
     end;
 end;
+//plot();
+//plotCircles(12,'','');
+//display;
 
 //*Creates and displays an animation
 main('animate')->begin
