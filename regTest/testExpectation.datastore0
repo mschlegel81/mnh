@@ -437,30 +437,26 @@ expectations:=
   '  [7,8,3,4,5,6,9]','  [8,7,3,5,4,6,9]','  [9,6,4,5,3,7,8]','  [9,6,5,4,3,8,7]',
   'The number of solutions for 0..9 (nonunique) is: 2860'],
  'fourierDemo'=>
- ['FDLinux'=>
-  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
-   'was reconstructed as -0.0960*cos(0*t)+0.0381*cos(1*t)+0.604*sin(1*t)-0.524*cos(2*t)+0.118*sin(2*t);'],
-  'FDWin64'=>
-  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
-   'was reconstructed as -0.104*cos(0*t)-0.158*cos(1*t)+0.656*sin(1*t)-0.696*cos(2*t)+0.143*sin(2*t);'],
-  'FOLinux'=>
-  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
-   'was reconstructed as -0.0960*cos(0*t)+0.0381*cos(1*t)+0.604*sin(1*t)-0.524*cos(2*t)+0.118*sin(2*t);'],
+ ['FDWin64'=>
+  [
+   'Series                                                   +1.00*sin(1*t)-0.500*cos(2*t)                                                                                                             +0.100*sin(5*t)',
+   'was reconstructed as -0.000623*cos(0*t)-0.000405*cos(1*t)+1.00*sin(1*t)-0.500*cos(2*t)+0.000707*sin(2*t)-0.0000837*cos(3*t)+0.000661*sin(3*t)+0.000116*cos(4*t)+0.000595*sin(4*t)+0.000543*cos(5*t)+0.100*sin(5*t)'
+  ],
   'FOWin64'=>
-  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
-   'was reconstructed as -0.104*cos(0*t)-0.158*cos(1*t)+0.656*sin(1*t)-0.696*cos(2*t)+0.143*sin(2*t);'],
-  'LDLinux'=>
-  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
-   'was reconstructed as -0.0960*cos(0*t)+0.0381*cos(1*t)+0.604*sin(1*t)-0.524*cos(2*t)+0.118*sin(2*t);'],
+  [
+   'Series                                                   +1.00*sin(1*t)-0.500*cos(2*t)                                                                                                             +0.100*sin(5*t)',
+   'was reconstructed as -0.000623*cos(0*t)-0.000405*cos(1*t)+1.00*sin(1*t)-0.500*cos(2*t)+0.000707*sin(2*t)-0.0000837*cos(3*t)+0.000661*sin(3*t)+0.000116*cos(4*t)+0.000595*sin(4*t)+0.000543*cos(5*t)+0.100*sin(5*t)'
+  ],
   'LDWin64'=>
-  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
-   'was reconstructed as -0.104*cos(0*t)-0.158*cos(1*t)+0.656*sin(1*t)-0.696*cos(2*t)+0.143*sin(2*t);'],
-  'LOLinux'=>
-  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
-   'was reconstructed as -0.0960*cos(0*t)+0.0381*cos(1*t)+0.604*sin(1*t)-0.524*cos(2*t)+0.118*sin(2*t);'],
+  [
+   'Series                                                   +1.00*sin(1*t)-0.500*cos(2*t)                                                                                                             +0.100*sin(5*t)',
+   'was reconstructed as -0.000623*cos(0*t)-0.000405*cos(1*t)+1.00*sin(1*t)-0.500*cos(2*t)+0.000707*sin(2*t)-0.0000837*cos(3*t)+0.000661*sin(3*t)+0.000116*cos(4*t)+0.000595*sin(4*t)+0.000543*cos(5*t)+0.100*sin(5*t)'
+  ],
   'LOWin64'=>
-  ['log> Series               1.00*sin(1*t)-0.500*cos(2*t)+0.100*sin(5*t)',
-   'was reconstructed as -0.104*cos(0*t)-0.158*cos(1*t)+0.656*sin(1*t)-0.696*cos(2*t)+0.143*sin(2*t);']].toMap,
+  [
+   'Series                                                   +1.00*sin(1*t)-0.500*cos(2*t)                                                                                                             +0.100*sin(5*t)',
+   'was reconstructed as -0.000623*cos(0*t)-0.000405*cos(1*t)+1.00*sin(1*t)-0.500*cos(2*t)+0.000707*sin(2*t)-0.0000837*cos(3*t)+0.000661*sin(3*t)+0.000116*cos(4*t)+0.000595*sin(4*t)+0.000543*cos(5*t)+0.100*sin(5*t)'
+  ]].toMap,
  'fractalPlant'=>
  ['png hash: 7FCF082F1A2A06908E6F2D65F5BD60B9C824C0088706B125D07901BF0E17C8C9'],
  'fractran'=>

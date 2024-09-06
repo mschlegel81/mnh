@@ -5,9 +5,10 @@ formatFourierCoefficients(c:List)->begin
   end;
 
   c.each(f,
-    f[0]=0 ? void : format('%s*cos(%s*t)',threeDigits(f[0]),index),
-    f[1]=0 ? void : format('%s*sin(%s*t)',threeDigits(f[1]),index)).join('+')
-   .replace('+-','-');
+    f[0]=0 ? "\v" : format("%s\v*cos(%s*t)",threeDigits(f[0]),index),
+    f[1]=0 ? "\v" : format("%s\v*sin(%s*t)",threeDigits(f[1]),index)).join("\v+\v")
+   .replace("\v+\v\v","\v\v\v")
+   .replace("+\v-","-\v");
 end;
 
 main->begin
@@ -19,7 +20,7 @@ main->begin
       [0,0.1]];
   T:=random(1000).sort*2*pi;
   //Construct X from the series + Noise
-  X:=newFourierSeries(C)(T)+0.1*(random(1000)-0.5);
+  X:=newFourierSeries(C)(T)+0.001*(random(1000)-0.5);
 
   //The linear interpolator is the baseline for comparison
   F0   :=newLinearInterpolator([T,X].transpose);
@@ -34,5 +35,5 @@ main->begin
   end,min)[1];
 
   coeff:=coeff.head(bestCoeffCount);
-  log("Series\t",formatFourierCoefficients(C),"\nwas reconstructed as\t",coeff.formatFourierCoefficients);
+  print("Series\t",formatFourierCoefficients(C),"\nwas reconstructed as\t",coeff.formatFourierCoefficients);
 end;
