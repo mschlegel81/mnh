@@ -579,9 +579,8 @@ FUNCTION calcFourierCoeff_im intFuncSignature;
       end;
       spline.createForFourierAnalysis(allX,allY,tokenLocation,context);
       if not context^.continueEvaluation then exit(false);
-
+      //In the case of equidistant points, all in range 0..2pi, this reverts to plain FFT
       sampleCount:=list0^.size;
-//    while hasLargePrimeFactors(sampleCount) do inc(sampleCount);
       setLength(values_to_sample,sampleCount);
       for k:=0 to sampleCount-1 do values_to_sample[k]:=spline.getSingleInterpolatedValue(2*pi*k/sampleCount);
       spline.destroy;
