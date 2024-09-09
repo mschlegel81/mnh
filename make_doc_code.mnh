@@ -92,7 +92,6 @@ end;
 
 main->for line in generate_doc_lines(false) do print(line);
 main('test')->for line in generate_doc_lines(true) do print(line);
-main(output_file)->writeFileLines(output_file,generate_doc_lines(false));
 
 main('validate')->begin
   generate_doc_lines(false);
@@ -115,5 +114,6 @@ main('validate')->begin
   .map((id)->[id,id in called ? '' : 'uncalled', id in commented ? '' :'uncommented', id in signatures ? '': 'missing signature'].join("\t"))
   .join("\n")
   .print;
-
 end;
+
+main(output_file)->writeFileLines(output_file,generate_doc_lines(false));

@@ -667,12 +667,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
         tt_while:                                       localIdStack.scopePush(tok,sc_while);
         tt_repeat:                                      localIdStack.scopePush(tok,sc_repeat);
         tt_if:                                          localIdStack.scopePush(tok,sc_if);
-        tt_each,tt_parallelEach:begin
-          localIdStack.scopePush(tok,sc_each);
-          localIdStack.addId(EACH_INDEX_IDENTIFIER,tok^.location,tt_eachIndex);
-          localIdStack.addId(tok^.txt             ,tok^.location,tt_eachParameter);
-        end;
-        tt_for:begin
+        tt_each,tt_parallelEach,tt_for:begin
           localIdStack.scopePush(tok,sc_each);
           localIdStack.addId(EACH_INDEX_IDENTIFIER,tok^.location,tt_eachIndex);
           for id in split(tok^.txt,',') do localIdStack.addId(id,tok^.location,tt_eachParameter);
@@ -2070,12 +2065,54 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
            (n[3]<>nil) and (n[3]^.tokType=tt_separatorComma) then begin
           nextToken^.txt:=n[2]^.txt;
           nextToken^.data:=nil;
-        end else messages^.raiseSimpleError('Invalid (p)Each construct. First argument must be an identifier. At least two arguments must be given.',nextToken^.location);
-        recycler^.disposeToken(n[1]);
-        recycler^.disposeToken(n[2]);
-        recycler^.disposeToken(n[3]);
-        appendToken(nextToken);
-        nextToken:=nil;
+          recycler^.disposeToken(n[1]);
+          recycler^.disposeToken(n[2]);
+          recycler^.disposeToken(n[3]);
+          appendToken(nextToken);
+          nextToken:=nil;
+          inFound:=true;
+        end else if (n[1]<>nil) and (n[1]^.tokType=tt_braceOpen) and
+          (n[2]<>nil) and (n[2]^.tokType=tt_braceOpen) and
+          (n[3]<>nil) and (n[3]^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule])
+        then begin
+          recycler^.disposeToken(n[1]);
+          recycler^.disposeToken(n[2]);
+          n[1]:=n[3];
+          n[2]:=fetch(messages,recycler);
+          n[3]:=fetch(messages,recycler);
+          inFound:=false;
+          nextToken^.txt:='';
+          while not(inFound) and (n[1]<>nil) and (n[2]<>nil) and (n[3]<>nil) and
+             (n[1]^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule]) and
+             ((n[2]^.tokType=tt_braceClose) and (n[3]^.tokType=tt_separatorComma) or
+              (n[2]^.tokType=tt_separatorComma) and (n[3]^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule]))
+          do begin
+            if n[2]^.tokType=tt_braceClose then inFound:=true;
+            if nextToken^.txt=''
+            then nextToken^.txt:=    n[1]^.txt
+            else nextToken^.txt+=','+n[1]^.txt;
+            recycler^.disposeToken(n[1]);
+            recycler^.disposeToken(n[2]);
+            n[1]:=n[3];
+            if inFound then begin
+              nextToken^.data:=nil;
+              appendToken(nextToken);
+              nextToken:=nil;
+              recycler^.disposeToken(n[1]);
+            end else begin
+              n[2]:=fetch(messages,recycler);
+              n[3]:=fetch(messages,recycler);
+            end;
+          end;
+        end;
+        if not inFound then begin
+          messages^.raiseSimpleError('Invalid (p)Each construct. First argument must be an identifier. At least two arguments must be given.',nextToken^.location);
+          appendToken(nextToken);
+          if n[1]<>nil then appendToken(n[1]);
+          if n[2]<>nil then appendToken(n[2]);
+          if n[3]<>nil then appendToken(n[3]);
+          nextToken:=nil;
+        end;
       end;
       tt_for:begin
         inFound:=false;
@@ -2094,7 +2131,7 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
             {$endif}
           end;
           if nextToken^.txt='for'
-          then nextToken^.txt:=n[1]^.txt
+          then nextToken^.txt:=    n[1]^.txt
           else nextToken^.txt+=','+n[1]^.txt;
 
           recycler^.disposeToken(n[1]);

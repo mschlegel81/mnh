@@ -1507,9 +1507,11 @@ permutationIterator([3,1,2]).map(::print).toList;
 #S map(L,f:Expression(0));
 #C Returns a list by applying f. The input L is ignored (apart from its size)
 ['a'..'f'].map(::upper);
+
 #I lists.map
 //The result of <generator>.map(<f>) is a new generator
 rangeGenerator(1,100).map({$x^2});
+
 #I lists.map
 //You can use functions with more parameters if the input matches:
 zip([1..10],[10..1]*2).map((x,y)->x+y).toList;
@@ -1535,6 +1537,7 @@ try({deserialize('x')});
 #C Evaluates E and returns the result if successful. Otherwise <except> is executed without paramters.
 #S try(E:Expression(0),except);
 #C Evaluates E and returns the result if successful. Otherwise <except> (any type except expression) is returned.
+
 #I system.try
 //Try with fallback: print error messages, if any
 try({deserialize('x')},::print);
@@ -2136,6 +2139,9 @@ scriptTime-t0;
 #I sleepUntil
 #S sleepUntil(wallClockSeconds:Numeric);
 #C Sleeps until the wallclock reaches the given value
+t0:=scriptTime;
+sleepUntil(t0+0.1);
+scriptTime-t0;
 
 #I scriptTime
 #S scriptTime;
@@ -2159,6 +2165,7 @@ formatTime('hh:nn dd.mm.yyyy',systime);
 #I callMemoryCleaner
 #S callMemoryCleaner;
 #C Calls the memory cleaner
+callMemoryCleaner;
 
 #I assertGuiStarted
 #S assertGuiStarted;
@@ -2171,10 +2178,12 @@ formatTime('hh:nn dd.mm.yyyy',systime);
 #I showConsole
 #S showConsole; 
 #C shows the console
+showConsole;
 
 #I hideConsole
 #S hideConsole; 
 #C hides the console
+hideConsole;
 
 #I readXmlFile
 #S readXmlFile(filename:String);
@@ -2221,7 +2230,6 @@ parseJson('{A:[1,2,3], B:"x", C:1, nested:{x:0.123,y:4.321}}')
 #C returns an local non-convex smooth interpolator
 
 newLocalInterpolator([1,2,1,0,3]);
-
 
 #I rangeGenerator
 #S rangeGenerator(i0:Int,i1:Int);
@@ -2369,6 +2377,7 @@ newLocalInterpolator([1,2,1,0,3]);
 #I beep
 #S beep;
 #C Makes a beep
+beep();
 
 getOptions;
 #S getOptions;
@@ -2637,7 +2646,6 @@ FFT([1..10..1]);
 #C Returns the inverse Fast Fourier Transform of x
 iFFT([[10..0],[0..10]].transpose);
 
-
 #I math.calculateFourierCoefficients
 ([0..99]/100*2*pi).map((x)->sin(x)+cos(2*x)).calculateFourierCoefficients(8); //Straight forward DFT
 
@@ -2859,3 +2867,5 @@ allFolders('.');
 #I showVariable
 #S showVariable(V);
 #C Shows V in a tree-view.
+#S showVariable(V, caption:String);
+#C Shows V with a custom caption.
