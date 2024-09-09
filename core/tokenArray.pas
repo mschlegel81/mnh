@@ -2104,7 +2104,7 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
               n[3]:=fetch(messages,recycler);
             end;
           end;
-        end;
+        end else inFound:=false;
         if not inFound then begin
           messages^.raiseSimpleError('Invalid (p)Each construct. First argument must be an identifier. At least two arguments must be given.',nextToken^.location);
           appendToken(nextToken);
