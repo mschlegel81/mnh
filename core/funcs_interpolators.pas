@@ -342,16 +342,48 @@ CONSTRUCTOR T_cSplineInterpolator.create(CONST values: P_listLiteral; CONST loca
 
 CONSTRUCTOR T_cSplineInterpolator.createForFourierAnalysis(CONST xValues_,yValues_:T_arrayOfDouble; CONST location: T_tokenLocation; CONST context:P_context);
   CONST x_shifts:array[0..2] of double=(-2*pi,0,2*pi);
+        twoPi=2*pi;
+        iTwoPi=1/(2*pi);
   VAR i:longint;
       j:longint=0;
       x_shift:double;
+
+      pairs:T_arrayOfComplex;
+      tmp:T_Complex;
   begin
-    setLength(xValues,length(xValues_)*3);
-    setLength(yValues,length(yValues_)*3);
+
+    setLength(pairs,length(xValues_));
+    //Project all samples into interval [0, 2*pi) - potentially requires reordering
+    for i:=0 to length(xValues_)-1 do begin
+      pairs[i].re:=xValues_[i];
+      pairs[i].im:=yValues_[i];
+      if (pairs[i].re<0) or (pairs[i].re>=2*pi) then begin
+        x_shift:=pairs[i].re*iTwoPi;
+        pairs[i].re:=twoPi*(x_shift-floor(x_shift));
+      end;
+      for j:=0 to i-1 do if pairs[i].re<pairs[j].re then begin
+        tmp:=pairs[i]; pairs[i]:=pairs[j]; pairs[j]:=tmp;
+      end;
+    end;
+    //filter out samples which are "too close"
+    j:=0;
+    for i:=0 to length(pairs)-1 do begin
+      if (j>0) and (pairs[i].re-pairs[j-1].re<1E-6)
+      then pairs[j-1]:=(pairs[j-1]+pairs[i])*0.5
+      else begin
+        pairs[j]:=pairs[i];
+        inc(j);
+      end;
+    end;
+    setLength(pairs,j);
+
+    j:=0;
+    setLength(xValues,length(pairs)*3);
+    setLength(yValues,length(pairs)*3);
     for x_shift in x_shifts do
-    for i:=0 to length(xValues_)-1 do if (xValues_[i]>=0) and (xValues_[i]<2*pi) then begin
-      xValues[j]:=xValues_[i]+x_shift;
-      yValues[j]:=yValues_[i];
+    for i:=0 to length(pairs)-1 do if (pairs[i].re>=0) and (pairs[i].im<2*pi) then begin
+      xValues[j]:=pairs[i].re+x_shift;
+      yValues[j]:=pairs[i].im;
       inc(j);
     end;
     setLength(xValues,j);
