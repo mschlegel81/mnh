@@ -613,6 +613,10 @@ FUNCTION calcFourierCoeff_im intFuncSignature;
       if not context^.continueEvaluation then exit(false);
       //In the case of equidistant points, all in range 0..2pi, this reverts to plain FFT
       sampleCount:=list0^.size;
+      if sampleCount>4*maxWaveNumber then begin
+        sampleCount:=4*maxWaveNumber;
+        while hasLargePrimeFactors(sampleCount) do inc(sampleCount);
+      end;
       setLength(values_to_sample,sampleCount);
       for k:=0 to sampleCount-1 do values_to_sample[k]:=spline.getSingleInterpolatedValue(2*pi*k/sampleCount);
       spline.destroy;
