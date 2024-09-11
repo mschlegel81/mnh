@@ -559,8 +559,8 @@ FUNCTION T_fourierSeries.getSingleInterpolatedValue(CONST floatIdx: double): dou
   VAR i:longint;
   begin
     result:=0;
-    if includeYsin then for i:=1 to length(yValues)-1 do result+=yValues[i]*system.sin(floatIdx*i);
-    if includeXcos then for i:=0 to length(xValues)-1 do result+=xValues[i]*system.cos(floatIdx*i);
+    if includeYsin then for i:=1 to length(yValues)-1 do if yValues[i]<>0 then result+=yValues[i]*system.sin(floatIdx*i);
+    if includeXcos then for i:=0 to length(xValues)-1 do if xValues[i]<>0 then result+=xValues[i]*system.cos(floatIdx*i);
   end;
 
 CONSTRUCTOR T_fourierSeries.create(CONST values: P_listLiteral; CONST location: T_tokenLocation; CONST context: P_context);

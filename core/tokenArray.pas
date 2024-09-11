@@ -1685,7 +1685,7 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
         then result.shortInfo:='suppresses warnings about unused rules';
         if result.tokenText=ATTRIBUTE_PREFIX+SUPPRESS_UNUSED_PARAMETER_WARNING_ATTRIBUTE
         then result.shortInfo:='suppresses warnings about unused parameters';
-        if result.tokenText=ATTRIBUTE_PREFIX+MAX_AGE_ATTRIBUTE
+        if startsWith(result.tokenText,ATTRIBUTE_PREFIX+MAX_AGE_ATTRIBUTE)
         then result.shortInfo:='Sets the maximum age for a cached element in seconds';
       end;
       tt_userRule, tt_globalVariable: begin
