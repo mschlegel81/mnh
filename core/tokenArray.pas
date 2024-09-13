@@ -1120,7 +1120,7 @@ FUNCTION T_idStack.hasBeginItem:boolean;
   VAR i:longint;
   begin
     result:=false;
-    for i:=0 to length(scope)-1 do if scope[i].scopeType=sc_block then exit(true);
+    for i:=0 to length(scope)-1 do if scope[i].scopeType in [sc_block,sc_repeat] then exit(true);
   end;
 
 FUNCTION T_idStack.addId(CONST id:T_idString; CONST location:T_tokenLocation; CONST idType:T_tokenType):T_addIdResult;
@@ -1128,7 +1128,7 @@ FUNCTION T_idStack.addId(CONST id:T_idString; CONST location:T_tokenLocation; CO
   begin
     i:=length(scope)-1;
     if idType=tt_blockLocalVariable
-    then while (i>=0) and (scope[i].scopeType<>sc_block) do dec(i);
+    then while (i>=0) and not(scope[i].scopeType in [sc_block,sc_repeat]) do dec(i);
     if i<0 then exit(air_notInBlock);
     with scope[i] do begin
       for j:=0 to length(ids)-1 do if ids[j].name=id then exit(air_reintroduce);
