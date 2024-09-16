@@ -125,6 +125,12 @@ TYPE
     secondsPerFrame:double;
     framesTimer:TEpikTimer;
 
+    pendingAnimationFrame:record
+      prepared:boolean;
+      timing:T_timedPlotExecution;
+      buffer:TImage;
+    end;
+
     mouseUpTriggersPlot:boolean;
     lastMouseX,lastMouseY:longint;
     relatedPlot:P_guiPlotSystem;
@@ -336,6 +342,9 @@ PROCEDURE TplotForm.FormCreate(Sender: TObject);
     initDockMenuItems(PopupMenu1,nil);
     registerFontControl(StatusBar,ctGeneral);
     registerFontControl(AnimationGroupBox,ctGeneral);
+
+    pendingAnimationFrame.prepared:=false;
+    pendingAnimationFrame.buffer:=TImage.create(self);
   end;
 
 PROCEDURE TplotForm.animateCheckBoxClick(Sender: TObject);
@@ -376,7 +385,7 @@ PROCEDURE TplotForm.frameTrackBarChange(Sender: TObject);
     animationFrameIndex:=frameTrackBar.position;
     relatedPlot^.startGuiInteraction;
     try
-      relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,timedPlotExecution(nil,0));
+      relatedPlot^.animation.getFrame(plotImage,animationFrameIndex);
     finally
       relatedPlot^.doneGuiInteraction;
     end;
@@ -590,20 +599,31 @@ PROCEDURE TplotForm.performFastUpdate;
     try
       if (gui_started<>NO) and (showing) and (relatedPlot^.animation.frameCount>0) then begin
         plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
-        if animateCheckBox.checked and
-          (frameInterval-framesTimer.elapsed-secondsPerFrameOverhead<0.1) and
-          relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height)
-        then begin
-          relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,timedPlotExecution(framesTimer,frameInterval-secondsPerFrameOverhead));
-          framesTimer.clear;
-          framesTimer.start;
-          //FPS label:
-          updateSecondsPerFrame;
-          framesTimer.clear(fpsSamplingStart);
-          framesTimer.start(fpsSamplingStart);
-          animationFPSLabel.caption:=formatFloat('#0.0',1/secondsPerFrame)+'fps';
-          //:FPS label
+        if animateCheckBox.checked then begin
+          if pendingAnimationFrame.prepared and (pendingAnimationFrame.timing.secondsLeft-secondsPerFrameOverhead<0.05) then begin
+            pendingAnimationFrame.timing.wait;
+            plotImage.Canvas.draw(0,0,pendingAnimationFrame.buffer.picture.Bitmap);
+            pendingAnimationFrame.prepared:=false;
+            framesTimer.clear;
+            framesTimer.start;
+            //FPS label:
+            updateSecondsPerFrame;
+            framesTimer.clear(fpsSamplingStart);
+            framesTimer.start(fpsSamplingStart);
+            animationFPSLabel.caption:=formatFloat('#0.0',1/secondsPerFrame)+'fps';
+          end;
+          if not pendingAnimationFrame.prepared then begin
+            if relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height)
+            then begin
+              pendingAnimationFrame.prepared:=true;
+              pendingAnimationFrame.timing:=timedPlotExecution(framesTimer,frameInterval-secondsPerFrameOverhead);
+              pendingAnimationFrame.buffer.SetBounds(0,0,plotImage.width,plotImage.height);
+              pendingAnimationFrame.buffer.picture.Bitmap.setSize(plotImage.width,plotImage.height);
+              relatedPlot^.animation.getFrame(pendingAnimationFrame.buffer,animationFrameIndex);
+            end;
+          end;
         end else relatedPlot^.flushToGui(false);
+
         frameTrackBar.max:=relatedPlot^.animation.frameCount-1;
         frameTrackBar.position:=animationFrameIndex;
         frameIndexLabel.caption:=intToStr(animationFrameIndex);
@@ -756,7 +776,7 @@ PROCEDURE TplotForm.doPlot;
         updateInteractiveSection;
         plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
         if relatedPlot^.animation.frameCount<>0 then begin
-          relatedPlot^.animation.getFrame(plotImage,animationFrameIndex,timedPlotExecution(nil,0));
+          relatedPlot^.animation.getFrame(plotImage,animationFrameIndex);
         end else begin
           relatedPlot^.currentPlot.renderPlot(plotImage);
           relatedPlot^.logPlotDone;

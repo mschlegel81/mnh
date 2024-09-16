@@ -23,6 +23,7 @@ TYPE
     timer:TEpikTimer;
     timeout:double;
     PROCEDURE wait;
+    FUNCTION secondsLeft:double;
   end;
 
   P_addRowMessage=^T_addRowMessage;
@@ -179,7 +180,7 @@ TYPE
       FUNCTION getRowStatementCount:longint;
 
       PROCEDURE doneImage(CONST cacheMode:T_frameCacheMode);
-      PROCEDURE obtainImage(VAR target:TImage; CONST timing:T_timedPlotExecution);
+      PROCEDURE obtainImage(VAR target:TImage);
       PROCEDURE prepareImage(CONST width,height:longint);
 
       {$ifdef enable_render_threads}
@@ -205,7 +206,7 @@ TYPE
       DESTRUCTOR destroy;
       PROCEDURE clear(CONST isVolatile:boolean=false);
       FUNCTION frameCount:longint;
-      PROCEDURE getFrame(VAR target:TImage; CONST frameIndex:longint; CONST timing:T_timedPlotExecution);
+      PROCEDURE getFrame(VAR target:TImage; CONST frameIndex:longint);
       PROCEDURE renderFrame(CONST index:longint; CONST fileName:string; CONST width,height:longint; CONST exportingAll:boolean);
       PROCEDURE addFrame(VAR plot:T_plot);
       FUNCTION nextFrame(VAR frameIndex:longint; CONST cycle:boolean; CONST width,height:longint):boolean;
@@ -337,6 +338,13 @@ PROCEDURE T_timedPlotExecution.wait;
     if timer=nil then exit;
     if timeout-timer.elapsed>0.1 then sleep(round(1000*(timeout-timer.elapsed))-100);
     if timeout-timer.elapsed>0   then sleep(round(1000*(timeout-timer.elapsed))    );
+  end;
+
+FUNCTION T_timedPlotExecution.secondsLeft:double;
+  begin
+    if timer=nil
+    then result:=-1
+    else result:=timeout-timer.elapsed;
   end;
 
 PROCEDURE T_plot.doneImage(CONST cacheMode:T_frameCacheMode);
@@ -502,14 +510,13 @@ FUNCTION T_plot.hasResolution(CONST width,height:longint):boolean;
     leaveCriticalSection(plotCs);
   end;
 
-PROCEDURE T_plot.obtainImage(VAR target: TImage; CONST timing:T_timedPlotExecution);
+PROCEDURE T_plot.obtainImage(VAR target: TImage);
   begin
     enterCriticalSection(plotCs);
     try
       if not isImagePreparedForResolution(target.width,target.height) then
       prepareImage(target.width,target.height);
       target.Canvas.draw(0,0,cachedImage.image.picture.Bitmap);
-      timing.wait;
     finally
       leaveCriticalSection(plotCs);
     end;
@@ -818,7 +825,7 @@ FUNCTION T_plotSeries.frameCount: longint;
     leaveCriticalSection(seriesCs);
   end;
 
-PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; CONST timing:T_timedPlotExecution);
+PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint);
   VAR current:P_plot;
 
   PROCEDURE handleImagesToFree;
@@ -851,7 +858,7 @@ PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint; C
     if (frameIndex<0) or (frameIndex>=length(frame)) then exit;
     current:=frame[frameIndex];
     if not(volatile) then handleImagesToFree;
-    current^.obtainImage(target,timing);
+    current^.obtainImage(target);
   end;
 
 PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; CONST width,height:longint; CONST exportingAll:boolean);
@@ -870,7 +877,7 @@ PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; C
       {$endif}
         storeImage:=TImage.create(nil);
         storeImage.SetInitialBounds(0,0,width,height);
-        frame[index]^.obtainImage(storeImage,timedPlotExecution(nil,0));
+        frame[index]^.obtainImage(storeImage);
         try
           if lowercase(extractFileExt(fileName))='.bmp'
           then storeImage.picture.Bitmap.saveToFile(fileName)

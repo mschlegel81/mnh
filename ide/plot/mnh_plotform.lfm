@@ -4,7 +4,7 @@ object plotForm: TplotForm
   Top = 241
   Width = 467
   Caption = 'MNH plot'
-  ClientHeight = 281
+  ClientHeight = 301
   ClientWidth = 467
   Menu = MainMenu
   OnClose = FormClose
@@ -16,11 +16,11 @@ object plotForm: TplotForm
   OnShow = FormShow
   PopupMenu = PopupMenu1
   Position = poScreenCenter
-  LCLVersion = '2.2.2.0'
+  LCLVersion = '3.0.0.3'
   object plotImage: TImage
     Cursor = crCross
     Left = 0
-    Height = 213
+    Height = 233
     Top = 45
     Width = 467
     Align = alClient
@@ -32,7 +32,7 @@ object plotForm: TplotForm
   object StatusBar: TStatusBar
     Left = 0
     Height = 23
-    Top = 258
+    Top = 278
     Width = 467
     Panels = <>
     ParentFont = False
@@ -57,17 +57,17 @@ object plotForm: TplotForm
       Left = 0
       Height = 25
       Top = 0
-      Width = 63
+      Width = 61
       Align = alLeft
       Caption = 'animate'
-      OnClick = animateCheckBoxClick
-      OnKeyUp = tabNextKeyHandling
       ParentFont = False
       PopupMenu = PopupMenu1
       TabOrder = 0
+      OnClick = animateCheckBoxClick
+      OnKeyUp = tabNextKeyHandling
     end
     object animationSpeedTrackbar: TTrackBar
-      Left = 110
+      Left = 106
       Height = 25
       Top = 0
       Width = 67
@@ -79,7 +79,7 @@ object plotForm: TplotForm
       TabOrder = 2
     end
     object animationFPSLabel: TLabel
-      Left = 177
+      Left = 173
       Height = 25
       Top = 0
       Width = 15
@@ -90,10 +90,10 @@ object plotForm: TplotForm
       PopupMenu = PopupMenu1
     end
     object frameTrackBar: TTrackBar
-      Left = 192
+      Left = 188
       Height = 25
       Top = 0
-      Width = 265
+      Width = 269
       Frequency = 5
       OnChange = frameTrackBarChange
       PageSize = 10
@@ -105,16 +105,16 @@ object plotForm: TplotForm
       TabOrder = 3
     end
     object cycleCheckbox: TCheckBox
-      Left = 63
+      Left = 61
       Height = 25
       Top = 0
-      Width = 47
+      Width = 45
       Align = alLeft
       Caption = 'cycle'
-      OnKeyUp = tabNextKeyHandling
       ParentFont = False
       PopupMenu = PopupMenu1
       TabOrder = 1
+      OnKeyUp = tabNextKeyHandling
     end
     object frameIndexLabel: TLabel
       Left = 457
