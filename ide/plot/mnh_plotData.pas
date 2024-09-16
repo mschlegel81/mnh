@@ -201,12 +201,14 @@ TYPE
       FUNCTION getOptions(CONST index:longint):T_scalingOptions;
       PROCEDURE setOptions(CONST index:longint; CONST value:T_scalingOptions);
       PROCEDURE flushFramesToDisk;
+      PROCEDURE handleImagesToFree(CONST current:P_plot);
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
       PROCEDURE clear(CONST isVolatile:boolean=false);
       FUNCTION frameCount:longint;
       PROCEDURE getFrame(VAR target:TImage; CONST frameIndex:longint);
+      FUNCTION canGetFrame(VAR target:TImage; CONST frameIndex:longint):boolean;
       PROCEDURE renderFrame(CONST index:longint; CONST fileName:string; CONST width,height:longint; CONST exportingAll:boolean);
       PROCEDURE addFrame(VAR plot:T_plot);
       FUNCTION nextFrame(VAR frameIndex:longint; CONST cycle:boolean; CONST width,height:longint):boolean;
@@ -825,40 +827,55 @@ FUNCTION T_plotSeries.frameCount: longint;
     leaveCriticalSection(seriesCs);
   end;
 
+PROCEDURE T_plotSeries.handleImagesToFree(CONST current:P_plot);
+  VAR k,j:longint;
+      cacheMode:T_frameCacheMode;
+  begin
+    //remove current from list
+    k:=0;
+    while k<length(framesWithImagesAllocated)-1 do
+    if framesWithImagesAllocated[k]=current then begin
+      for j:=k to length(framesWithImagesAllocated)-2 do
+      framesWithImagesAllocated[j]:=framesWithImagesAllocated[j+1];
+      framesWithImagesAllocated[length(framesWithImagesAllocated)-1]:=nil;
+    end else inc(k);
+    //deallocate the last one
+    k:=length(framesWithImagesAllocated)-1;
+    if ideSettings.cacheAnimationFrames
+    then cacheMode:=fcm_retainImage
+    else cacheMode:=fcm_none;
+    if (framesWithImagesAllocated[k]<>nil) then framesWithImagesAllocated[k]^.doneImage(cacheMode);
+    //shift
+    move(framesWithImagesAllocated[0],
+         framesWithImagesAllocated[1],
+         (length(framesWithImagesAllocated)-1)*sizeOf(P_plot));
+    //insert
+    framesWithImagesAllocated[0]:=current;
+  end;
+
 PROCEDURE T_plotSeries.getFrame(VAR target: TImage; CONST frameIndex: longint);
   VAR current:P_plot;
-
-  PROCEDURE handleImagesToFree;
-    VAR k,j:longint;
-        cacheMode:T_frameCacheMode;
-    begin
-      //remove current from list
-      k:=0;
-      while k<length(framesWithImagesAllocated)-1 do
-      if framesWithImagesAllocated[k]=current then begin
-        for j:=k to length(framesWithImagesAllocated)-2 do
-        framesWithImagesAllocated[j]:=framesWithImagesAllocated[j+1];
-        framesWithImagesAllocated[length(framesWithImagesAllocated)-1]:=nil;
-      end else inc(k);
-      //deallocate the last one
-      k:=length(framesWithImagesAllocated)-1;
-      if ideSettings.cacheAnimationFrames
-      then cacheMode:=fcm_retainImage
-      else cacheMode:=fcm_none;
-      if (framesWithImagesAllocated[k]<>nil) then framesWithImagesAllocated[k]^.doneImage(cacheMode);
-      //shift
-      move(framesWithImagesAllocated[0],
-           framesWithImagesAllocated[1],
-           (length(framesWithImagesAllocated)-1)*sizeOf(P_plot));
-      //insert
-      framesWithImagesAllocated[0]:=current;
-    end;
-
   begin
     if (frameIndex<0) or (frameIndex>=length(frame)) then exit;
     current:=frame[frameIndex];
-    if not(volatile) then handleImagesToFree;
+    if not(volatile) then handleImagesToFree(current);
     current^.obtainImage(target);
+  end;
+
+FUNCTION T_plotSeries.canGetFrame(VAR target:TImage; CONST frameIndex:longint):boolean;
+  VAR current: P_plot;
+  begin
+    if (frameIndex<0) or (frameIndex>=length(frame)) then exit(false);
+    current:=frame[frameIndex];
+    if not(volatile) then handleImagesToFree(current);
+    {$ifdef enable_render_threads}
+    if current^.isImagePreparedForResolution(target.width,target.height) then begin
+    {$endif}
+      result:=true;
+      current^.obtainImage(target);
+    {$ifdef enable_render_threads}
+    end else result:=false;
+    {$endif}
   end;
 
 PROCEDURE T_plotSeries.renderFrame(CONST index:longint; CONST fileName:string; CONST width,height:longint; CONST exportingAll:boolean);

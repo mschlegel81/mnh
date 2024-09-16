@@ -351,6 +351,7 @@ PROCEDURE TplotForm.animateCheckBoxClick(Sender: TObject);
   begin
     framesTimer.clear(fpsSamplingStart);
     framesTimer.start(fpsSamplingStart);
+    pendingAnimationFrame.timing:=timedPlotExecution(framesTimer,1-secondsPerFrameOverhead);
     secondsPerFrameOverhead:=0;
   end;
 
@@ -610,23 +611,25 @@ PROCEDURE TplotForm.performFastUpdate;
             updateSecondsPerFrame;
             framesTimer.clear(fpsSamplingStart);
             framesTimer.start(fpsSamplingStart);
+            pendingAnimationFrame.timing:=timedPlotExecution(framesTimer,frameInterval-secondsPerFrameOverhead);
             animationFPSLabel.caption:=formatFloat('#0.0',1/secondsPerFrame)+'fps';
+            frameTrackBar.position:=animationFrameIndex;
+            frameIndexLabel.caption:=intToStr(animationFrameIndex);
           end;
           if not pendingAnimationFrame.prepared then begin
             if relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height)
             then begin
-              pendingAnimationFrame.prepared:=true;
-              pendingAnimationFrame.timing:=timedPlotExecution(framesTimer,frameInterval-secondsPerFrameOverhead);
               pendingAnimationFrame.buffer.SetBounds(0,0,plotImage.width,plotImage.height);
               pendingAnimationFrame.buffer.picture.Bitmap.setSize(plotImage.width,plotImage.height);
-              relatedPlot^.animation.getFrame(pendingAnimationFrame.buffer,animationFrameIndex);
+              pendingAnimationFrame.prepared:=relatedPlot^.animation.canGetFrame(pendingAnimationFrame.buffer,animationFrameIndex);
             end;
           end;
-        end else relatedPlot^.flushToGui(false);
-
+        end else begin
+          relatedPlot^.flushToGui(false);
+          frameTrackBar.position:=animationFrameIndex;
+          frameIndexLabel.caption:=intToStr(animationFrameIndex);
+        end;
         frameTrackBar.max:=relatedPlot^.animation.frameCount-1;
-        frameTrackBar.position:=animationFrameIndex;
-        frameIndexLabel.caption:=intToStr(animationFrameIndex);
         if frameTrackBar.max>5000 then frameTrackBar.frequency:=500 else
         if frameTrackBar.max>1000 then frameTrackBar.frequency:=100 else
         if frameTrackBar.max> 500 then frameTrackBar.frequency:= 50 else
