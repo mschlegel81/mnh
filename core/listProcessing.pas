@@ -125,7 +125,6 @@ PROCEDURE processListSerial(CONST input:P_literal; CONST rulesList: T_expression
   PROCEDURE processX(x:P_literal);
     VAR rule:P_expressionLiteral;
         parameterList:T_listLiteral;
-        i:longint;
     begin
       indexLiteral:=recycler^.newIntLiteral(eachIndex);
       if rulesArity=2 then begin
@@ -141,7 +140,6 @@ PROCEDURE processListSerial(CONST input:P_literal; CONST rulesList: T_expression
         if (x^.literalType in C_compoundTypes) and (P_compoundLiteral(x)^.size=rulesArity-1) then begin
           parameterList.create(rulesArity);
           parameterList.appendAll(recycler,P_compoundLiteral(x));
-          for i:=0 to parameterList.size-1 do parameterList.value[i]^.unreference;
           parameterList.append(recycler,indexLiteral,true);
           for rule in rulesList do if proceed then begin
             addToAggregator(
@@ -151,6 +149,7 @@ PROCEDURE processListSerial(CONST input:P_literal; CONST rulesList: T_expression
               context,recycler);
             proceed:=context^.continueEvaluation and not(aggregator^.earlyAbort);
           end;
+          parameterList.cleanup(recycler);
           parameterList.destroy;
         end else begin
           context^.raiseError('Cannot apply for/each rule to element '+x^.toString(100),eachLocation);
@@ -234,7 +233,6 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
   PROCEDURE createTask(CONST expr:P_expressionLiteral; CONST idx:longint; CONST x:P_literal); {$ifndef debugMode} inline; {$endif}
     VAR nextToEnqueue:T_eachPayload;
         newTask:P_eachTask;
-        i:longint;
     begin
       with nextToEnqueue do begin
         eachRule     :=expr;
@@ -245,7 +243,6 @@ PROCEDURE processListParallel(CONST input:P_literal; CONST rulesList: T_expressi
         end else begin
           if (x^.literalType in C_compoundTypes) and (P_compoundLiteral(x)^.size=rulesArity-1) then begin
             parameters^.appendAll(recycler,P_compoundLiteral(x));
-            for i:=0 to parameters^.size-1 do parameters^.value[i]^.unreference;
             parameters^.appendInt(recycler,idx);
           end else begin
             context^.raiseError('Cannot apply for/each rule to element '+x^.toString(100),eachLocation);
