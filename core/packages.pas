@@ -988,12 +988,18 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
     end;
 
   PROCEDURE loadSecondaryProvider;
+    VAR transitive_use: T_packageReference;
     begin
       setLength(packageUses,1);
       packageUses[0].create('',secondaryProvider^.id,packageTokenLocation(@self),nil);
       packageUses[0].explicitlyGivenCodeProvider:=secondaryProvider;
       packageUses[0].loadPackage(@self,packageTokenLocation(@self),globals,recycler,usecase);
+
       ruleMap.clearImports;
+      for transitive_use in packageUses[0].pack^.packageUses do
+        if globals.primaryContext.continueEvaluation
+        then ruleMap.addImports(@transitive_use.pack^.ruleMap);
+
       if globals.primaryContext.continueEvaluation
       then ruleMap.addImports(@packageUses[0].pack^.ruleMap);
       customOperatorRules:=ruleMap.getOperators;
