@@ -78,6 +78,7 @@ TYPE
 
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
 IMPLEMENTATION
+USES mySys;
 CONST categoryText:array[T_profileCategory] of string=(':importing',':tokenizing',':declarations',':evaluation',':unknown',':total');
 FUNCTION blankProfilingCalls:T_packageProfilingCalls;
   VAR p:T_profileCategory;
@@ -181,12 +182,14 @@ CONSTRUCTOR T_profiler.create;
     line2funcLoc.create();
     initCriticalSection(cs);
     initCriticalSection(pendingCs);
+    memoryCleaner.registerObjectForCleanup(1,@flushPending);
     pending:=nil;
     pendingCount:=0;
   end;
 
 DESTRUCTOR T_profiler.destroy;
   begin
+    memoryCleaner.unregisterObjectForCleanup(@flushPending);
     enterCriticalSection(cs);
     enterCriticalSection(pendingCs);
     clear;

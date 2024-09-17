@@ -587,7 +587,10 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(CONST recycler:P_recycler; CONST l
     primaryContext.messages^.postSingal(mt_endOfEvaluation,location);
     if (primaryContext.messages^.isCollecting(mt_timing_info)) and (wallClock.timer<>nil) then logTimingInfo;
     {$ifdef fullVersion}
-    if (eco_profiling in globalOptions) and (profiler<>nil) then profiler^.logInfo(primaryContext.messages);
+    if (eco_profiling in globalOptions) and (profiler<>nil) then begin
+      primaryContext.messages^.postTextMessage(mt_printline,location,'Evaluation finished. Collecting profiling information...');
+      profiler^.logInfo(primaryContext.messages);
+    end;
     {$endif}
     if not(suppressBeep) and (eco_beepOnError in globalOptions) and primaryContext.messages^.triggersBeep then beep;
     while primaryContext.valueScope<>nil do begin
