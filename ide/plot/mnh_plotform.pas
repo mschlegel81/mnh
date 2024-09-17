@@ -126,7 +126,7 @@ TYPE
     framesTimer:TEpikTimer;
 
     pendingAnimationFrame:record
-      prepared:boolean;
+      prepared,pending:boolean;
       timing:T_timedPlotExecution;
       buffer:TImage;
     end;
@@ -344,6 +344,7 @@ PROCEDURE TplotForm.FormCreate(Sender: TObject);
     registerFontControl(AnimationGroupBox,ctGeneral);
 
     pendingAnimationFrame.prepared:=false;
+    pendingAnimationFrame.pending :=false;
     pendingAnimationFrame.buffer:=TImage.create(self);
   end;
 
@@ -351,6 +352,8 @@ PROCEDURE TplotForm.animateCheckBoxClick(Sender: TObject);
   begin
     framesTimer.clear(fpsSamplingStart);
     framesTimer.start(fpsSamplingStart);
+    pendingAnimationFrame.pending:=animateCheckBox.checked;
+    pendingAnimationFrame.prepared:=false;
     pendingAnimationFrame.timing:=timedPlotExecution(framesTimer,1-secondsPerFrameOverhead);
     secondsPerFrameOverhead:=0;
   end;
@@ -601,34 +604,42 @@ PROCEDURE TplotForm.performFastUpdate;
       if (gui_started<>NO) and (showing) and (relatedPlot^.animation.frameCount>0) then begin
         plotImage.picture.Bitmap.setSize(plotImage.width,plotImage.height);
         if animateCheckBox.checked then begin
-          if pendingAnimationFrame.prepared and (pendingAnimationFrame.timing.secondsLeft-secondsPerFrameOverhead<0.05) then begin
+          if pendingAnimationFrame.pending and (pendingAnimationFrame.timing.secondsLeft-secondsPerFrameOverhead<0.05) then begin
+            if not(pendingAnimationFrame.prepared)
+            then begin
+              pendingAnimationFrame.buffer.SetBounds(0,0,plotImage.width,plotImage.height);
+              pendingAnimationFrame.buffer.picture.Bitmap.setSize(plotImage.width,plotImage.height);
+              relatedPlot^.animation.getFrame(pendingAnimationFrame.buffer,animationFrameIndex);
+            end;
             pendingAnimationFrame.timing.wait;
             plotImage.Canvas.draw(0,0,pendingAnimationFrame.buffer.picture.Bitmap);
-            pendingAnimationFrame.prepared:=false;
-            framesTimer.clear;
-            framesTimer.start;
+
             //FPS label:
             updateSecondsPerFrame;
             framesTimer.clear(fpsSamplingStart);
             framesTimer.start(fpsSamplingStart);
-            pendingAnimationFrame.timing:=timedPlotExecution(framesTimer,frameInterval-secondsPerFrameOverhead);
             animationFPSLabel.caption:=formatFloat('#0.0',1/secondsPerFrame)+'fps';
-            frameTrackBar.position:=animationFrameIndex;
-            frameIndexLabel.caption:=intToStr(animationFrameIndex);
+            pendingAnimationFrame.pending :=false;
+            pendingAnimationFrame.prepared:=false;
           end;
-          if not pendingAnimationFrame.prepared then begin
-            if relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height)
-            then begin
-              pendingAnimationFrame.buffer.SetBounds(0,0,plotImage.width,plotImage.height);
-              pendingAnimationFrame.buffer.picture.Bitmap.setSize(plotImage.width,plotImage.height);
-              pendingAnimationFrame.prepared:=relatedPlot^.animation.canGetFrame(pendingAnimationFrame.buffer,animationFrameIndex);
-            end;
+
+          if not(pendingAnimationFrame.pending) and relatedPlot^.animation.nextFrame(animationFrameIndex,cycleCheckbox.checked,plotImage.width,plotImage.height) then begin
+            pendingAnimationFrame.pending:=true;
+            framesTimer.clear;
+            framesTimer.start;
+            pendingAnimationFrame.timing:=timedPlotExecution(framesTimer,frameInterval-secondsPerFrameOverhead);
+          end;
+
+          if pendingAnimationFrame.pending and not pendingAnimationFrame.prepared then begin
+            pendingAnimationFrame.buffer.SetBounds(0,0,plotImage.width,plotImage.height);
+            pendingAnimationFrame.buffer.picture.Bitmap.setSize(plotImage.width,plotImage.height);
+            pendingAnimationFrame.prepared:=relatedPlot^.animation.canGetFrame(pendingAnimationFrame.buffer,animationFrameIndex);
           end;
         end else begin
           relatedPlot^.flushToGui(false);
-          frameTrackBar.position:=animationFrameIndex;
-          frameIndexLabel.caption:=intToStr(animationFrameIndex);
         end;
+        frameTrackBar.position:=animationFrameIndex;
+        frameIndexLabel.caption:=intToStr(animationFrameIndex);
         frameTrackBar.max:=relatedPlot^.animation.frameCount-1;
         if frameTrackBar.max>5000 then frameTrackBar.frequency:=500 else
         if frameTrackBar.max>1000 then frameTrackBar.frequency:=100 else
