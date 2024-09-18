@@ -635,19 +635,23 @@ PROCEDURE TplotForm.performFastUpdate;
             pendingAnimationFrame.buffer.picture.Bitmap.setSize(plotImage.width,plotImage.height);
             pendingAnimationFrame.prepared:=relatedPlot^.animation.canGetFrame(pendingAnimationFrame.buffer,animationFrameIndex);
           end;
+
+          frameIndexLabel.caption:=intToStr(animationFrameIndex);
+          animateCheckBox.checked:=true;
         end else begin
           relatedPlot^.flushToGui(false);
         end;
-        frameTrackBar.position:=animationFrameIndex;
         frameIndexLabel.caption:=intToStr(animationFrameIndex);
+        frameTrackBar.min:=0;
         frameTrackBar.max:=relatedPlot^.animation.frameCount-1;
+        frameTrackBar.position:=animationFrameIndex;
         if frameTrackBar.max>5000 then frameTrackBar.frequency:=500 else
         if frameTrackBar.max>1000 then frameTrackBar.frequency:=100 else
         if frameTrackBar.max> 500 then frameTrackBar.frequency:= 50 else
         if frameTrackBar.max> 100 then frameTrackBar.frequency:= 10 else
         if frameTrackBar.max>  50 then frameTrackBar.frequency:=  5
                                   else frameTrackBar.frequency:=  1;
-        frameTrackBar.min:=0;
+
       end;
     finally
       relatedPlot^.doneGuiInteraction;
