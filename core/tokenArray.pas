@@ -1673,7 +1673,9 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
       tt_intrinsicRule:
         getBuiltinRuleInfo(result.linkToHelp);
       tt_blockLocalVariable, tt_parameterIdentifier, tt_eachParameter, tt_eachIndex:
-        begin end;
+        begin
+          result.shortInfo+=' declared at '+string(references);
+        end;
       tt_comparatorEq..tt_unaryOpMinus: begin
         result.tokenText:=operatorName[token^.tokType];
         getBuiltinRuleInfo(result.linkToHelp);
@@ -1950,8 +1952,8 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
 FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_recycler): boolean;
   PROCEDURE appendToken(CONST tok:P_token); inline;
     begin
-      if (tok<>nil) and
-         (tok^.tokType=tt_intrinsicRule) and
+      if tok=nil then exit;
+      if (tok^.tokType=tt_intrinsicRule) and
          ((tok^.data=pointer(BUILTIN_MYPATH)) or
           (tok^.data=pointer(BUILTIN_ASSERTUNIQUEINSTANCE)) or
           (tok^.data=pointer(BUILTIN_INSPECT)) or
@@ -2147,10 +2149,10 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
           end;
         end;
         if not inFound then begin
+          messages^.raiseSimpleError('Invalid for construct. Syntax is: for <id> in <iterable> do [parallel] ...',nextToken^.location);
           appendToken(nextToken);
           appendToken(n[1]);
           nextToken:=n[2];
-          messages^.raiseSimpleError('Invalid for construct. Syntax is: for <id> in <iterable> do [parallel] ...',nextToken^.location);
         end;
       end;
       tt_agg: begin
