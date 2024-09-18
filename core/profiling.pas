@@ -246,7 +246,7 @@ PROCEDURE T_profiler.addInternal(CONST id: T_idString; CONST callerFuncLocation,
 PROCEDURE T_profiler.add(CONST id: T_idString; CONST callerFuncLocation,callerLocation,calleeLocation: T_tokenLocation; CONST dt_inclusive, dt_exclusive: double);
   VAR newPending:P_callStackEntryProfilingPayload;
   begin
-    if (pendingCount>1024) and (tryEnterCriticalsection(cs)<>0) then begin
+    if (tryEnterCriticalsection(cs)<>0) then begin
       try
         addInternal(id,callerFuncLocation,callerLocation,calleeLocation,dt_inclusive,dt_exclusive);
       finally
@@ -266,6 +266,7 @@ PROCEDURE T_profiler.add(CONST id: T_idString; CONST callerFuncLocation,callerLo
         newPending^.next:=pending;
         pending:=newPending;
         inc(pendingCount);
+        if pendingCount>8192 then flushPending;
       finally
         leaveCriticalSection(pendingCs);
       end;
