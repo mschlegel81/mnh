@@ -171,21 +171,23 @@ PROCEDURE T_checkFilesThread.execute;
     threadStartsSleeping; //considered idle
     for i:=1 to 50 do if not Terminated then sleep(100);
     while not Terminated do begin
+      threadStopsSleeping;
       metaIndex:=0;
       while (metaIndex>=0) and (metaIndex<length(workspace.metas)) do begin
         m:=workspace.metas[metaIndex];
         try
-          with m^ do
-          if (fileInfo.filePath<>'') and not(fileExists(fileInfo.filePath)) and not(fileInfo.ignoreDeleted) then begin
-            message.filePath:=fileInfo.filePath;
-            message.deleted :=true;
-            message.modified:=false;
-            workspace.changedFilesQueue.appendIfNew(message,@equals_fileChangedMessage);
-          end else if fileIsModifiedOnFileSystem and not(fileInfo.ignoreChanged) then begin
-            message.filePath:=fileInfo.filePath;
-            message.modified:=true;
-            message.deleted :=false;
-            workspace.changedFilesQueue.appendIfNew(message,@equals_fileChangedMessage);
+          with m^ do if (fileInfo.filePath<>'') then begin
+            if not(fileExists(fileInfo.filePath)) and not(fileInfo.ignoreDeleted) then begin
+              message.filePath:=fileInfo.filePath;
+              message.deleted :=true;
+              message.modified:=false;
+              workspace.changedFilesQueue.appendIfNew(message,@equals_fileChangedMessage);
+            end else if fileIsModifiedOnFileSystem and not(fileInfo.ignoreChanged) then begin
+              message.filePath:=fileInfo.filePath;
+              message.modified:=true;
+              message.deleted :=false;
+              workspace.changedFilesQueue.appendIfNew(message,@equals_fileChangedMessage);
+            end;
           end;
         except
           //Ignore all exceptions
@@ -197,8 +199,10 @@ PROCEDURE T_checkFilesThread.execute;
       except
         //Ignore potential error on shutdown
       end;
+      threadStartsSleeping;
       for i:=1 to 20 do if not Terminated then sleep(100);
     end;
+
     threadStopsSleeping;
     Terminate;
     workspace.checkFilesThread_running:=false;

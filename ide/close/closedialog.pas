@@ -60,6 +60,7 @@ FUNCTION closeDialogForm:TcloseDialogForm;
 {$R *.lfm}
 PROCEDURE TcloseDialogForm.FormShow(Sender: TObject);
   begin
+    DoAutoSize;
     AdjustSize;
   end;
 
