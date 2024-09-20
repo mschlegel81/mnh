@@ -4,6 +4,7 @@
 //*            - mass of upper weight (default 1)
 //*            - mass of lower weight (default 1)
 plain script;
+@demo_for=numerics, simulation, animation, plain script, localAsync
 USE rungeKutta,GUI;
 //Animation parameters
 timeStepPerFrame:=0.02;
@@ -17,27 +18,19 @@ g:=9.81;
 F1fak:=-m2/(m1+m2)*l2/l1;
 F2fak:=-l1/l2;
 //*phi1'', dependent on phi2''
-@SuppressUnusedParameterWarning
-F1(phi1,phi2,phi1dt,phi2dt,        phi2dtt)->F1fak*(phi2dtt*cos(phi1-phi2)+phi2dt.sqr*sin(phi1-phi2))-g/l1*sin(phi1);
+F1(phi1,phi2,phi2dt,        phi2dtt)->F1fak*(phi2dtt*cos(phi1-phi2)+phi2dt.sqr*sin(phi1-phi2))-g/l1*sin(phi1);
 //*phi2'', dependent on phi1''
-@SuppressUnusedParameterWarning
-F2(phi1,phi2,phi1dt,phi2dt,phi1dtt        )->F2fak*(phi1dtt*cos(phi1-phi2)-phi1dt.sqr*sin(phi1-phi2))-g/l2*sin(phi2);
-//*Returns an expression F1(F2($x))-$x (for Regula Falsi)
-F12(phi1,phi2,phi1dt,phi2dt)->F1(phi1,phi2,phi1dt,phi2dt,F2(phi1,phi2,phi1dt,phi2dt,{$x}))-{$x};
-
-//*Overloaded for use in RK4
-accel(state:NumericList(4))->accel@state;
+F2(phi1,phi2,phi1dt,phi1dtt        )->F2fak*(phi1dtt*cos(phi1-phi2)-phi1dt.sqr*sin(phi1-phi2))-g/l2*sin(phi2);
 
 quickRoot(F:Expression)->begin -1-(f1:=F(-1))*2/(F(1)-f1); end;
 
 //*Returns first derivative in time for given state
-@demo_for=numerics, simulation, animation, plain script, future
 accel(phi1,phi2,phi1dt,phi2dt)->
   begin
     [phi1dt,
      phi2dt,
-     phi1dtt:=quickRoot(F12(phi1,phi2,phi1dt,phi2dt)),
-     F2(phi1,phi2,phi1dt,phi2dt,phi1dtt)];
+     phi1dtt:=quickRoot((x)->F1(phi1,phi2,phi2dt,F2(phi1,phi2,phi1dt,x))-x),
+     F2(phi1,phi2,phi1dt,phi1dtt)];
   end;
 
 //*Transforms the state (by angles) to a list of points (Cartesian, 2D)
@@ -60,9 +53,11 @@ begin
   hist2:=[state2];
   trace1:=[state1.plottable.trailing];
   trace2:=[state2.plottable.trailing];
-  p1:=state1.plottable;
-  p2:=state2.plottable;
-  replot:={begin
+  plottableQueue:=newQueue;
+  plottableQueue.put([state1.plottable,state2.plottable]);
+
+
+  replot:=(p1,p2)->begin
              trace1:=trace1.trailing(100)|[p1.trailing];
              trace2:=trace2.trailing(100)|[p2.trailing];
              setOptions(['x0'=>(x0:=min(x0,min(p1.getInner(0)),min(p2.getInner(0)))),
@@ -74,18 +69,24 @@ begin
              addPlot(p2,'3 . red l');
              addPlot(p1,'3 . black l');
              addAnimationFrame;
-           end};
+           end;
   clearAnimation(true);
-  replot();
+  replot@(plottableQueue());
   postDisplay;
-  step:=integrator(CASH_KARP,::accel,timeStepPerFrame,1E-7);
-  state1:=future(step,[state1]);
-  state2:=future(step,[state2]);
-  while not plotClosed do begin
-    p1:=(state1:=state1()).plottable; hist1|=[state1]; state1:=future(step,[state1]);
-    p2:=(state2:=state2()).plottable; hist2|=[state2]; state2:=future(step,[state2]);
-    replot();
-  end;
+  step:=integrator(CASH_KARP,(s)->accel@s,timeStepPerFrame,1E-7);
+
+  localAsync({begin
+    while not plotClosed do begin
+      hist1|=[state1:=step(state1)];
+      hist2|=[state2:=step(state2)];
+      plottableQueue.put([state1.plottable,state2.plottable]);
+      if (plottableQueue.size>100) then sleep(1);
+    end;
+    plottableQueue.closeQueue;
+    plottableQueue.toList;
+  end});
+
+  for p1,p2 in plottableQueue do replot(p1,p2);
 
   t:=[0..hist1.size-1]*timeStepPerFrame;
   mask:=[0..hist1.size-1] mod max(1,round(hist1.size/2000))=0;
