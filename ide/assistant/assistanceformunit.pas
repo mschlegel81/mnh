@@ -104,6 +104,7 @@ PROCEDURE TAssistanceForm.performFastUpdate;
     try
       if (codeAssistanceResponse<>nil) and ((codeAssistanceResponse^.stateHash<>paintedWithStateHash) or (AssistanceEdit.charsInWindow<>paintedWithWidth))
       then begin
+        messagesAndLocations.clear;
         codeAssistanceResponse^.getErrorHints(hasErrors,hasWarnings,messagesAndLocations);
         caption                           :=conditionalCaption[hasErrors,hasWarnings]+' ('+COMPONENT_SHORTCUT[icAssistance]+')';
         if parent<>nil then parent.caption:=conditionalCaption[hasErrors,hasWarnings]+' ('+COMPONENT_SHORTCUT[icAssistance]+')';
