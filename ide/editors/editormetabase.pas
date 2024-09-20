@@ -151,7 +151,7 @@ PROCEDURE setupEditorMetaBase(CONST languageMenuRoot        :TMenuItem);
       SynUNIXShellScriptSyn:=TSynUNIXShellScriptSyn.create(Application);
       SynVBSyn             :=TSynVBSyn             .create(Application);
       SynXMLSyn            :=TSynXMLSyn            .create(Application);
-      outputHighlighter    :=TMnhOutputSyn         .create(Application);
+      outputHighlighter    :=TMnhOutputSyn         .create(Application,nil);
       SynBatSyn            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
       SynCppSyn            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);
       SynCssSyn            .NumberAttri:=outputHighlighter.getAttributeForKind(SynHighlighterMnh.tkNonStringLiteral);

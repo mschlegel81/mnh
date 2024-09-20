@@ -62,6 +62,7 @@ TYPE
     OutputSynEdit: TSynEdit;
     outputHighlighter:TMnhOutputSyn;
     OutputPopupMenu: TPopupMenu;
+    CONSTRUCTOR create(TheOwner: TComponent; adapter_:P_lazyInitializedOutAdapter);  reintroduce;
     PROCEDURE cbFreezeOutputClick(Sender: TObject);
     PROCEDURE cbShowOnOutputChange(Sender: TObject);
     PROCEDURE FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
@@ -114,11 +115,10 @@ DESTRUCTOR T_lazyInitializedOutAdapter.destroy;
 FUNCTION T_lazyInitializedOutAdapter.ensureOutputForm: TOutputForm;
   begin
     if outputForm=nil then begin
-      outputForm:=TOutputForm.create(nil);
+      outputForm:=TOutputForm.create(nil,@self);
       if formCaption=''
       then outputForm.caption:=outputForm.getCaption
       else outputForm.caption:=formCaption;
-      outputForm.adapter:=@self;
       dockNewForm(outputForm);
       outputForm.updateAfterSettingsRestore;
       outputForm.showComponent(false);
@@ -151,7 +151,7 @@ PROCEDURE TOutputForm.updateAfterSettingsRestore;
 PROCEDURE TOutputForm.FormCreate(Sender: TObject);
   begin
     registerFontControl(OutputSynEdit,ctEditor);
-    outputHighlighter:=TMnhOutputSyn.create(self);
+    outputHighlighter:=TMnhOutputSyn.create(self,@self.adapter^.state);
     OutputSynEdit.highlighter:=outputHighlighter;
 
     initDockMenuItems(MainMenu1,miDockMainRoot);
@@ -174,6 +174,12 @@ PROCEDURE TOutputForm.FormCloseQuery(Sender: TObject; VAR CanClose: boolean);
 PROCEDURE TOutputForm.cbShowOnOutputChange(Sender: TObject);
   begin
     adapter^.jumpToEnd:=cbShowOnOutput.checked;
+  end;
+
+CONSTRUCTOR TOutputForm.create(TheOwner: TComponent; adapter_: P_lazyInitializedOutAdapter);
+  begin
+    adapter:=adapter_;
+    inherited create(TheOwner);
   end;
 
 PROCEDURE TOutputForm.cbFreezeOutputClick(Sender: TObject);
@@ -207,7 +213,8 @@ PROCEDURE TOutputForm.miEchoDeclarationsClick(Sender: TObject);
     adapter^.wrapEcho:=ideSettings.outputBehavior.echo_wrapping;
   end;
 
-PROCEDURE TOutputForm.OutputSynEditKeyUp(Sender: TObject; VAR key: word; Shift: TShiftState);
+PROCEDURE TOutputForm.OutputSynEditKeyUp(Sender: TObject; VAR key: word;
+  Shift: TShiftState);
   begin
     tabNextKeyHandling(Sender,key,Shift);
     if (key=13) and (ssCtrl in Shift) then begin
@@ -216,14 +223,15 @@ PROCEDURE TOutputForm.OutputSynEditKeyUp(Sender: TObject; VAR key: word; Shift: 
     end;
   end;
 
-PROCEDURE TOutputForm.OutputSynEditMouseDown(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
+PROCEDURE TOutputForm.OutputSynEditMouseDown(Sender: TObject;
+  button: TMouseButton; Shift: TShiftState; X, Y: integer);
   begin
     if (ssCtrl in Shift) and (button=mbLeft) then begin
       workspace.openLocation(adapter^.getLocationAtLine(OutputSynEdit.PixelsToRowColumn(point(x,y)).Y-1));
     end;
   end;
 
-PROCEDURE TOutputForm.performSlowUpdate(CONST isEvaluationRunning:boolean);
+PROCEDURE TOutputForm.performSlowUpdate(CONST isEvaluationRunning: boolean);
   begin
     if not(isEvaluationRunning) then cbFreezeOutput.checked:=false;
   end;

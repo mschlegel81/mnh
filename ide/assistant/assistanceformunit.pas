@@ -7,7 +7,7 @@ INTERFACE
 USES
   Classes, sysutils, Forms, Controls, Dialogs, Menus,
   SynEdit, ideLayoutUtil, codeAssistance, SynHighlighterMnh, editorMeta,
-  mnh_settings, basicTypes;
+  mnh_settings, basicTypes, messageFormatting;
 
 TYPE
 
@@ -29,9 +29,9 @@ TYPE
     PROCEDURE performFastUpdate; override;
     PROCEDURE dockChanged; override;
   private
-    locations:T_searchTokenLocations;
     paintedWithStateHash:T_hashInt;
     paintedWithWidth:longint;
+    messagesAndLocations:T_messagesAndLocations;
     PROCEDURE openLocationForLine(CONST i:longint);
   public
 
@@ -50,11 +50,11 @@ PROCEDURE ensureAssistanceForm;
 PROCEDURE TAssistanceForm.FormCreate(Sender: TObject);
   begin
     registerFontControl(AssistanceEdit,ctEditor);
-    assistanceHighlighter:=TMnhOutputSyn.create(self);
+    messagesAndLocations.create(1000);
+    assistanceHighlighter:=TMnhOutputSyn.create(self,@messagesAndLocations);
     AssistanceEdit.highlighter:=assistanceHighlighter;
     paintedWithStateHash:=0;
     paintedWithWidth:=0;
-    setLength(locations,0);
     initDockMenuItems(MainMenu1,nil);
     initDockMenuItems(PopupMenu1,PopupMenu1.items);
   end;
@@ -98,15 +98,18 @@ PROCEDURE TAssistanceForm.performFastUpdate;
   VAR hasErrors  :boolean=false;
       hasWarnings:boolean=false;
       codeAssistanceResponse:P_codeAssistanceResponse;
+      i:longint;
   begin
     codeAssistanceResponse:=workspace.getCurrentAssistanceResponse;
     try
       if (codeAssistanceResponse<>nil) and ((codeAssistanceResponse^.stateHash<>paintedWithStateHash) or (AssistanceEdit.charsInWindow<>paintedWithWidth))
       then begin
-        locations:=
-        codeAssistanceResponse^.getErrorHints(AssistanceEdit,hasErrors,hasWarnings);
+        codeAssistanceResponse^.getErrorHints(hasErrors,hasWarnings,messagesAndLocations);
         caption                           :=conditionalCaption[hasErrors,hasWarnings]+' ('+COMPONENT_SHORTCUT[icAssistance]+')';
         if parent<>nil then parent.caption:=conditionalCaption[hasErrors,hasWarnings]+' ('+COMPONENT_SHORTCUT[icAssistance]+')';
+        AssistanceEdit.clear;
+        for i:=0 to messagesAndLocations.size-1 do
+          AssistanceEdit.append(string(messagesAndLocations.location(i))+' '+messagesAndLocations.text(i));
         paintedWithStateHash:=codeAssistanceResponse^.stateHash;
         paintedWithWidth:=AssistanceEdit.charsInWindow;
       end;
@@ -121,8 +124,8 @@ PROCEDURE TAssistanceForm.dockChanged;
 
 PROCEDURE TAssistanceForm.openLocationForLine(CONST i: longint);
   begin
-    if (i>=0) and (i<length(locations)) then workspace.openLocation(locations[i]);
-end;
+    if (i>=0) and (i<messagesAndLocations.size) then workspace.openLocation(messagesAndLocations.location(i));
+  end;
 
 end.
 

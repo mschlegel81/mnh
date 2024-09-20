@@ -39,9 +39,10 @@ TYPE
     FUNCTION formatLocation(CONST location:T_searchTokenLocation):string; virtual;
   end;
 
+  P_messagesAndLocations=^T_messagesAndLocations;
   T_messagesAndLocations=object
     private
-      dat:array of record message:string; location:T_searchTokenLocation; end;
+      dat:array of record message:string; location:T_searchTokenLocation; kind:byte; end;
       fill:longint;
       offset:longint;
       maxSize:longint;
@@ -51,15 +52,16 @@ TYPE
       CONSTRUCTOR create(CONST maxSize_:longint);
       PROPERTY outputLinesLimit:longint read maxSize write setMaxSize;
       DESTRUCTOR destroy;
-      PROCEDURE append(CONST message:string);
-      PROCEDURE append(CONST message:string; CONST location:T_searchTokenLocation);
-      PROCEDURE append(CONST message: T_arrayOfString; CONST location: T_searchTokenLocation);
+      PROCEDURE append(CONST message:string; CONST messageType:T_messageType);
+      PROCEDURE append(CONST message:string; CONST location:T_searchTokenLocation; CONST messageType:T_messageType);
+      PROCEDURE append(CONST message: T_arrayOfString; CONST location: T_searchTokenLocation; CONST messageType:T_messageType);
       PROCEDURE clear;
       PROPERTY size:longint read fill;
       FUNCTION text(CONST i:longint):string;
       FUNCTION text:T_arrayOfString;
       FUNCTION location(CONST i:longint):T_searchTokenLocation;
       FUNCTION locations:T_searchTokenLocations;
+      FUNCTION getLineKind(CONST i:longint):byte;
       PROCEDURE appendPrint(CONST message:string);
       PROCEDURE processDirectPrint(CONST chars:string);
       PROCEDURE cleanup;
@@ -161,7 +163,7 @@ CONSTRUCTOR T_messagesAndLocations.create(CONST maxSize_: longint);
     maxSize:=maxSize_;
     fill:=0;
     offset:=0;
-    setLength(dat,0);
+    setLength(dat,1);
     directPrinting:=-1;
   end;
 
@@ -196,13 +198,22 @@ FUNCTION T_messagesAndLocations.locations:T_searchTokenLocations;
     for i:=0 to fill-1 do result[i]:=dat[longint((int64(i)+offset+maxSize) mod maxSize)].location;
   end;
 
+FUNCTION T_messagesAndLocations.getLineKind(CONST i:longint):byte;
+  VAR k:longint;
+  begin
+    k:=(i+offset+maxSize) mod maxSize;
+    if k>=length(dat)
+    then result:=0
+    else result:=dat[k].kind;
+  end;
+
 PROCEDURE T_messagesAndLocations.processDirectPrint(CONST chars: string);
   VAR c:char;
       lineIndex:longint;
       state:(initial,read27,readingAnsiEscape)=initial;
   begin
     if directPrinting<0 then begin
-      append('');
+      append('',mt_printline);
       directPrinting:=0;
     end;
     if fill>=maxSize
@@ -227,7 +238,7 @@ PROCEDURE T_messagesAndLocations.processDirectPrint(CONST chars: string);
           directPrinting:=0;
         #10: //new line
           begin
-            append('');
+            append('',mt_printline);
             directPrinting:=0;
             if fill>=maxSize
             then lineIndex:=(offset+maxSize-1) mod maxSize
@@ -289,19 +300,32 @@ PROCEDURE T_messagesAndLocations.appendPrint(CONST message:string);
     //  H: curosr position (n;m)
     //  K: Erase in line
 
-    append(message,noLocation);
+    append(message,noLocation,mt_printline);
   end;
 
-PROCEDURE T_messagesAndLocations.append(CONST message: string);
+PROCEDURE T_messagesAndLocations.append(CONST message: string; CONST messageType:T_messageType);
   CONST noLocation:T_searchTokenLocation=(fileName:'';line:-1; column:-1);
   begin
-    append(message,noLocation);
+    append(message,noLocation,messageType);
   end;
 
-PROCEDURE T_messagesAndLocations.append(CONST message: string;
-  CONST location: T_searchTokenLocation);
+PROCEDURE T_messagesAndLocations.append(CONST message: string;CONST location: T_searchTokenLocation; CONST messageType:T_messageType);
   VAR i:longint;
+      kind:byte=0;
   begin
+    case messageType of
+      mt_echo_input, mt_echo_declaration, mt_echo_output:
+        kind:=1;
+      mt_el1_note, mt_el1_userNote:
+        kind:=2;
+      mt_el2_warning, mt_el2_userWarning:
+        kind:=4;
+      mt_el3_evalError, mt_el3_trace, mt_el3_noMatchingMain, mt_el3_userDefined, mt_el4_systemError:
+        kind:=3;
+      mt_timing_info:
+        kind:=5;
+    end;
+
     if fill>=length(dat) then begin
       {$Q-}{$R-}
       i:=(length(dat) shl 1);
@@ -314,21 +338,22 @@ PROCEDURE T_messagesAndLocations.append(CONST message: string;
     if fill>=maxSize then begin
       dat[offset].message :=message;
       dat[offset].location:=location;
+      dat[offset].kind    :=kind;
       inc(offset);
       if offset>=maxSize then offset:=0;
     end else begin
       dat[fill].message :=message;
       dat[fill].location:=location;
+      dat[fill].kind    :=kind;
       inc(fill);
     end;
   end;
 
-PROCEDURE T_messagesAndLocations.append(CONST message: T_arrayOfString;
-  CONST location: T_searchTokenLocation);
+PROCEDURE T_messagesAndLocations.append(CONST message: T_arrayOfString; CONST location: T_searchTokenLocation; CONST messageType:T_messageType);
   VAR s:string;
   begin
     if fill+length(message)>length(dat) then setLength(dat,fill+length(message));
-    for s in message do append(s,location);
+    for s in message do append(s,location,messageType);
   end;
 
 CONSTRUCTOR T_echoOutMessage.create(CONST value: P_literal; CONST loc: T_searchTokenLocation);
@@ -531,39 +556,38 @@ FUNCTION T_guiFormatter.formatLocation(CONST location: T_searchTokenLocation): s
 
 PROCEDURE T_guiFormatter.formatMessageAndLocation(CONST message: P_storedMessage; VAR messagesAndLocations: T_messagesAndLocations);
   VAR locationPart:string='';
-      marker      :string='';
       nextLine    :string='';
       s           :string;
       i           :longint=0;
       messageLoc  :T_searchTokenLocation;
+      messageType :T_messageType;
       echo        :T_arrayOfString;
       limitPerLiteral: int64;
   begin
     if (message=nil) or (not(message^.isTextMessage) and (message^.messageType<>mt_echo_output))  then exit;
     messageLoc:=message^.getLocation;
+    messageType:=message^.messageType;
     if not(formatterForDemos)
     then locationPart:=formatLocation(messageLoc)+' ';
 
-    marker:=C_messageClassMeta[message^.messageClass].guiMarker;
-
     case message^.messageClass of
-      mc_echo: case message^.messageType of
+      mc_echo: case messageType of
         mt_echo_input,
         mt_echo_declaration: begin
-          if message^.messageType=mt_echo_input
+          if messageType=mt_echo_input
           then nextLine:=C_echoInInfix
           else nextLine:=C_echoDeclInfix;
           for s in P_storedMessageWithText(message)^.txt do begin
             if (formatterForDemos and (i>0)) or wrapEcho and (length(nextLine)+length(s)>preferredLineLength)
             then begin
-              messagesAndLocations.append(marker+trimRight(nextLine),messageLoc);
+              messagesAndLocations.append(trimRight(nextLine),messageLoc,messageType);
               if formatterForDemos
               then nextLine:=C_echoContdInfix+         s
               else nextLine:=C_echoContdInfix+trimLeft(s);
             end else nextLine+=s;
             inc(i);
           end;
-          messagesAndLocations.append(marker+trimRight(nextLine),messageLoc);
+          messagesAndLocations.append(trimRight(nextLine),messageLoc,messageType);
         end;
         mt_echo_output: begin
           limitPerLiteral:=int64(maxLinesPerLiteral)*int64(preferredLineLength);
@@ -576,13 +600,13 @@ PROCEDURE T_guiFormatter.formatMessageAndLocation(CONST message: P_storedMessage
                                            limitPerLiteral)
           else echo:=P_echoOutMessage(message)^.literal^.toString();
 
-          if length(echo) >0 then echo[  0]:=marker+C_echoOutInfix+echo[0];
+          if length(echo) >0 then echo[  0]:=C_echoOutInfix+echo[0];
           for i:=1 to length(echo)-1 do
-            echo[i]:=marker+C_echoContdInfix+echo[i];
-          messagesAndLocations.append(echo,messageLoc);
+            echo[i]:=C_echoContdInfix+echo[i];
+          messagesAndLocations.append(echo,messageLoc,messageType);
         end;
       end;
-      mc_timing: for s in P_storedMessageWithText(message)^.txt do messagesAndLocations.append(marker+s,messageLoc);
+      mc_timing: for s in P_storedMessageWithText(message)^.txt do messagesAndLocations.append(s,messageLoc,messageType);
       mc_log    ,
       mc_note   ,
       mc_warning,
@@ -591,25 +615,24 @@ PROCEDURE T_guiFormatter.formatMessageAndLocation(CONST message: P_storedMessage
       mc_fatal  : begin
         if length(P_storedMessageWithText(message)^.txt)=1 then begin
           if length(C_messageClassMeta[message^.messageClass].levelTxt)+2+length(locationPart)+length(P_storedMessageWithText(message)^.txt[0])<preferredLineLength
-          then messagesAndLocations.append(marker+C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart+P_storedMessageWithText(message)^.txt[0],messageLoc)
+          then messagesAndLocations.append(C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart+P_storedMessageWithText(message)^.txt[0],messageLoc,messageType)
           else begin
-            messagesAndLocations.append(marker+C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart,messageLoc);
-            messagesAndLocations.append(marker+StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1)+P_storedMessageWithText(message)^.txt[0],messageLoc);
+            messagesAndLocations.append(C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart,messageLoc,messageType);
+            messagesAndLocations.append(StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1)+P_storedMessageWithText(message)^.txt[0],messageLoc,messageType);
           end;
         end else begin
-          messagesAndLocations.append(marker+C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart,messageLoc);
+          messagesAndLocations.append(C_messageClassMeta[message^.messageClass].levelTxt+' '+locationPart,messageLoc,messageType);
           for s in P_storedMessageWithText(message)^.txt do
-            messagesAndLocations.append(marker+StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1)+s,messageLoc);
+            messagesAndLocations.append(StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1)+s,messageLoc,messageType);
         end;
         if (message^.internalType='T_errorMessage') then with P_errorMessage(message)^ do begin
-          marker+=StringOfChar(' ',length(C_messageClassMeta[message^.messageClass].levelTxt)+1);
           for i:=0 to length(stacktrace)-1 do
-            messagesAndLocations.append(marker+formatLocation(stacktrace[i].location)+' call '+stacktrace[i].callee+' with '+stacktrace[i].parameters,stacktrace[i].location);
+            messagesAndLocations.append(formatLocation(stacktrace[i].location)+' call '+stacktrace[i].callee+' with '+stacktrace[i].parameters,stacktrace[i].location,messageType);
         end;
       end;
       mc_print: for s in P_storedMessageWithText(message)^.txt do messagesAndLocations.appendPrint(s);
       else begin
-        for s in P_storedMessageWithText(message)^.txt do messagesAndLocations.append(s);
+        for s in P_storedMessageWithText(message)^.txt do messagesAndLocations.append(s,messageType);
       end;
     end;
   end;

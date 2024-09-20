@@ -31,11 +31,10 @@ TYPE
       currentlyFlushing:boolean;
       messageFormatter:T_guiFormatter;
     protected
-      state:T_messagesAndLocations;
       FUNCTION getSynEdit:TSynEdit; virtual; abstract;
       FUNCTION getOwnerForm:TForm;  virtual; abstract;
     public
-
+      state:T_messagesAndLocations;
       jumpToEnd:boolean;
       autoflush:boolean;
       CONSTRUCTOR create(CONST messageTypesToInc:T_messageTypeSet);
@@ -177,8 +176,8 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush: boolean): T_messag
             if (length(P_storedMessageWithText(message)^.txt)>0) and (P_storedMessageWithText(message)^.txt[0]=C_formFeedChar) then begin
               state.clear;
               fullUpdateRequired:=true;
-              for j:=1 to length(P_storedMessageWithText(message)^.txt)-1 do state.append(P_storedMessageWithText(message)^.txt[j]);
-            end else for s in P_storedMessageWithText(message)^.txt do state.append(s);
+              for j:=1 to length(P_storedMessageWithText(message)^.txt)-1 do state.append(P_storedMessageWithText(message)^.txt[j],mt_printline);
+            end else for s in P_storedMessageWithText(message)^.txt do state.append(s,mt_printline);
           end;
         mt_printdirect:
           begin

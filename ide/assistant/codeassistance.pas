@@ -19,7 +19,8 @@ USES
   packages,
   funcs,
   Forms,
-  ComCtrls;
+  ComCtrls,
+  messageFormatting;
 
 CONST
   MARKER_USAGE_SCAN_END='#';
@@ -54,7 +55,7 @@ TYPE
       package:P_package;
       DESTRUCTOR destroy; virtual;
       PROPERTY  stateHash:T_hashInt read responseStateHash;
-      FUNCTION getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean; CONST appendMode:boolean=false):T_searchTokenLocations;
+      PROCEDURE getErrorHints(OUT hasErrors, hasWarnings: boolean; VAR messagesAndLocations:T_messagesAndLocations);
       //Highlighter related:
       PROCEDURE updateHighlightingData(VAR highlightingData:T_highlightingData);
       //Rename/Help:
@@ -79,7 +80,7 @@ FUNCTION findRelatedScriptsTransitive(CONST scriptName:string):T_arrayOfString;
 
 VAR preparedResponses:specialize G_threadsafeQueue<P_codeAssistanceResponse>;
 IMPLEMENTATION
-USES FileUtil,sysutils,myStringUtil,commandLineParameters,SynHighlighterMnh,mnh_doc,messageFormatting,mySys,LazUTF8;
+USES FileUtil,sysutils,myStringUtil,commandLineParameters,SynHighlighterMnh,mnh_doc,mySys,LazUTF8;
 TYPE T_usagePair=record usedScript,usingScript:string; end;
 VAR scriptUsage:record
       dat:array of T_usagePair;
@@ -789,9 +790,7 @@ DESTRUCTOR T_codeAssistanceResponse.destroy;
     inherited destroy;
   end;
 
-FUNCTION T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasErrors, hasWarnings: boolean; CONST appendMode:boolean=false):T_searchTokenLocations;
-  VAR messageFormatter:T_guiFormatter;
-      messagesAndLocations:T_messagesAndLocations;
+PROCEDURE T_codeAssistanceResponse.getErrorHints(OUT hasErrors, hasWarnings: boolean; VAR messagesAndLocations:T_messagesAndLocations);
 
   PROCEDURE addErrors(CONST list:T_storedMessages);
     VAR m:P_storedMessage;
@@ -799,16 +798,12 @@ FUNCTION T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasErrors
       for m in list do begin
         hasErrors  :=hasErrors   or (C_messageTypeMeta[m^.messageType].level>2);
         hasWarnings:=hasWarnings or (C_messageTypeMeta[m^.messageType].level=2);
-        messageFormatter.formatMessageAndLocation(m,messagesAndLocations);
+        messagesAndLocations.append(P_storedMessageWithText(m)^.txt,m^.getLocation,m^.messageType);
       end;
     end;
 
   begin
-    messageFormatter.create(false);
     enterCriticalSection(messageCs);
-    messagesAndLocations.create(maxLongint);
-    messageFormatter.preferredLineLength:=edit.charsInWindow;
-    messageFormatter.wrapEcho:=true;
     hasErrors:=false;
     hasWarnings:=false;
     try
@@ -816,16 +811,7 @@ FUNCTION T_codeAssistanceResponse.getErrorHints(VAR edit:TSynEdit; OUT hasErrors
       addErrors(externalErrors);
     finally
       leaveCriticalSection(messageCs);
-      messageFormatter.destroy;
     end;
-
-    if not(appendMode) then begin
-      edit.clearAll;
-      edit.lines.clear;
-    end;
-    edit.lines.SetStrings(messagesAndLocations.text);
-    result:=messagesAndLocations.locations;
-    messagesAndLocations.destroy;
   end;
 
 PROCEDURE finalizeCodeAssistance;

@@ -315,7 +315,7 @@ FUNCTION ioTextToHtml(CONST line:string; CONST forceSyntaxHighlighting:boolean):
       size:longint;
       content:TStringList;
   begin
-    if mnhOutputSyn=nil then mnhOutputSyn:=TMnhOutputSyn.create(nil);
+    if mnhOutputSyn=nil then mnhOutputSyn:=TMnhOutputSyn.create(nil,nil);
 
     SynExporterHTML:=TSynExporterHTML.create(nil);
     SynExporterHTML.highlighter:=mnhOutputSyn;

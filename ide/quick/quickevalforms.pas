@@ -118,10 +118,12 @@ PROCEDURE TQuickEvalForm.FormCreate(Sender: TObject);
     inputMeta.editor.OnChange:=@quickInputEditChange;
 
     registerFontControl(quickOutputSynEdit,ctEditor);
-    outputHighlighter:=TMnhOutputSyn.create(self);
     inputMeta.editor.OnKeyUp:=@tabNextKeyHandling;
-    quickOutputSynEdit.highlighter:=outputHighlighter;
     quickOutput.create(quickOutputSynEdit,self,ideSettings.quickOutputBehavior);
+
+    outputHighlighter:=TMnhOutputSyn.create(self,@quickOutput.state);
+    quickOutputSynEdit.highlighter:=outputHighlighter;
+
     quickEvaluation.create(@quickOutput);
     with ideSettings.quickOutputBehavior do begin
       miEchoDeclarations .checked:=echo_declaration     ;

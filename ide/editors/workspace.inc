@@ -796,7 +796,7 @@ FUNCTION T_workspace.getSourceLine(CONST location:T_searchTokenLocation; CONST a
       if (lineIndex>=0) and (lineIndex<length(lines)) then begin
         loc.column:=1;
         loc.line:=lineIndex+1;
-        result.append(lines[lineIndex],loc);
+        result.append(lines[lineIndex],loc,mt_echo_declaration);
       end;
     finally
       leaveCriticalSection(workspaceCs);

@@ -80,7 +80,7 @@ PROCEDURE THelpForm.FormCreate(Sender: TObject);
     registerFontControl(SynEdit1,ctEditor);
     registerFontControl(self,ctGeneral);
 
-    helpHighlighter:=TMnhOutputSyn.create(self);
+    helpHighlighter:=TMnhOutputSyn.create(self,nil);
     SynEdit1.highlighter:=helpHighlighter;
     currentLink:=getDocIndexLinkForBrowser;
     initDockMenuItems(MainMenu1,nil);

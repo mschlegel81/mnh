@@ -9,7 +9,8 @@ USES
   mnh_messages,
   funcs,
   codeAssistance,
-  tokenArray;
+  tokenArray,
+  messageFormatting;
 
 TYPE
   T_tokenKind = (
@@ -92,8 +93,10 @@ TYPE
   end;
 
   TMnhOutputSyn = class(TAbstractSynMnhSyn)
+    private
+      messagesAndLocations:P_messagesAndLocations;
     public
-      CONSTRUCTOR create(AOwner: TComponent); reintroduce;
+      CONSTRUCTOR create(AOwner: TComponent; messagesAndLocations_:P_messagesAndLocations); reintroduce;
       DESTRUCTOR destroy; override;
       PROCEDURE next; override;
   end;
@@ -219,9 +222,10 @@ CONSTRUCTOR TMnhInputSyn.create(AOwner: TComponent);
     related.count:=0;
   end;
 
-CONSTRUCTOR TMnhOutputSyn.create(AOwner: TComponent);
+CONSTRUCTOR TMnhOutputSyn.create(AOwner: TComponent; messagesAndLocations_:P_messagesAndLocations);
   begin
     inherited create(AOwner,msf_output);
+    messagesAndLocations:=messagesAndLocations_;
   end;
 
 CONSTRUCTOR TMnhDebugSyn.create(AOwner: TComponent);
@@ -557,20 +561,29 @@ PROCEDURE TMnhOutputSyn.next;
     fTokenPos := run;
     //Marker handling...
     if run=0 then begin
-      blobEnder:=#0;
-      for b:=1 to length(tokenKindByPrefix)-1 do if startsWith(tokenKindByPrefix[b].marker) then begin
-        blobEnder:=chr(b);
-        run:=3;
+      if messagesAndLocations<>nil then begin
+        blobEnder:=chr(messagesAndLocations^.getLineKind(fLineNumber));
+        if blobEnder=#0 then begin
+          if fLine[run]=#0 then begin
+            fTokenId:=tkNull;
+            inc(run);
+          end else while fLine[run]<>#0 do inc(run);
+        end;
+      end else begin
+        for b:=1 to length(tokenKindByPrefix)-1 do if startsWith(tokenKindByPrefix[b].marker) then begin
+          blobEnder:=chr(b);
+          run:=3;
+          exit;
+        end;
+        if fLine[run]=#0 then begin
+          fTokenId:=tkNull;
+          inc(run);
+        end else while fLine[run]<>#0 do inc(run);
         exit;
       end;
-      if fLine[run]=#0 then begin
-        fTokenId:=tkNull;
-        inc(run);
-      end else while fLine[run]<>#0 do inc(run);
-      exit;
     end;
     case ord(blobEnder) of
-      1: if (run<3+C_echoPrefixLength) and (
+      1: if (run<3+C_echoPrefixLength) and (messagesAndLocations=nil) and (
            startsWith(ECHO_MARKER+C_echoOutInfix) or
            startsWith(ECHO_MARKER+C_echoInInfix) or
            startsWith(ECHO_MARKER+C_echoDeclInfix) or
@@ -578,6 +591,14 @@ PROCEDURE TMnhOutputSyn.next;
          then begin
            fTokenId:=tkOperator;
            run:=3+C_echoPrefixLength;
+         end else if (run<C_echoPrefixLength) and (messagesAndLocations<>nil) and (
+           startsWith(C_echoOutInfix) or
+           startsWith(C_echoInInfix) or
+           startsWith(C_echoDeclInfix) or
+           startsWith(C_echoContdInfix))
+         then begin
+           fTokenId:=tkOperator;
+           run:=C_echoPrefixLength;
          end else inherited next;
       else begin
         fTokenId:=tokenKindByPrefix[ord(blobEnder)].tokenkind;
