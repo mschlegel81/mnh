@@ -95,10 +95,13 @@ TYPE
   TMnhOutputSyn = class(TAbstractSynMnhSyn)
     private
       messagesAndLocations:P_messagesAndLocations;
+      styleRanges:T_ansiStyleRanges;
+      ansiAttribute:TSynHighlighterAttributes;
     public
       CONSTRUCTOR create(AOwner: TComponent; messagesAndLocations_:P_messagesAndLocations); reintroduce;
       DESTRUCTOR destroy; override;
       PROCEDURE next; override;
+      FUNCTION GetTokenAttribute: TSynHighlighterAttributes; override;
   end;
 
   TMnhDebugSyn = class(TAbstractSynMnhSyn)
@@ -118,6 +121,63 @@ USES sysutils,
 VAR listsAreInitialized:boolean=false;
     tokenTypeMap:specialize G_stringKeyMap<T_tokenKind>;
     builtinRules:T_setOfString;
+
+    cached_ansi_styles:array of record ansi_style:T_ansiStyle; attributes:TSynHighlighterAttributes; end;
+
+FUNCTION getAnsiStyleAttribute(CONST style:T_ansiStyle):TSynHighlighterAttributes;
+  VAR i:longint;
+      fontStyle:TFontStyles;
+  begin
+    for i:=0 to length(cached_ansi_styles)-1 do if cached_ansi_styles[i].ansi_style=style then exit(cached_ansi_styles[i].attributes);
+    i:=length(cached_ansi_styles);
+    setLength(cached_ansi_styles,i+1);
+    cached_ansi_styles[i].ansi_style:=style;
+
+    result:=TSynHighlighterAttributes.create('');
+    fontStyle:=[];
+    if style.italic    then include(fontStyle,fsItalic);
+    if style.bold      then include(fontStyle,fsBold);
+    if style.underline then include(fontStyle,fsUnderline);
+    result.style:=fontStyle;
+    case style.fg_color of
+       0: result.foreground:=$0C0C0C;
+       1: result.foreground:=$1F0FC5;
+       2: result.foreground:=$00A600;
+       3: result.foreground:=$009CC1;
+       4: result.foreground:=$DA3700;
+       5: result.foreground:=$981788;
+       6: result.foreground:=$DD963A;
+       7: result.foreground:=$BFBFBF;
+       8: result.foreground:=$666666;
+       9: result.foreground:=$5648E7;
+      10: result.foreground:=$0CC616;
+      11: result.foreground:=$A5F1F9;
+      12: result.foreground:=$EA8E3B;
+      13: result.foreground:=$BE00BE;
+      14: result.foreground:=$D6D661;
+      15: result.foreground:=$F2F2F2;
+     else result.foreground:=$000000;
+    end;
+    case style.bg_color of
+       0: result.background:=$0C0C0C;
+       1: result.background:=$1F0FC5;
+       2: result.background:=$00A600;
+       3: result.background:=$009CC1;
+       4: result.background:=$DA3700;
+       5: result.background:=$981788;
+       6: result.background:=$DD963A;
+       7: result.background:=$BFBFBF;
+       8: result.background:=$666666;
+       9: result.background:=$5648E7;
+      10: result.background:=$0CC616;
+      11: result.background:=$A5F1F9;
+      12: result.background:=$EA8E3B;
+      13: result.background:=$BE00BE;
+      14: result.background:=$D6D661;
+      15: result.background:=$F2F2F2;
+    end;
+    cached_ansi_styles[i].attributes:=result;
+  end;
 
 FUNCTION TMnhInputSyn.setMarkedWord(CONST s: ansistring): boolean;
   begin
@@ -222,7 +282,8 @@ CONSTRUCTOR TMnhInputSyn.create(AOwner: TComponent);
     related.count:=0;
   end;
 
-CONSTRUCTOR TMnhOutputSyn.create(AOwner: TComponent; messagesAndLocations_:P_messagesAndLocations);
+CONSTRUCTOR TMnhOutputSyn.create(AOwner: TComponent;
+  messagesAndLocations_: P_messagesAndLocations);
   begin
     inherited create(AOwner,msf_output);
     messagesAndLocations:=messagesAndLocations_;
@@ -546,7 +607,7 @@ PROCEDURE TMnhOutputSyn.next;
     (marker:SECTION_MARKER; tokenkind:tkTimingNote));//6=SECTION_HEAD_IDX
 
   VAR b:byte;
-
+      k:longint;
   FUNCTION startsWith(CONST part:shortstring):boolean;
     VAR k:longint;
     begin
@@ -556,6 +617,7 @@ PROCEDURE TMnhOutputSyn.next;
     end;
 
   begin
+    ansiAttribute:=nil;
     fTokenId := tkDefault;
     fTokenSubId:=skNormal;
     fTokenPos := run;
@@ -564,10 +626,14 @@ PROCEDURE TMnhOutputSyn.next;
       if messagesAndLocations<>nil then begin
         blobEnder:=chr(messagesAndLocations^.getLineKind(fLineNumber));
         if blobEnder=#0 then begin
-          if fLine[run]=#0 then begin
-            fTokenId:=tkNull;
-            inc(run);
-          end else while fLine[run]<>#0 do inc(run);
+          styleRanges:=messagesAndLocations^.getStyleRanges(fLineNumber);
+          if length(styleRanges)=0 then begin
+            if fLine[run]=#0 then begin
+              fTokenId:=tkNull;
+              inc(run);
+            end else while fLine[run]<>#0 do inc(run);
+            exit;
+          end;
         end;
       end else begin
         for b:=1 to length(tokenKindByPrefix)-1 do if startsWith(tokenKindByPrefix[b].marker) then begin
@@ -583,6 +649,20 @@ PROCEDURE TMnhOutputSyn.next;
       end;
     end;
     case ord(blobEnder) of
+      0: begin
+           fTokenId:=tkDefault;
+           k:=0;
+           while (k<length(styleRanges)) and (styleRanges[k].startAt<=run) do inc(k);
+           if k<length(styleRanges) then with styleRanges[k] do begin
+             run:=endAt-1;
+             ansiAttribute:=getAnsiStyleAttribute(style);
+             exit;
+           end;
+           if fLine[run]=#0 then begin
+             fTokenId:=tkNull;
+             inc(run);
+           end else while fLine[run]<>#0 do inc(run);
+         end;
       1: if (run<3+C_echoPrefixLength) and (messagesAndLocations=nil) and (
            startsWith(ECHO_MARKER+C_echoOutInfix) or
            startsWith(ECHO_MARKER+C_echoInInfix) or
@@ -609,6 +689,13 @@ PROCEDURE TMnhOutputSyn.next;
         end else while fLine[run]<>#0 do inc(run);
       end;
     end;
+  end;
+
+FUNCTION TMnhOutputSyn.GetTokenAttribute: TSynHighlighterAttributes;
+  begin
+    if ansiAttribute=nil
+    then result:=inherited GetTokenAttribute
+    else result:=ansiAttribute;
   end;
 
 PROCEDURE TMnhDebugSyn.next;
@@ -716,11 +803,23 @@ PROCEDURE initLists;
     builtinRules.create;
     builtinRules.put(builtinFunctionMap.getAllIds);
     listsAreInitialized:=true;
+
+    setLength(cached_ansi_styles,0);
+  end;
+
+PROCEDURE clearCachesAnsiStyles;
+  VAR i:longint;
+  begin
+    for i:=0 to length(cached_ansi_styles)-1 do with cached_ansi_styles[i] do begin
+      FreeAndNil(attributes);
+    end;
+    setLength(cached_ansi_styles,0);
   end;
 
 FINALIZATION
   if listsAreInitialized then begin
     tokenTypeMap.destroy;
     builtinRules.destroy;
+    clearCachesAnsiStyles;
   end;
 end.

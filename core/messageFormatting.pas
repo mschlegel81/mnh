@@ -39,10 +39,22 @@ TYPE
     FUNCTION formatLocation(CONST location:T_searchTokenLocation):string; virtual;
   end;
 
+  T_ansiStyle=record
+    fg_color,bg_color:byte;
+    bold,italic,underline:boolean;
+  end;
+
+  T_ansiStyleRange=record
+    startAt,endAt:longint;
+    style:T_ansiStyle;
+  end;
+
+  T_ansiStyleRanges=array of T_ansiStyleRange;
+
   P_messagesAndLocations=^T_messagesAndLocations;
   T_messagesAndLocations=object
     private
-      dat:array of record message:string; location:T_searchTokenLocation; kind:byte; end;
+      dat:array of record message:string; location:T_searchTokenLocation; kind:byte; styleRanges:T_ansiStyleRanges; end;
       fill:longint;
       offset:longint;
       maxSize:longint;
@@ -53,7 +65,7 @@ TYPE
       PROPERTY outputLinesLimit:longint read maxSize write setMaxSize;
       DESTRUCTOR destroy;
       PROCEDURE append(CONST message:string; CONST messageType:T_messageType);
-      PROCEDURE append(CONST message:string; CONST location:T_searchTokenLocation; CONST messageType:T_messageType);
+      FUNCTION append(CONST message:string; CONST location:T_searchTokenLocation; CONST messageType:T_messageType):longint;
       PROCEDURE append(CONST message: T_arrayOfString; CONST location: T_searchTokenLocation; CONST messageType:T_messageType);
       PROCEDURE clear;
       PROPERTY size:longint read fill;
@@ -62,6 +74,7 @@ TYPE
       FUNCTION location(CONST i:longint):T_searchTokenLocation;
       FUNCTION locations:T_searchTokenLocations;
       FUNCTION getLineKind(CONST i:longint):byte;
+      FUNCTION getStyleRanges(CONST i:longint):T_ansiStyleRanges;
       PROCEDURE appendPrint(CONST message:string);
       PROCEDURE processDirectPrint(CONST chars:string);
       PROCEDURE cleanup;
@@ -124,12 +137,22 @@ TYPE
   {$endif}
 VAR defaultConsoleFormatter:T_defaultConsoleFormatter;
 FUNCTION newEchoMessage(CONST value: P_literal; CONST loc: T_searchTokenLocation):P_echoOutMessage;
+OPERATOR =(CONST x,y:T_ansiStyle):boolean;
 IMPLEMENTATION
 USES sysutils,LazFileUtils{$ifdef fullVersion},myStringUtil{$endif},recyclers;
 
 FUNCTION newEchoMessage(CONST value: P_literal; CONST loc: T_searchTokenLocation):P_echoOutMessage;
   begin
     new(result,create(value,loc));
+  end;
+
+OPERATOR=(CONST x, y: T_ansiStyle): boolean;
+  begin
+    result:=(x.fg_color  = y.fg_color ) and
+            (x.bg_color  = y.bg_color ) and
+            (x.bold      = y.bold     ) and
+            (x.italic    = y.italic   ) and
+            (x.underline = y.underline);
   end;
 
 PROCEDURE T_messagesAndLocations.cleanup;
@@ -207,6 +230,15 @@ FUNCTION T_messagesAndLocations.getLineKind(CONST i:longint):byte;
     else result:=dat[k].kind;
   end;
 
+FUNCTION T_messagesAndLocations.getStyleRanges(CONST i:longint):T_ansiStyleRanges;
+  VAR k:longint;
+  begin
+    k:=(i+offset+maxSize) mod maxSize;
+    if k>=length(dat)
+    then setLength(result,0)
+    else result:=dat[k].styleRanges;
+  end;
+
 PROCEDURE T_messagesAndLocations.processDirectPrint(CONST chars: string);
   VAR c:char;
       lineIndex:longint;
@@ -266,41 +298,99 @@ DESTRUCTOR T_messagesAndLocations.destroy;
 
 PROCEDURE T_messagesAndLocations.appendPrint(CONST message:string);
   CONST noLocation:T_searchTokenLocation=(fileName:'';line:-1; column:-1);
-  begin
-    //TODO: Process and remove ansi escapes
-    // Ansi escape: \e[...m , e.g. \e[0m Reset colors
-    // 0: Reset
-    // 1: Bold
-    // 3: Italic
-    // 4: Underline
-    // Foreground Background
-    // 30 	40 	Black     12, 12, 12
-    // 31 	41 	Red 	  197, 15, 31
-    // 32 	42 	Green 	  0, 166, 0
-    // 33 	43 	Yellow 	  193, 156, 0
-    // 34 	44 	Blue      0, 55, 218
-    // 35 	45 	Magenta   136, 23, 152
-    // 36 	46 	Cyan      58, 150, 221
-    // 37 	47 	White 	  191, 191, 191
-    // 90 	100 	Bright Black (Gray) 	102, 102, 102
-    // 91 	101 	Bright Red 	231, 72, 86
-    // 92 	102 	Bright Green 	22, 198, 12
-    // 93 	103 	Bright Yellow 	249, 241, 165
-    // 94 	104 	Bright Blue 	59, 142, 234
-    // 95 	105 	Bright Magenta  190,0,190
-    // 96 	106 	Bright Cyan     97,214,214
-    // 97 	107 	Bright White    242,242,242
-    //              \e[...[A..H,J,K,S,T,f,m,i,n]
-    //  A: cursor n up
-    //  B: cursor n down
-    //  C: cursor forward
-    //  D: cursor back
-    //  E: cursor next line
-    //  F: cursor previous line
-    //  H: curosr position (n;m)
-    //  K: Erase in line
+        default_style:T_ansiStyle=(fg_color:255; bg_color:255; bold:false; italic:false; underline:false);
 
-    append(message,noLocation,mt_printline);
+  VAR i:longint;
+      styleRangeStart:longint=1;
+      messageIndex:longint;
+      currentStyle:T_ansiStyle;
+  PROCEDURE addStyleRange;
+    begin
+      if i>styleRangeStart then with dat[messageIndex] do begin;
+        setLength(styleRanges,length(styleRanges)+1);
+        with styleRanges[length(styleRanges)-1] do begin
+          startAt:=styleRangeStart;
+          endAt:=i;
+          style:=currentStyle;
+        end;
+        styleRangeStart:=i;
+      end;
+    end;
+
+  VAR cleanMessage:string;
+      j:longint;
+      styleKey:shortstring;
+      styleByte:byte;
+  begin
+    if pos(#27'[',message)>0 then begin
+      currentStyle:=default_style;
+      messageIndex:=append('',noLocation,mt_printline);
+      setLength(cleanMessage,length(message));
+      i:=1;
+      j:=1;
+      while j<=length(message) do begin
+        if (message[j]=#27) and (j<length(message)) and (message[j+1]='[') then begin
+          inc(j,2);
+          styleKey:='';
+          while (j<=length(message)) and (message[j] in ['0'..'9']) do begin
+            styleKey+=message[j];
+            inc(j);
+          end;
+          styleByte:=strToIntDef(styleKey,255);
+          // Ansi escape: \e[...m , e.g. \e[0m Reset colors
+          // 0: Reset
+          // 1: Bold
+          // 3: Italic
+          // 4: Underline
+          // Foreground Background
+          // 30 	40 	Black     12, 12, 12
+          // 31 	41 	Red 	  197, 15, 31
+          // 32 	42 	Green 	  0, 166, 0
+          // 33 	43 	Yellow 	  193, 156, 0
+          // 34 	44 	Blue      0, 55, 218
+          // 35 	45 	Magenta   136, 23, 152
+          // 36 	46 	Cyan      58, 150, 221
+          // 37 	47 	White 	  191, 191, 191
+          // 90 	100 	Bright Black (Gray) 	102, 102, 102
+          // 91 	101 	Bright Red 	231, 72, 86
+          // 92 	102 	Bright Green 	22, 198, 12
+          // 93 	103 	Bright Yellow 	249, 241, 165
+          // 94 	104 	Bright Blue 	59, 142, 234
+          // 95 	105 	Bright Magenta  190,0,190
+          // 96 	106 	Bright Cyan     97,214,214
+          // 97 	107 	Bright White    242,242,242
+          //              \e[...[A..H,J,K,S,T,f,m,i,n]
+          //  A: cursor n up
+          //  B: cursor n down
+          //  C: cursor forward
+          //  D: cursor back
+          //  E: cursor next line
+          //  F: cursor previous line
+          //  H: curosr position (n;m)
+          //  K: Erase in line
+
+          addStyleRange;
+          case styleByte of
+             0: currentStyle:=default_style;
+             1: currentStyle.bold:=true;
+             3: currentStyle.italic:=true;
+             4: currentStyle.underline:=true;
+            30.. 37: currentStyle.fg_color:=  styleByte- 30;
+            40.. 47: currentStyle.bg_color:=  styleByte- 40;
+            90.. 97: currentStyle.fg_color:=8+styleByte- 90;
+           100..107: currentStyle.bg_color:=8+styleByte-100;
+          end;
+          inc(j); //skip closing "m"
+        end else begin
+          cleanMessage[i]:=message[j];
+          inc(i);
+          inc(j);
+        end;
+      end;
+      setLength(cleanMessage,i);
+      addStyleRange;
+      dat[messageIndex].message:=cleanMessage;
+    end else append(message,noLocation,mt_printline);
   end;
 
 PROCEDURE T_messagesAndLocations.append(CONST message: string; CONST messageType:T_messageType);
@@ -309,7 +399,7 @@ PROCEDURE T_messagesAndLocations.append(CONST message: string; CONST messageType
     append(message,noLocation,messageType);
   end;
 
-PROCEDURE T_messagesAndLocations.append(CONST message: string;CONST location: T_searchTokenLocation; CONST messageType:T_messageType);
+FUNCTION T_messagesAndLocations.append(CONST message: string;CONST location: T_searchTokenLocation; CONST messageType:T_messageType):longint;
   VAR i:longint;
       kind:byte=0;
   begin
@@ -339,12 +429,16 @@ PROCEDURE T_messagesAndLocations.append(CONST message: string;CONST location: T_
       dat[offset].message :=message;
       dat[offset].location:=location;
       dat[offset].kind    :=kind;
+      setLength(dat[offset].styleRanges,0);
+      result:=offset;
       inc(offset);
       if offset>=maxSize then offset:=0;
     end else begin
       dat[fill].message :=message;
       dat[fill].location:=location;
       dat[fill].kind    :=kind;
+      setLength(dat[fill].styleRanges,0);
+      result:=fill;
       inc(fill);
     end;
   end;
