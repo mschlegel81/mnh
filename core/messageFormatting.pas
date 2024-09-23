@@ -387,7 +387,7 @@ PROCEDURE T_messagesAndLocations.appendPrint(CONST message:string);
           inc(j);
         end;
       end;
-      setLength(cleanMessage,i);
+      setLength(cleanMessage,i-1);
       addStyleRange;
       dat[messageIndex].message:=cleanMessage;
     end else append(message,noLocation,mt_printline);
