@@ -361,9 +361,11 @@ expectations:=
  ['Distribution of seven sided dice (100000 samples): ','  0.14168','  0.14199','  0.14217','  0.14234','  0.14370','  0.14402',
   '  0.14410'],
  'diff'=>
- ['--- <#>/demos/inputs/unixdict.txt','+++ <#>/demos/inputs/unixdict2.txt','@@ -20,13 +20,4 @@',"  Abby's",'  Abdul',"- Abdul's",
-  '- Abe',"- Abe's",'- Abel',"- Abel's",'- Abelard',"- Abelard's",'- Abelson',"- Abelson's",'  Aberdeen',"  Aberdeen's",
-  '@@ -101,5 +92,5 @@',"  Adan's",'  Adana',"- Adana's",'+ insertion','  Adar',"  Adar's"],
+ ["\e[91m--- <#>/demos/inputs/unixdict.txt\e[0m","\e[92m+++ <#>/demos/inputs/unixdict2.txt\e[0m",'@@ -20,13 +20,4 @@',
+  "  Abby's\e[0m","  Abdul\e[0m","\e[91m- Abdul's\e[0m","\e[91m- Abe\e[0m","\e[91m- Abe's\e[0m","\e[91m- Abel\e[0m",
+  "\e[91m- Abel's\e[0m","\e[91m- Abelard\e[0m","\e[91m- Abelard's\e[0m","\e[91m- Abelson\e[0m","\e[91m- Abelson's\e[0m",
+  "  Aberdeen\e[0m","  Aberdeen's\e[0m",'@@ -101,5 +92,5 @@',"  Adan's\e[0m","  Adana\e[0m","\e[91m- Adana's\e[0m",
+  "\e[92m+ insertion\e[0m","  Adar\e[0m","  Adar's\e[0m"],
  'digitSquareSum'=>
  ['85623'],
  'eratosthenes'=>
