@@ -3374,7 +3374,7 @@ FUNCTION map2list(CONST literalRecycler:P_literalRecycler; CONST params:P_listLi
         listRes^.dat[intKey]:=arr[k].value^.rereferenced;
         listRes^.modifyType(listRes^.dat[intKey]);
       end;
-      for k:=0 to MaxKey do if listRes^.dat[k]=defaultValue then listRes^.modifyType(listRes^.dat[k]);
+      for k:=0 to maxKey do if listRes^.dat[k]=defaultValue then listRes^.modifyType(listRes^.dat[k]);
       result:=listRes;
     end;
   end;
