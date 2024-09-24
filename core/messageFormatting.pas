@@ -321,7 +321,7 @@ VAR i:longint;
   VAR cleanMessage:string;
       j,k:longint;
       styleKey:shortstring;
-      styleByte:array[0..3] of byte;
+      styleByte:array[0..7] of byte;
       styleByteCount:longint=0;
   begin
     if pos(#27'[',messageWithMeta.message)>0 then begin
