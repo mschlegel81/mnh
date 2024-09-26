@@ -119,6 +119,13 @@ OPERATOR_POT(L:GeneralNumberList,p>=0)->L.map((x)->x^p);
 
 OPERATOR_NEGATE_ARITHMETIC(a:Rational)->[-a[0],a[1]].toRational;
 
+COMPARATOR_GRT(a:Rational,b:Numeric)->a.toReal>b;
+COMPARATOR_LSS(a:Rational,b:Numeric)->a.toReal<b;
+COMPARATOR_EQ (a:Rational,b:Numeric)->a.toReal=b;
+COMPARATOR_GEQ(a:Rational,b:Numeric)->a.toReal>=b;
+COMPARATOR_LEQ(a:Rational,b:Numeric)->a.toReal<=b;
+COMPARATOR_NEQ(a:Rational,b:Numeric)->a.toReal!=b;
+
 sqr(x:Rational)->sqr(x.toBuiltin).shortenRational;
 sqrt(x:Rational)->begin
   a:=isqrt(x[0]);

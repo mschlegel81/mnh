@@ -73,7 +73,7 @@ OPERATOR_POT(x:Polynomial,i>1)->
   ? (x*x)^(i/2)
   : x*(x^(i-1));
 
-OPERATOR_POT(x:Polynomial,i==0)->[1,[]].toPolynomial;
+OPERATOR_POT(x:Polynomial,i==0)->[[1,[]]].toPolynomial;
 
 OPERATOR_POT(x:Polynomial,i<0)->begin
   assert(x.size==1,'Operation not possible');
@@ -245,7 +245,7 @@ findRoot(poly:Polynomial,variable:String)->begin
       factor:=[[1/lhs[0,0],lhs[0,1].filter((pow)->pow[0]!=variable).map((pow)->[pow[0],-pow[1]])]].toPolynomial;
       lhs*=factor;
       rhs*=factor;
-      format('![%s]: "%s" => %s',variable,lhs.toPolynomial.toString,rhs.horner);
+      [lhs.toPolynomial,rhs];
     end
   : format('?[%s]: %s = %s',variable,lhs.toString,rhs.toString);
 end;

@@ -129,7 +129,7 @@ checkForUpdates(editorFile:String)->begin
     ? print('Your local version is newer than what is online... how did you do that?')
     : ask(f'A newer version ({online_version.join(".")}) has been found.'"\nDo you want to go to the download page?",
           ['yes','no'])=='yes' ? openUrl(latestPage) : void;
-  [online_version .composeDigits(1000),current_version.composeDigits(1000),online_version .composeDigits(1000)>current_version.composeDigits(1000)];
+  void;
 end;
 
 @utility=create encrypted script
