@@ -201,8 +201,12 @@ PROCEDURE T_messagesAndLocations.clear;
   end;
 
 FUNCTION T_messagesAndLocations.text(CONST i: longint): string;
+  VAR k:longint;
   begin
-    result:=dat[(i+offset+maxSize) mod maxSize].message;
+    k:=(i+offset+maxSize) mod maxSize;
+    if k>=length(dat)
+    then result:=''
+    else result:=dat[(i+offset+maxSize) mod maxSize].message;
   end;
 
 FUNCTION T_messagesAndLocations.text: T_arrayOfString;
@@ -213,8 +217,12 @@ FUNCTION T_messagesAndLocations.text: T_arrayOfString;
   end;
 
 FUNCTION T_messagesAndLocations.location(CONST i: longint): T_searchTokenLocation;
+  VAR k:longint;
   begin
-    result:=dat[(i+offset+maxSize) mod maxSize].location;
+    k:=(i+offset+maxSize) mod maxSize;
+    if k>=length(dat)
+    then result:=C_nilSearchTokenLocation
+    else result:=dat[k].location;
   end;
 
 FUNCTION T_messagesAndLocations.locations:T_searchTokenLocations;

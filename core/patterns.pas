@@ -32,9 +32,11 @@ TYPE
       PROCEDURE lateRHSResolution(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler{$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos{$endif});
       PROCEDURE thinOutWhitelistAndPlausibilize(CONST context:P_context);
       FUNCTION hides(CONST e:T_patternElement):boolean;
+      PROCEDURE clear;
     public
       CONSTRUCTOR createAnonymous(CONST loc:T_tokenLocation);
       CONSTRUCTOR create(CONST parameterId:T_idString; CONST loc:T_tokenLocation);
+      CONSTRUCTOR clone(CONST other:T_patternElement);
       PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler);
       DESTRUCTOR destroy;
       PROPERTY getCustomTypeCheck:P_typedef read customTypeCheck;
@@ -56,7 +58,7 @@ TYPE
     private
       sig:array of T_patternElement;
       hasOptionals:boolean;
-      PROCEDURE append(CONST el:T_patternElement);
+      PROCEDURE append(VAR el:T_patternElement);
       PROCEDURE finalizeRefs(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler{$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos{$endif});
     public
       CONSTRUCTOR create;
@@ -84,7 +86,7 @@ TYPE
       FUNCTION matches(VAR par:T_listLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean;
       FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean;
       FUNCTION idForIndexInline(CONST index:longint):T_idString;
-      PROCEDURE parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler {$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
+      FUNCTION parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler {$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil{$endif}):boolean;
       FUNCTION toString:ansistring;
       FUNCTION toCmdLineHelpStringString:ansistring;
       PROCEDURE toParameterIds(CONST tok:P_token);
@@ -125,6 +127,20 @@ FUNCTION extractIdsForCaseDistinction(CONST patterns:T_arrayOfPpattern):T_arrayO
   end;
 {$endif}
 
+PROCEDURE T_patternElement.clear;
+  begin
+    id:='';
+    restrictionType :=tt_literal;
+    restrictionValue:=nil;
+    restrictionIdx  :=-1;
+    restrictionId   :='';
+    builtinTypeCheck:=tc_any;
+    customTypeCheck :=nil;
+    typeWhitelist   :=[lt_boolean..lt_emptyMap];
+    elementLocation.package:=nil;
+    skipCustomCheck:=false;
+  end;
+
 CONSTRUCTOR T_patternElement.createAnonymous(CONST loc: T_tokenLocation);
   begin
     id:='';
@@ -137,6 +153,20 @@ CONSTRUCTOR T_patternElement.createAnonymous(CONST loc: T_tokenLocation);
     typeWhitelist   :=[lt_boolean..lt_emptyMap];
     elementLocation:=loc;
     skipCustomCheck:=false;
+  end;
+
+CONSTRUCTOR T_patternElement.clone(CONST other:T_patternElement);
+  begin
+    elementLocation  :=other.elementLocation ;
+    typeWhitelist    :=other.typeWhitelist   ;
+    id               :=other.id              ;
+    restrictionType  :=other.restrictionType ;
+    restrictionValue :=other.restrictionValue;
+    restrictionIdx   :=other.restrictionIdx  ;
+    restrictionId    :=other.restrictionId   ;
+    builtinTypeCheck :=other.builtinTypeCheck;
+    customTypeCheck  :=other.customTypeCheck ;
+    skipCustomCheck  :=other.skipCustomCheck ;
   end;
 
 CONSTRUCTOR T_patternElement.create(CONST parameterId: T_idString; CONST loc:T_tokenLocation);
@@ -408,10 +438,11 @@ FUNCTION T_pattern.appendFreeId(CONST parId: T_idString; CONST location:T_tokenL
     sig[result].create(parId,location);
   end;
 
-PROCEDURE T_pattern.append(CONST el: T_patternElement);
+PROCEDURE T_pattern.append(VAR el: T_patternElement);
   begin
     setLength(sig,length(sig)+1);
-    sig[length(sig)-1]:=el;
+    sig[length(sig)-1].clone(el);
+    el.clear;
   end;
 
 PROCEDURE T_pattern.appendOptional;
@@ -615,7 +646,7 @@ FUNCTION T_pattern.getNamedParameters: T_patternElementLocations;
     setLength(result,i);
   end;
 
-PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler {$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil{$endif});
+FUNCTION T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler {$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil{$endif}):boolean;
   CONST MSG_INVALID_OPTIONAL='Optional parameters are allowed only as last entry in a function head declaration.';
   VAR parts:T_bodyParts;
       closingBracket:P_token;
@@ -644,7 +675,7 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
       parts:=getBodyParts(first,0,context,closingBracket,[tt_endOfPatternAssign,tt_endOfPatternDeclare],[tt_iifElse]);
       if closingBracket=nil then begin
         context^.raiseError('Invalid pattern.',first^.location);
-        exit;
+        exit(false);
       end;
       for i:=0 to length(parts)-1 do begin
         partLocation:=parts[i].first^.location;
@@ -748,8 +779,6 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
             end else fail(parts[i].first);
           end;
           append(rulePatternElement);
-          rulePatternElement.id:='';
-          rulePatternElement.restrictionId:='';
         end else begin
           //Anonymous equals: f(1)->
           {$ifdef fullVersion}if callAndIdInfos<>nil then callAndIdInfos^.addAll(parts[i].first);{$endif}
@@ -762,18 +791,16 @@ PROCEDURE T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenL
             parts[i].first:=recycler^.disposeToken(parts[i].first);
             assertNil(parts[i].first);
             append(rulePatternElement);
-            rulePatternElement.id:='';
-            rulePatternElement.restrictionId:='';
           end else fail(parts[i].first);
         end;
       end;
       parts:=nil;
     end;
     finalizeRefs(ruleDeclarationStart,context,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
-
     first^.tokType:=tt_functionPattern;
     first^.data:=@self;
     first^.next:=recycler^.disposeToken(closingBracket);
+    result:=true;
   end;
 
 {$ifdef fullVersion}

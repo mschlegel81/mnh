@@ -117,17 +117,16 @@ CONST
     createRules,
     executeStatements,
     loadUsedPacks ,
-    interpretInputStatements,
     finalizeWorkers:boolean;
   end=(
- {lu_NONE                       }(import_usecase:lu_NONE                      ;collectMetaData:false; createRules:true ; executeStatements:false; loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
- {lu_beingLoaded                }(import_usecase:lu_NONE                      ;collectMetaData:false; createRules:true ; executeStatements:false; loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
- {lu_forImport                  }(import_usecase:lu_forImport                 ;collectMetaData:false; createRules:true ; executeStatements:false; loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
- {lu_forCallingMain             }(import_usecase:lu_forImport                 ;collectMetaData:false; createRules:true ; executeStatements:false; loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:true ),
- {lu_forDirectExecution         }(import_usecase:lu_forImport                 ;collectMetaData:false; createRules:true ; executeStatements:true ; loadUsedPacks:true ;interpretInputStatements:true ; finalizeWorkers:true ),
- {lu_forCodeAssistance          }(import_usecase:lu_forCodeAssistance         ;collectMetaData:true ; createRules:false; executeStatements:false; loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
- {lu_forCodeAssistanceSecondary }(import_usecase:lu_forCodeAssistanceSecondary;collectMetaData:true ; createRules:false; executeStatements:false; loadUsedPacks:true ;interpretInputStatements:false; finalizeWorkers:false),
- {lu_usageScan                  }(import_usecase:lu_usageScan                 ;collectMetaData:false; createRules:false; executeStatements:false; loadUsedPacks:false;interpretInputStatements:false; finalizeWorkers:false));
+ {lu_NONE                       }(import_usecase:lu_NONE                      ;collectMetaData:false; createRules:true ; executeStatements:false; loadUsedPacks:true ; finalizeWorkers:false),
+ {lu_beingLoaded                }(import_usecase:lu_NONE                      ;collectMetaData:false; createRules:true ; executeStatements:false; loadUsedPacks:true ; finalizeWorkers:false),
+ {lu_forImport                  }(import_usecase:lu_forImport                 ;collectMetaData:false; createRules:true ; executeStatements:false; loadUsedPacks:true ; finalizeWorkers:false),
+ {lu_forCallingMain             }(import_usecase:lu_forImport                 ;collectMetaData:false; createRules:true ; executeStatements:false; loadUsedPacks:true ; finalizeWorkers:true ),
+ {lu_forDirectExecution         }(import_usecase:lu_forImport                 ;collectMetaData:false; createRules:true ; executeStatements:true ; loadUsedPacks:true ; finalizeWorkers:true ),
+ {lu_forCodeAssistance          }(import_usecase:lu_forCodeAssistance         ;collectMetaData:true ; createRules:false; executeStatements:false; loadUsedPacks:true ; finalizeWorkers:false),
+ {lu_forCodeAssistanceSecondary }(import_usecase:lu_forCodeAssistanceSecondary;collectMetaData:true ; createRules:false; executeStatements:false; loadUsedPacks:true ; finalizeWorkers:false),
+ {lu_usageScan                  }(import_usecase:lu_NONE                      ;collectMetaData:false; createRules:false; executeStatements:false; loadUsedPacks:false; finalizeWorkers:false));
 
 TYPE
   P_sandbox=^T_sandbox;
@@ -539,6 +538,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
       end;
       {$endif}
       if extendsLevel>=32 then begin
+        //Note: This is a protection against stack overflow
         globals.primaryContext.raiseError('Max. extension level exceeded ',locationForErrorFeedback);
         exit;
       end;
@@ -566,7 +566,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         interpret(stmt,usecase,globals,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
         stmt:=lexer.getNextStatement(@globals.primaryContext,recycler);
       end;
-      if (stmt.token.first<>nil) then recycler^.cascadeDisposeToken(stmt.token.first);
+      recycler^.cascadeDisposeToken(stmt.token.first);
       dec(extendsLevel);
       lexer.destroy;
     end;
@@ -628,7 +628,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
       end;
       {$endif}
       locationForErrorFeedback:=first^.location;
-      first:=recycler^.disposeToken(first);
+      first:=recycler^.disposeToken(first); //dispose "USE"
       while first<>nil do begin
         j:=-1;
         if first^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule] then begin
@@ -669,16 +669,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         for i:=0 to length(packageUses)-1 do packageUses[i].destroy;
         setLength(packageUses,0);
       end;
-      if C_packageLoadUsecaseMeta[usecase].loadUsedPacks then reloadAllPackages(locationForErrorFeedback);
-    end;
-
-  FUNCTION continueDatastoreDeclaration:boolean;
-    begin
-      if getCodeProvider^.isPseudoFile then begin
-        globals.primaryContext.messages^.raiseSimpleError('data stores require the package to be saved to a file.',statement.token.first^.location);
-        recycler^.cascadeDisposeToken(statement.token.first);
-        result:=false;
-      end else result:=true;
+      if globals.primaryContext.continueEvaluation and C_packageLoadUsecaseMeta[usecase].loadUsedPacks then reloadAllPackages(locationForErrorFeedback);
     end;
 
   PROCEDURE assertThatAllIdsCanBeResolved(token:P_token);
@@ -719,7 +710,10 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         statement.token.first:=recycler^.disposeToken(statement.token.first);
       end;
       evaluateBody:=(evaluateBody or (modifier_mutable in ruleModifiers));
-      if (modifier_datastore in ruleModifiers) and not(modifier_memoized in ruleModifiers) and not(continueDatastoreDeclaration) then exit;
+      if (modifier_datastore in ruleModifiers) and not(modifier_memoized in ruleModifiers) and getCodeProvider^.isPseudoFile then begin
+        globals.primaryContext.messages^.postTextMessage(mt_el2_warning,ruleDeclarationStart,'Because the file is not saved, the variable will not be datastore but mutable');
+        ruleModifiers:=ruleModifiers-[modifier_datastore]+[modifier_mutable];
+      end;
       if not(statement.token.first^.tokType in [tt_identifier, tt_userRule, tt_intrinsicRule]) then begin
         globals.primaryContext.messages^.raiseSimpleError('Declaration does not start with an identifier.',statement.token.first^.location);
         recycler^.cascadeDisposeToken(statement.token.first);
@@ -756,12 +750,14 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
       end;
 
       if statement.token.first<>nil then begin
+        //After the pattern, we expect an "->" or a ":="
         statement.token.first:=recycler^.disposeToken(statement.token.first);
       end else begin
         globals.primaryContext.messages^.raiseSimpleError('Invalid declaration.',ruleDeclarationStart);
         recycler^.cascadeDisposeToken(ruleBody);
         exit;
       end;
+      assert(statement.token.first=nil);
 
       if evaluateBody and (globals.primaryContext.continueEvaluation)
       then begin
@@ -787,16 +783,24 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         loc:T_tokenLocation;
         metaData:T_ruleMetaData;
     begin
-      if not(continueDatastoreDeclaration) then exit;
       while (statement.token.first<>nil) and (statement.token.first^.tokType=tt_modifier) and (C_modifierInfo[statement.token.first^.getModifier].isRuleModifier) do begin
         include(ruleModifiers,statement.token.first^.getModifier);
         loc:=statement.token.first^.location;
         statement.token.first:=recycler^.disposeToken(statement.token.first);
       end;
       if (statement.token.first=nil) or not(statement.token.first^.tokType in [tt_identifier, tt_userRule, tt_intrinsicRule]) or
-         (statement.token.first^.next<>nil) then begin
+         (statement.token.first^.next<>nil) or not(modifier_datastore in ruleModifiers) and not (modifier_mutable in ruleModifiers) then begin
         if statement.token.first<>nil then loc:=statement.token.first^.location;
-        globals.primaryContext.messages^.raiseSimpleError('Invalid datastore definition: '+tokensToString(statement.token.first),loc);
+        globals.primaryContext.messages^.raiseSimpleError('Invalid statement: '+tokensToString(statement.token.first),loc);
+        recycler^.cascadeDisposeToken(statement.token.first);
+        exit;
+      end;
+      if (modifier_datastore in ruleModifiers) and not(modifier_memoized in ruleModifiers) and getCodeProvider^.isPseudoFile then begin
+        globals.primaryContext.messages^.postTextMessage(mt_el2_warning,loc,'Because the file is not saved, the variable will not be datastore but mutable');
+        ruleModifiers:=ruleModifiers-[modifier_datastore]+[modifier_mutable];
+      end;
+      if not(se_alterPackageState in globals.primaryContext.sideEffectWhitelist) then begin
+        globals.primaryContext.messages^.raiseSimpleError('Datastore declaration is not allowed here',statement.token.first^.location);
         recycler^.cascadeDisposeToken(statement.token.first);
         exit;
       end;
@@ -820,13 +824,13 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
       exit;
     end;
 
-    profile:=globals.primaryContext.messages^.isCollecting(mt_timing_info) and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
-    if statement.token.first=nil then exit;
-
-    if (C_packageLoadUsecaseMeta[usecase].createRules or C_packageLoadUsecaseMeta[usecase].executeStatements) and not(globals.primaryContext.continueEvaluation) then begin
+    if (C_packageLoadUsecaseMeta[usecase].createRules or C_packageLoadUsecaseMeta[usecase].executeStatements) and not(globals.primaryContext.continueEvaluation)
+      or (statement.token.first=nil) then begin
       recycler^.cascadeDisposeToken(statement.token.first);
       exit;
     end;
+
+    profile:=globals.primaryContext.messages^.isCollecting(mt_timing_info) and (usecase in [lu_forDirectExecution,lu_forCallingMain]);
 
     if (statement.token.first^.tokType=tt_use) then begin
       interpretUseClause;
@@ -840,6 +844,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
 
     if C_packageLoadUsecaseMeta[usecase].collectMetaData or C_packageLoadUsecaseMeta[usecase].createRules or C_packageLoadUsecaseMeta[usecase].executeStatements then begin
       if (statement.assignmentToken<>nil) then begin
+
         if not(se_alterPackageState in globals.primaryContext.sideEffectWhitelist) then begin
           globals.primaryContext.messages^.raiseSimpleError('Rule declaration is not allowed here',statement.assignmentToken^.location);
           recycler^.cascadeDisposeToken(statement.token.first);
@@ -852,6 +857,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         if statement.assignmentToken^.next=nil then begin
           globals.primaryContext.messages^.raiseSimpleError('Missing rule body',statement.assignmentToken^.location);
           recycler^.cascadeDisposeToken(statement.token.first);
+          if profile then globals.timeBaseComponent(pc_declaration);
           exit;
         end;
         if globals.primaryContext.messages^.isCollecting(mt_echo_declaration)
@@ -861,13 +867,8 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         {$ifdef fullVersion}
         globals.primaryContext.callStackPop(nil);
         {$endif}
+
       end else if (statement.token.first^.tokType=tt_modifier) then begin
-        if not(se_alterPackageState in globals.primaryContext.sideEffectWhitelist) then begin
-          //TODO: This message comes in strange places, even if no "datastore" modifier is given
-          globals.primaryContext.messages^.raiseSimpleError('Datastore declaration is not allowed here',statement.token.first^.location);
-          recycler^.cascadeDisposeToken(statement.token.first);
-          exit;
-        end;
         {$ifdef fullVersion}
         globals.primaryContext.callStackPushCategory(@self,pc_declaration,pseudoCallees);
         {$endif}
@@ -901,7 +902,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
       end else if C_packageLoadUsecaseMeta[usecase].collectMetaData then resolveBuiltinIDs(statement.token.first,globals.primaryContext.messages);
     end;
     if statement.token.first<>nil then recycler^.cascadeDisposeToken(statement.token.first);
-    statement.token.first:=nil;
+    assert(statement.token.first=nil);
   end;
 
 PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluationGlobals; CONST recycler:P_recycler; CONST mainParameters: T_arrayOfString{$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil; CONST secondaryProvider:P_codeProvider=nil{$endif});
@@ -1043,7 +1044,7 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
         if profile then globals.timeBaseComponent(pc_tokenizing);
       end else stmt.token.first:=nil;
     end;
-    if (stmt.token.first<>nil) then recycler^.cascadeDisposeToken(stmt.token.first);
+    recycler^.cascadeDisposeToken(stmt.token.first);
     lexer.destroy;
     if  C_packageLoadUsecaseMeta[usecase].collectMetaData then begin
       readyForUsecase:=usecase;
@@ -1408,7 +1409,7 @@ FUNCTION T_package.usedAndExtendedPackages: T_arrayOfString;
       ext:P_extendedPackage;
   begin
     setLength(result,0);
-    for ref in packageUses      do append(result,ref.path);
+    for ref in packageUses      do append(result,ref .path);
     for ext in extendedPackages do append(result,ext^.getPath);
     sortUnique(result);
     dropValues(result,'');
