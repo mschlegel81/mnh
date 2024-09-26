@@ -1004,7 +1004,7 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
               tt_endOfPatternDeclare: closeToken^.tokType:=tt_declare;
               tt_endOfPatternAssign : closeToken^.tokType:=tt_assign;
             end;
-            if topIdx=0 then workingIn.assignmentToken:=closeToken;
+            if (topIdx=0) and (workingIn.assignmentToken=nil) then workingIn.assignmentToken:=closeToken;
             //We exit early, because we do not want to pop the scope we just modified.
             exit;
           end else dispose(pattern,destroy);
