@@ -63,7 +63,7 @@ PROCEDURE ensureQuickEvalForm;
 FUNCTION isQuickEvaluationRunning:boolean;
 PROCEDURE stopQuickEvaluation;
 IMPLEMENTATION
-USES mnh_constants,contexts,myStringUtil;
+USES mnh_constants,contexts,myStringUtil,fileWrappers;
 PROCEDURE ensureQuickEvalForm;
   begin
     if not(hasFormOfType(icQuickEval,true)) then dockNewForm(TQuickEvalForm.create(Application));
@@ -162,7 +162,7 @@ PROCEDURE TQuickEvalForm.performSlowUpdate(CONST isEvaluationRunning: boolean);
 
 PROCEDURE TQuickEvalForm.performFastUpdate;
   VAR meta:P_editorMeta;
-      proxy:P_editorMetaProxy;
+      proxy:P_codeProvider;
       assistanceData:P_codeAssistanceResponse;
       startTime:double;
   begin
@@ -184,7 +184,7 @@ PROCEDURE TQuickEvalForm.performFastUpdate;
     quickEvaluation.flushMessages;
     if (evaluatedFor<>stateHash) then begin
       if (meta<>nil) and cbEvaluateInCurrentPackage.enabled and cbEvaluateInCurrentPackage.checked
-      then proxy:=newFixatedFileProxy(meta^.getPath)
+      then proxy:=meta
       else proxy:=nil;
       if not(quickEvaluation.isRunning) then begin
         evaluationStart:=now;
