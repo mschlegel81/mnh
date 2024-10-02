@@ -233,30 +233,35 @@ CONSTRUCTOR TAbstractSynMnhSyn.create(AOwner: TComponent; CONST flav: T_mnhSynFl
       styleTable[tkTimingNote      ,s].style:=[fsBold];
       styleTable[tkHighlightedItem ,s].style:=[fsBold];
 
-      styleTable[tkComment         ,s].foreground:=$00999999;
-      styleTable[tkDocComment      ,s].foreground:=$00999999;
-      styleTable[tkSpecialComment  ,s].foreground:=$00999999;
-      styleTable[tkDefault         ,s].foreground:=$00000000;
-      styleTable[tkDollarIdentifier,s].foreground:=$00000000;
-      styleTable[tkUserRule        ,s].foreground:=$00FF0000;
-      styleTable[tkLocalVar        ,s].foreground:=$00AA0000;
-      styleTable[tkBultinRule      ,s].foreground:=$00FF0000;
-      styleTable[tkSpecialRule     ,s].foreground:=$00FF0000;
-      styleTable[tkOperator        ,s].foreground:=$00880000;
-      styleTable[tkNonStringLiteral,s].foreground:=$000000ff;
-      styleTable[tkString          ,s].foreground:=$00008800;
-      styleTable[tkModifier        ,s].foreground:=$000088ff;
-      styleTable[tkNull            ,s].foreground:=$00000000;
-      styleTable[tkError           ,s].foreground:=$000000ff;
-      styleTable[tkWarning         ,s].foreground:=$000000ff;
-      styleTable[tkNote            ,s].foreground:=$00666666;
-      styleTable[tkTimingNote      ,s].background:=$00EEEEEE;
-      styleTable[tkHighlightedItem ,s].background:=$00AAFF00;
+      styleTable[tkComment         ,s].foreground:=$999999;
+      styleTable[tkDocComment      ,s].foreground:=$999999;
+      styleTable[tkSpecialComment  ,s].foreground:=$999999;
+      styleTable[tkDefault         ,s].foreground:=$000000;
+      styleTable[tkDollarIdentifier,s].foreground:=$000000;
+      styleTable[tkUserRule        ,s].foreground:=$FF0000;
+      styleTable[tkLocalVar        ,s].foreground:=$AA0000;
+      styleTable[tkBultinRule      ,s].foreground:=$FF0000;
+      styleTable[tkSpecialRule     ,s].foreground:=$FF0000;
+      styleTable[tkOperator        ,s].foreground:=$880000;
+      styleTable[tkNonStringLiteral,s].foreground:=$0000ff;
+      styleTable[tkString          ,s].foreground:=$008800;
+      styleTable[tkModifier        ,s].foreground:=$0088ff;
+      styleTable[tkNull            ,s].foreground:=$000000;
+      styleTable[tkError           ,s].foreground:=$0000ff;
+      styleTable[tkWarning         ,s].foreground:=$0000ff;
+      styleTable[tkNote            ,s].foreground:=$666666;
+      styleTable[tkTimingNote      ,s].background:=$EEEEEE;
+      styleTable[tkHighlightedItem ,s].background:=$FFEEDD;
+
+      styleTable[tkHighlightedItem,s].FrameColor:=$FFBB77;
+      styleTable[tkHighlightedItem,s].FrameStyle:=slsSolid;
+      styleTable[tkHighlightedItem,s].FrameEdges:=sfeAround;
     end;
     styleTable[tkTimingNote,skWarn ].style:=[];
     styleTable[tkTimingNote,skWarn ].background:=$00F6F6F6;
     styleTable[tkTimingNote,skError].style:=[fsBold];
     styleTable[tkTimingNote,skError].background:=$00FFFFFF;
+
     for t:=low(T_tokenKind) to high(T_tokenKind) do begin
       if flav=msf_debug
       then styleTable[t,skWarn].background:=$00EEEEEE
