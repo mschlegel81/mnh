@@ -314,7 +314,7 @@ VAR getFormatTokens: FUNCTION (CONST formatString:ansistring; CONST tokenLocatio
     BUILTIN_WRITE_ALL_DATA_STORES,
     BUILTIN_INSPECT:P_intFuncCallback;
 IMPLEMENTATION
-USES sysutils,{$ifdef fullVersion}strutils,messageFormatting,{$endif}math,subrules,profiling,typinfo,patterns,funcs_ipc;
+USES sysutils,{$ifdef fullVersion}strutils,messageFormatting,{$endif}math,subrules,profiling,typinfo,patterns,funcs_ipc,rules;
 
 TYPE
 T_scopeType=(sc_block,        // begin ... end
@@ -757,6 +757,12 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
             if idType=tt_eachIndex then tok^.location:=idLoc;
           end else begin
             associatedPackage^.resolveId(tok^,nil);
+            {$ifdef fullVersion}
+            if (callAndIdInfos<>nil) and (tok^.location.package=P_objectWithPath(associatedPackage)) and (tok^.tokType in [tt_userRule,tt_globalVariable]) then begin
+              idLoc:=P_abstractRule(tok^.data)^.getLocation;
+              if idLoc.package=P_objectWithPath(associatedPackage) then callAndIdInfos^.addTokenRelation(tok,idLoc);
+            end;
+            {$endif}
           end;
         end;
         {$ifdef fullVersion}
