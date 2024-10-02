@@ -1,7 +1,7 @@
 USE mnhExeInfo,formattingUtils,make_config,distroLog,testExpectation,guiScripts;
 tprint(...)->print@(formatTime('hh:nn.ss ',systime)|...);
 //Configuration:=====================================================
-private needBuild(B)->B['canBuild'] AND (!(B['targetDest'].fileExists) OR !([B['targetDest'].flavour,B['targetDest'].codeVersion]==[B['flavour'],ensureCodeHash]));
+private needBuild(B)->B['canBuild'] AND (!(B['targetDest'].fileExists) OR !([B['targetDest'].flavour,B['targetDest'].codeVersion]==[B['flavour'],ensureCodeHash(false)]));
 
 private delp->(isLinux ? 'delp' : DelpPath).exec(
        ['core',
@@ -21,14 +21,16 @@ private templateToInc(inFile,outFile<>inFile,pasId)->begin
   : writeFile(outFile,outText);
 end;
 
-private ensureDefaultFilesSource->begin
-  sort(allFiles('demos\','*.mnh')|allFiles('packages\','*.mnh'))
-  .map((f)->[f,mnhInfo['configDir']&f])
-  .map((a,b)->fileContents(a)==fileContents(b) ? void : begin
-    warn("Files differ:\t",a,"\n\t",b);
-    unifiedDiff(a.systemSpecificFilename,b.systemSpecificFilename,a.fileLines,b.fileLines,3).join("\n").print;
-    true;
-  end).size>0 ? halt : void;
+private ensureDefaultFilesSource(skipFileScan:Boolean)->begin
+  if not skipFileScan AND
+     sort(allFiles('demos\','*.mnh')|allFiles('packages\','*.mnh'))
+     .map((f)->[f,mnhInfo['configDir']&f])
+     .map((a,b)->fileContents(a)==fileContents(b) ? void : begin
+       warn("Files differ:\t",a,"\n\t",b);
+       unifiedDiff(a.systemSpecificFilename,b.systemSpecificFilename,a.fileLines,b.fileLines,3).join("\n").print;
+       true;
+     end).size>0
+  then halt;
 
   code:=
   format('(%{escapePascal($0)}s,%{escapePascal($0.fileContents.compress)}s)',
@@ -53,7 +55,7 @@ private ensureFilesToDeleteSource->begin
 end;
 
 private mutable currentCodeHash:=void;
-private synchronized updateCurrentCodeHash->
+private synchronized updateCurrentCodeHash(skipFileScan:Boolean)->
 currentCodeHash:=begin
   fileExists('../checkstyle.mnh')
   ? begin
@@ -72,7 +74,7 @@ currentCodeHash:=begin
   templateToInc('resources/removeAssoc.mnh'                ,'ide/res_removeAssoc.inc');
   docCodeFuture();
   templateToInc('resources/examples_processed.txt'         ,'ide/res_examples.inc','examples_txt');
-  ensureDefaultFilesSource;
+  ensureDefaultFilesSource(skipFileScan);
   ensureFilesToDeleteSource;
   //update code hash
   tprint('Updating code hash based on ',hashFiles.size,' files');
@@ -89,7 +91,7 @@ currentCodeHash:=begin
   result;
 end;
 
-private ensureCodeHash->currentCodeHash orElse updateCurrentCodeHash;
+private ensureCodeHash(skipFileScan:Boolean)->currentCodeHash orElse updateCurrentCodeHash(skipFileScan);
 
 private myMove(source,dest:String)->fileExists(source) ? begin
   tries:=3;
@@ -105,7 +107,7 @@ private BUILD_LOG:='build.log';
 private buildExe(B:Map)->
   B.needBuild AND B['canBuild']
   ? begin
-      ensureCodeHash;
+      ensureCodeHash(false);
       tprint('Building ',B['targetDest'].systemSpecificFilename);
       compilerOutput:=exec@(B['compilerCall']);
       sepLine:=repeatString('-',compilerOutput[0].each(line,line.length,max) orElse 0);
@@ -133,7 +135,7 @@ private testExe(B:Map,...)->begin
   ? B.buildExe
   : void;
   //Skip entries which are already tested
-  (!forceTest AND allTestsPassed(B['flavour'],ensureCodeHash)) OR needBuild(B)
+  (!forceTest AND allTestsPassed(B['flavour'],ensureCodeHash(false))) OR needBuild(B)
   ? return true
   : void;
 
@@ -145,7 +147,7 @@ end;
 
 private showStatus->begin
   print;
-  tprint('Current code hash: ',ensureCodeHash);
+  tprint('Current code hash: ',ensureCodeHash(false));
   BUILDS.each(B,begin
     exe  :=B['targetDest'].systemSpecificFilename;
     exist:=fileExists(exe);
@@ -201,8 +203,13 @@ private isSameFileName(filename1:String,filename2:String)->begin
 end;
 
 main->main('build');
+//*Build all targets, skipping checks for differing files
+main('BUILD')->begin
+  ensureCodeHash(true);
+  BUILDS.reverseList.each(B,B.buildExe);
+end;
 //*Build all targets
-main('build')->BUILDS.reverseList.each(B,B.buildExe);
+main('build')->BUILDS.reverseList.each(B,B.buildExe(false));
 //*Test all targets - non-debug versions will be built if necessary
 main('test')->BUILDS.reverseList.each(B,B.testExe,and).assert('There are failed tests');
 //*Test all targets even if the test already has been passed - non-debug versions will be built if necessary
@@ -212,7 +219,7 @@ main('noLogTest')->BUILDS.reverseList.each(B,B.testExe('noLog'),and).assert('The
 //*Show the current built status
 main('status')->showStatus;
 //*Show the current built status
-main('prepare')->ensureCodeHash;
+main('prepare')->ensureCodeHash(false);
 //*Clean the output files
 main('clean')->tprint('Cleaning') orElse cleanup;
 //*Deep cleaning, including deleting all executables
