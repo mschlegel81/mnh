@@ -1138,46 +1138,8 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
       k:longint=0;
       clearFirst:boolean=false;
 
-  {$ifdef Windows}
-  PROCEDURE updateScreenSize;
-    VAR
-      hStdOut: handle;
-      csbi:TCONSOLESCREENBUFFERINFO;
-      width: dword;
-    begin
-      hStdOut:=GetStdHandle(STD_OUTPUT_HANDLE);
-      if not GetConsoleScreenBufferInfo(hStdOut,csbi) then exit;
-      width:=dword(csbi.dwSize.x);
-      if (width>=50) and (width<1000) then messageFormatProvider^.preferredLineLength:=width;
-    end;
-
-  PROCEDURE directOutput;
-    CONST origin: COORD=(x:0;y:0);
-    VAR
-      hStdOut: handle;
-      csbi:TCONSOLESCREENBUFFERINFO;
-      conSize,written: dword;
-      newCursor:COORD=(x:0;y:0);
-      lpReserved: pointer;
-    begin
-      hStdOut:=GetStdHandle(STD_OUTPUT_HANDLE);
-      if not GetConsoleScreenBufferInfo(hStdOut,csbi) then exit;
-      conSize:=dword(csbi.dwSize.x)*dword(csbi.dwSize.Y);
-      SetConsoleCursorPosition(hStdOut,origin);
-      FillConsoleOutputCharacter(hStdOut,' ',conSize,origin,written);
-      SetConsoleCursorPosition(hStdOut,origin);
-      WriteConsole(hStdOut,@p[1],length(p),written,lpReserved);
-      FillConsoleOutputAttribute(hStdOut,csbi.wAttributes,conSize,origin,written);
-      newCursor.Y:=length(toPrint);
-      SetConsoleCursorPosition(hStdOut,newCursor);
-    end;
-  {$endif}
-
   begin
     result:=mySys.showConsole and (message^.messageType in messageTypesToInclude);
-    {$ifdef Windows}
-    updateScreenSize;
-    {$endif}
     if result then begin
       enterCriticalSection(adapterCs);
       try
@@ -1210,11 +1172,7 @@ FUNCTION T_consoleOutAdapter.append(CONST message:P_storedMessage):boolean;
             if    (message^.messageType in [mt_printline,mt_log]) and (mode in [com_normal,com_stdout_only]) or
                not(message^.messageType in [mt_printline,mt_log]) and (mode = com_stdout_only)
             then begin
-              {$ifdef Windows}
-              if clearFirst then directOutput else
-              {$else}
               if clearFirst then mySys.clearConsole;
-              {$endif}
               writeln(       p);
             end else begin
               if clearFirst then mySys.clearConsole;
