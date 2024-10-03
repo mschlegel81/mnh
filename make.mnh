@@ -209,7 +209,7 @@ main('BUILD')->begin
   BUILDS.reverseList.each(B,B.buildExe);
 end;
 //*Build all targets
-main('build')->BUILDS.reverseList.each(B,B.buildExe(false));
+main('build')->BUILDS.reverseList.each(B,B.buildExe);
 //*Test all targets - non-debug versions will be built if necessary
 main('test')->BUILDS.reverseList.each(B,B.testExe,and).assert('There are failed tests');
 //*Test all targets even if the test already has been passed - non-debug versions will be built if necessary
