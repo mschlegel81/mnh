@@ -1190,7 +1190,14 @@ FUNCTION integrate_impl intFuncSignature;
       subrangeHeap.insert(subrange,w);
     end;
 
-  FUNCTION performIntegration(CONST x0,x1:double):T_arrayOfDouble;
+  FUNCTION anyNonzero(CONST a:T_arrayOfDouble):boolean;
+    VAR d:double;
+    begin
+      for d in a do if d<>0 then exit(true);
+      result:=false;
+    end;
+
+  FUNCTION performIntegration(x0,x1:double):T_arrayOfDouble;
     VAR initialSubranges:longint;
         subrange:T_subrange;
         YStitch:array[0..1] of T_arrayOfDouble;
@@ -1200,10 +1207,28 @@ FUNCTION integrate_impl intFuncSignature;
         dx:double;
         i:longint;
     begin
-      initialSubranges:=pointsRemaining shr 4;
+      initialSubranges:=pointsRemaining shr 6;
       if initialSubranges< 1 then initialSubranges:=1;
       if initialSubranges>32 then initialSubranges:=32;
       subrangeHeap.createWithNumericPriority(nil); //priority will be explicitly passed to heap
+      if isInfinite(x1) and isInfinite(x0) then begin
+        x0:=-1;
+        x1:= 1;
+        dx:=1;
+        while anyNonzero(evalF(x1)) do begin dx*=2; x1+=dx; end;
+        x1-=dx;
+        dx:=1;
+        while anyNonzero(evalF(x0)) do begin dx*=2; x0-=dx; end;
+        x0+=dx;
+      end else if IsInfinite(x1) then begin
+        x1:=x0+1; dx:=1;
+        while anyNonzero(evalF(x1)) do begin dx*=2; x1+=dx; end;
+        x1-=dx;
+      end else if IsInfinite(x0) then begin
+        x0:=x1-1; dx:=1;
+        while anyNonzero(evalF(x0)) do begin dx*=2; x0-=dx; end;
+        x0+=dx;
+      end;
       dx:=(x1-x0)/initialSubranges;
 
       for i:=0 to initialSubranges-1 do begin
