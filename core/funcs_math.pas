@@ -1100,25 +1100,25 @@ FUNCTION integrate_impl intFuncSignature;
         for d in a do if isNan(d) or isInfinite(d) then exit(true);
         result:=false;
       end;
-    CONST highOrderWeights:array[0..31,0..4] of double=(( 0.07777777777777777, 0.35555555555555555, 0.13333333333333333, 0.3555555555555555 , 0.07777777777777777),
+    CONST highOrderWeights:array[0..31,0..4] of double=(( 0.07777777777777777, 0.35555555555555556, 0.13333333333333333, 0.3555555555555556 , 0.07777777777777777),
                                                         ( 0                  , 0.66666666666666666,-0.33333333333333333, 0.6666666666666666 , 0                  ),
-                                                        ( 0.16666666666666666, 0                  , 0.66666666666666666, 0                  , 0.16666666666666666),
+                                                        ( 0.16666666666666666, 0                  , 0.6666666666666667 , 0                  , 0.16666666666666666),
                                                         ( 0.66666666666666666,-1.33333333333333333, 1.66666666666666666, 0                  , 0                  ),
                                                         ( 0.05555555555555555, 0.44444444444444444, 0                  , 0.44444444444444444, 0.05555555555555555),
                                                         ( 0.11111111111111111, 0.33333333333333333, 0                  , 0.55555555555555555, 0                  ),
                                                         (-0.16666666666666666, 0.88888888888888888, 0                  , 0                  , 0.27777777777777777),
                                                         (-1                  , 2                  , 0                  , 0                  , 0                  ),
-                                                        ( 0.16666666666666666, 0                  , 0.66666666666666666, 0                  , 0.16666666666666666),
+                                                        ( 0.16666666666666666, 0                  , 0.6666666666666667 , 0                  , 0.16666666666666666),
                                                         ( 0.22222222222222222, 0                  , 0.33333333333333333, 0.44444444444444444, 0                  ),
-                                                        ( 0.16666666666666666, 0                  , 0.66666666666666666, 0                  , 0.16666666666666666),
+                                                        ( 0.16666666666666666, 0                  , 0.6666666666666667 , 0                  , 0.16666666666666666),
                                                         ( 0                  , 0                  , 1                  , 0                  , 0                  ),
-                                                        ( 0.27777777777777777, 0                  , 0                  , 0.88888888888888888,-0.16666666666666666),
+                                                        ( 0.27777777777777777, 0                  , 0                  , 0.8888888888888889 ,-0.16666666666666666),
                                                         ( 0.33333333333333333, 0                  , 0                  , 0.66666666666666666, 0                  ),
                                                         ( 0.5                , 0                  , 0                  , 0                  , 0.5                ),
                                                         ( 1                  , 0                  , 0                  , 0                  , 0                  ),
                                                         ( 0                  , 0.66666666666666666,-0.33333333333333333, 0.66666666666666666, 0                  ),
                                                         ( 0                  , 0.66666666666666666,-0.33333333333333333, 0.66666666666666666, 0                  ),
-                                                        ( 0                  , 0.44444444444444444, 0.33333333333333333, 0                  , 0.22222222222222222),
+                                                        ( 0                  , 0.4444444444444445 , 0.33333333333333333, 0                  , 0.22222222222222222),
                                                         ( 0                  , 0                  , 1                  , 0                  , 0                  ),
                                                         ( 0                  , 0.55555555555555555, 0                  , 0.33333333333333333, 0.11111111111111111),
                                                         ( 0                  , 0.5                , 0                  , 0.5                , 0                  ),
@@ -1132,7 +1132,7 @@ FUNCTION integrate_impl intFuncSignature;
                                                         ( 0                  , 0                  , 0                  , 1                  , 0                  ),
                                                         ( 0                  , 0                  , 0                  , 0                  , 1                  ),
                                                         ( 0                  , 0                  , 0                  , 0                  , 0                  ));
-    CONST lowOrderWeights:array[0..7,0..2] of double=((0.16666666666666666,0.6666666666666666,0.16666666666666666),
+    CONST lowOrderWeights:array[0..7,0..2] of double=((0.16666666666666666,0.6666666666666667,0.16666666666666666),
                                                       (0                  ,1                 ,0                  ),
                                                       (0.5                ,0                 ,0.5                ),
                                                       (1                  ,0                 ,0                  ),
@@ -1198,49 +1198,41 @@ FUNCTION integrate_impl intFuncSignature;
     end;
 
   FUNCTION performIntegration(x0,x1:double):T_arrayOfDouble;
-    VAR initialSubranges:longint;
-        subrange:T_subrange;
-        YStitch:array[0..1] of T_arrayOfDouble;
-
+    VAR subrange:T_subrange;
         subranges:T_subrangeHeap.T_payloadArray;
-
         dx:double;
         i:longint;
     begin
-      initialSubranges:=pointsRemaining shr 6;
-      if initialSubranges< 1 then initialSubranges:=1;
-      if initialSubranges>32 then initialSubranges:=32;
       subrangeHeap.createWithNumericPriority(nil); //priority will be explicitly passed to heap
       if isInfinite(x1) and isInfinite(x0) then begin
         x0:=-1;
         x1:= 1;
         dx:=1;
-        while anyNonzero(evalF(x1)) do begin dx*=2; x1+=dx; end;
+        while not(isInfinite(x1)) and anyNonzero(evalF(x1)) do begin dx*=2; x1+=dx; end;
         x1-=dx;
         dx:=1;
-        while anyNonzero(evalF(x0)) do begin dx*=2; x0-=dx; end;
+        while not(isInfinite(x0)) and anyNonzero(evalF(x0)) do begin dx*=2; x0-=dx; end;
         x0+=dx;
-      end else if IsInfinite(x1) then begin
+      end else if isInfinite(x1) then begin
         x1:=x0+1; dx:=1;
-        while anyNonzero(evalF(x1)) do begin dx*=2; x1+=dx; end;
+        while not(isInfinite(x1)) and anyNonzero(evalF(x1)) do begin dx*=2; x1+=dx; end;
         x1-=dx;
-      end else if IsInfinite(x0) then begin
+      end else if isInfinite(x0) then begin
         x0:=x1-1; dx:=1;
-        while anyNonzero(evalF(x0)) do begin dx*=2; x0-=dx; end;
+        while not(isInfinite(x0)) and anyNonzero(evalF(x0)) do begin dx*=2; x0-=dx; end;
         x0+=dx;
       end;
-      dx:=(x1-x0)/initialSubranges;
+      if isInfinite(x0) then x0:=-1E256;
+      if isInfinite(x1) then x1:= 1E256;
+      dx:=(x1-x0);
 
-      for i:=0 to initialSubranges-1 do begin
-        if i=0 then YStitch[0]:=evalF(x0);
-        YStitch[(1+i) and 1]:=evalF(x0+(i+1)*dx);
-        evaluatePart(x0+dx*i,dx,
-          YStitch[   i  and 1],          //i=      0 1 2 3 4 5 ...
-          evalF(x0+(i+0.5)*dx),          //YS[0]@  0 2 2 4 4 6 ...
-          YStitch[(1+i) and 1]);         //YS[1]@  1 1 3 3 5 5 ...
-      end;
+      i:=pointsRemaining-floor(sqrt(pointsRemaining));
+      evaluatePart(x0,dx,
+        evalF(x0),
+        evalF(x0+0.5*dx),
+        evalF(x1));
 
-      while (pointsRemaining>0) and (subrangeHeap.maxPrio>errorTolerance) do begin
+      while (pointsRemaining>0) and ((pointsRemaining>i) or (subrangeHeap.maxPrio>errorTolerance)) do begin
         subrange:=subrangeHeap.extractHighestPrio;
         evaluatePart(subrange.x0                ,subrange.dx*0.5,subrange.y[0],subrange.y[1],subrange.y[2]);
         evaluatePart(subrange.x0+subrange.dx*0.5,subrange.dx*0.5,subrange.y[2],subrange.y[3],subrange.y[4]);
