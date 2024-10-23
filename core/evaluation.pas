@@ -34,7 +34,8 @@ USES sysutils,
      rules,
      aggregators,
      recyclers,
-     listProcessing;
+     listProcessing,
+     patterns;
 
 FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recycler:P_recycler):T_reduceResult;
   VAR stack:T_TokenStack;
@@ -803,6 +804,13 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
     begin
       newValue:=first^.next^.data;
       case kind of
+        tt_assign: begin
+          if (stack.top=nil) or (stack.top^.tokType<>tt_functionPattern) then exit;
+          context^.valueScope^.applyMultiAssignment(recycler,P_pattern(stack.top^.data)^.getNamedParameters,newValue,first^.location,context);
+          stack.top:=recycler^.disposeToken(stack.top);
+          first:=recycler^.disposeToken(first);
+        end;
+
         tt_assignNewBlockLocal: begin
           context^.valueScope^.createVariable(first^.txt,newValue,false);
           first:=recycler^.disposeToken(first);
@@ -1428,7 +1436,7 @@ end}
             end;
             COMMON_CASES;
           end;
- {cT[-1]=}tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_mut_nested_assign..tt_mut_nestedDrop: case cTokType[1] of
+ {cT[-1]=}tt_assign, tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_mut_nested_assign..tt_mut_nestedDrop: case cTokType[1] of
             tt_semicolon: if (cTokType[-1] in [tt_beginBlock,tt_beginRule,tt_beginExpression]) and (cTokType[2]=C_compatibleEnd[cTokType[-1]]) then begin
               first:=recycler^.disposeToken(first);
               if (cTokType[-1] in [tt_beginRule,tt_beginExpression]) then begin
@@ -1478,7 +1486,7 @@ end}
           stack.push(first);
           didSubstitution:=true;
         end;
-{cT[0]=}tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_mut_nested_assign..tt_mut_nestedDrop: begin
+{cT[0]=}tt_assignNewBlockLocal, tt_assignExistingBlockLocal,tt_mut_nested_assign..tt_mut_nestedDrop, tt_assign: begin
           stack.push(first);
           didSubstitution:=true;
         end;
@@ -1529,7 +1537,14 @@ end}
         tt_operatorMult..tt_operatorConcatAlt:
           context^.raiseError('Undefined prefix operator '+first^.singleTokenToString,errorLocation);
 {cT[0]=}tt_braceOpen: begin stack.push(first); didSubstitution:=true; end;
-{cT[0]=}tt_expBraceOpen,tt_functionPattern: begin
+{cT[0]=}tt_expBraceOpen: begin
+          digestInlineExpression(first,context,recycler);
+          didSubstitution:=true;
+        end;
+        tt_functionPattern: if cTokType[1]=tt_assign then begin
+          stack.push(first);
+          didSubstitution:=true;
+        end else begin
           digestInlineExpression(first,context,recycler);
           didSubstitution:=true;
         end;

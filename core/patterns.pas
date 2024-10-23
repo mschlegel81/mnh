@@ -46,12 +46,6 @@ TYPE
       FUNCTION isTypeCheckOnly:boolean;
   end;
 
-  T_patternElementLocation=object
-    id:T_idString;
-    location:T_tokenLocation;
-  end;
-  T_patternElementLocations=array of T_patternElementLocation;
-
   P_pattern=^T_pattern;
   T_arrayOfPpattern=array of P_pattern;
   T_pattern=object
@@ -77,6 +71,7 @@ TYPE
       FUNCTION isValidCustomTypeCheckPattern(CONST forDuckTyping:boolean):boolean;
       FUNCTION isValidMutablePattern:boolean;
       FUNCTION isNaiveInlinePattern:boolean;
+      PROCEDURE warnForMultiAssign(CONST context:P_context);
       FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
       FUNCTION isEquivalent(CONST p:T_pattern):boolean;
       FUNCTION hides(CONST p:T_pattern):boolean;
@@ -612,6 +607,15 @@ FUNCTION T_pattern.isNaiveInlinePattern:boolean;
     for i:=0 to length(sig)-1 do
       if (sig[i].id='') or (length(sig[i].id)>1) and (sig[i].id[1]='$') then exit(true);
     result:=false;
+  end;
+
+PROCEDURE T_pattern.warnForMultiAssign(CONST context:P_context);
+  VAR i:longint;
+  begin
+    for i:=0 to length(sig)-1 do begin
+      if sig[i].id='' then context^.raiseError('Invalid element for left-hand-side of multi-assign.',sig[i].elementLocation);
+      if sig[i].restrictionType<>tt_literal then context^.messages^.postTextMessage(mt_el2_warning,sig[i].elementLocation,'Pattern-like checks will be ignored.');
+    end;
   end;
 
 FUNCTION T_pattern.acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean; begin result:=(length(sig)=1) and (literalTypeToAccept in sig[0].typeWhitelist); end;

@@ -962,6 +962,7 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
       pattern:P_pattern;
       namedParamter: T_patternElementLocation;
       i: longint;
+      multi_assign:boolean=false;
   begin
     if (closeToken<>nil) and (closeToken^.tokType in [tt_semicolon,tt_separatorComma]) or forcePop then begin
       popSpecialIfPresent;
@@ -984,6 +985,7 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
       tt_endOfPatternDeclare,tt_endOfPatternAssign:
         if   scope[topIdx].scopeStartToken^.tokType =tt_braceOpen
         then begin
+          multi_assign:=(topIdx>0) and (closeToken^.tokType=tt_endOfPatternAssign);
           with scope[topIdx] do begin
             for i:=0 to length(delayedErrorMessages)-1 do disposeMessage(delayedErrorMessages[i]);
             setLength(delayedErrorMessages,0);
@@ -992,17 +994,13 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
           //The closing token is not part of the expression yet: add a clone now:
           workingIn.token.last^.next:=recycler^.newToken(closeToken);
           workingIn.token.last      :=workingIn.token.last^.next;
-
           new(pattern,create);
           if  pattern^.parse(scope[topIdx].scopeStartToken,
                              scope[topIdx].scopeStartToken^.location,
                              context,
                              recycler{$ifdef fullVersion},localIdInfos{$endif})
           then begin
-            for namedParamter in pattern^.getNamedParameters do
-              addId(namedParamter.id,
-                    namedParamter.location,
-                    tt_parameterIdentifier);
+
             //expression changed; need to collect new last token
             workingIn.token.last:=scope[topIdx].scopeStartToken^.last;
 
@@ -1011,8 +1009,21 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
               tt_endOfPatternAssign : closeToken^.tokType:=tt_assign;
             end;
             if (topIdx=0) and (workingIn.assignmentToken=nil) then workingIn.assignmentToken:=closeToken;
-            //We exit early, because we do not want to pop the scope we just modified.
-            exit;
+            if multi_assign then begin
+              if pattern^.isVariadic then context^.raiseError('Invalid token "..." in this context.',scope[topIdx].scopeStartToken^.location);
+              pattern^.warnForMultiAssign(context);
+              for namedParamter in pattern^.getNamedParameters do
+                addId(namedParamter.id,
+                      namedParamter.location,
+                      tt_blockLocalVariable);
+            end else begin
+              for namedParamter in pattern^.getNamedParameters do
+                addId(namedParamter.id,
+                      namedParamter.location,
+                      tt_parameterIdentifier);
+              //We exit early, because we do not want to pop the scope we just modified.
+              exit;
+            end;
           end else dispose(pattern,destroy);
         end else raiseMismatchError;
       tt_expBraceClose: begin

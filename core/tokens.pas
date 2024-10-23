@@ -17,6 +17,12 @@ TYPE
   T_rawTokenArray=array of T_rawToken;
   {$endif}
 
+  T_patternElementLocation=object
+    id:T_idString;
+    location:T_tokenLocation;
+  end;
+  T_patternElementLocations=array of T_patternElementLocation;
+
   P_token=^T_token;
   T_tokenRange=record
     first,last:P_token;
