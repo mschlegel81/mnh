@@ -2,9 +2,8 @@ UNIT patterns;
 INTERFACE
 USES sysutils,
      math,
-     {$ifdef fullVersion}
-     myGenerics,mnh_messages,
-     {$endif}
+     mnh_messages,
+     myGenerics,
      basicTypes,mnh_constants,
      recyclers,
      litVar,
@@ -72,6 +71,7 @@ TYPE
       FUNCTION isValidMutablePattern:boolean;
       FUNCTION isNaiveInlinePattern:boolean;
       PROCEDURE warnForMultiAssign(CONST context:P_context);
+      PROCEDURE markAsNewVariable(CONST id:T_idString);
       FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
       FUNCTION isEquivalent(CONST p:T_pattern):boolean;
       FUNCTION hides(CONST p:T_pattern):boolean;
@@ -597,6 +597,7 @@ FUNCTION T_pattern.isValidCustomTypeCheckPattern(CONST forDuckTyping:boolean):bo
             and (forDuckTyping or
                  (sig[0].typeWhitelist-C_typables=[]));
   end;
+
 FUNCTION T_pattern.isValidMutablePattern:boolean; begin result:=(length(sig)=0) and not(hasOptionals); end;
 
 FUNCTION T_pattern.isNaiveInlinePattern:boolean;
@@ -613,9 +614,17 @@ PROCEDURE T_pattern.warnForMultiAssign(CONST context:P_context);
   VAR i:longint;
   begin
     for i:=0 to length(sig)-1 do begin
-      if sig[i].id='' then context^.raiseError('Invalid element for left-hand-side of multi-assign.',sig[i].elementLocation);
-      if sig[i].restrictionType<>tt_literal then context^.messages^.postTextMessage(mt_el2_warning,sig[i].elementLocation,'Pattern-like checks will be ignored.');
+      if sig[i].id=''
+      then context^.raiseError('Invalid element for left-hand-side of multi-assign.',sig[i].elementLocation);
+      if (sig[i].restrictionType<>tt_literal) or (sig[i].builtinTypeCheck<>tc_any) or (sig[i].customTypeCheck<>nil)
+      then context^.messages^.postTextMessage(mt_el2_warning,sig[i].elementLocation,'Pattern-like checks will be ignored.');
     end;
+  end;
+
+PROCEDURE T_pattern.markAsNewVariable(CONST id:T_idString);
+  VAR i:longint;
+  begin
+    for i:=0 to length(sig)-1 do if sig[i].id=id then sig[i].restrictionType:=tt_assignNewBlockLocal;
   end;
 
 FUNCTION T_pattern.acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean; begin result:=(length(sig)=1) and (literalTypeToAccept in sig[0].typeWhitelist); end;
@@ -645,6 +654,7 @@ FUNCTION T_pattern.getNamedParameters: T_patternElementLocations;
     for el in sig do if el.id<>'' then begin
       result[i].location:=el.elementLocation;
       result[i].id      :=el.id;
+      result[i].declareNew:=el.restrictionType=tt_assignNewBlockLocal;
       inc(i);
     end;
     setLength(result,i);

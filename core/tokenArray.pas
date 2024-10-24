@@ -963,6 +963,8 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
       namedParamter: T_patternElementLocation;
       i: longint;
       multi_assign:boolean=false;
+      idType: T_tokenType;
+      idLoc: T_tokenLocation;
   begin
     if (closeToken<>nil) and (closeToken^.tokType in [tt_semicolon,tt_separatorComma]) or forcePop then begin
       popSpecialIfPresent;
@@ -1013,9 +1015,13 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
               if pattern^.isVariadic then context^.raiseError('Invalid token "..." in this context.',scope[topIdx].scopeStartToken^.location);
               pattern^.warnForMultiAssign(context);
               for namedParamter in pattern^.getNamedParameters do
+              if not hasId(namedParamter.id,idType,idLoc) or (idType<>tt_blockLocalVariable)
+              then begin
                 addId(namedParamter.id,
                       namedParamter.location,
                       tt_blockLocalVariable);
+                pattern^.markAsNewVariable(namedParamter.id);
+              end;
             end else begin
               for namedParamter in pattern^.getNamedParameters do
                 addId(namedParamter.id,

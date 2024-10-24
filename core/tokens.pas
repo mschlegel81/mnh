@@ -20,6 +20,7 @@ TYPE
   T_patternElementLocation=object
     id:T_idString;
     location:T_tokenLocation;
+    declareNew:boolean;
   end;
   T_patternElementLocations=array of T_patternElementLocation;
 

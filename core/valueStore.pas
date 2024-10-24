@@ -35,9 +35,7 @@ TYPE
     refCount    :longint;
     variables   :array of P_namedVariable;
     varFill     :longint;
-  private
-    FUNCTION trySetVariableValue(CONST literalRecycler:P_literalRecycler; CONST id:T_idString; CONST value:P_literal):boolean;
-  public
+
     CONSTRUCTOR create(CONST asChildOf:P_valueScope);
     PROCEDURE insteadOfCreate(CONST asChildOf:P_valueScope);
     PROCEDURE cleanup(CONST literalRecycler:P_literalRecycler);
@@ -215,18 +213,6 @@ FUNCTION T_valueScope.getVariableValue(CONST id: T_idString): P_literal;
     if parentScope<>nil then result:=parentScope^.getVariableValue(id);
   end;
 
-FUNCTION T_valueScope.trySetVariableValue(CONST literalRecycler:P_literalRecycler; CONST id:T_idString; CONST value:P_literal):boolean;
-  VAR k:longint;
-  begin
-    result:=false;
-    for k:=0 to varFill-1 do if variables[k]^.id=id then begin
-      variables[k]^.setValue(literalRecycler,value);
-      exit(true);
-    end;
-    if parentScope<>nil
-    then result:=parentScope^.trySetVariableValue(literalRecycler,id,value);
-  end;
-
 FUNCTION T_valueScope.setVariableValue(CONST literalRecycler:P_literalRecycler; CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext):boolean;
   VAR k:longint;
   begin
@@ -243,13 +229,13 @@ FUNCTION T_valueScope.setVariableValue(CONST literalRecycler:P_literalRecycler; 
 FUNCTION T_valueScope.applyMultiAssignment(CONST literalRecycler:P_literalRecycler;  CONST ids:T_patternElementLocations; CONST value:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext):boolean;
   VAR i:longint;
   begin
-    result:=false;
     if not(value^.literalType in C_listTypes) then begin context^.raiseError('Right-hand-side of a multi-assignment must be a list.',location); exit(false); end;
     if P_listLiteral(value)^.size<length(ids) then begin context^.raiseError('Wrong number of values. Expected '+intToStr(length(ids))+' but only got '+intToStr(P_listLiteral(value)^.size),location); exit(false); end;
-    for i:=0 to length(ids)-1 do
-      if not trySetVariableValue(literalRecycler,ids[i].id,P_listLiteral(value)^.value[i]) then
-                                  createVariable(ids[i].id,P_listLiteral(value)^.value[i]);
     result:=true;
+    for i:=0 to length(ids)-1 do
+      if ids[i].declareNew
+      then                    createVariable  (                ids[i].id,P_listLiteral(value)^.value[i])
+      else result:=result and setVariableValue(literalRecycler,ids[i].id,P_listLiteral(value)^.value[i],location,context);
   end;
 
 FUNCTION T_valueScope.mutateVariableValue(CONST literalRecycler:P_literalRecycler; CONST id:T_idString; CONST mutation:T_tokenType; CONST RHS:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext; CONST recycler:pointer):P_literal;
