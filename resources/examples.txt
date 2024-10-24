@@ -49,6 +49,26 @@ if false then 'o.k.'; //If the else-branch is missing it returns void
 f(a,b,c)->if a then b else c; //Internally, if-then-else is mapped to inline-if
 ::f;
 
+#I tt_beginBlock tt_endBlock
+begin
+  x:=[0,1];
+  x|=x.reverseList;
+  x;
+end;
+
+#I tt_return
+begin
+  return 3;
+  'This will never be called';
+end;
+
+#I tt_pseudoFuncPointer
+::sin;
+
+#I tt_pseudoFuncPointer
+f(x)->x*2;
+::f;
+
 #I tt_while
 begin
   L:=[5..1];
