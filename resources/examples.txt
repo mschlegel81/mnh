@@ -16,6 +16,52 @@ Q()(); //First call resolves Q, second call calls the queue object
 Q.closeQueue; //You must call this before iterating!
 Q.agg(|);
 
+#I tt_separatorMapItem
+'a'=>1;
+
+#I tt_mutate tt_assign tt_assignNewBlockLocal tt_assignExistingBlockLocal tt_endOfPatternAssign
+#C The := operator has different meanings in different contexts:
+#C - Declaring a function with := (instead of ->) leads to instant evalution of the body
+#C - Assignment of global variables (mutable or datastore)
+#C - Declaration and assignment of local variables
+#C - Multi-variable-assignments of local variables
+begin
+  x:=3;
+  x;
+end;
+
+#I tt_mutate tt_assign tt_assignNewBlockLocal tt_assignExistingBlockLocal tt_endOfPatternAssign
+begin
+  (a,b):=[2,5];
+  a+b;
+end;
+
+#I tt_ponFlipper
+#C Introduced to make function chaining easier. It also allows for an alternative notation for (non-assigning) operators.
+factors(n>=1)->n.factorize.subSets.map((s)->s.agg(*) orElse 1).unique;
+factors(14325);
+
+#I tt_ponFlipper
+(3).*(5);
+
+#I tt_listToParameterList
+arctan2(1,2)==arctan2@[1,2];
+
+#I tt_nameOf
+begin
+  x:=3;
+  nameOf x;
+end;
+
+#I tt_nameOf
+nameOf(::sin);
+
+#I tt_pow2
+3²
+
+#I tt_pow3
+5³
+
 #I newStack
 #S newStack()
 #C Returns a new stack, which is an iterable expression. Iterating means calling stack.pop until the stack is empty.
