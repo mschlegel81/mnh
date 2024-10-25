@@ -222,7 +222,7 @@ FUNCTION T_valueScope.setVariableValue(CONST literalRecycler:P_literalRecycler; 
       exit(true);
     end;
     if parentScope<>nil
-    then parentScope^.setVariableValue(literalRecycler,id,value,location,context)
+    then result:=parentScope^.setVariableValue(literalRecycler,id,value,location,context)
     else context^.raiseError('Cannot assign value to unknown local variable '+id,location);
   end;
 

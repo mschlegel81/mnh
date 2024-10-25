@@ -1000,7 +1000,8 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
           if  pattern^.parse(scope[topIdx].scopeStartToken,
                              scope[topIdx].scopeStartToken^.location,
                              context,
-                             recycler{$ifdef fullVersion},localIdInfos{$endif})
+                             recycler,
+                             multi_assign{$ifdef fullVersion},localIdInfos{$endif})
           then begin
 
             //expression changed; need to collect new last token
@@ -1013,14 +1014,12 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
             if (topIdx=0) and (workingIn.assignmentToken=nil) then workingIn.assignmentToken:=closeToken;
             if multi_assign then begin
               if pattern^.isVariadic then context^.raiseError('Invalid token "..." in this context.',scope[topIdx].scopeStartToken^.location);
-              pattern^.warnForMultiAssign(context);
               for namedParamter in pattern^.getNamedParameters do
               if not hasId(namedParamter.id,idType,idLoc) or (idType<>tt_blockLocalVariable)
               then begin
                 addId(namedParamter.id,
                       namedParamter.location,
                       tt_blockLocalVariable);
-                pattern^.markAsNewVariable(namedParamter.id);
               end;
             end else begin
               for namedParamter in pattern^.getNamedParameters do

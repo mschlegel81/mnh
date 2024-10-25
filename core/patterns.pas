@@ -70,8 +70,6 @@ TYPE
       FUNCTION isValidCustomTypeCheckPattern(CONST forDuckTyping:boolean):boolean;
       FUNCTION isValidMutablePattern:boolean;
       FUNCTION isNaiveInlinePattern:boolean;
-      PROCEDURE warnForMultiAssign(CONST context:P_context);
-      PROCEDURE markAsNewVariable(CONST id:T_idString);
       FUNCTION acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean;
       FUNCTION isEquivalent(CONST p:T_pattern):boolean;
       FUNCTION hides(CONST p:T_pattern):boolean;
@@ -81,7 +79,7 @@ TYPE
       FUNCTION matches(VAR par:T_listLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean;
       FUNCTION matchesForFallback(VAR par:T_listLiteral; CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):boolean;
       FUNCTION idForIndexInline(CONST index:longint):T_idString;
-      FUNCTION parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler {$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil{$endif}):boolean;
+      FUNCTION parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; CONST multi_assign:boolean{$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil{$endif}):boolean;
       FUNCTION toString:ansistring;
       FUNCTION toCmdLineHelpStringString:ansistring;
       PROCEDURE toParameterIds(CONST tok:P_token);
@@ -610,23 +608,6 @@ FUNCTION T_pattern.isNaiveInlinePattern:boolean;
     result:=false;
   end;
 
-PROCEDURE T_pattern.warnForMultiAssign(CONST context:P_context);
-  VAR i:longint;
-  begin
-    for i:=0 to length(sig)-1 do begin
-      if sig[i].id=''
-      then context^.raiseError('Invalid element for left-hand-side of multi-assign.',sig[i].elementLocation);
-      if (sig[i].restrictionType<>tt_literal) or (sig[i].builtinTypeCheck<>tc_any) or (sig[i].customTypeCheck<>nil)
-      then context^.messages^.postTextMessage(mt_el2_warning,sig[i].elementLocation,'Pattern-like checks will be ignored.');
-    end;
-  end;
-
-PROCEDURE T_pattern.markAsNewVariable(CONST id:T_idString);
-  VAR i:longint;
-  begin
-    for i:=0 to length(sig)-1 do if sig[i].id=id then sig[i].restrictionType:=tt_assignNewBlockLocal;
-  end;
-
 FUNCTION T_pattern.acceptsSingleLiteral(CONST literalTypeToAccept:T_literalType):boolean; begin result:=(length(sig)=1) and (literalTypeToAccept in sig[0].typeWhitelist); end;
 PROCEDURE T_pattern.toParameterIds(CONST tok: P_token);
   VAR t:P_token;
@@ -660,7 +641,7 @@ FUNCTION T_pattern.getNamedParameters: T_patternElementLocations;
     setLength(result,i);
   end;
 
-FUNCTION T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler {$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil{$endif}):boolean;
+FUNCTION T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; CONST multi_assign:boolean{$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos=nil{$endif}):boolean;
   CONST MSG_INVALID_OPTIONAL='Optional parameters are allowed only as last entry in a function head declaration.';
   VAR parts:T_bodyParts;
       closingBracket:P_token;
@@ -696,11 +677,16 @@ FUNCTION T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLo
         if (parts[i].first^.tokType=tt_optionalParameters) and (parts[i].first^.next=nil) then begin
           if i<>length(parts)-1 then context^.raiseError(MSG_INVALID_OPTIONAL,parts[i].first^.location);
           //Optionals: f(...)->
+          if multi_assign then begin context^.raiseError('Invalid left hand side of multi-assignment.',parts[i].first^.location); exit(false); end;
           appendOptional;
           parts[i].first:=recycler^.disposeToken(parts[i].first);
           assertNil(parts[i].first);
         end else if (parts[i].first^.tokType in [tt_blockLocalVariable]) then begin
-          context^.raiseError(parts[i].first^.txt+' is a block local variable and cannot be used as lambda parameter',parts[i].first^.location);
+          if multi_assign then begin
+            rulePatternElement.create(parts[i].first^.txt,parts[i].first^.location);
+            append(rulePatternElement);
+          end else
+            context^.raiseError(parts[i].first^.txt+' is a block local variable and cannot be used as lambda parameter',parts[i].first^.location);
           recycler^.cascadeDisposeToken(parts[i].first);
         end else if (parts[i].first^.tokType in [tt_identifier,tt_userRule,tt_intrinsicRule,tt_globalVariable,tt_customType]) then begin
           //Identified parameter: f(x)->
@@ -708,6 +694,7 @@ FUNCTION T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLo
           parts[i].first:=recycler^.disposeToken(parts[i].first);
           if (parts[i].first<>nil) then begin
             if (parts[i].first^.tokType=tt_iifElse) and (parts[i].first^.next<>nil) and (parts[i].first^.next^.tokType in [tt_identifier]) then begin
+              if multi_assign then context^.messages^.postTextMessage(mt_el2_warning,parts[i].first^.location,'Pattern-like checks will be ignored.');
               rulePatternElement.restrictionType :=tt_typeCheck;
               rulePatternElement.builtinTypeCheck:=tc_byTypeString;
               rulePatternElement.restrictionId   :=parts[i].first^.next^.txt;
@@ -719,6 +706,7 @@ FUNCTION T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLo
                 parts[i].first:=recycler^.disposeToken(parts[i].first);
               end;
             end else if (parts[i].first^.tokType=tt_typeCheck) then begin
+              if multi_assign then context^.messages^.postTextMessage(mt_el2_warning,parts[i].first^.location,'Pattern-like checks will be ignored.');
               //Type check: f(x:Int)
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
               rulePatternElement.builtinTypeCheck:=parts[i].first^.getTypeCheck;
@@ -754,6 +742,7 @@ FUNCTION T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLo
               end else assertNil(parts[i].first);
 
             end else if (parts[i].first^.tokType in C_comparators) then begin
+              if multi_assign then context^.messages^.postTextMessage(mt_el2_warning,parts[i].first^.location,'Pattern-like checks will be ignored.');
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
               parts[i].first:=recycler^.disposeToken(parts[i].first);
 
@@ -776,6 +765,7 @@ FUNCTION T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLo
               end;
 
             end else if (parts[i].first^.tokType=tt_customTypeCheck) then begin
+              if multi_assign then context^.messages^.postTextMessage(mt_el2_warning,parts[i].first^.location,'Pattern-like checks will be ignored.');
               //f(x:MyType)
               {$ifdef fullVersion}if callAndIdInfos<>nil then callAndIdInfos^.add(parts[i].first);{$endif}
               rulePatternElement.restrictionType:=parts[i].first^.tokType;
@@ -792,8 +782,9 @@ FUNCTION T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLo
               assertNil(parts[i].first);
             end else fail(parts[i].first);
           end;
+          if multi_assign then rulePatternElement.restrictionType:=tt_assignNewBlockLocal;
           append(rulePatternElement);
-        end else begin
+        end else if not multi_assign then begin
           //Anonymous equals: f(1)->
           {$ifdef fullVersion}if callAndIdInfos<>nil then callAndIdInfos^.addAll(parts[i].first);{$endif}
           context^.reduceExpression(parts[i].first,recycler);
@@ -806,7 +797,7 @@ FUNCTION T_pattern.parse(VAR first:P_token; CONST ruleDeclarationStart:T_tokenLo
             assertNil(parts[i].first);
             append(rulePatternElement);
           end else fail(parts[i].first);
-        end;
+        end else fail(parts[i].first);
       end;
       parts:=nil;
     end;
