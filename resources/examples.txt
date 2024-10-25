@@ -1,3 +1,13 @@
+#I sum
+#S sum(summable:List)
+#S sum(summable:Iterable)
+#C Returns the sum over all values in the input or 0.0 if the input is empty.
+#C Uses the Kahan-Babushka-Klein sum and only works if the values to be summed are numeric scalars or numeric lists.
+#C WARNING: If you want a correct summation of a pure integer list or overload the addition operator, use .agg(+) instead!
+sum([]);
+
+sum(3^[-1..-2000]);
+
 S:=newStack;
 S.push('A');
 S.push('B');

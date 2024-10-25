@@ -1,6 +1,6 @@
 private runningSum(L:NumericList)->begin
-  sum:=0;
-  L.each(x,sum+=x);
+  S:=0;
+  L.each(x,S+=x);
 end;
 
 private eSeries(n>0)->(1+1/[1..n])^[1..n];

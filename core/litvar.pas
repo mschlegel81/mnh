@@ -283,7 +283,7 @@ TYPE
       FUNCTION arity:T_arityInfo; virtual; abstract;
       FUNCTION canApplyToNumberOfParameters(CONST parCount:longint):boolean; virtual; abstract;
 
-      PROCEDURE makeStateful  (CONST context:P_abstractContext; CONST location:T_tokenLocation);
+      PROCEDURE makeStateful(CONST context:P_abstractContext; CONST location:T_tokenLocation);
       PROCEDURE makeIterable(CONST context:P_abstractContext; CONST location:T_tokenLocation);
 
       FUNCTION getParentId:T_idString; virtual;

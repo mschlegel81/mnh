@@ -1,8 +1,8 @@
 @demo for=local variables
 runningSum([])->[];
 runningSum(L)->begin
-  sum:=L.head;
-  sum|L.tail.each(i,sum+=i);
+  S:=L.head;
+  S|L.tail.each(i,S+=i);
 end;
 
 kochCurve(depth)->kochCurve(depth,1,0);

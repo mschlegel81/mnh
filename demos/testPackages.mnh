@@ -11,8 +11,8 @@ USE '..\packages\mathUtils.mnh';
 testMathUtils->begin
   print('Package mathUtils');
   printf("{nameOf $f}\t=\t{$f@$p}",
-    [::iterate        ,::sum,::prod,::runningSum,::factorial,::binomCoeff,::Bernoulli],
-    [[1,{1/($x+1)},10],[X]  ,[X]   ,[X]         ,[20]       ,[12,5]      ,[4]        ]);
+    [::iterate        ,::prod,::runningSum,::factorial,::binomCoeff,::Bernoulli],
+    [[1,{1/($x+1)},10],[X]   ,[X]         ,[20]       ,[12,5]      ,[4]        ]);
 end;
 
 USE '..\packages\generators.mnh';

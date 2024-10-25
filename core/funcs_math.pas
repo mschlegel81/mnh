@@ -12,12 +12,50 @@ USES sysutils,
      out_adapters,
      recyclers,
      contexts;
+
+TYPE KahanBabushkaKleinSummation=object
+       sum,cs,ccs,c,cc:double;
+       PROCEDURE init;
+       PROCEDURE addTerm(CONST k:double);
+       FUNCTION getSum:double;
+     end;
+
 VAR BUILTIN_MIN,
     BUILTIN_MAX:P_intFuncCallback;
 IMPLEMENTATION
 USES mySys,heaps,complex;
 {$i func_defines.inc}
-FUNCTION sqrt_imp intFuncSignature;
+PROCEDURE KahanBabushkaKleinSummation.init;
+  begin
+    sum:=0;
+    cs:=0;
+    ccs:=0;
+    c:=0;
+    cc:=0;
+  end;
+
+PROCEDURE KahanBabushkaKleinSummation.addTerm(CONST k: double);
+  VAR t:double;
+  begin
+    t:=sum+k;
+    if abs(sum)>=abs(k)
+    then c:=(sum-t)+k
+    else c:=(k-t)+sum;
+    sum:=t;
+    t:=cs+c;
+    if abs(cs)>=abs(c)
+    then cc:=(cs-t)+c
+    else cc:=(c-t)+cs;
+    cs:=t;
+    ccs+=cc;
+  end;
+
+FUNCTION KahanBabushkaKleinSummation.getSum: double;
+  begin
+    result:=sum+cs+ccs;
+  end;
+
+ FUNCTION sqrt_imp intFuncSignature;
   VAR intRoot:int64;
       bigRoot:T_bigInt;
       fltRoot:T_myFloat;
@@ -1202,6 +1240,7 @@ FUNCTION integrate_impl intFuncSignature;
         subranges:T_subrangeHeap.T_payloadArray;
         dx:double;
         i:longint;
+        aggregator:array of KahanBabushkaKleinSummation;
     begin
       subrangeHeap.createWithNumericPriority(nil); //priority will be explicitly passed to heap
       if isInfinite(x1) and isInfinite(x0) then begin
@@ -1239,12 +1278,16 @@ FUNCTION integrate_impl intFuncSignature;
       end;
 
       subranges:=subrangeHeap.getAll;
-      setLength(result,length(subranges[0].area));
-      for i:=0 to length(result)-1 do result[i]:=0;
-      for subrange in subranges do begin
-        for i:=0 to min(length(result),length(subrange.area))-1 do
-          result[i]+=subrange.area[i];
-      end;
+      setLength(aggregator,length(subranges[0].area));
+      for i:=0 to length(aggregator)-1 do aggregator[i].init;
+
+      for subrange in subranges do
+        for i:=0 to min(length(aggregator),length(subrange.area))-1 do
+          aggregator[i].addTerm(subrange.area[i]);
+      setLength(result,length(aggregator));
+      for i:=0 to length(result)-1 do result[i]:=aggregator[i].getSum;
+      setLength(aggregator,0);
+      setLength(subranges,0);
       subrangeHeap.destroy;
     end;
 
@@ -1641,6 +1684,85 @@ FUNCTION convolve1D_impl intFuncSignature;
     end;
   end;
 
+FUNCTION sum_impl intFuncSignature;
+  VAR aggregators:array of KahanBabushkaKleinSummation;
+      resultIsScalar:boolean=true;
+      er: T_evaluationResult;
+
+  PROCEDURE addAggregator;
+    begin
+      setLength(aggregators,length(aggregators)+1);
+      aggregators[length(aggregators)-1].init;
+    end;
+
+  FUNCTION canAggregate(CONST v:P_literal):boolean;
+    VAR k:longint;
+    begin
+      case v^.literalType of
+        lt_smallint, lt_bigint, lt_real:
+          begin
+            if length(aggregators)=0 then addAggregator;
+            for k:=0 to length(aggregators)-1 do aggregators[k].addTerm(P_numericLiteral(v)^.floatValue);
+            result:=true;
+          end;
+        lt_realList, lt_intList, lt_numList:
+          begin
+            if resultIsScalar then begin
+              if length(aggregators)=0 then addAggregator;
+              setLength(aggregators,P_listLiteral(v)^.size);
+              for k:=1 to length(aggregators)-1 do aggregators[k]:=aggregators[0];
+              resultIsScalar:=false;
+            end else begin
+              if P_listLiteral(v)^.size<>length(aggregators) then begin
+                context^.raiseError('Trying to sum up lists of different sizes.',tokenLocation);
+                exit(false);
+              end;
+            end;
+            for k:=0 to length(aggregators)-1 do
+              aggregators[k].addTerm(P_numericLiteral(P_listLiteral(v)^.value[k])^.floatValue);
+          end;
+        else begin
+          context^.raiseError('Trying to sum up invalid types. Only numeric scalars and numeric lists are allowed.',tokenLocation);
+          result:=false;
+        end;
+      end;
+    end;
+
+  VAR i:longint;
+  begin
+    result:=nil;
+    if (params<>nil) and (params^.size=1) then begin
+      case arg0^.literalType of
+        lt_expression: if P_expressionLiteral(arg0)^.typ in C_iterableExpressionTypes then begin
+          er:=evaluteExpression(P_expressionLiteral(arg0),tokenLocation,context,recycler);
+          while not(er.reasonForStop in [rr_ok,rr_okWithReturn]) and context^.continueEvaluation do begin
+            if canAggregate(er.literal)
+            then begin
+              recycler^.disposeLiteral(er.literal);
+              er:=evaluteExpression(P_expressionLiteral(arg0),tokenLocation,context,recycler);
+            end else begin
+              recycler^.disposeLiteral(er.literal);
+              exit(nil);
+            end;
+          end;
+        end;
+        lt_intList,lt_numList,lt_realList, lt_emptyList:
+          for i:=0 to list0^.size-1 do canAggregate(list0^.value[i]);
+        lt_list:
+          for i:=0 to list0^.size-1 do if not canAggregate(list0^.value[i]) then exit(nil);
+        else
+          exit(nil);
+      end;
+      if length(aggregators)=0 then result:=recycler^.newRealLiteral(0)
+      else if resultIsScalar then result:=recycler^.newRealLiteral(aggregators[0].getSum)
+      else begin
+        result:=recycler^.newListLiteral(length(aggregators));
+        for i:=0 to length(aggregators)-1 do listResult^.appendReal(recycler,aggregators[i].getSum);
+      end;
+      setLength(aggregators,0);
+    end;
+  end;
+
 INITIALIZATION
   //Unary Numeric -> real
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'sqrt'  ,@sqrt_imp  ,ak_unary);
@@ -1696,4 +1818,5 @@ INITIALIZATION
 
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'kMeans'    ,@kMeans_impl,ak_variadic_2);
   builtinFunctionMap.registerRule(MATH_NAMESPACE,'convolve1D',@convolve1D_impl,ak_variadic_2);
+  builtinFunctionMap.registerRule(MATH_NAMESPACE,'sum',@sum_impl,ak_unary);
 end.

@@ -6,7 +6,6 @@ iterate(x0,function:Expression(1),stepCount>=1,lastOnly=false)->begin
 end;
 
 @SuppressUnusedWarning=all
-sum(L:NumericList)->L.agg(+) orElse 0;
 prod(L:NumericList)->L.agg(*) orElse 1;
 
 runningSum(L:NumericList)->begin
