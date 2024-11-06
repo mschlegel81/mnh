@@ -184,10 +184,13 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
     new(result,create(formatString,tokenLocation,context,recycler));
   end;
 
-FUNCTION getFormatTokens(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_token;
+FUNCTION getFormatTokens(CONST formatString:ansistring; CONST isFString:boolean; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_token;
   VAR temp_format: P_preparedFormatStatement;
+      fixedLocation:T_tokenLocation;
   begin
-    temp_format:=getFormat(formatString,tokenLocation,context,recycler);
+    fixedLocation:=tokenLocation;
+    if isFString then inc(fixedLocation.column);
+    temp_format:=getFormat(formatString,fixedLocation,context,recycler);
     if temp_format^.formatSubrule=nil
     then result:=nil
     else result:=temp_format^.formatSubrule^.getResolvableTokens(recycler);
@@ -195,42 +198,50 @@ FUNCTION getFormatTokens(CONST formatString:ansistring; CONST tokenLocation:T_to
   end;
 
 CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
-  FUNCTION splitFormatString(CONST formatString:ansistring):T_arrayOfString;
+  FUNCTION splitFormatString(CONST formatString:ansistring):T_locatedStrings;
     CONST FORMAT_CHARS:T_charSet=['d','D','e','E','f','F','g','G','m','M','n','N','s','S','x','X'];
     VAR i:longint=1;
         partStart:longint=1;
         bracketLevel:longint=0;
-        part:ansistring;
+        part:T_locatedString;
         fmtPart:boolean=false;
         simpleFmtPart:boolean=false;
+        resultFill:longint=0;
+    PROCEDURE appendPart;
+      begin
+        if resultFill>=length(result) then setLength(result,resultFill*2);
+        result[resultFill]:=part; inc(resultFill);
+        part.txt:='';
+        part.loc.column:=i+tokenLocation.column;
+      end;
+
     begin
-      part:='';
-      setLength(result,0);
+      part.txt:='';
+      part.loc:=tokenLocation;
+      setLength(result,1);
       while i<=length(formatString) do begin
         case formatString[i] of
           '\': if not(fmtPart) and (i+1<=length(formatString)) and (formatString[i+1] in ['%','{','}']) then begin
-                 part+=formatString[i+1];
+                 part.txt+=formatString[i+1];
                  inc(i);
-               end else part+=formatString[i];
+               end else part.txt+=formatString[i];
           '{': if fmtPart then begin
                  inc(bracketLevel);
-                 part+=formatString[i];
+                 part.txt+=formatString[i];
                end else begin
-                 setLength(result,length(result)+1);
-                 result[length(result)-1]:=part;
-                 part:='%{';
+                 appendPart;
+                 part.txt:='%{';
+                 dec(part.loc.column);
                  partStart:=i;
                  bracketLevel:=1;
                  fmtPart:=true; simpleFmtPart:=true;
                end;
           '}': begin
                  if fmtPart then dec(bracketLevel);
-                 part+=formatString[i];
+                 part.txt+=formatString[i];
                  if (bracketLevel=0) and fmtPart and simpleFmtPart then begin
-                   part+='s';
-                   setLength(result,length(result)+1);
-                   result[length(result)-1]:=part;
-                   part:='';
+                   part.txt+='s';
+                   appendPart;
                    partStart:=i;
                    bracketLevel:=0;
                    fmtPart:=false;
@@ -239,16 +250,15 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
                end;
           '%': if fmtPart then begin
                  if bracketLevel>0
-                 then part+=formatString[i]
+                 then part.txt+=formatString[i]
                  else context^.raiseError('Invalid format specification: '+copy(formatString,partStart,length(formatString)),tokenLocation);
                end else begin
                  if (i+1<=length(formatString)) and (formatString[i+1]='%') then begin
-                   part+='%';
+                   part.txt+='%';
                    inc(i);
                  end else begin
-                   setLength(result,length(result)+1);
-                   result[length(result)-1]:=part;
-                   part:='%';
+                   appendPart;
+                   part.txt:='%';
                    partStart:=i;
                    bracketLevel:=0;
                    fmtPart:=true;
@@ -256,87 +266,115 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
                end;
           'a'..'z','A'..'Z':
                if fmtPart then begin
-                 part+=formatString[i];
+                 part.txt+=formatString[i];
                  if bracketLevel<=0 then begin
                    if not(formatString[i] in FORMAT_CHARS) then
                      context^.raiseError('Invalid format specification: Unknown format "'+formatString[i]+'"',tokenLocation);
-                   setLength(result,length(result)+1);
-                   result[length(result)-1]:=part;
-                   part:='';
+                   appendPart;
+                   part.txt:='';
                    partStart:=i;
                    bracketLevel:=0;
                    fmtPart:=false;
                  end;
-               end else part+=formatString[i];
-          else part+=formatString[i];
+               end else part.txt+=formatString[i];
+          else part.txt+=formatString[i];
         end;
         inc(i);
       end;
-      if part<>'' then begin
-        setLength(result,length(result)+1);
-        result[length(result)-1]:=part;
-      end;
+      if part.txt<>'' then appendPart;
+      setLength(result,resultFill);
     end;
 
-  FUNCTION getFormatSubrule(VAR parts:T_arrayOfString):P_inlineExpression;
+  FUNCTION getFormatSubrule(VAR loc_parts:T_locatedStrings):P_inlineExpression;
     VAR i,k:longint;
         needSubRule:boolean=false;
-        expressionString:ansistring;
+        expressionParts:T_locatedStrings;
         tempStringLiteral:P_stringLiteral;
+        expressionString: string;
+        lexer:T_locatedStringLexer;
+        statement: T_enhancedStatement;
 
-    PROCEDURE splitPart(VAR part:ansistring; CONST index:longint);
+    PROCEDURE splitPart(VAR part:T_locatedString; CONST index:longint);
       VAR expPart:ansistring;
           nonescapableFound:boolean;
       begin
-        part:=trim(part);
-        if pos('{',part)<=0 then begin
-          if pos('}',part)>0 then context^.raiseError('Invalid format specification: '+escapeString(part,es_dontCare,se_testPending,nonescapableFound),tokenLocation);
+        while (length(part.txt)>=1) and (part.txt[1] in [' ',C_tabChar]) do begin
+          part.txt:=copy(part.txt,2,length(part.txt));
+          part.loc.column+=1;
+        end;
+        if pos('{',part.txt)<=0 then begin
+          if pos('}',part.txt)>0 then context^.raiseError('Invalid format specification: '+escapeString(part.txt,es_dontCare,se_testPending,nonescapableFound),tokenLocation);
           expPart:='$'+intToStr(index);
         end else begin
-          expPart:=copy(part,3,pos('}',part)-3);
-          part:='%'+copy(part,pos('}',part)+1,length(part));
-          if (pos('{',part)>0) or (pos('}',part)>0) then context^.raiseError('Invalid format specification: '+escapeString(part,es_dontCare,se_testPending,nonescapableFound),tokenLocation);
+          expPart:=copy(part.txt,3,pos('}',part.txt)-3);
+          part.txt:='%'+copy(part.txt,pos('}',part.txt)+1,length(part.txt));
+          if (pos('{',part.txt)>0) or (pos('}',part.txt)>0) then context^.raiseError('Invalid format specification: '+escapeString(part.txt,es_dontCare,se_testPending,nonescapableFound),tokenLocation);
         end;
-        if expressionString=''
-        then expressionString:='['+expPart
-        else expressionString+=','+expPart;
-        if part='%' then part:='%S';
+
+        if length(expressionParts)=1
+        then expressionParts[length(expressionParts)-1].txt+='('
+        else expressionParts[length(expressionParts)-1].txt+='),(';
+
+        setLength(expressionParts,length(expressionParts)+1);
+        expressionParts[length(expressionParts)-1].txt:=expPart;
+        expressionParts[length(expressionParts)-1].loc:=part.loc;
+
+        if part.txt='%' then part.txt:='%S';
       end;
 
     begin
       result:=nil;
       //Check if a rule is needed at all:
-      for i:=0 to length(parts)-1 do if odd(i) and (copy(trim(parts[i]),2,1)='{') then needSubRule:=true;
+      for i:=0 to length(loc_parts)-1 do if odd(i) and (copy(trim(loc_parts[i].txt),2,1)='{') then needSubRule:=true;
       if not(needSubRule) then exit(nil);
 
-      expressionString:='';
+      setLength(expressionParts,1);
+      expressionParts[0].loc:=tokenLocation;
+      expressionParts[0].txt:='{[';
+
       k:=0;
-      for i:=0 to length(parts)-1 do begin
+      for i:=0 to length(loc_parts)-1 do begin
         if odd(i) then begin
-          if parts[i]<>'' then begin
-            splitPart(parts[i],k);
+          if loc_parts[i].txt<>'' then begin
+            splitPart(loc_parts[i],k);
             inc(k);
           end;
         end;
       end;
+      expressionParts[length(expressionParts)-1].txt+=')]}';
       if context^.continueEvaluation
       then begin
-        tempStringLiteral:=recycler^.newStringLiteral('{'+expressionString+']}');
-        result:=stringOrListToExpression(tempStringLiteral,
-                                         tokenLocation,
-                                         context,recycler);
-        recycler^.disposeLiteral(tempStringLiteral);
+        lexer.create(expressionParts,P_abstractPackage(tokenLocation.package));
+        statement:=lexer.getNextStatement(context,recycler);
+        if (lexer.getNextStatement(context,recycler).token.first<>nil) or
+           (statement.assignmentToken<>nil)
+        then context^.raiseError('Invalid format statement.',tokenLocation);
+        lexer.destroy;
+
+        digestInlineExpression(statement.token.first,context,recycler);
+
+        if (statement.token.first=nil) or (statement.token.first^.tokType<>tt_literal) or (P_literal(statement.token.first^.data)^.literalType<>lt_expression) or (statement.token.first^.next<>nil)
+        then context^.raiseError('Invalid format statement.',tokenLocation)
+        else result:=P_inlineExpression(P_literal(statement.token.first^.data)^.rereferenced);
+
+        recycler^.cascadeDisposeToken(statement.token.first);
+
       end
       else result:=nil;
     end;
 
   VAR i:longint;
+      loc_parts: T_locatedStrings;
   begin
     inPackage:=tokenLocation.package;
-    parts:=splitFormatString(formatString);
-    formatSubrule:=getFormatSubrule(parts);
-    setLength(formats,length(parts));
-    for i:=0 to length(parts)-1 do if odd(i) then formats[i].create(parts[i]);
+    loc_parts:=splitFormatString(formatString);
+    formatSubrule:=getFormatSubrule(loc_parts);
+    setLength(formats,length(loc_parts));
+    setLength(parts  ,length(loc_parts));
+    for i:=0 to length(parts)-1 do begin
+      parts[i]:=loc_parts[i].txt;
+      if odd(i) then formats[i].create(parts[i]);
+    end;
   end;
 
 DESTRUCTOR T_preparedFormatStatement.destroy;

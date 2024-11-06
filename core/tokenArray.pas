@@ -127,7 +127,7 @@ TYPE
   T_simpleTokenRange=record x,y,width:longint; end;
   T_relatedTokens=record
     count:byte;
-    position: array[0..15] of T_simpleTokenRange;
+    position: array[0..63] of T_simpleTokenRange;
   end;
 
   T_callAndIdInfos=object
@@ -268,6 +268,23 @@ TYPE
       {$endif}
   end;
 
+  T_locatedString=record txt:string; loc:T_tokenLocation; end;
+  T_locatedStrings=array of T_locatedString;
+
+  { T_locatedStringLexer }
+
+  T_locatedStringLexer = object(T_abstractLexer)
+    protected
+      parts:T_locatedStrings;
+      partIdx:longint;
+      inputLocation:T_tokenLocation;
+      columnOffset:longint;
+      FUNCTION fetch(CONST messages:P_messages; CONST recycler:P_recycler):P_token; virtual;
+    public
+      CONSTRUCTOR create(CONST strings:T_locatedStrings; CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+      DESTRUCTOR destroy; virtual;
+  end;
+
   { T_variableLexer }
 
   T_variableLexer=object(T_abstractLexer)
@@ -307,7 +324,7 @@ TYPE
 OPERATOR =(CONST A,B:T_relatedTokens):boolean;
 {$endif}
 FUNCTION isOperatorName(CONST id:T_idString):boolean;
-VAR getFormatTokens: FUNCTION (CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_token;
+VAR getFormatTokens: FUNCTION (CONST formatString:ansistring; CONST isFString:boolean; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_token;
     BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
     BUILTIN_WRITE_DATA_STORES,
@@ -499,6 +516,43 @@ FUNCTION T_singleStringLexer.getEnhancedTokens(CONST idInfos: P_callAndIdInfos):
     freeRecycler(recycler);
   end;
 
+{ T_locatedStringLexer }
+
+FUNCTION T_locatedStringLexer.fetch(CONST messages: P_messages; CONST recycler: P_recycler): P_token;
+  begin
+    result:=nil;
+    while (result=nil) and (partIdx<length(parts)) do begin
+      result:=getToken(parts[partIdx].txt,inputLocation,messages,recycler);
+      if (result=nil) then begin
+        inc(partIdx);
+        if length(parts)>partIdx then begin
+          columnOffset:=parts[partIdx].loc.column+1;
+          inputLocation:=parts[partIdx].loc;
+        end;
+        inputLocation.column:=1;
+      end;
+    end;
+    if result<>nil then inc(result^.location.column,columnOffset);
+  end;
+
+CONSTRUCTOR T_locatedStringLexer.create(CONST strings: T_locatedStrings; CONST package: P_abstractPackage; CONST callAndIdInfos_: P_callAndIdInfos);
+  VAR k:longint;
+  begin
+    inherited create(package{$ifdef fullVersion},false,callAndIdInfos_{$endif});
+    partIdx:=0;
+    setLength(parts,length(strings));
+    for k:=0 to length(parts)-1 do parts[k]:=strings[k];
+    if length(parts)>partIdx then begin
+      columnOffset:=parts[partIdx].loc.column+1;
+      inputLocation:=parts[partIdx].loc;
+    end;
+    inputLocation.column:=1;
+  end;
+
+DESTRUCTOR T_locatedStringLexer.destroy;
+  begin
+  end;
+
 FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenArray;
   VAR lexer:T_singleStringLexer;
       location:T_tokenLocation;
@@ -597,10 +651,13 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
     begin
 
       if localIdStack.localIdInfos<>nil then begin
-        ft:=getFormatTokens(P_stringLiteral(tok^.data)^.value,tok^.location,context,recycler);
+        ft:=getFormatTokens(P_stringLiteral(tok^.data)^.value,tok^.tokType=tt_formatString,tok^.location,context,recycler);
         while (ft<>nil) do begin
           if localIdStack.hasId(ft^.txt,idType,idLoc)
-          then ft^.tokType:=idType
+          then begin
+            ft^.tokType:=idType;
+            if callAndIdInfos<>nil then callAndIdInfos^.addTokenRelation(ft,idLoc);
+          end
           else associatedPackage^.resolveId(ft^,nil);
           if ft^.tokType=tt_identifier
           then context^.raiseError('Unresolvable identifier in format string: "'+ft^.txt+'"',tok^.location)
@@ -1380,12 +1437,10 @@ FUNCTION T_callAndIdInfos.getIndexOfRelated(CONST CaretX,CaretY:longint; CONST e
   end;
 
 FUNCTION T_callAndIdInfos.getRelated(CONST CaretX,CaretY:longint):T_relatedTokens;
-  CONST no_relations:T_relatedTokens=(count:0; position:((x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0),
-                                                         (x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0),(x:0;y:0;width:0)));
   VAR i:longint;
   begin
     i:=getIndexOfRelated(CaretX,CaretY);
-    if i<0 then result:=no_relations else result:=relatedTokens[i];
+    if i<0 then result.count:=0 else result:=relatedTokens[i];
   end;
 
 PROCEDURE T_callAndIdInfos.copyFrom(CONST original:P_callAndIdInfos);
