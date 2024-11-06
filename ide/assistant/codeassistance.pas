@@ -39,6 +39,7 @@ TYPE
       FUNCTION isUserRule(CONST id: string): boolean;
       FUNCTION isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
       FUNCTION isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
+      FUNCTION isFormatString(CONST lineIndex, tokenStart:longint; OUT tokenEnd:longint):boolean;
       PROCEDURE clearLocalIdInfos;
       FUNCTION getRelatedLocations(CONST CaretX,CaretY:longint):T_relatedTokens;
   end;
@@ -705,6 +706,17 @@ FUNCTION T_highlightingData.isLocalId(CONST id: string; CONST lineIndex, colIdx:
     enterCriticalSection(highlightingCs);
     try
       result:=localIdInfos.localTypeOf(id,lineIndex,colIdx,dummyLocation)=tt_blockLocalVariable;
+    finally
+      leaveCriticalSection(highlightingCs);
+    end;
+  end;
+
+FUNCTION T_highlightingData.isFormatString(CONST lineIndex, tokenStart:longint; OUT tokenEnd:longint):boolean;
+  VAR i:longint;
+  begin
+    enterCriticalSection(highlightingCs);
+    try
+      result:=localIdInfos.isFormatString(lineIndex,tokenStart,tokenEnd);
     finally
       leaveCriticalSection(highlightingCs);
     end;

@@ -577,6 +577,8 @@ PROCEDURE TAbstractSynMnhSyn.next;
   end;
 
 PROCEDURE TMnhInputSyn.next;
+  VAR
+    fStringEnd: longint;
   begin
     fTokenId := tkDefault;
     fTokenSubId:=skNormal;
@@ -592,6 +594,9 @@ PROCEDURE TMnhInputSyn.next;
         inc(run);
       end;
       fTokenId:=tkString;
+    end else if highlightingData.isFormatString(fLineNumber,fTokenPos,fStringEnd) then begin
+      fTokenId:=tkString;
+      run:=fStringEnd;
     end else
     inherited next;
     case highlightingData.isErrorLocation(fLineNumber,fTokenPos,run) of

@@ -34,7 +34,7 @@ TYPE
   P_preparedFormatStatement=^T_preparedFormatStatement;
   T_preparedFormatStatement=object
     inPackage:P_objectWithPath;
-    parts:T_arrayOfString;
+    parts:T_locatedStrings;
     formats:array of T_format;
     formatSubrule:P_inlineExpression;
     CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
@@ -184,16 +184,46 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
     new(result,create(formatString,tokenLocation,context,recycler));
   end;
 
-FUNCTION getFormatTokens(CONST formatString:ansistring; CONST isFString:boolean; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_token;
+FUNCTION getFormatTokens(CONST formatString:ansistring; CONST isFString:boolean; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; OUT formatStringRanges:T_simpleTokenRanges):P_token;
   VAR temp_format: P_preparedFormatStatement;
       fixedLocation:T_tokenLocation;
+      i,k:longint;
   begin
     fixedLocation:=tokenLocation;
     if isFString then inc(fixedLocation.column);
     temp_format:=getFormat(formatString,fixedLocation,context,recycler);
     if temp_format^.formatSubrule=nil
-    then result:=nil
-    else result:=temp_format^.formatSubrule^.getResolvableTokens(recycler);
+    then begin
+      result:=nil;
+      setLength(formatStringRanges,0);
+    end else begin
+      result:=temp_format^.formatSubrule^.getResolvableTokens(recycler);
+      setLength(formatStringRanges,length(temp_format^.parts));
+      k:=0;
+      for i:=0 to length(temp_format^.parts)-1 do if not odd(i) then begin
+        formatStringRanges[k].y:=temp_format^.parts[i].loc.line;
+        formatStringRanges[k].x:=temp_format^.parts[i].loc.column;
+        formatStringRanges[k].width:=length(temp_format^.parts[i].txt);
+        inc(k);
+      end;
+      if isFString then begin
+        formatStringRanges[0].x    -=2;
+        formatStringRanges[0].width+=2;
+      end else begin
+        formatStringRanges[0].x    -=1;
+        formatStringRanges[0].width+=1;
+      end;
+      if odd(length(temp_format^.parts))
+      then formatStringRanges[k-1].width+=1
+      else begin
+        //add marker for closing ' or "
+        formatStringRanges[k].y:=tokenLocation.line;
+        formatStringRanges[k].width:=1;
+        formatStringRanges[k].x:=fixedLocation.column+length(formatString);
+        inc(k);
+      end;
+      setLength(formatStringRanges,k);
+    end;
     dispose(temp_format,destroy);
   end;
 
@@ -289,8 +319,6 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
     VAR i,k:longint;
         needSubRule:boolean=false;
         expressionParts:T_locatedStrings;
-        tempStringLiteral:P_stringLiteral;
-        expressionString: string;
         lexer:T_locatedStringLexer;
         statement: T_enhancedStatement;
 
@@ -351,12 +379,13 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
         then context^.raiseError('Invalid format statement.',tokenLocation);
         lexer.destroy;
 
-        digestInlineExpression(statement.token.first,context,recycler);
-
-        if (statement.token.first=nil) or (statement.token.first^.tokType<>tt_literal) or (P_literal(statement.token.first^.data)^.literalType<>lt_expression) or (statement.token.first^.next<>nil)
-        then context^.raiseError('Invalid format statement.',tokenLocation)
-        else result:=P_inlineExpression(P_literal(statement.token.first^.data)^.rereferenced);
-
+        if (statement.token.first=nil) then context^.raiseError('Invalid format statement.',tokenLocation)
+        else begin
+          digestInlineExpression(statement.token.first,context,recycler);
+          if (statement.token.first=nil) or (statement.token.first^.tokType<>tt_literal) or (P_literal(statement.token.first^.data)^.literalType<>lt_expression) or (statement.token.first^.next<>nil)
+          then context^.raiseError('Invalid format statement.',tokenLocation)
+          else result:=P_inlineExpression(P_literal(statement.token.first^.data)^.rereferenced);
+        end;
         recycler^.cascadeDisposeToken(statement.token.first);
 
       end
@@ -364,24 +393,19 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
     end;
 
   VAR i:longint;
-      loc_parts: T_locatedStrings;
   begin
     inPackage:=tokenLocation.package;
-    loc_parts:=splitFormatString(formatString);
-    formatSubrule:=getFormatSubrule(loc_parts);
-    setLength(formats,length(loc_parts));
-    setLength(parts  ,length(loc_parts));
-    for i:=0 to length(parts)-1 do begin
-      parts[i]:=loc_parts[i].txt;
-      if odd(i) then formats[i].create(parts[i]);
-    end;
+    parts:=splitFormatString(formatString);
+    formatSubrule:=getFormatSubrule(parts);
+    setLength(formats,length(parts));
+    for i:=0 to length(parts)-1 do if odd(i) then formats[i].create(parts[i].txt);
   end;
 
 DESTRUCTOR T_preparedFormatStatement.destroy;
   VAR i:longint;
   begin
     if formatSubrule<>nil then globalLiteralRecycler.disposeLiteral(formatSubrule);
-    for i:=0 to length(parts)-1 do parts[i]:='';
+    for i:=0 to length(parts)-1 do parts[i].txt:='';
     setLength(parts,0);
     for i:=0 to length(formats)-1 do formats[i].destroy;
     setLength(formats,0);
@@ -391,7 +415,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
   VAR iter:array of T_arrayOfLiteral;
 
   FUNCTION getFormattedString(CONST index:longint):ansistring;
-    FUNCTION simpleFormat(CONST parts:T_arrayOfString; CONST p:T_listLiteral):ansistring;
+    FUNCTION simpleFormat(CONST p:T_listLiteral):ansistring;
       VAR i,k:longint;
       begin
         result:='';
@@ -400,9 +424,9 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
           for i:=0 to length(parts)-1 do if odd(i) then begin
             if k<p.size
             then formats[i].formatAppend(result,p.value[k],tokenLocation,context,recycler)
-            else result:=result+'%'+parts[i]+'%';
+            else result:=result+'%'+parts[i].txt+'%';
             inc(k);
-          end else result:=result+parts[i];
+          end else result:=result+parts[i].txt;
         except on E:Exception do context^.raiseError('Error during formatting: '+e.message,tokenLocation);
         end;
       end;
@@ -431,7 +455,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
           exit(''); //One of the called routines already raised a proper error
         end;
       end;
-      result:=simpleFormat(parts,fpar^);
+      result:=simpleFormat(fpar^);
       recycler^.disposeLiteral(fpar);
     end;
 

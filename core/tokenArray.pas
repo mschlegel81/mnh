@@ -129,6 +129,7 @@ TYPE
     count:byte;
     position: array[0..63] of T_simpleTokenRange;
   end;
+  T_simpleTokenRanges=array of T_simpleTokenRange;
 
   T_callAndIdInfos=object
     private
@@ -141,6 +142,7 @@ TYPE
         lineIndex:longint;
         blobCloser:char;
       end;
+      formatStrings:array of T_simpleTokenRange;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -165,6 +167,8 @@ TYPE
       PROCEDURE addLocalIdInfo(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType; CONST used:boolean);
       PROCEDURE markBlobLine(CONST lineIndex:longint; CONST closer:char);
       FUNCTION getBlobCloserOrZero(CONST lineIndex:longint):char;
+      PROCEDURE addFormatStrings(CONST ranges:T_simpleTokenRanges);
+      FUNCTION isFormatString(CONST lineIndex, tokenStart:longint; OUT tokenEnd:longint):boolean;
       PROCEDURE copyFrom(CONST original:P_callAndIdInfos);
   end;
 
@@ -324,7 +328,7 @@ TYPE
 OPERATOR =(CONST A,B:T_relatedTokens):boolean;
 {$endif}
 FUNCTION isOperatorName(CONST id:T_idString):boolean;
-VAR getFormatTokens: FUNCTION (CONST formatString:ansistring; CONST isFString:boolean; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_token;
+VAR getFormatTokens: FUNCTION (CONST formatString:ansistring; CONST isFString:boolean; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; OUT formatStringRanges:T_simpleTokenRanges):P_token;
     BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
     BUILTIN_WRITE_DATA_STORES,
@@ -648,10 +652,11 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
     VAR ft:P_token;
       idType: T_tokenType;
       idLoc: T_tokenLocation;
+      formatStringRanges: T_simpleTokenRanges;
     begin
-
       if localIdStack.localIdInfos<>nil then begin
-        ft:=getFormatTokens(P_stringLiteral(tok^.data)^.value,tok^.tokType=tt_formatString,tok^.location,context,recycler);
+        ft:=getFormatTokens(P_stringLiteral(tok^.data)^.value,tok^.tokType=tt_formatString,tok^.location,context,recycler,formatStringRanges);
+        localIdStack.localIdInfos^.addFormatStrings(formatStringRanges);
         while (ft<>nil) do begin
           if localIdStack.hasId(ft^.txt,idType,idLoc)
           then begin
@@ -1263,6 +1268,7 @@ PROCEDURE T_callAndIdInfos.clear;
     setLength(localIdInfos,0);
     setLength(blobLines,0);
     setLength(relatedTokens,0);
+    setLength(formatStrings,0);
   end;
 
 PROCEDURE T_callAndIdInfos.add(CONST token: P_token);
@@ -1454,6 +1460,8 @@ PROCEDURE T_callAndIdInfos.copyFrom(CONST original:P_callAndIdInfos);
     for k:=0 to length(blobLines)-1 do blobLines[k]:=original^.blobLines[k];
     setLength(relatedTokens,length(original^.relatedTokens));
     for k:=0 to length(relatedTokens)-1 do relatedTokens[k]:=original^.relatedTokens[k];
+    setLength(formatStrings,length(original^.formatStrings));
+    for k:=0 to length(formatStrings)-1 do formatStrings[k]:=original^.formatStrings[k];
   end;
 
 FUNCTION T_callAndIdInfos.localTypeOf(CONST id: T_idString; CONST line, col: longint; OUT declaredAt: T_tokenLocation): T_tokenType;
@@ -1499,6 +1507,24 @@ PROCEDURE T_callAndIdInfos.markBlobLine(CONST lineIndex:longint; CONST closer:ch
     setLength(blobLines,k+1);
     blobLines[k].lineIndex :=lineIndex;
     blobLines[k].blobCloser:=closer;
+  end;
+
+PROCEDURE T_callAndIdInfos.addFormatStrings(CONST ranges:T_simpleTokenRanges);
+  VAR i,i0:longint;
+  begin
+    i0:=length(formatStrings);
+    setLength(formatStrings,i0+length(ranges));
+    for i:=0 to length(ranges)-1 do formatStrings[i0+i]:=ranges[i];
+  end;
+
+FUNCTION T_callAndIdInfos.isFormatString(CONST lineIndex, tokenStart:longint; OUT tokenEnd:longint):boolean;
+  VAR r:T_simpleTokenRange;
+  begin
+    result:=false;
+    for r in formatStrings do if (r.y=lineIndex+1) and (r.x=tokenStart) then begin
+      tokenEnd:=r.x+r.width;
+      exit(r.width>0);
+    end;
   end;
 
 FUNCTION T_callAndIdInfos.getBlobCloserOrZero(CONST lineIndex:longint):char;
