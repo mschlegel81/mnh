@@ -7,7 +7,7 @@
     FUNCTION newBigIntLiteral(value: T_bigInt): P_abstractIntLiteral; virtual; abstract;
     FUNCTION newIntLiteral   (CONST value: int64         ): P_abstractIntLiteral; virtual; abstract;
     FUNCTION newIntLiteral   (CONST value: T_bigInt      ): P_abstractIntLiteral; virtual; abstract;
-    FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral; virtual; abstract;
+    FUNCTION newStringLiteral(CONST value: ansistring; CONST escapedValue:ansistring=''; CONST enforceNewString:boolean=false): P_stringLiteral; virtual; abstract;
     FUNCTION newRealLiteral  (CONST value: T_myFloat     ): P_realLiteral; virtual; abstract;
     FUNCTION newListLiteral  (CONST initialSize:longint=2): P_listLiteral; virtual; abstract;
     FUNCTION listLiteralOf   (CONST a:P_literal;
@@ -33,7 +33,7 @@
       FUNCTION newBigIntLiteral(value: T_bigInt): P_abstractIntLiteral; virtual;
       FUNCTION newIntLiteral   (CONST value: int64         ): P_abstractIntLiteral; virtual;
       FUNCTION newIntLiteral   (CONST value: T_bigInt      ): P_abstractIntLiteral; virtual;
-      FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral; virtual;
+      FUNCTION newStringLiteral(CONST value: ansistring; CONST escapedValue:ansistring=''; CONST enforceNewString:boolean=false): P_stringLiteral; virtual;
       FUNCTION newRealLiteral  (CONST value: T_myFloat     ): P_realLiteral; virtual;
       FUNCTION newListLiteral  (CONST initialSize:longint=2): P_listLiteral; virtual;
       FUNCTION newSetLiteral(CONST expectedSize:longint)    : P_setLiteral; virtual;
@@ -57,7 +57,7 @@
       FUNCTION newBigIntLiteral(value: T_bigInt): P_abstractIntLiteral; virtual;
       FUNCTION newIntLiteral   (CONST value: int64         ): P_abstractIntLiteral; virtual;
       FUNCTION newIntLiteral   (CONST value: T_bigInt      ): P_abstractIntLiteral; virtual;
-      FUNCTION newStringLiteral(CONST value: ansistring; CONST enforceNewString:boolean=false): P_stringLiteral; virtual;
+      FUNCTION newStringLiteral(CONST value: ansistring; CONST escapedValue:ansistring=''; CONST enforceNewString:boolean=false): P_stringLiteral; virtual;
       FUNCTION newRealLiteral  (CONST value: T_myFloat     ): P_realLiteral; virtual;
       FUNCTION newListLiteral  (CONST initialSize:longint=2): P_listLiteral; virtual;
       FUNCTION newSetLiteral(CONST expectedSize:longint)    : P_setLiteral; virtual;
@@ -547,13 +547,13 @@ FUNCTION T_localLiteralRecycler.newIntLiteral(CONST value: T_bigInt): P_abstract
     end;
   end;
 
-FUNCTION T_globalLiteralRecycler.newStringLiteral(CONST value: ansistring; CONST enforceNewString: boolean): P_stringLiteral;
+FUNCTION T_globalLiteralRecycler.newStringLiteral(CONST value: ansistring; CONST escapedValue:ansistring; CONST enforceNewString: boolean): P_stringLiteral;
   begin
     if not(enforceNewString) then begin
       if length(value)=1 then exit(P_stringLiteral(charLit[value[1]]   .rereferenced));
       if length(value)=0 then exit(P_stringLiteral(emptyStringSingleton.rereferenced));
     end;
-    with stringLiterals do if tryEnterCriticalsection(cs)=0 then new(result,create(value)) else try
+    with stringLiterals do if tryEnterCriticalsection(cs)=0 then new(result,create(value,escapedValue)) else try
       if (fill>0) then begin
         dec(fill);
         result:=dat[fill];
@@ -561,14 +561,14 @@ FUNCTION T_globalLiteralRecycler.newStringLiteral(CONST value: ansistring; CONST
         result^.numberOfReferences:=1;
         result^.enc:=se_testPending;
       end else begin
-        new(result,create(value));
+        new(result,create(value,escapedValue));
       end;
     finally
       leaveCriticalSection(cs);
     end;
   end;
 
-FUNCTION T_localLiteralRecycler.newStringLiteral(CONST value: ansistring; CONST enforceNewString: boolean): P_stringLiteral;
+FUNCTION T_localLiteralRecycler.newStringLiteral(CONST value: ansistring; CONST escapedValue:ansistring; CONST enforceNewString: boolean): P_stringLiteral;
   begin
     if not(enforceNewString) then begin
       if length(value)=1 then exit(P_stringLiteral(charLit[value[1]]   .rereferenced));
@@ -582,7 +582,7 @@ FUNCTION T_localLiteralRecycler.newStringLiteral(CONST value: ansistring; CONST 
         result^.numberOfReferences:=1;
         result^.enc:=se_testPending;
       end else begin
-        new(result,create(value));
+        new(result,create(value,escapedValue));
       end;
       inc(request);
     end;
@@ -799,9 +799,9 @@ boolLit[false].create(false);
 boolLit[true ].create(true);
 voidLit.create();
 generatorClosedLit.create();
-emptyStringSingleton.create('');
+emptyStringSingleton.create('','''''');
 for i:=low(intLit) to high(intLit) do intLit[i].create(i);
-for i:=0 to 255 do charLit[chr(i)].create(chr(i));
+for i:=0 to 255 do charLit[chr(i)].create(chr(i),'');
 SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
 nanLit   .create(Nan);
 infLit   .create(infinity);

@@ -144,7 +144,7 @@ FUNCTION T_literalDeserializer.getLiteral: P_literal;
       lt_boolean  : result:=boolLit[streamWrapper^.readBoolean].rereferenced;
       lt_smallint,lt_bigint: result:=nextIntFromStream;
       lt_real     : result:=globalLiteralRecycler.newRealLiteral  (streamWrapper^.readDouble    );
-      lt_string   : result:=globalLiteralRecycler.newStringLiteral(streamWrapper^.readAnsiString,customTypeName<>'');
+      lt_string   : result:=globalLiteralRecycler.newStringLiteral(streamWrapper^.readAnsiString,'',customTypeName<>'');
       lt_emptyList: result:=globalLiteralRecycler.newListLiteral;
       lt_emptySet : result:=globalLiteralRecycler.newSetLiteral(0);
       lt_emptyMap : result:=globalLiteralRecycler.newMapLiteral(0);

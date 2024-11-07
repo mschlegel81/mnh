@@ -653,15 +653,21 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
       idType: T_tokenType;
       idLoc: T_tokenLocation;
       formatStringRanges: T_simpleTokenRanges;
+      simpleCase:boolean;
     begin
       if localIdStack.localIdInfos<>nil then begin
         ft:=getFormatTokens(P_stringLiteral(tok^.data)^.value,tok^.tokType=tt_formatString,tok^.location,context,recycler,formatStringRanges);
-        localIdStack.localIdInfos^.addFormatStrings(formatStringRanges);
+        case tok^.tokType of
+          tt_formatString: simpleCase:=(length(P_stringLiteral(tok^.data)^.value)=length(P_stringLiteral(tok^.data)^.getEscapedOriginal)-3);
+          tt_literal     : simpleCase:=(length(P_stringLiteral(tok^.data)^.value)=length(P_stringLiteral(tok^.data)^.getEscapedOriginal)-2);
+          else             simpleCase:=false;
+        end;
+        if simpleCase then localIdStack.localIdInfos^.addFormatStrings(formatStringRanges);
         while (ft<>nil) do begin
           if localIdStack.hasId(ft^.txt,idType,idLoc)
           then begin
             ft^.tokType:=idType;
-            if callAndIdInfos<>nil then callAndIdInfos^.addTokenRelation(ft,idLoc);
+            if (callAndIdInfos<>nil) and simpleCase then callAndIdInfos^.addTokenRelation(ft,idLoc);
           end
           else associatedPackage^.resolveId(ft^,nil);
           if ft^.tokType=tt_identifier
@@ -829,8 +835,11 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
         end;
         {$ifdef fullVersion}
         tt_formatString: validateFormatString(tok);
-        tt_literal: if (P_literal(tok^.data)^.literalType=lt_string) and (nextStatement.token.last<>nil) and (nextStatement.token.last^.tokType=tt_braceOpen) and (ensureBeforeLast<>nil) and (beforeLast^.tokType=tt_intrinsicRule) and ((beforeLast^.txt='format') or (beforeLast^.txt='printf'))
-                    then validateFormatString(tok);
+        tt_literal:
+          begin
+            if (P_literal(tok^.data)^.literalType=lt_string) and (nextStatement.token.last<>nil) and (nextStatement.token.last^.tokType=tt_braceOpen) and (ensureBeforeLast<>nil) and (beforeLast^.tokType=tt_intrinsicRule) and ((beforeLast^.txt='format') or (beforeLast^.txt='printf'))
+            then validateFormatString(tok);
+          end;
         {$endif}
       end;
 
@@ -1919,7 +1928,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
         append(lines,copy(id,1,pos(closer,id)-1));
         result^.location:=start;
         result^.tokType:=tt_literal;
-        result^.data:=recycler^.newStringLiteral(join(lines,C_lineBreakChar));
+        result^.data:=recycler^.newStringLiteral(join(lines,C_lineBreakChar),'//!'+closer+join(lines,C_lineBreakChar)+closer);
         setLength(lines,0);
         closer:=#0;
         exit(result);
@@ -1957,7 +1966,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
           handleComment(id,BLOCK_COMMENT_DELIMITER);
         end else begin
           result^.tokType:=tt_literal;
-          result^.data:=recycler^.newStringLiteral(stringValue);
+          result^.data:=recycler^.newStringLiteral(stringValue,copy(line,inputLocation.column,parsedLength));
         end;
         stringValue:='';
       end;
@@ -1970,7 +1979,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
         stringValue:=unescapeString(line,inputLocation.column+1,parsedLength);
         inc(parsedLength); //...because we added one more character before the string
         result^.tokType:=tt_formatString;
-        result^.data:=recycler^.newStringLiteral(stringValue);
+        result^.data:=recycler^.newStringLiteral(stringValue,copy(line,inputLocation.column,parsedLength));
       end else begin
         result^.txt:=leadingId;
         result^.tokType:=tt_identifier;

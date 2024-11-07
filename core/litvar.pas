@@ -234,11 +234,12 @@ TYPE
   T_stringLiteral = object(T_literal)
   private
     enc: T_stringEncoding;
-    val: ansistring;
-    CONSTRUCTOR create(CONST value: ansistring);
+    val,escapedOriginal: ansistring;
+    CONSTRUCTOR create(CONST value, escaped: ansistring);
   public
     DESTRUCTOR destroy; virtual;
     PROPERTY value:ansistring read val;
+    PROPERTY getEscapedOriginal:ansistring read escapedOriginal;
     FUNCTION softCast(CONST literalRecycler:P_literalRecycler): P_literal;
     FUNCTION getEncoding: T_stringEncoding;
     PROCEDURE append(CONST suffix:ansistring);
@@ -1235,7 +1236,7 @@ CONSTRUCTOR T_bigIntLiteral    .create(CONST value: int64);      begin {inherite
 CONSTRUCTOR T_smallIntLiteral  .create(CONST value: longint);    begin {inherited init}inline_init(lt_smallint);val:=value; end;
 CONSTRUCTOR T_bigIntLiteral    .create(CONST value: T_bigInt);   begin {inherited init}inline_init(lt_bigint);  val:=value; end;
 CONSTRUCTOR T_realLiteral      .create(CONST value: T_myFloat);  begin {inherited init}inline_init(lt_real);    val:=value; end;
-CONSTRUCTOR T_stringLiteral    .create(CONST value: ansistring); begin {inherited init}inline_init(lt_string);  val:=value; enc:=se_testPending; end;
+CONSTRUCTOR T_stringLiteral    .create(CONST value,escaped: ansistring); begin {inherited init}inline_init(lt_string);  val:=value; escapedOriginal:=escaped; enc:=se_testPending; end;
 {$define inline_init:=numberOfReferences:=1; customType:=nil;literalType:=}
 CONSTRUCTOR T_expressionLiteral.create(CONST eType: T_expressionType; CONST location:T_tokenLocation);
   begin

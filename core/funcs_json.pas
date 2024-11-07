@@ -114,7 +114,7 @@ FUNCTION formatJson_impl intFuncSignature;
 
   begin
     if (params<>nil) and (params^.size=1)
-    then result:=recycler^.newStringLiteral(literalToJson(arg0),true)
+    then result:=recycler^.newStringLiteral(literalToJson(arg0),'',true)
     else result:=nil;
   end;
 

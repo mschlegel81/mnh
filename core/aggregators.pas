@@ -207,7 +207,7 @@ CONSTRUCTOR T_elementFrequencyAggregator.create;
     counterMap.create();
   end;
 CONSTRUCTOR T_trailingAggregator .create; begin inherited create(newVoidLiteral); end;
-CONSTRUCTOR T_stringConcatAggregator.create(CONST literalRecycler:P_literalRecycler); begin inherited create(literalRecycler^.newStringLiteral('',true)); end;
+CONSTRUCTOR T_stringConcatAggregator.create(CONST literalRecycler:P_literalRecycler); begin inherited create(literalRecycler^.newStringLiteral('','',true)); end;
 CONSTRUCTOR T_andAggregator         .create; begin inherited create(nil); boolResult:=true;  end;
 CONSTRUCTOR T_orAggregator          .create; begin inherited create(nil); boolResult:=false; end;
 CONSTRUCTOR T_opAggregator.create(CONST operatorToken: T_tokenType; CONST initialValue:P_literal);

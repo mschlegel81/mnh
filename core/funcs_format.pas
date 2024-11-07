@@ -35,6 +35,7 @@ TYPE
   T_preparedFormatStatement=object
     inPackage:P_objectWithPath;
     parts:T_locatedStrings;
+    fStringRanges:T_simpleTokenRanges;
     formats:array of T_format;
     formatSubrule:P_inlineExpression;
     CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
@@ -187,7 +188,6 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
 FUNCTION getFormatTokens(CONST formatString:ansistring; CONST isFString:boolean; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; OUT formatStringRanges:T_simpleTokenRanges):P_token;
   VAR temp_format: P_preparedFormatStatement;
       fixedLocation:T_tokenLocation;
-      i,k:longint;
   begin
     fixedLocation:=tokenLocation;
     if isFString then inc(fixedLocation.column);
@@ -198,31 +198,11 @@ FUNCTION getFormatTokens(CONST formatString:ansistring; CONST isFString:boolean;
       setLength(formatStringRanges,0);
     end else begin
       result:=temp_format^.formatSubrule^.getResolvableTokens(recycler);
-      setLength(formatStringRanges,length(temp_format^.parts));
-      k:=0;
-      for i:=0 to length(temp_format^.parts)-1 do if not odd(i) then begin
-        formatStringRanges[k].y:=temp_format^.parts[i].loc.line;
-        formatStringRanges[k].x:=temp_format^.parts[i].loc.column;
-        formatStringRanges[k].width:=length(temp_format^.parts[i].txt);
-        inc(k);
-      end;
+      formatStringRanges:=temp_format^.fStringRanges;
       if isFString then begin
-        formatStringRanges[0].x    -=2;
-        formatStringRanges[0].width+=2;
-      end else begin
         formatStringRanges[0].x    -=1;
         formatStringRanges[0].width+=1;
       end;
-      if odd(length(temp_format^.parts))
-      then formatStringRanges[k-1].width+=1
-      else begin
-        //add marker for closing ' or "
-        formatStringRanges[k].y:=tokenLocation.line;
-        formatStringRanges[k].width:=1;
-        formatStringRanges[k].x:=fixedLocation.column+length(formatString);
-        inc(k);
-      end;
-      setLength(formatStringRanges,k);
     end;
     dispose(temp_format,destroy);
   end;
@@ -237,6 +217,7 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
         fmtPart:boolean=false;
         simpleFmtPart:boolean=false;
         resultFill:longint=0;
+        rangeCount:longint=1;
     PROCEDURE appendPart;
       begin
         if resultFill>=length(result) then setLength(result,resultFill*2);
@@ -245,7 +226,23 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
         part.loc.column:=i+tokenLocation.column;
       end;
 
+    PROCEDURE closeRange;
+      begin
+        fStringRanges[rangeCount-1].width:=i-fStringRanges[rangeCount-1].x+tokenLocation.column-1;
+      end;
+
+    PROCEDURE openRange;
+      begin
+        if rangeCount>=length(fStringRanges) then setLength(fStringRanges,rangeCount*2);
+        fStringRanges[rangeCount].y:=tokenLocation.line;
+        fStringRanges[rangeCount].x:=i+tokenLocation.column;
+        inc(rangeCount);
+      end;
+
     begin
+      setLength(fStringRanges,1);
+      fStringRanges[0].y:=tokenLocation.line;
+      fStringRanges[0].x:=tokenLocation.column-1; //include opening characer
       part.txt:='';
       part.loc:=tokenLocation;
       setLength(result,1);
@@ -256,11 +253,13 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
                  inc(i);
                end else part.txt+=formatString[i];
           '{': if fmtPart then begin
+                 if bracketLevel=0 then closeRange;
                  inc(bracketLevel);
                  part.txt+=formatString[i];
                end else begin
                  appendPart;
                  part.txt:='%{';
+                 closeRange;
                  dec(part.loc.column);
                  partStart:=i;
                  bracketLevel:=1;
@@ -269,6 +268,7 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
           '}': begin
                  if fmtPart then dec(bracketLevel);
                  part.txt+=formatString[i];
+                 if bracketLevel=0 then openRange;
                  if (bracketLevel=0) and fmtPart and simpleFmtPart then begin
                    part.txt+='s';
                    appendPart;
@@ -312,6 +312,9 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
         inc(i);
       end;
       if part.txt<>'' then appendPart;
+      closeRange;
+      setLength(fStringRanges,rangeCount);
+      fStringRanges[rangeCount-1].width+=1;
       setLength(result,resultFill);
     end;
 
@@ -325,17 +328,20 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
     PROCEDURE splitPart(VAR part:T_locatedString; CONST index:longint);
       VAR expPart:ansistring;
           nonescapableFound:boolean;
+          openAt,closeAt:longint;
       begin
         while (length(part.txt)>=1) and (part.txt[1] in [' ',C_tabChar]) do begin
           part.txt:=copy(part.txt,2,length(part.txt));
           part.loc.column+=1;
         end;
-        if pos('{',part.txt)<=0 then begin
-          if pos('}',part.txt)>0 then context^.raiseError('Invalid format specification: '+escapeString(part.txt,es_dontCare,se_testPending,nonescapableFound),tokenLocation);
+        openAt :=pos('{',part.txt);
+        closeAt:=length(part.txt); while (closeAt>0) and (part.txt[closeAt]<>'}') do dec(closeAt);
+        if openAt<=0 then begin
+          if closeAt>0 then context^.raiseError('Invalid format specification: '+escapeString(part.txt,es_dontCare,se_testPending,nonescapableFound),tokenLocation);
           expPart:='$'+intToStr(index);
         end else begin
-          expPart:=copy(part.txt,3,pos('}',part.txt)-3);
-          part.txt:='%'+copy(part.txt,pos('}',part.txt)+1,length(part.txt));
+          expPart:=copy(part.txt,openAt+1,closeAt-openAt-1);
+          part.txt:=copy(part.txt,1,openAt-1)+copy(part.txt,closeAt+1,length(part.txt));
           if (pos('{',part.txt)>0) or (pos('}',part.txt)>0) then context^.raiseError('Invalid format specification: '+escapeString(part.txt,es_dontCare,se_testPending,nonescapableFound),tokenLocation);
         end;
 
@@ -353,7 +359,7 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
     begin
       result:=nil;
       //Check if a rule is needed at all:
-      for i:=0 to length(loc_parts)-1 do if odd(i) and (copy(trim(loc_parts[i].txt),2,1)='{') then needSubRule:=true;
+      for i:=0 to length(loc_parts)-1 do if odd(i) and ((copy(trim(loc_parts[i].txt),2,1)='{') or (copy(trim(loc_parts[i].txt),1,1)='{')) then needSubRule:=true;
       if not(needSubRule) then exit(nil);
 
       setLength(expressionParts,1);
