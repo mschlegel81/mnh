@@ -161,6 +161,14 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush: boolean): T_messag
       fullUpdateRequired:boolean=false;
       start:double;
 
+  PROCEDURE appendPrint(CONST s:String; CONST callerLocation:T_searchTokenLocation);
+    VAR locationFromString:T_searchTokenLocation;
+    begin
+      locationFromString:=guessLocationFromString(s,false);
+      if locationFromString.fileName='' then locationFromString:=callerLocation;
+      state.append(s,locationFromString,mt_printline);
+    end;
+
   PROCEDURE processMessage(CONST message: P_storedMessage);
     VAR j:longint;
         s:string;
@@ -176,8 +184,11 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush: boolean): T_messag
             if (length(P_storedMessageWithText(message)^.txt)>0) and (P_storedMessageWithText(message)^.txt[0]=C_formFeedChar) then begin
               state.clear;
               fullUpdateRequired:=true;
-              for j:=1 to length(P_storedMessageWithText(message)^.txt)-1 do state.append(P_storedMessageWithText(message)^.txt[j],message^.getLocation,mt_printline);
-            end else for s in P_storedMessageWithText(message)^.txt do state.append(s,message^.getLocation,mt_printline);
+              for j:=1 to length(P_storedMessageWithText(message)^.txt)-1 do
+                appendPrint(P_storedMessageWithText(message)^.txt[j],message^.getLocation);
+            end else for s in P_storedMessageWithText(message)^.txt do begin
+              appendPrint(s,message^.getLocation);
+            end;
           end;
         mt_printdirect:
           begin
