@@ -906,6 +906,9 @@ PROCEDURE T_workspace.processPendingMessagesInMainThread;
     end;
     setLength(responses,0);
 
+    meta:=currentEditor;
+    if meta<>nil then meta^.updateHighlighterCaret(false);
+
     for fileChange in changedFilesQueue.getAll do begin
       Assigned:=false;
 

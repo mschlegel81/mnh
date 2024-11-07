@@ -61,10 +61,7 @@ TYPE T_language=(LANG_MNH   = 0,
   T_basicEditorMeta=object(T_codeProvider)
     private
       language_   : T_language;
-      PROCEDURE userCommandProcessed(Sender: TObject;
-        VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
-      PROCEDURE userCommandProcessedOnMouseUp(Sender: TObject;
-        button: TMouseButton; Shift: TShiftState; X, Y: integer);
+      lastUpdateByCaret: double;
     protected
       completionLogic:T_completionLogic;
       editor_     : TSynEdit;
@@ -88,6 +85,7 @@ TYPE T_language=(LANG_MNH   = 0,
       PROCEDURE setLanguageWithFallback(CONST extensionWithoutDot:string; CONST fallback:T_language);
 
       PROCEDURE setCaret(CONST location: T_searchTokenLocation);
+      PROCEDURE updateHighlighterCaret(CONST force:boolean);
       PROCEDURE toggleComment;
       PROCEDURE moveLine(CONST up:boolean);
       PROCEDURE insertText(CONST s: string);
@@ -305,16 +303,12 @@ PROCEDURE T_basicEditorMeta.processUserCommand(Sender: TObject;
     else if command=editCommandUnescapeSelection then begin command:=ecNone; escapeSelection(true);      end;
   end;
 
-PROCEDURE T_basicEditorMeta.userCommandProcessed(Sender: TObject; VAR command: TSynEditorCommand; VAR AChar: TUTF8Char; data: pointer);
+PROCEDURE T_basicEditorMeta.updateHighlighterCaret(CONST force:boolean);
   begin
-    if (language_=LANG_MNH) and highlighter.setCaretLocation(editor.CaretXY)
-    then editor_.Invalidate;
-  end;
-
-PROCEDURE T_basicEditorMeta.userCommandProcessedOnMouseUp(Sender: TObject; button: TMouseButton; Shift: TShiftState; X, Y: integer);
-  begin
-    if (language_=LANG_MNH) and highlighter.setCaretLocation(editor.CaretXY)
-    then editor_.Invalidate;
+    if (language_=LANG_MNH) and (force or (now>=lastUpdateByCaret+ONE_SECOND)) then begin
+      lastUpdateByCaret:=now;
+      if highlighter.setCaretLocation(editor.CaretXY) then editor_.Invalidate;
+    end;
   end;
 
 PROCEDURE T_basicEditorMeta.setLanguage(CONST languageIndex: T_language);
@@ -359,6 +353,7 @@ CONSTRUCTOR T_basicEditorMeta.createWithExistingEditor(CONST existingEditor:TSyn
   VAR style:TSynSelectedColor;
       isRealEditor:boolean;
   begin
+    lastUpdateByCaret:=now;
     editor_:=existingEditor;
     registerFontControl(editor_,ctEditor);
     isRealEditor:=bookmarkImages<>nil;
@@ -469,8 +464,6 @@ CONSTRUCTOR T_basicEditorMeta.createWithExistingEditor(CONST existingEditor:TSyn
     editor_.highlighter:=highlighter;
 
     editor_.OnProcessCommand    :=@processUserCommand;
-    editor_.OnCommandProcessed  :=@userCommandProcessed;
-    editor_.OnMouseUp           :=@userCommandProcessedOnMouseUp;
     language_:=LANG_TXT;
   end;
 
