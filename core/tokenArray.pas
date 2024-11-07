@@ -653,28 +653,27 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
       idType: T_tokenType;
       idLoc: T_tokenLocation;
       formatStringRanges: T_simpleTokenRanges;
-      simpleCase:boolean;
+      addHighlightingInfo:boolean;
     begin
-      if localIdStack.localIdInfos<>nil then begin
-        ft:=getFormatTokens(P_stringLiteral(tok^.data)^.value,tok^.tokType=tt_formatString,tok^.location,context,recycler,formatStringRanges);
-        case tok^.tokType of
-          tt_formatString: simpleCase:=(length(P_stringLiteral(tok^.data)^.value)=length(P_stringLiteral(tok^.data)^.getEscapedOriginal)-3);
-          tt_literal     : simpleCase:=(length(P_stringLiteral(tok^.data)^.value)=length(P_stringLiteral(tok^.data)^.getEscapedOriginal)-2);
-          else             simpleCase:=false;
-        end;
-        if simpleCase then localIdStack.localIdInfos^.addFormatStrings(formatStringRanges);
-        while (ft<>nil) do begin
-          if localIdStack.hasId(ft^.txt,idType,idLoc)
-          then begin
-            ft^.tokType:=idType;
-            if (callAndIdInfos<>nil) and simpleCase then callAndIdInfos^.addTokenRelation(ft,idLoc);
-          end
-          else associatedPackage^.resolveId(ft^,nil);
-          if ft^.tokType=tt_identifier
-          then context^.raiseError('Unresolvable identifier in format string: "'+ft^.txt+'"',tok^.location)
-          else localIdStack.localIdInfos^.add(ft);
-          ft:=recycler^.disposeToken(ft);
-        end;
+      ft:=getFormatTokens(P_stringLiteral(tok^.data)^.value,tok^.tokType=tt_formatString,tok^.location,context,recycler,formatStringRanges);
+      case tok^.tokType of
+        tt_formatString: addHighlightingInfo:=(length(P_stringLiteral(tok^.data)^.value)=length(P_stringLiteral(tok^.data)^.getEscapedOriginal)-3);
+        tt_literal     : addHighlightingInfo:=(length(P_stringLiteral(tok^.data)^.value)=length(P_stringLiteral(tok^.data)^.getEscapedOriginal)-2);
+        else             addHighlightingInfo:=false;
+      end;
+      addHighlightingInfo:=addHighlightingInfo and (localIdStack.localIdInfos<>nil);
+      if addHighlightingInfo then localIdStack.localIdInfos^.addFormatStrings(formatStringRanges);
+      while (ft<>nil) do begin
+        if localIdStack.hasId(ft^.txt,idType,idLoc)
+        then begin
+          ft^.tokType:=idType;
+          if addHighlightingInfo then callAndIdInfos^.addTokenRelation(ft,idLoc);
+        end
+        else associatedPackage^.resolveId(ft^,nil);
+        if ft^.tokType=tt_identifier
+        then context^.raiseError('Unresolvable identifier in format string: "'+ft^.txt+'"',tok^.location)
+        else if localIdStack.localIdInfos<>nil then localIdStack.localIdInfos^.add(ft);
+        ft:=recycler^.disposeToken(ft);
       end;
     end;
   {$endif}

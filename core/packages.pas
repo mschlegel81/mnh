@@ -55,7 +55,7 @@ TYPE
     {$endif}
     DESTRUCTOR destroy;
     {Loads the specified package using the appropriate T_packageLoadUsecase}
-    PROCEDURE loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR globals:T_evaluationGlobals; CONST recycler:P_recycler; CONST parentUsecase:T_packageLoadUsecase);
+    PROCEDURE loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR globals:T_evaluationGlobals; CONST recycler:P_recycler; CONST parentUsecase:T_packageLoadUsecase{$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos{$endif});
   end;
 
   T_packageList=array of P_package;
@@ -421,11 +421,8 @@ PROCEDURE T_sandbox.runUninstallScript;
 {$define include_implementation}
 {$include funcs_package.inc}
 
-PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR globals:T_evaluationGlobals; CONST recycler:P_recycler; CONST parentUsecase:T_packageLoadUsecase);
+PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONST tokenLocation:T_tokenLocation; VAR globals:T_evaluationGlobals; CONST recycler:P_recycler; CONST parentUsecase:T_packageLoadUsecase{$ifdef fullVersion}; CONST callAndIdInfos:P_callAndIdInfos{$endif});
   VAR i:longint;
-      {$ifdef fullVersion}
-      callAndIdInfos:P_callAndIdInfos=nil;
-      {$endif}
   begin
     with containingPackage^.mainPackage^ do begin
       if containingPackage^.mainPackage^.getCodeProvider^.id=id then begin
@@ -439,9 +436,7 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
           then secondaryPackages[i]^.readyForUsecase:=lu_NONE;
           if secondaryPackages[i]^.readyForUsecase<>lu_beingLoaded then begin
             if secondaryPackages[i]^.readyForUsecase<>C_packageLoadUsecaseMeta[parentUsecase].import_usecase then begin
-              {$ifdef fullVersion}if parentUsecase in [lu_forCodeAssistance,lu_forCodeAssistanceSecondary] then new(callAndIdInfos,create);{$endif}
               secondaryPackages[i]^.load(C_packageLoadUsecaseMeta[parentUsecase].import_usecase,globals,recycler,C_EMPTY_STRING_ARRAY{$ifdef fullVersion} ,callAndIdInfos{$endif});
-              {$ifdef fullVersion}if parentUsecase in [lu_forCodeAssistance,lu_forCodeAssistanceSecondary] then dispose(callAndIdInfos,destroy);{$endif}
             end;
             pack:=secondaryPackages[i];
             exit;
@@ -456,9 +451,7 @@ PROCEDURE T_packageReference.loadPackage(CONST containingPackage:P_package; CONS
       else new(pack,create(newCodeProvider(path)      ,containingPackage^.mainPackage));
       setLength(secondaryPackages,length(secondaryPackages)+1);
       secondaryPackages[length(secondaryPackages)-1]:=pack;
-      {$ifdef fullVersion}if parentUsecase in [lu_forCodeAssistance,lu_forCodeAssistanceSecondary] then new(callAndIdInfos,create);{$endif}
       pack^.load(C_packageLoadUsecaseMeta[parentUsecase].import_usecase,globals,recycler,C_EMPTY_STRING_ARRAY{$ifdef fullVersion} ,callAndIdInfos{$endif});
-      {$ifdef fullVersion}if parentUsecase in [lu_forCodeAssistance,lu_forCodeAssistanceSecondary] then dispose(callAndIdInfos,destroy);{$endif}
     end;
   end;
 
@@ -588,7 +581,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         globals.primaryContext.callStackPushCategory(@self,pc_importing,pseudoCallees);
         {$endif}
         if profile then globals.timeBaseComponent(pc_importing);
-        for i:=0 to length(packageUses)-1 do packageUses[i].loadPackage(@self,locationForErrorFeedback,globals,recycler,usecase);
+        for i:=0 to length(packageUses)-1 do packageUses[i].loadPackage(@self,locationForErrorFeedback,globals,recycler,usecase{$ifdef fullVersion},callAndIdInfos{$endif});
         if profile then globals.timeBaseComponent(pc_importing);
         {$ifdef fullVersion}
         globals.primaryContext.callStackPop(nil);
@@ -994,7 +987,7 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
       setLength(packageUses,1);
       packageUses[0].create('',secondaryProvider^.id,packageTokenLocation(@self),nil);
       packageUses[0].explicitlyGivenCodeProvider:=secondaryProvider;
-      packageUses[0].loadPackage(@self,packageTokenLocation(@self),globals,recycler,usecase);
+      packageUses[0].loadPackage(@self,packageTokenLocation(@self),globals,recycler,usecase{$ifdef fullVersion},callAndIdInfos{$endif});
 
       ruleMap.clearImports;
       for transitive_use in packageUses[0].pack^.packageUses do
