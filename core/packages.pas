@@ -1059,7 +1059,7 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
 
     if isMain and C_packageLoadUsecaseMeta[usecase].finalizeWorkers then begin
       globals.startFinalization;
-      finalize(@globals.primaryContext,recycler,secondaryProvider=nil);
+      finalize(@globals.primaryContext,recycler,{$ifdef fullVersion}secondaryProvider=nil{$else}true{$endif});
       globals.stopWorkers(recycler);
     end;
   end;
