@@ -93,7 +93,7 @@ TYPE
       DESTRUCTOR destroy; virtual;
 
       FUNCTION getHelpOnMain:ansistring;
-      PROCEDURE finalize(CONST context:P_context; CONST recycler:P_recycler);
+      PROCEDURE finalize(CONST context:P_context; CONST recycler:P_recycler; CONST executeAfterRules:boolean);
       FUNCTION resolveId(VAR token:T_token; CONST messagesOrNil:P_messages):boolean; virtual;
       FUNCTION resolveLocationForStackTrace(CONST location:T_tokenLocation):string; virtual;
       FUNCTION getTypeMap:T_typeMap; virtual;
@@ -989,14 +989,10 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
       packageUses[0].explicitlyGivenCodeProvider:=secondaryProvider;
       packageUses[0].loadPackage(@self,packageTokenLocation(@self),globals,recycler,usecase{$ifdef fullVersion},callAndIdInfos{$endif});
 
-      ruleMap.clearImports;
-      for transitive_use in packageUses[0].pack^.packageUses do
-        if globals.primaryContext.continueEvaluation
-        then ruleMap.addImports(@transitive_use.pack^.ruleMap);
-
-      if globals.primaryContext.continueEvaluation
-      then ruleMap.addImports(@packageUses[0].pack^.ruleMap);
-      customOperatorRules:=ruleMap.getOperators;
+      if globals.primaryContext.continueEvaluation then begin
+        ruleMap.cloneContents(@packageUses[0].pack^.ruleMap);
+        customOperatorRules:=ruleMap.getOperators;
+      end;
     end;
 
   {$endif}
@@ -1063,7 +1059,7 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
 
     if isMain and C_packageLoadUsecaseMeta[usecase].finalizeWorkers then begin
       globals.startFinalization;
-      finalize(@globals.primaryContext,recycler);
+      finalize(@globals.primaryContext,recycler,secondaryProvider=nil);
       globals.stopWorkers(recycler);
     end;
   end;
@@ -1104,12 +1100,12 @@ FUNCTION T_package.writeDataStores(CONST messages:P_messages; CONST recurse:bool
     if recurse then for i:=0 to length(packageUses)-1 do if packageUses[i].pack^.writeDataStores(messages,recurse,literalRecycler,flush) then result:=true;
   end;
 
-PROCEDURE T_package.finalize(CONST context:P_context; CONST recycler:P_recycler);
+PROCEDURE T_package.finalize(CONST context:P_context; CONST recycler:P_recycler; CONST executeAfterRules:boolean);
   VAR i:longint;
       flush:T_datastoreFlush;
   begin
-    for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(context,recycler);
-    ruleMap.executeAfterRules(context,recycler);
+    for i:=0 to length(packageUses)-1 do packageUses[i].pack^.finalize(context,recycler,executeAfterRules);
+    if executeAfterRules then ruleMap.executeAfterRules(context,recycler);
     if isMain then begin
       flush.create(tb_undefined,tb_undefined);
       writeDataStores(context^.messages,true,recycler,flush);

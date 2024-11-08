@@ -222,6 +222,7 @@ TYPE
     value:P_objectWithIdAndLocation;
     FUNCTION isImportedOrDelegateWithoutLocal:boolean;
     FUNCTION hasPublicSubrule:boolean;
+    FUNCTION clone:T_ruleMapEntry;
   end;
 
   T_ruleMapEntries=array of T_ruleMapEntry;
@@ -240,6 +241,7 @@ TYPE
       PROCEDURE disposeValue(VAR v:MY_VALUE_TYPE); virtual;
     public
       CONSTRUCTOR create(CONST package:P_abstractPackage);
+      PROCEDURE cloneContents(CONST otherMap:P_ruleMap);
       PROCEDURE clear;
       FUNCTION addImports(CONST other:P_ruleMap):boolean;
       FUNCTION getOperators:T_customOperatorArray;
@@ -296,6 +298,13 @@ FUNCTION T_ruleMapEntry.hasPublicSubrule:boolean;
       tt_globalVariable: result:=P_variable(value)^.hasPublicSubrule;
       else               result:=true;
     end;
+  end;
+
+FUNCTION T_ruleMapEntry.clone:T_ruleMapEntry;
+  begin
+    result.entryType :=entryType;
+    result.isImported:=true;
+    result.value     :=value;
   end;
 
 FUNCTION T_ruleMap.mergeEntry(CONST id: T_idString; entry: T_ruleMapEntry): boolean;
@@ -378,6 +387,21 @@ PROCEDURE T_ruleMap.clear;
     {$ifdef fullVersion}
     suppressAllUnusedWarnings:=false;
     {$endif}
+  end;
+
+PROCEDURE T_ruleMap.cloneContents(CONST otherMap:P_ruleMap);
+  VAR entry: KEY_VALUE_PAIR;
+  begin
+    clear;
+    localPackage:=otherMap^.localPackage;
+    setLength(afterRules,0);
+    merging:=false;
+    {$ifdef fullVersion}
+    suppressAllUnusedWarnings:=false;
+    {$endif}
+    builtinOverrides:=C_EMPTY_STRING_ARRAY;
+    append(builtinOverrides,otherMap^.builtinOverrides);
+    for entry in otherMap^.entrySet do put(entry.key,entry.value.clone);
   end;
 
 FUNCTION T_ruleMap.addImports(CONST other: P_ruleMap): boolean;
