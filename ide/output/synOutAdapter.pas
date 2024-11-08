@@ -161,7 +161,7 @@ FUNCTION T_abstractSynOutAdapter.flushToGui(CONST forceFlush: boolean): T_messag
       fullUpdateRequired:boolean=false;
       start:double;
 
-  PROCEDURE appendPrint(CONST s:String; CONST callerLocation:T_searchTokenLocation);
+  PROCEDURE appendPrint(CONST s:string; CONST callerLocation:T_searchTokenLocation);
     VAR locationFromString:T_searchTokenLocation;
     begin
       locationFromString:=guessLocationFromString(s,false);

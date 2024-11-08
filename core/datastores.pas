@@ -286,7 +286,7 @@ FUNCTION T_datastoreMeta.readValue(CONST location:T_tokenLocation; CONST context
       if not(accessed) then result:=nil
       else begin
         dropFirst(fileLines,1);
-        lexer.create(fileLines,location,P_abstractPackage(location.package){$ifdef fullVersion},false{$endif});
+        lexer.create(fileLines,location,P_abstractPackage(location.package){$ifdef fullVersion},lxu_interpretation{$endif});
         stmt:=lexer.getNextStatement(context,recycler);
         stmt.token.first^.setSingleLocationForExpression(location);
         lexer.destroy;

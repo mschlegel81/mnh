@@ -113,20 +113,20 @@ TYPE
 CONST
   C_packageLoadUsecaseMeta:array[T_packageLoadUsecase] of record
     import_usecase:T_packageLoadUsecase;
-    collectMetaData,
+    lexing_usecase:T_lexingUsecase;
     createRules,
     executeStatements,
     loadUsedPacks ,
     finalizeWorkers:boolean;
   end=(
- {lu_NONE                       }(import_usecase:lu_NONE                      ;collectMetaData:false; createRules:true ; executeStatements:false; loadUsedPacks:true ; finalizeWorkers:false),
- {lu_beingLoaded                }(import_usecase:lu_NONE                      ;collectMetaData:false; createRules:true ; executeStatements:false; loadUsedPacks:true ; finalizeWorkers:false),
- {lu_forImport                  }(import_usecase:lu_forImport                 ;collectMetaData:false; createRules:true ; executeStatements:false; loadUsedPacks:true ; finalizeWorkers:false),
- {lu_forCallingMain             }(import_usecase:lu_forImport                 ;collectMetaData:false; createRules:true ; executeStatements:false; loadUsedPacks:true ; finalizeWorkers:true ),
- {lu_forDirectExecution         }(import_usecase:lu_forImport                 ;collectMetaData:false; createRules:true ; executeStatements:true ; loadUsedPacks:true ; finalizeWorkers:true ),
- {lu_forCodeAssistance          }(import_usecase:lu_forCodeAssistance         ;collectMetaData:true ; createRules:false; executeStatements:false; loadUsedPacks:true ; finalizeWorkers:false),
- {lu_forCodeAssistanceSecondary }(import_usecase:lu_forCodeAssistanceSecondary;collectMetaData:true ; createRules:false; executeStatements:false; loadUsedPacks:true ; finalizeWorkers:false),
- {lu_usageScan                  }(import_usecase:lu_NONE                      ;collectMetaData:false; createRules:false; executeStatements:false; loadUsedPacks:false; finalizeWorkers:false));
+ {lu_NONE                       }(import_usecase:lu_NONE                      ;lexing_usecase:lxu_interpretation;   createRules:true ; executeStatements:false; loadUsedPacks:true ; finalizeWorkers:false),
+ {lu_beingLoaded                }(import_usecase:lu_NONE                      ;lexing_usecase:lxu_interpretation;   createRules:true ; executeStatements:false; loadUsedPacks:true ; finalizeWorkers:false),
+ {lu_forImport                  }(import_usecase:lu_forImport                 ;lexing_usecase:lxu_interpretation;   createRules:true ; executeStatements:false; loadUsedPacks:true ; finalizeWorkers:false),
+ {lu_forCallingMain             }(import_usecase:lu_forImport                 ;lexing_usecase:lxu_interpretation;   createRules:true ; executeStatements:false; loadUsedPacks:true ; finalizeWorkers:true ),
+ {lu_forDirectExecution         }(import_usecase:lu_forImport                 ;lexing_usecase:lxu_interpretation;   createRules:true ; executeStatements:true ; loadUsedPacks:true ; finalizeWorkers:true ),
+ {lu_forCodeAssistance          }(import_usecase:lu_forCodeAssistanceSecondary;lexing_usecase:lxu_assistance;       createRules:false; executeStatements:false; loadUsedPacks:true ; finalizeWorkers:false),
+ {lu_forCodeAssistanceSecondary }(import_usecase:lu_forCodeAssistanceSecondary;lexing_usecase:lxu_assistanceImport; createRules:false; executeStatements:false; loadUsedPacks:true ; finalizeWorkers:false),
+ {lu_usageScan                  }(import_usecase:lu_NONE                      ;lexing_usecase:lxu_interpretation;   createRules:false; executeStatements:false; loadUsedPacks:false; finalizeWorkers:false));
 
 TYPE
   P_sandbox=^T_sandbox;
@@ -552,7 +552,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
       extendedPackages[length(extendedPackages)-1]:=importWrapper;
 
       helperUse.destroy;
-      lexer.createForExtendedPackage(importWrapper,@self{$ifdef fullVersion},C_packageLoadUsecaseMeta[usecase].collectMetaData,callAndIdInfos{$endif});
+      lexer.createForExtendedPackage(importWrapper,@self{$ifdef fullVersion},C_packageLoadUsecaseMeta[usecase].lexing_usecase,callAndIdInfos{$endif});
       stmt:=lexer.getNextStatement(@globals.primaryContext,recycler);
       inc(extendsLevel);
       while (globals.primaryContext.continueEvaluation) and (stmt.token.first<>nil) do begin
@@ -712,7 +712,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         recycler^.cascadeDisposeToken(statement.token.first);
         recycler^.cascadeDisposeToken(ruleBody);
         exit;
-      end;
+      end else ruleDeclarationStart:=statement.token.first^.location;
       p:=statement.token.first;
       while (p<>nil) and not(p^.tokType in [tt_assign,tt_declare]) do begin
         if (p^.tokType in [tt_identifier, tt_userRule, tt_intrinsicRule]) and isQualified(p^.txt) then begin
@@ -787,7 +787,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
         globals.primaryContext.messages^.raiseSimpleError('Invalid statement: '+tokensToString(statement.token.first),loc);
         recycler^.cascadeDisposeToken(statement.token.first);
         exit;
-      end;
+      end else loc:=statement.token.first^.location;
       if (modifier_datastore in ruleModifiers) and not(modifier_memoized in ruleModifiers) and getCodeProvider^.isPseudoFile then begin
         globals.primaryContext.messages^.postTextMessage(mt_el2_warning,loc,'Because the file is not saved, the variable will not be datastore but mutable');
         ruleModifiers:=ruleModifiers-[modifier_datastore]+[modifier_mutable];
@@ -835,7 +835,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
       exit;
     end;
 
-    if C_packageLoadUsecaseMeta[usecase].collectMetaData or C_packageLoadUsecaseMeta[usecase].createRules or C_packageLoadUsecaseMeta[usecase].executeStatements then begin
+    if (C_packageLoadUsecaseMeta[usecase].lexing_usecase in C_assistanceUseCases) or C_packageLoadUsecaseMeta[usecase].createRules or C_packageLoadUsecaseMeta[usecase].executeStatements then begin
       if (statement.assignmentToken<>nil) then begin
 
         if not(se_alterPackageState in globals.primaryContext.sideEffectWhitelist) then begin
@@ -892,7 +892,7 @@ PROCEDURE T_package.interpret(VAR statement: T_enhancedStatement; CONST usecase:
            (statement.token.first^.next=nil) and
            (statement.token.first^.tokType=tt_literal)
         then globals.primaryContext.messages^.postCustomMessage(newEchoMessage(P_literal(statement.token.first^.data),statement.token.first^.location),true);
-      end else if C_packageLoadUsecaseMeta[usecase].collectMetaData then resolveBuiltinIDs(statement.token.first,globals.primaryContext.messages);
+      end else if C_packageLoadUsecaseMeta[usecase].lexing_usecase in C_assistanceUseCases then resolveBuiltinIDs(statement.token.first,globals.primaryContext.messages);
     end;
     if statement.token.first<>nil then recycler^.cascadeDisposeToken(statement.token.first);
     assert(statement.token.first=nil);
@@ -1013,7 +1013,7 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
     {$endif}
     logReady(getCodeProvider^.stateHash);
     if profile then globals.timeBaseComponent(pc_tokenizing);
-    lexer.createForPackageParsing(@self{$ifdef fullVersion},C_packageLoadUsecaseMeta[usecase].collectMetaData,callAndIdInfos{$endif});
+    lexer.createForPackageParsing(@self{$ifdef fullVersion},C_packageLoadUsecaseMeta[usecase].lexing_usecase,callAndIdInfos{$endif});
     if profile then globals.timeBaseComponent(pc_tokenizing);
     stmt:=lexer.getNextStatement(@globals.primaryContext,recycler);
     isPlainScript:=isPlainScriptStatement;
@@ -1028,9 +1028,9 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
     end;
     if profile then globals.timeBaseComponent(pc_tokenizing);
 
-    while (C_packageLoadUsecaseMeta[usecase].collectMetaData or globals.primaryContext.continueEvaluation) and (stmt.token.first<>nil) do begin
+    while ((C_packageLoadUsecaseMeta[usecase].lexing_usecase in C_assistanceUseCases) or globals.primaryContext.continueEvaluation) and (stmt.token.first<>nil) do begin
       interpret(stmt,usecase,globals,recycler{$ifdef fullVersion},callAndIdInfos{$endif});
-      if C_packageLoadUsecaseMeta[usecase].collectMetaData or globals.primaryContext.continueEvaluation
+      if (C_packageLoadUsecaseMeta[usecase].lexing_usecase in C_assistanceUseCases) or globals.primaryContext.continueEvaluation
       then begin
         if profile then globals.timeBaseComponent(pc_tokenizing);
         stmt:=lexer.getNextStatement(@globals.primaryContext,recycler);
@@ -1039,7 +1039,7 @@ PROCEDURE T_package.load(usecase: T_packageLoadUsecase; VAR globals: T_evaluatio
     end;
     recycler^.cascadeDisposeToken(stmt.token.first);
     lexer.destroy;
-    if  C_packageLoadUsecaseMeta[usecase].collectMetaData then begin
+    if (C_packageLoadUsecaseMeta[usecase].lexing_usecase in C_assistanceUseCases) then begin
       readyForUsecase:=usecase;
       {$ifdef fullVersion}
       if (usecase in [lu_forCodeAssistance,lu_forCodeAssistanceSecondary]) and isMain then afterLoadForAssistance;

@@ -111,6 +111,9 @@ TYPE
     assignmentToken:P_token;
   end;
 
+  T_simpleTokenRange=record x,y,width:longint; end;
+  T_simpleTokenRanges=array of T_simpleTokenRange;
+
   {$ifdef fullVersion}
   T_usageInfo=record
     targetLocation,
@@ -124,12 +127,10 @@ TYPE
                   used:boolean;
                 end;
 
-  T_simpleTokenRange=record x,y,width:longint; end;
   T_relatedTokens=record
     count:byte;
     position: array[0..63] of T_simpleTokenRange;
   end;
-  T_simpleTokenRanges=array of T_simpleTokenRange;
 
   T_callAndIdInfos=object
     private
@@ -227,6 +228,7 @@ TYPE
   {$endif}
 
   T_lexingStyle=(ls_onlyInterpretable,ls_retainAll,ls_retainComments);
+  T_lexingUsecase=(lxu_interpretation, lxu_assistance, lxu_assistanceImport);
 
   { T_abstractLexer }
 
@@ -243,14 +245,14 @@ TYPE
       end;
       associatedPackage:P_abstractPackage;
       {$ifdef fullVersion}
-      assistanceRun:boolean;
+      usecase:T_lexingUsecase;
       callAndIdInfos:P_callAndIdInfos;
       {$endif}
       FUNCTION getToken(CONST line: ansistring; VAR inputLocation: T_tokenLocation; CONST messages:P_messages; CONST recycler:P_recycler): P_token;
       FUNCTION fetchNext(                                                           CONST messages:P_messages; CONST recycler:P_recycler):boolean;
       FUNCTION fetch(CONST messages:P_messages; CONST recycler:P_recycler):P_token; virtual; abstract;
     public
-      CONSTRUCTOR create(CONST package:P_abstractPackage {$ifdef fullVersion};CONST isAssistanceRun:boolean; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+      CONSTRUCTOR create(CONST package:P_abstractPackage {$ifdef fullVersion};CONST usecase_:T_lexingUsecase; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
       DESTRUCTOR destroy; virtual;
       FUNCTION getNextStatement(CONST context:P_context; CONST recycler:P_recycler):T_enhancedStatement;
   end;
@@ -285,7 +287,7 @@ TYPE
       columnOffset:longint;
       FUNCTION fetch(CONST messages:P_messages; CONST recycler:P_recycler):P_token; virtual;
     public
-      CONSTRUCTOR create(CONST strings:T_locatedStrings; CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+      CONSTRUCTOR create(CONST strings:T_locatedStrings; CONST package:P_abstractPackage {$ifdef fullVersion}; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -317,10 +319,10 @@ TYPE
       FUNCTION fetch(CONST messages:P_messages; CONST recycler:P_recycler):P_token; virtual;
     public
       CONSTRUCTOR create(CONST input_:T_arrayOfString; CONST parseLocation_:T_tokenLocation;
-                         CONST package:P_abstractPackage {$ifdef fullVersion};CONST isAssistanceRun:boolean; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+                         CONST package:P_abstractPackage {$ifdef fullVersion};CONST usecase_:T_lexingUsecase; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
       CONSTRUCTOR createForExtendedPackage(CONST importWrapper:P_extendedPackage;
-                         CONST package:P_abstractPackage {$ifdef fullVersion};CONST isAssistanceRun:boolean; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
-      CONSTRUCTOR createForPackageParsing(CONST package:P_abstractPackage {$ifdef fullVersion};CONST isAssistanceRun:boolean; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+                         CONST package:P_abstractPackage {$ifdef fullVersion};CONST usecase_:T_lexingUsecase; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+      CONSTRUCTOR createForPackageParsing(CONST package:P_abstractPackage {$ifdef fullVersion}; CONST usecase_:T_lexingUsecase; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
       DESTRUCTOR destroy; virtual;
   end;
 
@@ -328,7 +330,12 @@ TYPE
 OPERATOR =(CONST A,B:T_relatedTokens):boolean;
 {$endif}
 FUNCTION isOperatorName(CONST id:T_idString):boolean;
-VAR getFormatTokens: FUNCTION (CONST formatString:ansistring; CONST isFString:boolean; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; OUT formatStringRanges:T_simpleTokenRanges):P_token;
+CONST
+  C_assistanceUseCases:set of T_lexingUsecase=[lxu_assistance, lxu_assistanceImport];
+VAR
+    {$ifdef fullVersion}
+    getFormatTokens: FUNCTION (CONST formatString:ansistring; CONST isFString:boolean; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; OUT formatStringRanges:T_simpleTokenRanges):P_token;
+    {$endif}
     BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
     BUILTIN_WRITE_DATA_STORES,
@@ -362,7 +369,7 @@ T_idStack=object
     ids:array of record name:T_idString; used:boolean; location:T_tokenLocation; idType:T_tokenType; end;
     delayedErrorMessages:T_storedMessages;
   end;
-  forAssistance:boolean;
+  lexingUsecase:T_lexingUsecase;
   doSuppressAllUnusedWarnings:boolean;
   suppressUnusedWarningInLines:T_arrayOfLongint;
   {$ifdef fullVersion}
@@ -401,9 +408,9 @@ FUNCTION T_linesLexer.fetch(CONST messages: P_messages; CONST recycler:P_recycle
   end;
 
 CONSTRUCTOR T_linesLexer.create(CONST input_: T_arrayOfString; CONST parseLocation_: T_tokenLocation;
-                                CONST package:P_abstractPackage {$ifdef fullVersion};CONST isAssistanceRun:boolean; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+                                CONST package:P_abstractPackage {$ifdef fullVersion}; CONST usecase_:T_lexingUsecase; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
   begin
-    inherited create(package{$ifdef fullVersion},isAssistanceRun,callAndIdInfos_{$endif});
+    inherited create(package{$ifdef fullVersion},usecase_,callAndIdInfos_{$endif});
     input:=input_;
     inputIndex:=0;
     inputLocation:=parseLocation_;
@@ -411,14 +418,14 @@ CONSTRUCTOR T_linesLexer.create(CONST input_: T_arrayOfString; CONST parseLocati
   end;
 
 CONSTRUCTOR T_linesLexer.createForExtendedPackage(CONST importWrapper: P_extendedPackage;
-                                                  CONST package:P_abstractPackage {$ifdef fullVersion};CONST isAssistanceRun:boolean; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+                                                  CONST package:P_abstractPackage {$ifdef fullVersion}; CONST usecase_:T_lexingUsecase; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
   begin
-    create(importWrapper^.getCodeProvider^.getLines,packageTokenLocation(importWrapper),package{$ifdef fullVersion},isAssistanceRun,callAndIdInfos_{$endif});
+    create(importWrapper^.getCodeProvider^.getLines,packageTokenLocation(importWrapper),package{$ifdef fullVersion},usecase_,callAndIdInfos_{$endif});
   end;
 
-CONSTRUCTOR T_linesLexer.createForPackageParsing(CONST package:P_abstractPackage {$ifdef fullVersion};CONST isAssistanceRun:boolean; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+CONSTRUCTOR T_linesLexer.createForPackageParsing(CONST package:P_abstractPackage {$ifdef fullVersion}; CONST usecase_:T_lexingUsecase; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
   begin
-    create(package^.getCodeProvider^.getLines,packageTokenLocation(package),package{$ifdef fullVersion},isAssistanceRun,callAndIdInfos_{$endif});
+    create(package^.getCodeProvider^.getLines,packageTokenLocation(package),package{$ifdef fullVersion},usecase_,callAndIdInfos_{$endif});
   end;
 
 DESTRUCTOR T_linesLexer.destroy;
@@ -450,7 +457,7 @@ FUNCTION T_variableLexer.fetch(CONST messages: P_messages; CONST recycler:P_recy
 
 CONSTRUCTOR T_variableLexer.create(CONST input: T_arrayOfLiteral; CONST parseLocation_: T_tokenLocation; CONST package: P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
   begin
-    inherited create(package{$ifdef fullVersion},false,callAndIdInfos_{$endif});
+    inherited create(package{$ifdef fullVersion},lxu_interpretation,callAndIdInfos_{$endif});
     data:=input;
     dataIdx:=-1;
     parseLocation:=parseLocation_;
@@ -479,7 +486,7 @@ FUNCTION T_singleStringLexer.fetch(CONST messages: P_messages; CONST recycler:P_
 CONSTRUCTOR T_singleStringLexer.create(CONST inputString: string; CONST parseLocation: T_tokenLocation;
                                        CONST package:P_abstractPackage {$ifdef fullVersion};CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
   begin
-    inherited create(package{$ifdef fullVersion},false,callAndIdInfos_{$endif});
+    inherited create(package{$ifdef fullVersion},lxu_interpretation,callAndIdInfos_{$endif});
     text:=inputString;
     inputLocation:=parseLocation;
     inputLocation.column:=1;
@@ -490,6 +497,43 @@ DESTRUCTOR T_singleStringLexer.destroy;
   begin
     inherited;
     text:='';
+  end;
+
+{ T_locatedStringLexer }
+
+FUNCTION T_locatedStringLexer.fetch(CONST messages: P_messages; CONST recycler: P_recycler): P_token;
+  begin
+    result:=nil;
+    while (result=nil) and (partIdx<length(parts)) do begin
+      result:=getToken(parts[partIdx].txt,inputLocation,messages,recycler);
+      if (result=nil) then begin
+        inc(partIdx);
+        if length(parts)>partIdx then begin
+          columnOffset:=parts[partIdx].loc.column+1;
+          inputLocation:=parts[partIdx].loc;
+        end;
+        inputLocation.column:=1;
+      end;
+    end;
+    if result<>nil then inc(result^.location.column,columnOffset);
+  end;
+
+CONSTRUCTOR T_locatedStringLexer.create(CONST strings: T_locatedStrings; CONST package: P_abstractPackage {$ifdef fullVersion}; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+  VAR k:longint;
+  begin
+    inherited create(package{$ifdef fullVersion},lxu_interpretation,callAndIdInfos_{$endif});
+    partIdx:=0;
+    setLength(parts,length(strings));
+    for k:=0 to length(parts)-1 do parts[k]:=strings[k];
+    if length(parts)>partIdx then begin
+      columnOffset:=parts[partIdx].loc.column+1;
+      inputLocation:=parts[partIdx].loc;
+    end;
+    inputLocation.column:=1;
+  end;
+
+DESTRUCTOR T_locatedStringLexer.destroy;
+  begin
   end;
 
 {$ifdef fullVersion}
@@ -518,43 +562,6 @@ FUNCTION T_singleStringLexer.getEnhancedTokens(CONST idInfos: P_callAndIdInfos):
     result.addLineEnder(inputLocation.column);
     resetTemp;
     freeRecycler(recycler);
-  end;
-
-{ T_locatedStringLexer }
-
-FUNCTION T_locatedStringLexer.fetch(CONST messages: P_messages; CONST recycler: P_recycler): P_token;
-  begin
-    result:=nil;
-    while (result=nil) and (partIdx<length(parts)) do begin
-      result:=getToken(parts[partIdx].txt,inputLocation,messages,recycler);
-      if (result=nil) then begin
-        inc(partIdx);
-        if length(parts)>partIdx then begin
-          columnOffset:=parts[partIdx].loc.column+1;
-          inputLocation:=parts[partIdx].loc;
-        end;
-        inputLocation.column:=1;
-      end;
-    end;
-    if result<>nil then inc(result^.location.column,columnOffset);
-  end;
-
-CONSTRUCTOR T_locatedStringLexer.create(CONST strings: T_locatedStrings; CONST package: P_abstractPackage; CONST callAndIdInfos_: P_callAndIdInfos);
-  VAR k:longint;
-  begin
-    inherited create(package{$ifdef fullVersion},false,callAndIdInfos_{$endif});
-    partIdx:=0;
-    setLength(parts,length(strings));
-    for k:=0 to length(parts)-1 do parts[k]:=strings[k];
-    if length(parts)>partIdx then begin
-      columnOffset:=parts[partIdx].loc.column+1;
-      inputLocation:=parts[partIdx].loc;
-    end;
-    inputLocation.column:=1;
-  end;
-
-DESTRUCTOR T_locatedStringLexer.destroy;
-  begin
   end;
 
 FUNCTION tokenizeAllReturningRawTokens(CONST inputString:ansistring):T_rawTokenArray;
@@ -591,13 +598,13 @@ FUNCTION T_abstractPackage.getExtended(CONST idOrPath:string):P_abstractPackage;
 
 { T_abstractLexer }
 
-CONSTRUCTOR T_abstractLexer.create(CONST package: P_abstractPackage {$ifdef fullVersion};CONST isAssistanceRun:boolean; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
+CONSTRUCTOR T_abstractLexer.create(CONST package: P_abstractPackage {$ifdef fullVersion};CONST usecase_:T_lexingUsecase; CONST callAndIdInfos_:P_callAndIdInfos=nil{$endif});
   begin
     associatedPackage:=package;
 
     {$ifdef fullVersion}
     callAndIdInfos:=callAndIdInfos_;
-    assistanceRun:=isAssistanceRun;
+    usecase:=usecase_;
     {$endif}
 
     setLength(blob.lines,0);
@@ -661,7 +668,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
         tt_literal     : addHighlightingInfo:=(length(P_stringLiteral(tok^.data)^.value)=length(P_stringLiteral(tok^.data)^.getEscapedOriginal)-2);
         else             addHighlightingInfo:=false;
       end;
-      addHighlightingInfo:=addHighlightingInfo and (localIdStack.localIdInfos<>nil);
+      addHighlightingInfo:=addHighlightingInfo and (usecase=lxu_assistance) and (localIdStack.localIdInfos<>nil);
       if addHighlightingInfo then localIdStack.localIdInfos^.addFormatStrings(formatStringRanges);
       while (ft<>nil) do begin
         if localIdStack.hasId(ft^.txt,idType,idLoc)
@@ -807,7 +814,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
         tt_identifier,tt_userRule,tt_intrinsicRule,tt_globalVariable,tt_customType:begin
           if (nextStatement.token.last<>nil) and (nextStatement.token.last^.tokType=tt_modifier) and (nextStatement.token.last^.getModifier=modifier_local) then begin
             {$ifdef fullVersion}
-            if (tok^.tokType=tt_identifier) and not(localIdStack.hasId(tok^.txt,idType,idLoc)) and assistanceRun
+            if (tok^.tokType=tt_identifier) and not(localIdStack.hasId(tok^.txt,idType,idLoc)) and (usecase in C_assistanceUseCases)
             then context^.messages^.postTextMessage(mt_el1_note,nextStatement.token.last^.location,'Obsolete local modifier.');
             {$endif}
             tok^.tokType:=tt_blockLocalVariable;
@@ -819,7 +826,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
           end else if localIdStack.hasId(tok^.txt,idType,idLoc) then begin
             tok^.tokType:=idType;
             {$ifdef fullVersion}
-            if (callAndIdInfos<>nil) and (idLoc.package=P_objectWithPath(associatedPackage)) and (tok^.location.package=P_objectWithPath(associatedPackage)) then callAndIdInfos^.addTokenRelation(tok,idLoc);
+            if (callAndIdInfos<>nil) and (usecase=lxu_assistance) and (idLoc.package=P_objectWithPath(associatedPackage)) and (tok^.location.package=P_objectWithPath(associatedPackage)) then callAndIdInfos^.addTokenRelation(tok,idLoc);
             {$endif}
             if idType=tt_eachIndex then tok^.location:=idLoc;
           end else begin
@@ -827,7 +834,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
             {$ifdef fullVersion}
             if (callAndIdInfos<>nil) and (tok^.location.package=P_objectWithPath(associatedPackage)) and (tok^.tokType in [tt_userRule,tt_globalVariable]) then begin
               idLoc:=P_abstractRule(tok^.data)^.getLocation;
-              if idLoc.package=P_objectWithPath(associatedPackage) then callAndIdInfos^.addTokenRelation(tok,idLoc);
+              if (idLoc.package=P_objectWithPath(associatedPackage)) and (usecase=lxu_assistance) then callAndIdInfos^.addTokenRelation(tok,idLoc);
             end;
             {$endif}
           end;
@@ -857,7 +864,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
   begin
     localIdStack.create({$ifdef fullVersion}callAndIdInfos{$endif});
     {$ifdef fullVersion}
-    localIdStack.forAssistance:=assistanceRun;
+    localIdStack.lexingUsecase:=usecase;
     {$endif}
     while tokenQueue.hasNext or (fetchNext(context^.messages,recycler) and tokenQueue.hasNext) do begin
       nextToProcess:=tokenQueue.next;
@@ -868,7 +875,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
           recycler^.disposeToken(nextToProcess);
           result:=nextStatement;
           {$ifdef fullVersion}
-          if (callAndIdInfos<>nil) and assistanceRun then begin
+          if (callAndIdInfos<>nil) and (usecase in C_assistanceUseCases) then begin
             if result.assignmentToken<>nil
             then callAndIdInfos^.addAll(result.assignmentToken)
             else callAndIdInfos^.addAll(result.token.first);
@@ -891,7 +898,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
           do localIdStack.scopePop(context,lastLocation,recycler,nextStatement,nil,true);
     result:=nextStatement;
     {$ifdef fullVersion}
-    if (callAndIdInfos<>nil) and assistanceRun then begin
+    if (callAndIdInfos<>nil) and (usecase in C_assistanceUseCases) then begin
       if result.assignmentToken<>nil
       then callAndIdInfos^.addAll(result.assignmentToken)
       else callAndIdInfos^.addAll(result.token.first);
@@ -987,11 +994,11 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
         msg: P_storedMessage;
     begin
       {$ifdef fullVersion}
-      if (localIdInfos<>nil) and forAssistance then
+      if (localIdInfos<>nil) and (lexingUsecase in C_assistanceUseCases) then
       with scope[topIdx] do for i:=0 to length(ids)-1 do begin
         if not(ids[i].used) and (context<>nil) and not(arrContains(suppressUnusedWarningInLines,ids[i].location.line)) and (ids[i].idType=tt_blockLocalVariable)
         then context^.messages^.postTextMessage(mt_el2_warning,ids[i].location,'Unused local variable '+ids[i].name);
-        localIdInfos^.addLocalIdInfo(ids[i].name,ids[i].location,location,ids[i].idType,ids[i].used);
+        if lexingUsecase = lxu_assistance then localIdInfos^.addLocalIdInfo(ids[i].name,ids[i].location,location,ids[i].idType,ids[i].used);
       end;
       {$endif}
       setLength(scope[topIdx].ids,0);
@@ -1110,7 +1117,7 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
         if scope[topIdx].scopeStartToken^.tokType = tt_if
         then begin
           {$ifdef fullVersion}
-          if (localIdInfos<>nil) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken^.location);
+          if (localIdInfos<>nil) and (lexingUsecase=lxu_assistance) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken^.location);
           {$endif}
           pre:=workingIn.token.first;
           if pre = scope[topIdx].scopeStartToken
@@ -1127,7 +1134,7 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
         if scope[topIdx].scopeStartToken^.tokType=tt_then
         then begin
           {$ifdef fullVersion}
-          if (localIdInfos<>nil) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken^.location);
+          if (localIdInfos<>nil) and (lexingUsecase=lxu_assistance) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken^.location);
           {$endif}
           scope[topIdx].scopeStartToken^.tokType:=tt_iifCheck;
           closeToken                   ^.tokType:=tt_iifElse;
@@ -1136,7 +1143,7 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
         popSpecialIfPresent; if stackIsEmpty then exit;
         if scope[topIdx].scopeStartToken^.tokType=tt_iifCheck then begin
           {$ifdef fullVersion}
-          if (localIdInfos<>nil) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken^.location);
+          if (localIdInfos<>nil) and (lexingUsecase=lxu_assistance) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken^.location);
           {$endif}
         end else begin
           postDelayedMismatchError;
@@ -1147,33 +1154,33 @@ PROCEDURE T_idStack.scopePop(CONST context:P_context; CONST location:T_tokenLoca
         popSpecialIfPresent; if stackIsEmpty then exit;
         if scope[topIdx].scopeStartToken^.tokType=tt_beginBlock then begin
           {$ifdef fullVersion}
-          if (localIdInfos<>nil) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken^.location);
+          if (localIdInfos<>nil) and (lexingUsecase=lxu_assistance) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken^.location);
           {$endif}
         end else raiseMismatchError;
       end;
       tt_do:
         if scope[topIdx].scopeStartToken^.tokType=tt_for then begin
           {$ifdef fullVersion}
-          if (localIdInfos<>nil) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken^.location);
+          if (localIdInfos<>nil) and (lexingUsecase=lxu_assistance) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken^.location);
           {$endif}
           if closeToken^.getDoType=dt_unknown then closeToken^.setDoType(dt_for_related_do);
           exit; //This is not a pop...
         end else if scope[topIdx].scopeStartToken^.tokType=tt_while then begin
           {$ifdef fullVersion}
-          if (localIdInfos<>nil) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken^.location);
+          if (localIdInfos<>nil) and (lexingUsecase=lxu_assistance) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken^.location);
           {$endif}
           if closeToken^.getDoType=dt_unknown then closeToken^.setDoType(dt_while_related_do);
         end else raiseMismatchError;
       tt_aggregatorConstructor: begin
         {$ifdef fullVersion}
-        if (scope[topIdx].scopeStartToken^.tokType in [tt_for,tt_each,tt_parallelEach]) and (localIdInfos<>nil) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken^.location);
+        if (scope[topIdx].scopeStartToken^.tokType in [tt_for,tt_each,tt_parallelEach]) and (localIdInfos<>nil) and (lexingUsecase=lxu_assistance) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken^.location);
         {$endif}
         exit;
       end;
       tt_until: begin
         if scope[topIdx].scopeStartToken^.tokType=tt_repeat then begin
           {$ifdef fullVersion}
-          if (localIdInfos<>nil) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken^.location);
+          if (localIdInfos<>nil) and (lexingUsecase=lxu_assistance) then localIdInfos^.addTokenRelation(scope[topIdx].scopeStartToken,closeToken^.location);
           {$endif}
         end else raiseMismatchError;
       end;
@@ -1890,7 +1897,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
           blob.closer:=commentText[1+length(SPECIAL_COMMENT_BLOB_BEGIN_INFIX)];
           parsedLength:=length(commentOpener+SPECIAL_COMMENT_BLOB_BEGIN_INFIX)+1;
         end else {if commentOpener='#' then blob.closer:='#' else} blob.closer:='''';
-      end {$ifdef fullVersion} else if (pos('TODO',commentText)>0) and assistanceRun then messages^.postTextMessage(mt_el1_note,inputLocation,commentText) {$endif};
+      end {$ifdef fullVersion} else if (pos('TODO',commentText)>0) and (usecase in C_assistanceUseCases) then messages^.postTextMessage(mt_el1_note,inputLocation,commentText) {$endif};
     end;
 
   {$MACRO ON}
@@ -1913,7 +1920,7 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
     result:=recycler^.newToken(inputLocation,'',tt_EOL);
     with blob do if closer<>#0 then begin
       {$ifdef fullVersion}
-      if callAndIdInfos<>nil then callAndIdInfos^.markBlobLine(inputLocation.line,closer);
+      if (usecase=lxu_assistance) and (callAndIdInfos<>nil) then callAndIdInfos^.markBlobLine(inputLocation.line,closer);
       {$endif}
       //id now is rest of line
       id:=copy(line,inputLocation.column,length(line));
@@ -2240,7 +2247,7 @@ FUNCTION T_abstractLexer.fetchNext(CONST messages:P_messages; CONST recycler:P_r
           if (n[2]^.tokType=tt_operatorIn) then begin
             inFound:=true;
             {$ifdef fullVersion}
-            if (callAndIdInfos<>nil) and (associatedPackage^.isMain) then begin
+            if (callAndIdInfos<>nil) and (associatedPackage^.isMain) and (usecase=lxu_assistance) then begin
               callAndIdInfos^.addTokenRelation(nextToken,n[2]^.location);
             end;
             {$endif}

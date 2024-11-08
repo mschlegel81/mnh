@@ -392,7 +392,7 @@ PROCEDURE T_ideScriptEvaluation.execute(CONST recycler: P_recycler);
 
   PROCEDURE doneEdit;
     begin
-      package.finalize(@globals.primaryContext,recycler);
+      package.finalize(@globals.primaryContext,recycler,true);
       globals.afterEvaluation(recycler,packageTokenLocation(@package));
       if evalRequest<>nil
       then messages.postCustomMessage(evalRequest^.withSuccessFlag(messages.collectedMessageTypes*C_errorMessageTypes[3]=[]))

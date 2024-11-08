@@ -633,5 +633,7 @@ INITIALIZATION
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE       ,'format'           ,@format_imp    ,ak_variadic_1);
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE       ,'formatTime'       ,@formatTime_imp,ak_binary    );
   builtinFunctionMap.registerRule(STRINGS_NAMESPACE       ,'parseTime'        ,@parseTime_imp ,ak_binary    );
+  {$ifdef fullVersion}
   tokenArray.getFormatTokens:=@getFormatTokens;
+  {$endif}
 end.

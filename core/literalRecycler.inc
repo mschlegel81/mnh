@@ -558,6 +558,7 @@ FUNCTION T_globalLiteralRecycler.newStringLiteral(CONST value: ansistring; CONST
         dec(fill);
         result:=dat[fill];
         result^.val:=value;
+        result^.escapedOriginal:=escapedValue;
         result^.numberOfReferences:=1;
         result^.enc:=se_testPending;
       end else begin
@@ -579,6 +580,7 @@ FUNCTION T_localLiteralRecycler.newStringLiteral(CONST value: ansistring; CONST 
         dec(fill);
         result:=dat[fill];
         result^.val:=value;
+        result^.escapedOriginal:=escapedValue;
         result^.numberOfReferences:=1;
         result^.enc:=se_testPending;
       end else begin
