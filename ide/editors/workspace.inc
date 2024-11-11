@@ -761,12 +761,12 @@ PROCEDURE T_workspace.renameWordUnderCursor;
       id:string='';
       idType:T_tokenType;
       renameLocation:T_searchTokenLocation;
-      scanOther:boolean;
+      scanOther, forceScanOther:boolean;
   begin
     meta:=currentEditor;
     if (meta=nil) or (meta^.language<>LANG_MNH) then exit;
-    if meta^.canRenameUnderCursor(id,idType,renameLocation,scanOther) and
-       (renameForm.showModalFor(id,idType,scanOther)=mrOk)
+    if meta^.canRenameUnderCursor(id,idType,renameLocation,scanOther,forceScanOther) and
+       (renameForm.showModalFor(id,idType,scanOther,forceScanOther)=mrOk)
     then begin
       meta^.doRename(renameLocation,id,renameForm.newId,renameForm.checkAllEditorsCheckBox.checked and scanOther);
       inputPageControl.activePage:=meta^.tabsheet;

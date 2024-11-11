@@ -23,7 +23,7 @@ TYPE
     PROCEDURE NewNameEditChange(Sender: TObject);
     PROCEDURE NewNameEditKeyPress(Sender: TObject; VAR key: char);
   public
-    FUNCTION showModalFor(CONST id:string; CONST tokenType:T_tokenType; CONST enableScanOther:boolean):integer;
+    FUNCTION showModalFor(CONST id:string; CONST tokenType:T_tokenType; CONST enableScanOther,forceOtherScan:boolean):integer;
     FUNCTION newId:string;
   end;
 
@@ -52,13 +52,13 @@ PROCEDURE TrenameForm.NewNameEditChange(Sender: TObject);
     OKButton.enabled:=NewNameEdit.text<>OriginalNameEdit.text;
   end;
 
-FUNCTION TrenameForm.showModalFor(CONST id:string; CONST tokenType:T_tokenType; CONST enableScanOther:boolean):integer;
+FUNCTION TrenameForm.showModalFor(CONST id:string; CONST tokenType:T_tokenType; CONST enableScanOther,forceOtherScan:boolean):integer;
   begin
     caption:='Rename '+C_tokenDoc[tokenType].helpText;
     OriginalNameEdit.text:=id;
     NewNameEdit.text:=id;
-    checkAllEditorsCheckBox.enabled:=enableScanOther;
-    checkAllEditorsCheckBox.checked:=checkAllEditorsCheckBox.checked and enableScanOther;
+    checkAllEditorsCheckBox.enabled:=enableScanOther and not(forceOtherScan);
+    checkAllEditorsCheckBox.checked:=(checkAllEditorsCheckBox.checked and enableScanOther) or forceOtherScan;
     result:=ShowModal;
   end;
 

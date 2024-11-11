@@ -83,7 +83,7 @@ T_editorMeta=object(T_basicEditorMeta)
     PROCEDURE toggleBreakpoint;
 
     //Assistant related
-    FUNCTION canRenameUnderCursor(OUT orignalId:string; OUT tokTyp:T_tokenType; OUT ref:T_searchTokenLocation; OUT mightBeUsedElsewhere:boolean):boolean;
+    FUNCTION canRenameUnderCursor(OUT orignalId:string; OUT tokTyp:T_tokenType; OUT ref:T_searchTokenLocation; OUT mightBeUsedElsewhere,forceUsedElsewhere:boolean):boolean;
   public
     FUNCTION setUnderCursor(CONST updateMarker,forHelpOrJump: boolean):boolean;
   private
@@ -416,16 +416,17 @@ PROCEDURE T_editorMeta.toggleBreakpoint;
 FUNCTION T_editorMeta.canRenameUnderCursor(OUT orignalId: string;
                                            OUT tokTyp: T_tokenType;
                                            OUT ref: T_searchTokenLocation;
-                                           OUT mightBeUsedElsewhere: boolean): boolean;
+                                           OUT mightBeUsedElsewhere,forceUsedElsewhere: boolean): boolean;
   begin
     if language<>LANG_MNH then exit(false);
     setUnderCursor(false,true);
     result   :=underCursor.canRename;
     orignalId:=underCursor.idWithoutIsPrefix;
     tokTyp   :=underCursor.tokenType;
-    if tokTyp in [tt_each,tt_parallelEach] then tokTyp:=tt_eachParameter;
+    if tokTyp in [tt_each,tt_parallelEach,tt_for] then tokTyp:=tt_eachParameter;
     ref      :=underCursor.location;
-    mightBeUsedElsewhere:=underCursor.mightBeUsedInOtherPackages and (fileInfo.filePath<>'');
+    forceUsedElsewhere  :=fileInfo.filePath<>ref.fileName;
+    mightBeUsedElsewhere:=underCursor.mightBeUsedInOtherPackages and (fileInfo.filePath<>'') or forceUsedElsewhere;
   end;
 
 FUNCTION T_editorMeta.setUnderCursor(CONST updateMarker, forHelpOrJump: boolean):boolean;
@@ -455,6 +456,7 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
       fileName:string;
       editorWasThereBefore:boolean;
       assistanceData:P_codeAssistanceResponse;
+      others: T_arrayOfString;
   PROCEDURE updateLine;
     VAR lineStart,lineEnd:TPoint;
     begin
@@ -470,7 +472,10 @@ FUNCTION T_editorMeta.doRename(CONST ref: T_searchTokenLocation; CONST oldId, ne
     result:=false;
     if (language<>LANG_MNH) then exit(false);
     if renameInOtherEditors then begin
-      if not(isPseudoFile) then for fileName in findScriptsUsing(ref.fileName) do begin
+      others:=findScriptsUsing(ref.fileName);
+      if (ref.fileName<>fileInfo.filePath) then append(others,ref.fileName);
+
+      for fileName in others do begin
         editorWasThereBefore:=workspace.hasEditorForFile(fileName);
         meta:=workspace.addOrGetEditorMetaForFiles(fileName,false,false);
         if (meta<>nil) and not(meta^.doRename(ref,oldId,newId,false)) and not(editorWasThereBefore) then workspace.closeQuietly(meta);
