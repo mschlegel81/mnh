@@ -710,7 +710,10 @@ PROCEDURE TMnhOutputSyn.next;
            run:=C_echoPrefixLength;
          end else inherited next;
       else begin
-        fTokenId:=tokenKindByPrefix[ord(blobEnder)].tokenkind;
+        if (ord(blobEnder)>=0) and (ord(blobEnder)<length(tokenKindByPrefix))
+        then fTokenId:=tokenKindByPrefix[ord(blobEnder)].tokenkind
+        else inherited next;
+
         if blobEnder=chr(SECTION_HEAD_IDX) then fTokenSubId:=skError;
         if fLine[run]=#0 then begin
           fTokenId:=tkNull;
