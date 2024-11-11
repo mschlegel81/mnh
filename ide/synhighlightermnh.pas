@@ -577,13 +577,30 @@ PROCEDURE TAbstractSynMnhSyn.next;
   end;
 
 PROCEDURE TMnhInputSyn.next;
+  {$ifdef debugMode}
+  PROCEDURE writeNextToken;
+    VAR s:shortstring;
+        i:longint;
+    begin
+      s:='';
+      for i:=fTokenPos to run-1 do s+=fLine[i];
+      writeln('Next token: ',fLineNumber,',',fTokenPos,':',s,': ',fTokenId,'(',fTokenSubId,') blobEnder: #',ord(blobEnder));
+    end;
+  {$endif}
+
   VAR
     fStringEnd: longint;
+    closer: char;
   begin
     fTokenId := tkDefault;
     fTokenSubId:=skNormal;
     fTokenPos := run;
-    if  (blobEnder<>#0) then begin
+    if highlightingData.isFormatString(fLineNumber,fTokenPos,fStringEnd) then begin
+      fTokenId:=tkString;
+      run:=fStringEnd;
+      blobEnder:=#0;
+    end else if highlightingData.isBlobLine(fLineNumber,closer) then begin
+      blobEnder:=closer;
       if fLine[run]=#0 then begin
         fTokenId := tkNull;
         exit;
@@ -594,15 +611,17 @@ PROCEDURE TMnhInputSyn.next;
         inc(run);
       end;
       fTokenId:=tkString;
-    end else if highlightingData.isFormatString(fLineNumber,fTokenPos,fStringEnd) then begin
-      fTokenId:=tkString;
-      run:=fStringEnd;
-    end else
-    inherited next;
+    end else begin
+      blobEnder:=#0;
+      inherited next;
+    end;
     case highlightingData.isErrorLocation(fLineNumber,fTokenPos,run) of
       2: fTokenSubId:=skError;
       1: fTokenSubId:=skWarn;
     end;
+    {$ifdef debugMode}
+    writeNextToken;
+    {$endif}
   end;
 
 PROCEDURE TMnhOutputSyn.next;

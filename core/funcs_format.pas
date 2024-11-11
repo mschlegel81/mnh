@@ -185,13 +185,10 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
     new(result,create(formatString,tokenLocation,context,recycler));
   end;
 
-FUNCTION getFormatTokens(CONST formatString:ansistring; CONST isFString:boolean; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; OUT formatStringRanges:T_simpleTokenRanges):P_token;
+FUNCTION getFormatTokens(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; OUT formatStringRanges:T_simpleTokenRanges):P_token;
   VAR temp_format: P_preparedFormatStatement;
-      fixedLocation:T_tokenLocation;
   begin
-    fixedLocation:=tokenLocation;
-    if isFString then inc(fixedLocation.column);
-    temp_format:=getFormat(formatString,fixedLocation,context,recycler);
+    temp_format:=getFormat(formatString,tokenLocation,context,recycler);
     if temp_format^.formatSubrule=nil
     then begin
       result:=nil;
@@ -199,10 +196,6 @@ FUNCTION getFormatTokens(CONST formatString:ansistring; CONST isFString:boolean;
     end else begin
       result:=temp_format^.formatSubrule^.getResolvableTokens(recycler);
       formatStringRanges:=temp_format^.fStringRanges;
-      if isFString then begin
-        formatStringRanges[0].x    -=1;
-        formatStringRanges[0].width+=1;
-      end;
     end;
     dispose(temp_format,destroy);
   end;
@@ -218,31 +211,38 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
         simpleFmtPart:boolean=false;
         resultFill:longint=0;
         rangeCount:longint=1;
+        currentLine:longint;
+        currentCol :longint;
+
     PROCEDURE appendPart;
       begin
         if resultFill>=length(result) then setLength(result,resultFill*2);
         result[resultFill]:=part; inc(resultFill);
         part.txt:='';
-        part.loc.column:=i+tokenLocation.column;
+        part.loc.column:= currentCol+1;
+        part.loc.line  :=currentLine;
       end;
 
     PROCEDURE closeRange;
       begin
-        fStringRanges[rangeCount-1].width:=i-fStringRanges[rangeCount-1].x+tokenLocation.column-1;
+        fStringRanges[rangeCount-1].width:=currentCol-fStringRanges[rangeCount-1].x;
+        if fStringRanges[rangeCount-1].width=0 then dec(rangeCount);
       end;
 
     PROCEDURE openRange;
       begin
         if rangeCount>=length(fStringRanges) then setLength(fStringRanges,rangeCount*2);
-        fStringRanges[rangeCount].y:=tokenLocation.line;
-        fStringRanges[rangeCount].x:=i+tokenLocation.column;
+        fStringRanges[rangeCount].y:=currentLine;
+        fStringRanges[rangeCount].x:= currentCol;
         inc(rangeCount);
       end;
 
     begin
       setLength(fStringRanges,1);
+      currentLine       :=tokenLocation.line;
       fStringRanges[0].y:=tokenLocation.line;
-      fStringRanges[0].x:=tokenLocation.column-1; //include opening characer
+      currentCol        :=tokenLocation.column-1; //Offset because highlighter indexes are 0-based
+      fStringRanges[0].x:=tokenLocation.column-1;
       part.txt:='';
       part.loc:=tokenLocation;
       setLength(result,1);
@@ -250,7 +250,7 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
         case formatString[i] of
           '\': if not(fmtPart) and (i+1<=length(formatString)) and (formatString[i+1] in ['%','{','}']) then begin
                  part.txt+=formatString[i+1];
-                 inc(i);
+                 inc(i); inc(currentCol);
                end else part.txt+=formatString[i];
           '{': if fmtPart then begin
                  if bracketLevel=0 then closeRange;
@@ -268,7 +268,7 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
           '}': begin
                  if fmtPart then dec(bracketLevel);
                  part.txt+=formatString[i];
-                 if bracketLevel=0 then openRange;
+                 if bracketLevel=0 then begin inc(currentCol); openRange; dec(currentCol); end;
                  if (bracketLevel=0) and fmtPart and simpleFmtPart then begin
                    part.txt+='s';
                    appendPart;
@@ -285,7 +285,7 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
                end else begin
                  if (i+1<=length(formatString)) and (formatString[i+1]='%') then begin
                    part.txt+='%';
-                   inc(i);
+                   inc(i); inc(currentCol);
                  end else begin
                    appendPart;
                    part.txt:='%';
@@ -307,14 +307,19 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
                    fmtPart:=false;
                  end;
                end else part.txt+=formatString[i];
+          C_lineBreakChar:
+              begin
+                closeRange; inc(currentLine); currentCol:=0; openRange; currentCol:=-1;
+                part.txt+=formatString[i];
+              end
           else part.txt+=formatString[i];
+
         end;
-        inc(i);
+        inc(i); inc(currentCol);
       end;
       if part.txt<>'' then appendPart;
       closeRange;
       setLength(fStringRanges,rangeCount);
-      fStringRanges[rangeCount-1].width+=1;
       setLength(result,resultFill);
     end;
 

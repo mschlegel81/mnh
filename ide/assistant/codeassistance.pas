@@ -40,6 +40,7 @@ TYPE
       FUNCTION isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
       FUNCTION isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
       FUNCTION isFormatString(CONST lineIndex, tokenStart:longint; OUT tokenEnd:longint):boolean;
+      FUNCTION isBlobLine(CONST lineIndex:longint; OUT closer:char):boolean;
       PROCEDURE clearLocalIdInfos;
       FUNCTION getRelatedLocations(CONST CaretX,CaretY:longint):T_relatedTokens;
   end;
@@ -443,6 +444,7 @@ FUNCTION T_codeAssistanceResponse.explainIdentifier(CONST fullLine: ansistring; 
 
   VAR trueCaretX:longint=1;
       i:longint=1;
+      fStringEnd: longint;
   begin
     enterCriticalSection(messageCs);
     try
@@ -712,11 +714,21 @@ FUNCTION T_highlightingData.isLocalId(CONST id: string; CONST lineIndex, colIdx:
   end;
 
 FUNCTION T_highlightingData.isFormatString(CONST lineIndex, tokenStart:longint; OUT tokenEnd:longint):boolean;
-  VAR i:longint;
   begin
     enterCriticalSection(highlightingCs);
     try
       result:=localIdInfos.isFormatString(lineIndex,tokenStart,tokenEnd);
+    finally
+      leaveCriticalSection(highlightingCs);
+    end;
+  end;
+
+FUNCTION T_highlightingData.isBlobLine(CONST lineIndex:longint; OUT closer:char):boolean;
+  begin
+    enterCriticalSection(highlightingCs);
+    try
+      closer:=localIdInfos.getBlobCloserOrZero(lineIndex);
+      result:=closer<>#0;
     finally
       leaveCriticalSection(highlightingCs);
     end;

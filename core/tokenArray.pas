@@ -162,7 +162,6 @@ TYPE
       PROCEDURE addTokenRelation(CONST token:P_token; CONST other:T_tokenLocation);
       FUNCTION  getIndexOfRelated(CONST CaretX,CaretY:longint; CONST exactMatchOnly:boolean=false):longint;
       FUNCTION  getRelated(CONST CaretX,CaretY:longint):T_relatedTokens;
-
       FUNCTION localTypeOf(CONST id:T_idString; CONST line,col:longint; OUT declaredAt:T_tokenLocation):T_tokenType;
       FUNCTION allLocalIdsAt(CONST line,col:longint):T_arrayOfString;
       PROCEDURE addLocalIdInfo(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType; CONST used:boolean);
@@ -334,7 +333,7 @@ CONST
   C_assistanceUseCases:set of T_lexingUsecase=[lxu_assistance, lxu_assistanceImport];
 VAR
     {$ifdef fullVersion}
-    getFormatTokens: FUNCTION (CONST formatString:ansistring; CONST isFString:boolean; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; OUT formatStringRanges:T_simpleTokenRanges):P_token;
+    getFormatTokens: FUNCTION (CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; OUT formatStringRanges:T_simpleTokenRanges):P_token;
     {$endif}
     BLANK_ABSTRACT_PACKAGE:T_abstractPackage;
     MNH_PSEUDO_PACKAGE:T_mnhSystemPseudoPackage;
@@ -541,19 +540,31 @@ FUNCTION T_singleStringLexer.getEnhancedTokens(CONST idInfos: P_callAndIdInfos):
   VAR adapters:T_messagesDummy;
       recycler:P_recycler;
       tokenToProcess:P_token;
+  FUNCTION informedFetchNext:boolean;
+    VAR
+      fStringEnd: longint;
+      fStringToken:P_token;
+    begin
+      if idInfos^.isFormatString(inputLocation.line-1,inputLocation.column-1,fStringEnd)
+      then begin
+        fStringToken:=recycler^.newToken(inputLocation,'',tt_formatString,
+          recycler^.newStringLiteral(copy(text,inputLocation.column,fStringEnd-inputLocation.column+1)));
+        tokenQueue.append(fStringToken);
+        inputLocation.column:=fStringEnd+1;
+        result:=true;
+      end else result:=fetchNext(@adapters,recycler);
+    end;
+
   begin
     recycler:=newRecycler;
     blob.closer:=idInfos^.getBlobCloserOrZero(inputLocation.line);
 
     adapters.createDummy;
-    while fetchNext(@adapters,recycler) do begin end;
+    while informedFetchNext do begin end;
     dec(inputLocation.line);
     inputLocation.column:=length(text);
-
     adapters.destroy;
-
     result.create;
-
     while tokenQueue.hasNext do begin
       tokenToProcess:=tokenQueue.next;
       associatedPackage^.resolveId(tokenToProcess^,nil);
@@ -662,21 +673,21 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
       formatStringRanges: T_simpleTokenRanges;
       addHighlightingInfo:boolean;
     begin
-      ft:=getFormatTokens(P_stringLiteral(tok^.data)^.value,tok^.tokType=tt_formatString,tok^.location,context,recycler,formatStringRanges);
-      case tok^.tokType of
-        tt_formatString: addHighlightingInfo:=(length(P_stringLiteral(tok^.data)^.value)=length(P_stringLiteral(tok^.data)^.getEscapedOriginal)-3);
-        tt_literal     : addHighlightingInfo:=(length(P_stringLiteral(tok^.data)^.value)=length(P_stringLiteral(tok^.data)^.getEscapedOriginal)-2);
-        else             addHighlightingInfo:=false;
-      end;
-      addHighlightingInfo:=addHighlightingInfo and (usecase=lxu_assistance) and (localIdStack.localIdInfos<>nil);
+      ft:=getFormatTokens(P_stringLiteral(tok^.data)^.getEscapedOriginal,tok^.location,context,recycler,formatStringRanges);
+      addHighlightingInfo:=(usecase=lxu_assistance) and (localIdStack.localIdInfos<>nil);
       if addHighlightingInfo then localIdStack.localIdInfos^.addFormatStrings(formatStringRanges);
       while (ft<>nil) do begin
         if localIdStack.hasId(ft^.txt,idType,idLoc)
         then begin
           ft^.tokType:=idType;
           if addHighlightingInfo then callAndIdInfos^.addTokenRelation(ft,idLoc);
-        end
-        else associatedPackage^.resolveId(ft^,nil);
+        end else begin
+          associatedPackage^.resolveId(ft^,nil);
+          if ft^.tokType in [tt_userRule,tt_globalVariable] then begin
+            idLoc:=P_abstractRule(ft^.data)^.getLocation;
+            if addHighlightingInfo and (idLoc.package=P_objectWithPath(associatedPackage)) then callAndIdInfos^.addTokenRelation(ft,idLoc);
+          end;
+        end;
         if ft^.tokType=tt_identifier
         then context^.raiseError('Unresolvable identifier in format string: "'+ft^.txt+'"',tok^.location)
         else if localIdStack.localIdInfos<>nil then localIdStack.localIdInfos^.add(ft);
@@ -1526,10 +1537,25 @@ PROCEDURE T_callAndIdInfos.markBlobLine(CONST lineIndex:longint; CONST closer:ch
 
 PROCEDURE T_callAndIdInfos.addFormatStrings(CONST ranges:T_simpleTokenRanges);
   VAR i,i0:longint;
+      firstLine:longint=-1;
+      lastLine :longint=-1;
   begin
     i0:=length(formatStrings);
     setLength(formatStrings,i0+length(ranges));
-    for i:=0 to length(ranges)-1 do formatStrings[i0+i]:=ranges[i];
+    for i:=0 to length(ranges)-1 do begin
+      formatStrings[i0+i]:=ranges[i];
+      if firstLine<0 then firstLine:=ranges[i].y;
+      lastLine:=ranges[i].y;
+    end;
+
+    if firstLine<0 then exit;
+
+    i:=0;
+    for i0:=0 to length(blobLines)-1 do if (blobLines[i0].lineIndex<firstLine) or (blobLines[i0].lineIndex>lastLine) then begin
+      if i<>i0 then blobLines[i]:=blobLines[i0];
+      inc(i);
+    end;
+    if i<>length(blobLines) then setLength(blobLines,i);
   end;
 
 FUNCTION T_callAndIdInfos.isFormatString(CONST lineIndex, tokenStart:longint; OUT tokenEnd:longint):boolean;
