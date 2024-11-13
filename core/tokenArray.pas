@@ -1724,6 +1724,8 @@ DESTRUCTOR T_enhancedToken.destroy;
 
 FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation: T_searchTokenLocation; CONST oldName,newName: string): boolean;
   VAR partBefore, partBetween, partAfter: string;
+      idParts: T_arrayOfString;
+      i:longint;
   begin
     case token^.tokType of
       tt_identifier         ,
@@ -1745,7 +1747,13 @@ FUNCTION T_enhancedToken.renameInLine(VAR line: string; CONST referencedLocation
     partBetween:=copy(line,token^.location.column,endsAtColumn-token^.location.column+1);
     partAfter  :=copy(line,endsAtColumn+1,length(line));
     if token^.tokType in [tt_each,tt_parallelEach]
-    then partBetween:=C_tokenDefaultId[token^.tokType]+'('+newName+','
+    then begin
+      idParts:=split(token^.txt,',');
+      if length(idParts)>1 then begin
+        for i:=0 to length(idParts)-1 do if idParts[i]=oldName then idParts[i]:=newName;
+        partBetween:=C_tokenDefaultId[token^.tokType]+'(('+join(idParts,',')+'),';
+      end else partBetween:=C_tokenDefaultId[token^.tokType]+'('+newName+',';
+    end
     else if partBetween='is'+oldName then partBetween:='is'+newName
     else if partBetween='to'+oldName then partBetween:='to'+newName
     else    partBetween:=replaceOne(partBetween,oldName,newName);
@@ -1788,11 +1796,12 @@ FUNCTION T_enhancedToken.toInfo:T_tokenInfo;
     result.startLoc     :=token^.location;
     result.endLoc       :=token^.location;
     result.endLoc.column:=endsAtColumn;
-    result.canRename:=token^.tokType in [tt_parameterIdentifier,tt_userRule,tt_globalVariable,tt_customType,tt_blockLocalVariable,tt_customTypeCheck,tt_eachParameter,tt_each,tt_for,tt_parallelEach];
+    result.canRename:=(token^.tokType in [tt_parameterIdentifier,tt_userRule,tt_globalVariable,tt_customType,tt_blockLocalVariable,tt_customTypeCheck]) or
+                      (token^.tokType in [tt_eachParameter,tt_each,tt_parallelEach,tt_for]) and isIdentifier(token^.txt,false);
     result.tokenText:=safeTokenToString(token);
     if result.canRename then begin
       case token^.tokType of
-        tt_each,tt_parallelEach:           result.idWithoutIsPrefix:=token^.txt;
+        tt_each,tt_parallelEach, tt_for:   result.idWithoutIsPrefix:=token^.txt;
         tt_customType,tt_customTypeCheck:  result.idWithoutIsPrefix:=P_typedef(token^.data)^.getId;
         tt_userRule,tt_globalVariable:     result.idWithoutIsPrefix:=P_abstractRule(token^.data)^.getRootId;
         else                               result.idWithoutIsPrefix:=result.tokenText;

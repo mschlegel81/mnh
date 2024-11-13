@@ -480,6 +480,7 @@ FUNCTION T_codeAssistanceResponse.renameIdentifierInLine(CONST idLocation: T_sea
   begin
     enterCriticalSection(messageCs);
     try
+      //TODO: Check for potential naming conflicts
       loc.line:=CaretY;
       loc.column:=1;
       loc.package:=package;
