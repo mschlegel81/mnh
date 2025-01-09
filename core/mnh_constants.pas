@@ -31,7 +31,7 @@ CONST
   '|   \    /   |   \     |    _    | |___  \',
   '|   |\  /|   |   |\    |   | |   |  ___)  |',
   '|___| \/ |___|___| \___|___| |___| |_____/',
-  '             (c) Martin Schlegel, 2010-2024',
+  '             (c) Martin Schlegel, 2010-2025',
   '',
   'This program is distributed in the hope that it will be useful,',
   'but WITHOUT ANY WARRANTY; without even the implied warranty of',
@@ -263,7 +263,7 @@ CONST
     {tt_iifCheck}           tt_iifElse);
 
   C_opPrecedence: array[tt_separatorMapItem..tt_unaryOpMinus,0..1] of byte =
-   ((2,2),
+   ((12,12),
     (6,6),(6,6),(6,6),(6,6),(6,6),(6,6),(6,6), //comparators
     (7,7),(7,7),                //in, not in
     (8,8),(9,9),(9,9),          //logical operators
