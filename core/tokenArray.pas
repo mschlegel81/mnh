@@ -743,6 +743,8 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
         then context^.messages^.raiseSimpleError('Missing element in '+nextStatement.token.last^.singleTokenToString+'-separated list',tok^.location);
         if (nextStatement.token.last^.tokType<>tt_semicolon) and (tok^.tokType in [tt_endBlock,tt_endRule])
         then context^.messages^.raiseSimpleError('Missing ";" before "end"',tok^.location);
+        if (nextStatement.token.last^.tokType=tt_return) and (tok^.tokType=tt_semicolon)
+        then context^.messages^.raiseSimpleError('Empty return statement',nextStatement.token.last^.location);
       end;
 
       case tok^.tokType of
