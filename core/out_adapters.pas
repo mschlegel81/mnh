@@ -594,7 +594,11 @@ FUNCTION T_guiMessagesDistributor.flushToGui: T_messageTypeSet;
      at_imig,
      at_table,
      at_treeView,
-     at_profilingView] then result+=P_abstractGuiOutAdapter(a.adapter)^.flushToGui(false);
+     at_profilingView] then try
+       result+=P_abstractGuiOutAdapter(a.adapter)^.flushToGui(false);
+     except
+       //Ignore all potential violations...
+     end;
   end;
 {$endif}
 
@@ -878,15 +882,15 @@ FUNCTION T_messagesDistributor.triggersBeep: boolean;
 PROCEDURE T_messagesDistributor.addOutAdapter(CONST p: P_abstractOutAdapter; CONST destroyIt: boolean);
   VAR i:longint=0;
   begin
-      while (i<length(adapters)) and (adapters[i].adapter<>p) do inc(i);
-      if i>=length(adapters) then begin
-        setLength(adapters,length(adapters)+1);
-        adapters[length(adapters)-1].adapter:=p;
-        adapters[length(adapters)-1].doDispose:=destroyIt;
-        collecting:=collecting+p^.messageTypesToInclude;
-        if p^.adapterType=at_textFile then ensureFileFlushThread;
-        p^.parentMessage:=@self;
-      end;
+    while (i<length(adapters)) and (adapters[i].adapter<>p) do inc(i);
+    if i>=length(adapters) then begin
+      setLength(adapters,length(adapters)+1);
+      adapters[length(adapters)-1].adapter:=p;
+      adapters[length(adapters)-1].doDispose:=destroyIt;
+      collecting:=collecting+p^.messageTypesToInclude;
+      if p^.adapterType=at_textFile then ensureFileFlushThread;
+      p^.parentMessage:=@self;
+    end;
   end;
 
 PROCEDURE splitIntoLogNameAndOption(CONST nameAndOption:string; OUT fileName,options:string);
