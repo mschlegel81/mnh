@@ -590,7 +590,6 @@ PROCEDURE TMnhInputSyn.next;
 
   VAR
     fStringEnd: longint;
-    closer: char;
   begin
     fTokenId := tkDefault;
     fTokenSubId:=skNormal;
@@ -599,8 +598,7 @@ PROCEDURE TMnhInputSyn.next;
       fTokenId:=tkString;
       run:=fStringEnd;
       blobEnder:=#0;
-    end else if highlightingData.isBlobLine(fLineNumber,closer) then begin
-      blobEnder:=closer;
+    end else if (blobEnder<>#0) then begin
       if fLine[run]=#0 then begin
         fTokenId := tkNull;
         exit;

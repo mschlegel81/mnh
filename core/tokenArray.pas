@@ -139,11 +139,12 @@ TYPE
       usageInfos:array of T_usageInfo;
       relatedTokens:array of T_relatedTokens;
       localIdInfos: array of T_localIdInfo;
-      blobLines:array of record
-        lineIndex:longint;
-        blobCloser:char;
+      blobLocations:array of record
+        closer:char;
+        startLine,startCol,endLine,endCol:longint;
       end;
       formatStrings:array of T_simpleTokenRange;
+      FUNCTION getBlobCloserOrZero(CONST lineIndex:longint):char;
     public
       CONSTRUCTOR create;
       DESTRUCTOR destroy;
@@ -165,8 +166,8 @@ TYPE
       FUNCTION localTypeOf(CONST id:T_idString; CONST line,col:longint; OUT declaredAt:T_tokenLocation):T_tokenType;
       FUNCTION allLocalIdsAt(CONST line,col:longint):T_arrayOfString;
       PROCEDURE addLocalIdInfo(CONST id:T_idString; CONST validFrom,validUntil:T_tokenLocation; CONST typ:T_tokenType; CONST used:boolean);
-      PROCEDURE markBlobLine(CONST lineIndex:longint; CONST closer:char);
-      FUNCTION getBlobCloserOrZero(CONST lineIndex:longint):char;
+      PROCEDURE markBlobLine(CONST startLine_,startCol_,endLine_,endCol_:longint; CONST closer_:char);
+      FUNCTION getEndOfBlob(CONST lineIndex,colIndex:longint):longint;
       PROCEDURE addFormatStrings(CONST ranges:T_simpleTokenRanges);
       FUNCTION isFormatString(CONST lineIndex, tokenStart:longint; OUT tokenEnd:longint):boolean;
       PROCEDURE copyFrom(CONST original:P_callAndIdInfos);
@@ -1294,7 +1295,7 @@ PROCEDURE T_callAndIdInfos.clear;
     usedBuiltins.clear;
     usageInfoFill:=0;
     setLength(localIdInfos,0);
-    setLength(blobLines,0);
+    setLength(blobLocations,0);
     setLength(relatedTokens,0);
     setLength(formatStrings,0);
   end;
@@ -1397,7 +1398,7 @@ FUNCTION T_callAndIdInfos.isPackageReferenced(CONST packagePath:string):boolean;
 
 FUNCTION T_callAndIdInfos.isEmpty:boolean;
   begin
-    result:=(usageInfoFill=0) and (length(localIdInfos)=0) and (length(blobLines)=0);
+    result:=(usageInfoFill=0) and (length(localIdInfos)=0) and (length(blobLocations)=0);
   end;
 
 PROCEDURE T_callAndIdInfos.includeUsages(CONST other:P_callAndIdInfos);
@@ -1484,8 +1485,8 @@ PROCEDURE T_callAndIdInfos.copyFrom(CONST original:P_callAndIdInfos);
     if original=nil then exit;
     setLength(localIdInfos,length(original^.localIdInfos));
     for k:=0 to length(localIdInfos)-1 do localIdInfos[k]:=original^.localIdInfos[k];
-    setLength(blobLines,length(original^.blobLines));
-    for k:=0 to length(blobLines)-1 do blobLines[k]:=original^.blobLines[k];
+    setLength(blobLocations,length(original^.blobLocations));
+    for k:=0 to length(blobLocations)-1 do blobLocations[k]:=original^.blobLocations[k];
     setLength(relatedTokens,length(original^.relatedTokens));
     for k:=0 to length(relatedTokens)-1 do relatedTokens[k]:=original^.relatedTokens[k];
     setLength(formatStrings,length(original^.formatStrings));
@@ -1528,13 +1529,18 @@ PROCEDURE T_callAndIdInfos.addLocalIdInfo(CONST id:T_idString; CONST validFrom,v
     localIdInfos[i].used      :=used;
   end;
 
-PROCEDURE T_callAndIdInfos.markBlobLine(CONST lineIndex:longint; CONST closer:char);
+PROCEDURE T_callAndIdInfos.markBlobLine(CONST startLine_,startCol_,endLine_,endCol_:longint; CONST closer_:char);
   VAR k:longint;
   begin
-    k:=length(blobLines);
-    setLength(blobLines,k+1);
-    blobLines[k].lineIndex :=lineIndex;
-    blobLines[k].blobCloser:=closer;
+    k:=length(blobLocations);
+    setLength(blobLocations,k+1);
+    with blobLocations[k] do begin
+      closer   :=closer_;
+      startLine:=startLine_;
+      startCol :=startCol_ ;
+      endLine  :=endLine_  ;
+      endCol   :=endCol_   ;
+    end;
   end;
 
 PROCEDURE T_callAndIdInfos.addFormatStrings(CONST ranges:T_simpleTokenRanges);
@@ -1552,12 +1558,12 @@ PROCEDURE T_callAndIdInfos.addFormatStrings(CONST ranges:T_simpleTokenRanges);
 
     if firstLine<0 then exit;
 
-    i:=0;
-    for i0:=0 to length(blobLines)-1 do if (blobLines[i0].lineIndex<firstLine) or (blobLines[i0].lineIndex>lastLine) then begin
-      if i<>i0 then blobLines[i]:=blobLines[i0];
-      inc(i);
-    end;
-    if i<>length(blobLines) then setLength(blobLines,i);
+    //i:=0;
+    //for i0:=0 to length(blobLines)-1 do if (blobLines[i0].lineIndex<firstLine) or (blobLines[i0].lineIndex>lastLine) then begin
+    //  if i<>i0 then blobLines[i]:=blobLines[i0];
+    //  inc(i);
+    //end;
+    //if i<>length(blobLines) then setLength(blobLines,i);
   end;
 
 FUNCTION T_callAndIdInfos.isFormatString(CONST lineIndex, tokenStart:longint; OUT tokenEnd:longint):boolean;
@@ -1570,12 +1576,25 @@ FUNCTION T_callAndIdInfos.isFormatString(CONST lineIndex, tokenStart:longint; OU
     end;
   end;
 
+FUNCTION T_callAndIdInfos.getEndOfBlob(CONST lineIndex,colIndex:longint):longint;
+  VAR k:longint;
+  begin
+    result:=-1;
+    for k:=0 to length(blobLocations)-1 do with blobLocations[k] do begin
+      if (lineIndex>startLine) or (lineIndex=startLine) and (colIndex>=startCol) then begin
+        if (lineIndex<endLine) then exit(maxlongint)
+        else if lineIndex=endLine then exit(endCol);
+      end;
+    end;
+  end;
+
 FUNCTION T_callAndIdInfos.getBlobCloserOrZero(CONST lineIndex:longint):char;
   VAR k:longint;
   begin
     result:=#0;
-    for k:=0 to length(blobLines)-1 do if blobLines[k].lineIndex=lineIndex then exit(blobLines[k].blobCloser);
+    for k:=0 to length(blobLocations)-1 do if (lineIndex>blobLocations[k].startLine) and (lineIndex<=blobLocations[k].endLine) then exit(blobLocations[k].closer);
   end;
+
 {$endif}
 
 CONSTRUCTOR T_mnhSystemPseudoPackage.create;
@@ -1956,9 +1975,6 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
     firstInLine:=inputLocation.column=1;
     result:=recycler^.newToken(inputLocation,'',tt_EOL);
     with blob do if closer<>#0 then begin
-      {$ifdef fullVersion}
-      if (usecase=lxu_assistance) and (callAndIdInfos<>nil) then callAndIdInfos^.markBlobLine(inputLocation.line,closer);
-      {$endif}
       //id now is rest of line
       id:=copy(line,inputLocation.column,length(line));
       if pos(closer,id)<=0 then begin
@@ -1968,6 +1984,9 @@ FUNCTION T_abstractLexer.getToken(CONST line: ansistring; VAR inputLocation:T_to
       end else begin
         parsedLength:=pos(closer,id)+length(closer)-1;
         inc(inputLocation.column,parsedLength);
+        {$ifdef fullVersion}
+        if (usecase=lxu_assistance) and (callAndIdInfos<>nil) then callAndIdInfos^.markBlobLine(blob.start.line,blob.start.column,inputLocation.line,inputLocation.column-1,closer);
+        {$endif}
         append(lines,copy(id,1,pos(closer,id)-1));
         result^.location:=start;
         result^.tokType:=tt_literal;

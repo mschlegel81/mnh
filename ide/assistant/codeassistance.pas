@@ -40,7 +40,7 @@ TYPE
       FUNCTION isErrorLocation(CONST lineIndex, tokenStart, tokenEnd: longint): byte;
       FUNCTION isLocalId(CONST id: string; CONST lineIndex, colIdx: longint): boolean;
       FUNCTION isFormatString(CONST lineIndex, tokenStart:longint; OUT tokenEnd:longint):boolean;
-      FUNCTION isBlobLine(CONST lineIndex:longint; OUT closer:char):boolean;
+      FUNCTION getEndOfBlob(CONST lineIndex, colIndex:longint):longint;
       PROCEDURE clearLocalIdInfos;
       FUNCTION getRelatedLocations(CONST CaretX,CaretY:longint):T_relatedTokens;
   end;
@@ -724,12 +724,11 @@ FUNCTION T_highlightingData.isFormatString(CONST lineIndex, tokenStart:longint; 
     end;
   end;
 
-FUNCTION T_highlightingData.isBlobLine(CONST lineIndex:longint; OUT closer:char):boolean;
+FUNCTION T_highlightingData.getEndOfBlob(CONST lineIndex, colIndex:longint):longint;
   begin
     enterCriticalSection(highlightingCs);
     try
-      closer:=localIdInfos.getBlobCloserOrZero(lineIndex);
-      result:=closer<>#0;
+      result:=getEndOfBlob(lineIndex,colIndex);
     finally
       leaveCriticalSection(highlightingCs);
     end;
