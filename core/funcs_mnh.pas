@@ -180,7 +180,7 @@ FUNCTION getMnhInfo:T_arrayOfString;
     recycler:=newRecycler;
     globals.create(nil);
     L:=mnhInfo_imp(nil,pseudoLoc,@globals.primaryContext,recycler);
-    result:=serializeToStringList(L,pseudoLoc,nil);
+    result:=serializeToStringList(L,pseudoLoc,nil,su_full);
     recycler^.disposeLiteral(L);
     globals.destroy;
     freeRecycler(recycler);

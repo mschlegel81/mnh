@@ -481,6 +481,8 @@ TYPE
       FUNCTION underlyingMap:P_literalKeyLiteralValueMap;
       PROCEDURE ensureType;
   end;
+
+  T_serializationUsecase=(su_abbreviated,su_full,su_forDatastore);
 {$define include_interface}
 {$i literalRecycler.inc}
 {$undef include_interface}
@@ -500,7 +502,7 @@ FUNCTION parseNumber(CONST input: ansistring; CONST offset:longint; CONST suppre
 
 FUNCTION newLiteralFromStream(CONST inputStream: P_inputStreamWrapper; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_literal;
 PROCEDURE writeLiteralToStream(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_messages; CONST deflate,reuse:boolean; CONST stream:P_outputStreamWrapper);
-FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLocation; CONST adapters:P_messages; CONST forceFullOutput:boolean=false; CONST maxLineLength:longint=128; CONST maxTotalLength:longint=6400):T_arrayOfString;
+FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLocation; CONST adapters:P_messages; CONST usecase:T_serializationUsecase; CONST maxLineLength:longint=128; CONST maxTotalLength:longint=6400):T_arrayOfString;
 
 FUNCTION serialize(CONST L:P_literal; CONST location:T_tokenLocation; CONST adapters:P_messages; CONST deflate,reuse:boolean):ansistring;
 FUNCTION deserialize(CONST source:ansistring; CONST location:T_tokenLocation; CONST adapters:P_messages; VAR typeMap:T_typeMap):P_literal;
@@ -3594,7 +3596,7 @@ FUNCTION mutateVariable(CONST literalRecycler:P_literalRecycler; VAR toMutate:P_
     result:=returnValue;
   end;
 
-FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLocation; CONST adapters:P_messages; CONST forceFullOutput:boolean=false; CONST maxLineLength:longint=128; CONST maxTotalLength:longint=6400):T_arrayOfString;
+FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLocation; CONST adapters:P_messages; CONST usecase:T_serializationUsecase; CONST maxLineLength:longint=128; CONST maxTotalLength:longint=6400):T_arrayOfString;
   VAR indent:longint=0;
       prevLines:T_arrayOfString;
       nextLine:ansistring;
@@ -3602,7 +3604,7 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLo
 
   FUNCTION innerMaxLength:longint;
     begin
-      if forceFullOutput
+      if usecase in [su_forDatastore,su_full]
       then result:=maxLongint
       else result:=maxTotalLength-totalLength;
     end;
@@ -3696,7 +3698,7 @@ FUNCTION serializeToStringList(CONST L:P_literal; CONST location:T_searchTokenLo
           appendPart('].toMap',true);
           if (L^.literalType in C_typables) and (P_typableLiteral(L)^.customType<>nil) then appendPart('.to'+P_typableLiteral(L)^.customType^.name,true);
         end;
-        lt_expression: if forceFullOutput
+        lt_expression: if usecase=su_forDatastore
                        then begin if adapters<>nil then adapters^.raiseSimpleError('Literal of type '+L^.typeString+' ('+L^.toString(maxLineLength)+') cannot be serialized',location); end
                        else appendPart(L^.toString(innerMaxLength),false);
         else if adapters<>nil then adapters^.raiseSimpleError('Literal of type '+L^.typeString+' ('+L^.toString(maxLineLength)+') cannot be serialized',location);

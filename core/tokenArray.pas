@@ -1582,7 +1582,7 @@ FUNCTION T_callAndIdInfos.getEndOfBlob(CONST lineIndex,colIndex:longint):longint
     result:=-1;
     for k:=0 to length(blobLocations)-1 do with blobLocations[k] do begin
       if (lineIndex>startLine) or (lineIndex=startLine) and (colIndex>=startCol) then begin
-        if (lineIndex<endLine) then exit(maxlongint)
+        if (lineIndex<endLine) then exit(maxLongint)
         else if lineIndex=endLine then exit(endCol);
       end;
     end;

@@ -697,7 +697,7 @@ FUNCTION T_logFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
 
     if mc=mc_echo then begin
       if message^.messageType=mt_echo_output then begin
-        result:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil);
+        result:=serializeToStringList(P_echoOutMessage(message)^.literal,C_nilSearchTokenLocation,nil,su_full);
       end else begin
         for s in P_storedMessageWithText(message)^.txt do begin
           if (length(nextLine)>10) and (length(nextLine)+length(s)>100)
@@ -766,6 +766,7 @@ FUNCTION T_guiFormatter.formatLocation(CONST location: T_searchTokenLocation): s
   end;
 
 PROCEDURE T_guiFormatter.formatMessageAndLocation(CONST message: P_storedMessage; VAR messagesAndLocations: T_messagesAndLocations);
+  CONST usecase:array[false..true] of T_serializationUsecase=(su_abbreviated,su_full);
   VAR locationPart:string='';
       nextLine    :string='';
       s           :string;
@@ -806,7 +807,7 @@ PROCEDURE T_guiFormatter.formatMessageAndLocation(CONST message: P_storedMessage
           if wrapEcho
           then echo:=serializeToStringList(P_echoOutMessage(message)^.literal,
                                            C_nilSearchTokenLocation,nil,
-                                           forceFullLiteralOutput,
+                                           usecase[forceFullLiteralOutput],
                                            preferredLineLength-C_echoPrefixLength,
                                            limitPerLiteral)
           else echo:=P_echoOutMessage(message)^.literal^.toString();
@@ -848,6 +849,7 @@ PROCEDURE T_guiFormatter.formatMessageAndLocation(CONST message: P_storedMessage
   end;
 
 FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOfString;
+  CONST usecase:array[false..true] of T_serializationUsecase=(su_abbreviated,su_full);
   VAR locationPart:string='';
       marker      :string='';
       nextLine    :string='';
@@ -887,7 +889,7 @@ FUNCTION T_guiFormatter.formatMessage(CONST message: P_storedMessage): T_arrayOf
           if wrapEcho
           then result:=serializeToStringList(P_echoOutMessage(message)^.literal,
                                              C_nilSearchTokenLocation,nil,
-                                             forceFullLiteralOutput,
+                                             usecase[forceFullLiteralOutput],
                                              preferredLineLength-C_echoPrefixLength,
                                              limitPerLiteral)
           else result:=P_echoOutMessage(message)^.literal^.toString();
@@ -975,7 +977,7 @@ FUNCTION T_defaultConsoleFormatter.formatMessage(CONST message: P_storedMessage)
           then result:=''
           else result:=serializeToStringList(P_echoOutMessage(message)^.literal,
                                              C_nilSearchTokenLocation,nil,
-                                             false,
+                                             su_abbreviated,
                                              preferredLineLength-C_echoPrefixLength,
                                              limitPerLiteral);
           if length(result)>0 then result[  0]:=C_echoOutInfix+C_messageClassMeta[mc_echo].levelColor+result[0]+C_ANSI_CODE_RESET;
