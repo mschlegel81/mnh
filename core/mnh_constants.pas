@@ -232,8 +232,8 @@ CONST
   C_operators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorConcatAlt];
   C_unaryOperators: T_tokenTypeSet=[tt_unaryOpNegate,tt_unaryOpPlus,tt_unaryOpMinus];
   C_comparators: T_tokenTypeSet=[tt_comparatorEq..tt_operatorNotIn];
-  C_openingBrackets:T_tokenTypeSet=[tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck,tt_startOfPattern,tt_for];
-  C_closingBrackets:T_tokenTypeSet=[tt_endBlock,tt_endRule,tt_endExpression,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse,tt_endOfPatternAssign,tt_endOfPatternDeclare,tt_end_for];
+  C_openingBrackets:T_tokenTypeSet=[tt_beginBlock,tt_beginRule,tt_beginExpression,tt_each,tt_parallelEach,tt_agg,tt_braceOpen,tt_parList_constructor,tt_listBraceOpen,tt_list_constructor,tt_expBraceOpen,tt_iifCheck,tt_startOfPattern,tt_for,tt_repeat];
+  C_closingBrackets:T_tokenTypeSet=[tt_endBlock,tt_endRule,tt_endExpression,tt_braceClose,tt_listBraceClose,tt_expBraceClose,tt_iifElse,tt_endOfPatternAssign,tt_endOfPatternDeclare,tt_end_for,tt_until];
   C_matchingClosingBracket:array[tt_each..tt_iifCheck] of T_tokenType=
     {tt_each}              (tt_braceClose,
     {tt_parallelEach}       tt_braceClose,
