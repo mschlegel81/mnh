@@ -20,6 +20,10 @@ TYPE
     EditLocationLabel: TLabel;
     FindDialog1: TFindDialog;
     MenuItem1: TMenuItem;
+    miMicroStep: TMenuItem;
+    miStepOut: TMenuItem;
+    miStep: TMenuItem;
+    miStepInto: TMenuItem;
     miEventsView: TMenuItem;
     openRelatedSubmenu: TMenuItem;
     miOpenDependenciesUsed: TMenuItem;
@@ -38,6 +42,7 @@ TYPE
     miAbout: TMenuItem;
     miHelp: TMenuItem;
     ReplaceDialog1: TReplaceDialog;
+    Separator1: TMenuItem;
     smScripts: TMenuItem;
     MenuItem3: TMenuItem;
     miKeepStackTrace: TMenuItem;
@@ -126,6 +131,7 @@ TYPE
     PROCEDURE miHelpClick(Sender: TObject);
     PROCEDURE miIncFontSizeClick(Sender: TObject);
     PROCEDURE miKeepStackTraceClick(Sender: TObject);
+    PROCEDURE miMicroStepClick(Sender: TObject);
     PROCEDURE miNewClick(Sender: TObject);
     PROCEDURE miOpenClassicalClick(Sender: TObject);
     PROCEDURE miOpenClick(Sender: TObject);
@@ -144,6 +150,9 @@ TYPE
     PROCEDURE miSaveClick(Sender: TObject);
     PROCEDURE miSettingsClick(Sender: TObject);
     PROCEDURE miShebangClick(Sender: TObject);
+    PROCEDURE miStepClick(Sender: TObject);
+    PROCEDURE miStepIntoClick(Sender: TObject);
+    PROCEDURE miStepOutClick(Sender: TObject);
     PROCEDURE miToggleFullscreenClick(Sender: TObject);
     PROCEDURE miUndockAllClick(Sender: TObject);
     PROCEDURE smFileClick(Sender: TObject);
@@ -587,9 +596,14 @@ PROCEDURE TIdeMainForm.miRunDirectClick(Sender: TObject);
   end;
 
 PROCEDURE TIdeMainForm.miRunScriptClick(Sender: TObject);
+  VAR debuggerForm: TDebuggerForm;
   begin
     ensureTimerSuspend;
-    if runnerModel.canRunMain(true) and showCustomRunForm(false) then runnerModel.customRun(true);
+    if runnerModel.canRunMain(true) and showCustomRunForm(false) then runnerModel.customRun(true)
+    else if (miDebug.enabled) then begin
+      debuggerForm:=getDebuggerFormOrNil;
+      if debuggerForm<>nil then debuggerForm.tbRunContinueClick(Sender);
+    end;
     timer.enabled:=true;
   end;
 
@@ -626,6 +640,42 @@ PROCEDURE TIdeMainForm.miShebangClick(Sender: TObject);
     ensureTimerSuspend;
     showShebangWizard(workspace.currentEditor);
     timer.enabled:=true;
+  end;
+
+PROCEDURE TIdeMainForm.miStepClick(Sender: TObject);
+  VAR debuggerForm: TDebuggerForm;
+  begin
+    if (miDebug.enabled) then begin
+      debuggerForm:=getDebuggerFormOrNil;
+      if debuggerForm<>nil then debuggerForm.tbStepClick(Sender);
+    end;
+  end;
+
+PROCEDURE TIdeMainForm.miStepIntoClick(Sender: TObject);
+  VAR debuggerForm: TDebuggerForm;
+  begin
+    if (miDebug.enabled) then begin
+      debuggerForm:=getDebuggerFormOrNil;
+      if debuggerForm<>nil then debuggerForm.tbStepInClick(Sender);
+    end;
+  end;
+
+PROCEDURE TIdeMainForm.miStepOutClick(Sender: TObject);
+  VAR debuggerForm: TDebuggerForm;
+  begin
+    if (miDebug.enabled) then begin
+      debuggerForm:=getDebuggerFormOrNil;
+      if debuggerForm<>nil then debuggerForm.tbStepOutClick(Sender);
+    end;
+  end;
+
+PROCEDURE TIdeMainForm.miMicroStepClick(Sender: TObject);
+  VAR debuggerForm: TDebuggerForm;
+  begin
+    if (miDebug.enabled) then begin
+      debuggerForm:=getDebuggerFormOrNil;
+      if debuggerForm<>nil then debuggerForm.tbMicroStepClick(Sender);
+    end;
   end;
 
 PROCEDURE TIdeMainForm.miToggleFullscreenClick(Sender: TObject);
@@ -797,6 +847,11 @@ PROCEDURE TIdeMainForm.TimerTimer(Sender: TObject);
         miRestore  .enabled:=unlocked;
         smScripts  .enabled:=unlocked;
         miReplace  .enabled:=unlocked;
+        unlocked:=miDebug.enabled and runnerModel.anyRunning();
+        miStepInto .enabled:=unlocked;
+        miStepOut  .enabled:=unlocked;
+        miStep     .enabled:=unlocked;
+        miMicroStep.enabled:=unlocked;
       end;
 
     FUNCTION caretLabel(edit:TSynEdit):string;

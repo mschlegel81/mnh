@@ -782,6 +782,29 @@ object IdeMainForm: TIdeMainForm
         Caption = '&Keep stack trace'
         OnClick = miKeepStackTraceClick
       end
+      object Separator1: TMenuItem
+        Caption = '-'
+      end
+      object miStepInto: TMenuItem
+        Caption = 'Step into'
+        ShortCut = 118
+        OnClick = miStepIntoClick
+      end
+      object miStep: TMenuItem
+        Caption = 'Step'
+        ShortCut = 119
+        OnClick = miStepClick
+      end
+      object miStepOut: TMenuItem
+        Caption = 'Step Out'
+        ShortCut = 8311
+        OnClick = miStepOutClick
+      end
+      object miMicroStep: TMenuItem
+        Caption = 'Microstep'
+        ShortCut = 117
+        OnClick = miMicroStepClick
+      end
     end
     object smShow: TMenuItem
       Caption = '&Show'

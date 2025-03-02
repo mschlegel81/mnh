@@ -52,8 +52,14 @@ TYPE
   end;
 
 PROCEDURE ensureDebuggerForm(CONST snapshot:P_debuggingSnapshot=nil);
+FUNCTION getDebuggerFormOrNil:TDebuggerForm;
 IMPLEMENTATION
 USES editorMeta,myGenerics,mnh_settings,mnh_messages,mnh_constants,contexts,myStringUtil;
+
+FUNCTION getDebuggerFormOrNil:TDebuggerForm;
+  begin
+    result:=TDebuggerForm(getFormOfType(icDebugger));
+  end;
 
 PROCEDURE ensureDebuggerForm(CONST snapshot:P_debuggingSnapshot);
   PROCEDURE jumpToFile;
