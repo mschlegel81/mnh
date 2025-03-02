@@ -281,7 +281,8 @@ FUNCTION T_valueScope.checkVariablesOnPop(CONST literalRecycler:P_literalRecycle
     result:=true;
     for i:=0 to varFill-1 do
       if (variables[i]^.value^.literalType=lt_expression) and
-         (P_expressionLiteral(variables[i]^.value)^.mustBeDroppedBeforePop)
+         (P_expressionLiteral(variables[i]^.value)^.mustBeDroppedBeforePop) and
+         not(variables[i]^.readonly)
       then begin
         result:=false;
         context^.messages^.postTextMessage(mt_el2_warning,location,'Invalid entry in value scope on pop: '+variables[i]^.id+'='+variables[i]^.getValue^.toString(20)+' - set value to void before end!');

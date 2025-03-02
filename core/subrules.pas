@@ -796,7 +796,7 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
       {$ifdef fullVersion}
       if parametersNode<>nil then for i:=0 to pattern.arity-1  do parametersNode^.addEntry(pattern.idForIndexInline(i),param^.value[i],true);
       {$endif}
-      //if requiresBlockConstants then
+      if requiresBlockConstants then
       for i:=0 to pattern.arity-1 do begin
         output.last^.next:=recycler^.newToken(callLocation,pattern.idForIndexInline(i),tt_assignBlockConstant,param^.value[i]^.rereferenced);
         output.last:=output.last^.next;
