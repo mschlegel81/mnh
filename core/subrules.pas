@@ -47,7 +47,7 @@ TYPE
       PROPERTY attributeValue[index:longint]:string read getAttributeValue write setAttributeValue;
   end;
 
-  T_resolveIdContext=(ON_DECLARATION,ON_DELEGATION,ON_EVALUATION);
+  T_resolveIdContext=(ON_DECLARATION,ON_DELEGATION,ON_EVALUATION,ON_FORMAT);
 
   P_inlineExpression=^T_inlineExpression;
   T_inlineExpression=object(T_expressionLiteral)
@@ -75,7 +75,7 @@ TYPE
       FUNCTION getParameterNames(CONST literalRecycler:P_literalRecycler):P_listLiteral; virtual;
       {Calling with intrinsicTuleId='' means the original is cloned}
       CONSTRUCTOR createFromInlineWithOp(CONST original:P_inlineExpression; CONST intrinsicRuleId:string; CONST funcLocation:T_tokenLocation; CONST recycler:P_recycler);
-      PROCEDURE resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
+      PROCEDURE resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext; CONST context:P_context);
       FUNCTION usedGlobalVariables:T_arrayOfPointer;
       CONSTRUCTOR createForWhile   (CONST rep:P_token; CONST declAt:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
       CONSTRUCTOR createForEachBody(CONST parameterId:ansistring; CONST rep:P_token; CONST eachLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
@@ -796,7 +796,8 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
       {$ifdef fullVersion}
       if parametersNode<>nil then for i:=0 to pattern.arity-1  do parametersNode^.addEntry(pattern.idForIndexInline(i),param^.value[i],true);
       {$endif}
-      if requiresBlockConstants then for i:=0 to pattern.arity-1 do begin
+      //if requiresBlockConstants then
+      for i:=0 to pattern.arity-1 do begin
         output.last^.next:=recycler^.newToken(callLocation,pattern.idForIndexInline(i),tt_assignBlockConstant,param^.value[i]^.rereferenced);
         output.last:=output.last^.next;
       end;
@@ -843,7 +844,7 @@ FUNCTION T_inlineExpression.matchesPatternAndReplaces(CONST param: P_listLiteral
     output.last:=nil;
     if (param= nil) and pattern.matchesNilPattern or
        (param<>nil) and pattern.matches(param^,callLocation,context,recycler) then begin
-      if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then resolveIds(context^.messages,ON_EVALUATION);
+      if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then resolveIds(context^.messages,ON_EVALUATION,context);
       if indexOfSave>=0 then begin
         enterCriticalSection(subruleCallCs);
         try
@@ -1228,14 +1229,14 @@ FUNCTION T_inlineExpression.evaluate(CONST location: T_tokenLocation; CONST cont
 FUNCTION T_inlineExpression.evaluateFormat(CONST location:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; CONST parameters:P_listLiteral):P_literal;
   VAR toReduce: T_tokenRange;
       t: P_token;
-      k: longint;
+//      k: longint;
   begin
     if not(functionIdsReady=IDS_RESOLVED_AND_INLINED) then begin
       enterCriticalSection(subruleCallCs);
       try
-        resolveIds(nil,ON_EVALUATION);
+        resolveIds(nil,ON_FORMAT,context);
         functionIdsReady:=IDS_RESOLVED_AND_INLINED;
-        for k:=0 to length(preparedBody)-1 do if preparedBody[k].token.tokType=tt_identifier then preparedBody[k].token.tokType:=tt_blockLocalVariable;
+//        for k:=0 to length(preparedBody)-1 do if preparedBody[k].token.tokType=tt_identifier then preparedBody[k].token.tokType:=tt_blockLocalVariable;
       finally
         leaveCriticalSection(subruleCallCs);
       end;
@@ -1549,7 +1550,7 @@ PROCEDURE resolveBuiltinIDs(CONST first:P_token; CONST messages:P_messages);
     end;
   end;
 
-PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext);
+PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolveIdContext:T_resolveIdContext; CONST context:P_context);
   VAR i:longint;
       inlineValue:P_literal;
       idsReady, prevWasPseudoFuncPointer:boolean;
@@ -1565,14 +1566,22 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
     enterCriticalSection(subruleCallCs);
     try
       if (functionIdsReady=NOT_READY) or
-         (functionIdsReady=IDS_RESOLVED) and (resolveIdContext in [ON_DELEGATION,ON_EVALUATION]) then begin
+         (functionIdsReady=IDS_RESOLVED) and (resolveIdContext in [ON_DELEGATION,ON_EVALUATION,ON_FORMAT]) then begin
         idsReady:=true;
         meta.sideEffects:=[];
         for i:=0 to length(preparedBody)-1 do with preparedBody[i] do begin
           case token.tokType of
             tt_identifier: if (parIdx=NO_PARAMETERS_IDX) then begin
-              P_abstractPackage(token.location.package)^.resolveId(token,messages);
+              try
+                if (resolveIdContext=ON_FORMAT) and (context^.valueScope^.hasVariable(token.txt))
+                then token.tokType:=tt_blockLocalVariable;
+              except
+                //Catch this thing and ignore it...
+              end;
+              if token.tokType=tt_identifier
+              then P_abstractPackage(token.location.package)^.resolveId(token,messages);
               requiresBlockConstants:=requiresBlockConstants or tokenRequiresBlockConstants(token);
+              if (token.tokType=tt_identifier) and (resolveIdContext=ON_FORMAT) then token.tokType:=tt_blockLocalVariable;
               idsReady:=idsReady and (token.tokType<>tt_identifier);
             end;
             tt_userRule, tt_globalVariable: if resolveIdContext=ON_DELEGATION then begin
@@ -1581,7 +1590,7 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
             end;
           end;
           case token.tokType of
-            tt_userRule: if (P_abstractRule(token.data)^.getRuleType in [rt_normal,rt_delegate]) and (resolveIdContext=ON_EVALUATION) then begin
+            tt_userRule: if (P_abstractRule(token.data)^.getRuleType in [rt_normal,rt_delegate]) and (resolveIdContext in [ON_EVALUATION,ON_FORMAT]) then begin
               inlineValue:=P_abstractRule(token.data)^.getInlineValue;
               if (inlineValue<>nil) then begin
                 if prevWasPseudoFuncPointer
@@ -1598,8 +1607,8 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
         end;
       end;
       if idsReady then case resolveIdContext of
-        ON_EVALUATION: functionIdsReady:=IDS_RESOLVED_AND_INLINED
-        else           functionIdsReady:=IDS_RESOLVED;
+        ON_EVALUATION,ON_FORMAT: functionIdsReady:=IDS_RESOLVED_AND_INLINED
+        else                     functionIdsReady:=IDS_RESOLVED;
       end else functionIdsReady:=NOT_READY;
     finally
       leaveCriticalSection(subruleCallCs);
@@ -1610,7 +1619,7 @@ FUNCTION T_inlineExpression.getSideEffects:T_sideEffects;
   begin
     enterCriticalSection(subruleCallCs);
     try
-      if functionIdsReady=NOT_READY then resolveIds(nil,ON_DELEGATION);
+      if functionIdsReady=NOT_READY then resolveIds(nil,ON_DELEGATION,nil);
       result:=meta.sideEffects;
     finally
       leaveCriticalSection(subruleCallCs);

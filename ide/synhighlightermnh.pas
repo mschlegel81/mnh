@@ -618,7 +618,7 @@ PROCEDURE TMnhInputSyn.next;
       1: fTokenSubId:=skWarn;
     end;
     {$ifdef debugMode}
-    writeNextToken;
+    //writeNextToken;
     {$endif}
   end;
 

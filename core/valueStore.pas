@@ -44,6 +44,7 @@ TYPE
 
     PROCEDURE createVariable(CONST id:T_idString; CONST value:P_literal; CONST readonly:boolean=false);
     PROCEDURE createVariable(CONST literalRecycler:P_literalRecycler; CONST id:T_idString; CONST value:int64    ; CONST readonly:boolean=true);
+    FUNCTION  hasVariable     (CONST id: T_idString): boolean;
     FUNCTION  getVariableValue(CONST id: T_idString): P_literal;
     FUNCTION  setVariableValue(CONST literalRecycler:P_literalRecycler; CONST id:T_idString; CONST value:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext):boolean;
     FUNCTION  applyMultiAssignment(CONST literalRecycler:P_literalRecycler;  CONST ids:T_patternElementLocations; CONST value:P_literal; CONST location:T_tokenLocation; CONST context:P_abstractContext):boolean;
@@ -200,6 +201,14 @@ PROCEDURE T_valueScope.createVariable(CONST literalRecycler:P_literalRecycler; C
     lit:=literalRecycler^.newIntLiteral(value);
     createVariable(id,lit,readonly);
     lit^.unreference;
+  end;
+
+FUNCTION T_valueScope.hasVariable(CONST id: T_idString): boolean;
+  VAR k:longint;
+  begin
+    result:=false;
+    for k:=0 to varFill-1 do if variables[k]^.id=id then exit(true);
+    if parentScope<>nil then result:=parentScope^.hasVariable(id);
   end;
 
 FUNCTION T_valueScope.getVariableValue(CONST id: T_idString): P_literal;

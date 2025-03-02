@@ -1249,7 +1249,7 @@ PROCEDURE T_delegatorRule.resolveIds(CONST adapters:P_messages; CONST resolveIdC
 PROCEDURE T_ruleWithSubrules.resolveIds(CONST adapters: P_messages; CONST resolveIdContext:T_resolveIdContext);
   VAR s:P_subruleExpression;
   begin
-    for s in subrules do s^.resolveIds(adapters,resolveIdContext);
+    for s in subrules do s^.resolveIds(adapters,resolveIdContext,nil);
   end;
 
 PROCEDURE T_protectedRuleWithSubrules.resolveIds(CONST adapters:P_messages; CONST resolveIdContext:T_resolveIdContext);
@@ -1257,7 +1257,7 @@ PROCEDURE T_protectedRuleWithSubrules.resolveIds(CONST adapters:P_messages; CONS
       p:pointer;
   begin
     for s in subrules do begin
-      s^.resolveIds(adapters,resolveIdContext);
+      s^.resolveIds(adapters,resolveIdContext,nil);
       for p in s^.usedGlobalVariables do appendIfNew(usedGlobalVariables,p);
     end;
   end;
