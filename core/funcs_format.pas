@@ -12,6 +12,7 @@ USES sysutils,
      funcs;
 
 PROCEDURE formatMetaData(VAR meta:T_ruleMetaData; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
+PROCEDURE clearFormatCache;
 IMPLEMENTATION
 USES out_adapters,LazUTF8,tokens;
 TYPE
@@ -180,9 +181,38 @@ PROCEDURE formatMetaData(VAR meta:T_ruleMetaData; CONST tokenLocation:T_tokenLoc
       meta.comment          :=formatComment(meta.comment          ,tokenLocation,context,recycler);
   end;
 
+VAR formatCacheCs:TRTLCriticalSection;
+    formatCache:array of record
+      id:ansistring;
+      location:T_tokenLocation;
+      format:P_preparedFormatStatement;
+    end;
+
+PROCEDURE clearFormatCache;
+  VAR i:longint;
+  begin
+    enterCriticalSection(formatCacheCs);
+    for i:=0 to length(formatCache)-1 do dispose(formatCache[i].format,destroy);
+    setLength(formatCache,0);
+    leaveCriticalSection(formatCacheCs);
+  end;
+
 FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):P_preparedFormatStatement;
+  VAR i:longint;
   begin;
-    new(result,create(formatString,tokenLocation,context,recycler));
+    enterCriticalSection(formatCacheCs);
+    i:=0;
+    while (i<length(formatCache)) and ((formatCache[i].id<>formatString) or (formatCache[i].location<>tokenLocation)) do inc(i);
+    if i<length(formatCache)
+    then result:=formatCache[i].format
+    else begin
+      new(result,create(formatString,tokenLocation,context,recycler));
+      setLength(formatCache,i+1);
+      formatCache[i].id:=formatString;
+      formatCache[i].location:=tokenLocation;
+      formatCache[i].format:=result;
+    end;
+    leaveCriticalSection(formatCacheCs);
   end;
 
 FUNCTION getFormatTokens(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler; OUT formatStringRanges:T_simpleTokenRanges):P_token;
@@ -197,7 +227,6 @@ FUNCTION getFormatTokens(CONST formatString:ansistring; CONST tokenLocation:T_to
       result:=temp_format^.formatSubrule^.getResolvableTokens(recycler);
       formatStringRanges:=temp_format^.fStringRanges;
     end;
-    dispose(temp_format,destroy);
   end;
 
 CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
@@ -489,6 +518,7 @@ FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST toke
     if formatSubrule=nil
     then i:=length(parts) shr 1
     else i:=formatSubrule^.arity.minPatternLength;
+
     if i<>(params^.size-1) then begin
       context^.raiseError('Invalid format statement; found '+intToStr(i)+' placeholders but '+intToStr(params^.size-1)+' variables.',tokenLocation);
       if formatSubrule<>nil then begin
@@ -514,12 +544,8 @@ FUNCTION format_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context,recycler);
-      if not(context^.messages^.continueEvaluation) then begin
-        try dispose(preparedStatement,destroy); except end;
-        exit(nil);
-      end;
+      if not(context^.messages^.continueEvaluation) then exit(nil);
       txt:=preparedStatement^.format(params,tokenLocation,context,recycler);
-      dispose(preparedStatement,destroy);
       if length(txt)=1 then result:=recycler^.newStringLiteral(txt[0])
       else begin
         result:=recycler^.newListLiteral;
@@ -541,7 +567,6 @@ FUNCTION printf_imp intFuncSignature;
       end;
       textToPost:=formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context,recycler)));
       context^.messages^.postTextMessage(mt_printline,tokenLocation,textToPost);
-      dispose(preparedStatement,destroy);
       result:=newVoidLiteral;
     end;
   end;
@@ -632,6 +657,8 @@ FUNCTION parseTime_imp intFuncSignature;
   end;
 
 INITIALIZATION
+  initCriticalSection(formatCacheCs);
+  contexts.clearFormatCache:=@clearFormatCache;
   PRINTF_FUNCTION:=
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'           ,@printf_imp    ,ak_variadic_1,[se_output]);
   FORMAT_FUNCTION:=
@@ -641,4 +668,6 @@ INITIALIZATION
   {$ifdef fullVersion}
   tokenArray.getFormatTokens:=@getFormatTokens;
   {$endif}
+FINALIZATION
+  doneCriticalSection(formatCacheCs);
 end.

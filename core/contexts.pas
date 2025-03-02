@@ -242,6 +242,7 @@ VAR reduceExpressionCallback:FUNCTION(VAR first:P_token; CONST context:P_context
     {$ifdef fullVersion}
     postIdeMessage:PROCEDURE (CONST messageText:string; CONST warn:boolean);
     {$endif}
+    clearFormatCache:PROCEDURE;
 IMPLEMENTATION
 USES Classes;
 CONSTRUCTOR T_taskChain.create(CONST handDownThreshold_: longint;
@@ -598,6 +599,7 @@ PROCEDURE T_evaluationGlobals.afterEvaluation(CONST recycler:P_recycler; CONST l
       recycler^.scopePop(primaryContext.valueScope);
     end;
     primaryContext.finalizeTaskAndDetachFromParent(recycler);
+    clearFormatCache();
     primaryContext.messages^.awaitAllFlushed(0.7);
   end;
 
