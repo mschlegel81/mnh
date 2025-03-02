@@ -659,6 +659,7 @@ FUNCTION parseTime_imp intFuncSignature;
 INITIALIZATION
   initCriticalSection(formatCacheCs);
   contexts.clearFormatCache:=@clearFormatCache;
+  memoryCleaner.registerCleanupMethod(1,@clearFormatCache);
   PRINTF_FUNCTION:=
   builtinFunctionMap.registerRule(SYSTEM_BUILTIN_NAMESPACE,'printf'           ,@printf_imp    ,ak_variadic_1,[se_output]);
   FORMAT_FUNCTION:=
