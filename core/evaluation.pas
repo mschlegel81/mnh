@@ -453,7 +453,7 @@ FUNCTION reduceExpression(VAR first:P_token; CONST context:P_context; CONST recy
       repeatLocation:=first^.location;
       if not(parseBodyOk) then exit;
       {$ifdef fullVersion}
-      if tco_stackTrace in context^.threadOptions then context^.callStackPush(repeatLocation,'while',stepForward(repeatLocation,6),nil);
+      if tco_stackTrace in context^.threadOptions then context^.callStackPush(repeatLocation,'repeat',stepForward(repeatLocation,6),nil);
       {$endif}
       repeat evaluateBody
       until (returnValue.reasonForStop<>rr_ok) or

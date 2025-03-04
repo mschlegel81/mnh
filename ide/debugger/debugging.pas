@@ -162,14 +162,14 @@ PROCEDURE T_debuggingStepper.stepping(CONST first: P_token; CONST stack: P_token
       end;
       if state=waitingForGUI then begin
         {$ifdef debugMode}
-        writeln('+----------------- - - -');
-        writeln('| DEBUGGER HALTED');
-        writeln('+----------------- - - -');
-        writeln('| Level last ',lastBreakLevel);
-        writeln('|       curr ',callStack^.size);
-        writeln('| Line  last ',string(lastBreakLine));
-        writeln('|       curr ',string(first^.location));
-        writeln('+----------------- - - -');
+        writeln('┌───────────────── ─ ─ ─');
+        writeln('│ DEBUGGER HALTED');
+        writeln('├───────────────── ─ ─ ─');
+        writeln('│ Level last ',lastBreakLevel);
+        writeln('│       curr ',callStack^.size);
+        writeln('│ Line  last ',string(lastBreakLine));
+        writeln('│       curr ',string(first^.location));
+        writeln('└───────────────── ─ ─ ─');
         {$endif}
 
         lastBreakLine:=first^.location;

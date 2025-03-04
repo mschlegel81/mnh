@@ -597,10 +597,12 @@ PROCEDURE TIdeMainForm.miRunDirectClick(Sender: TObject);
 
 PROCEDURE TIdeMainForm.miRunScriptClick(Sender: TObject);
   VAR debuggerForm: TDebuggerForm;
+      currentlyDebugging: boolean;
   begin
     ensureTimerSuspend;
-    if runnerModel.canRunMain(true) and showCustomRunForm(false) then runnerModel.customRun(true)
-    else if (miDebug.enabled) then begin
+    currentlyDebugging:=miDebug.Enabled and runnerModel.anyRunning(false);
+    if runnerModel.canRunMain(not currentlyDebugging) and showCustomRunForm(false) then runnerModel.customRun(true)
+    else if currentlyDebugging then begin
       debuggerForm:=getDebuggerFormOrNil;
       if debuggerForm<>nil then debuggerForm.tbRunContinueClick(Sender);
     end;
