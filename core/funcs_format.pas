@@ -34,6 +34,11 @@ TYPE
 
   P_preparedFormatStatement=^T_preparedFormatStatement;
   T_preparedFormatStatement=object
+    private
+      _formatString:AnsiString;
+      _formatLocation:T_tokenLocation;
+      _refCount:longint;
+    public
     inPackage:P_objectWithPath;
     parts:T_locatedStrings;
     fStringRanges:T_simpleTokenRanges;
@@ -42,6 +47,8 @@ TYPE
     CONSTRUCTOR create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
     DESTRUCTOR destroy;
     FUNCTION format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):T_arrayOfString;
+    PROCEDURE markAsUnused;
+    FUNCTION equals(CONST fmtString:ansistring; CONST loc:T_tokenLocation):boolean;
   end;
 
 {$i func_defines.inc}
@@ -182,18 +189,21 @@ PROCEDURE formatMetaData(VAR meta:T_ruleMetaData; CONST tokenLocation:T_tokenLoc
   end;
 
 VAR formatCacheCs:TRTLCriticalSection;
-    formatCache:array of record
-      id:ansistring;
-      location:T_tokenLocation;
-      format:P_preparedFormatStatement;
-    end;
+    formatCache:array of P_preparedFormatStatement;
 
 PROCEDURE clearFormatCache;
   VAR i:longint;
+      j:longint=0;
   begin
     enterCriticalSection(formatCacheCs);
-    for i:=0 to length(formatCache)-1 do dispose(formatCache[i].format,destroy);
-    setLength(formatCache,0);
+    for i:=0 to length(formatCache)-1 do
+      if (formatCache[i]^._refCount<=0)
+      then dispose(formatCache[i],destroy)
+      else begin
+        formatCache[j]:=formatCache[i];
+        inc(j);
+      end;
+    setLength(formatCache,j);
     leaveCriticalSection(formatCacheCs);
   end;
 
@@ -202,16 +212,15 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
   begin;
     enterCriticalSection(formatCacheCs);
     i:=0;
-    while (i<length(formatCache)) and ((formatCache[i].id<>formatString) or (formatCache[i].location<>tokenLocation)) do inc(i);
+    while (i<length(formatCache)) and not formatCache[i]^.equals(formatString,tokenLocation) do inc(i);
     if i<length(formatCache)
-    then result:=formatCache[i].format
+    then result:=formatCache[i]
     else begin
       new(result,create(formatString,tokenLocation,context,recycler));
       setLength(formatCache,i+1);
-      formatCache[i].id:=formatString;
-      formatCache[i].location:=tokenLocation;
-      formatCache[i].format:=result;
+      formatCache[i]:=result;
     end;
+    InterlockedIncrement(result^._refCount);
     leaveCriticalSection(formatCacheCs);
   end;
 
@@ -227,6 +236,7 @@ FUNCTION getFormatTokens(CONST formatString:ansistring; CONST tokenLocation:T_to
       result:=temp_format^.formatSubrule^.getResolvableTokens(recycler);
       formatStringRanges:=temp_format^.fStringRanges;
     end;
+    temp_format^.markAsUnused;
   end;
 
 CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler);
@@ -434,6 +444,9 @@ CONSTRUCTOR T_preparedFormatStatement.create(CONST formatString:ansistring; CONS
 
   VAR i:longint;
   begin
+    self._formatLocation:=tokenLocation;
+    self._formatString  :=formatString;
+    self._refCount      :=0;
     inPackage:=tokenLocation.package;
     parts:=splitFormatString(formatString);
     formatSubrule:=getFormatSubrule(parts);
@@ -449,6 +462,16 @@ DESTRUCTOR T_preparedFormatStatement.destroy;
     setLength(parts,0);
     for i:=0 to length(formats)-1 do formats[i].destroy;
     setLength(formats,0);
+  end;
+
+PROCEDURE T_preparedFormatStatement.markAsUnused;
+  begin
+    InterlockedDecrement(_refCount);
+  end;
+
+FUNCTION T_preparedFormatStatement.equals(CONST fmtString:ansistring; CONST loc:T_tokenLocation):boolean;
+  begin
+    result:=(_formatString=fmtString) and (_formatLocation=loc);
   end;
 
 FUNCTION T_preparedFormatStatement.format(CONST params:P_listLiteral; CONST tokenLocation:T_tokenLocation; CONST context:P_context; CONST recycler:P_recycler):T_arrayOfString;
@@ -544,8 +567,12 @@ FUNCTION format_imp intFuncSignature;
     result:=nil;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context,recycler);
-      if not(context^.messages^.continueEvaluation) then exit(nil);
+      if not(context^.messages^.continueEvaluation) then begin
+        preparedStatement^.markAsUnused;
+        exit(nil);
+      end;
       txt:=preparedStatement^.format(params,tokenLocation,context,recycler);
+      preparedStatement^.markAsUnused;
       if length(txt)=1 then result:=recycler^.newStringLiteral(txt[0])
       else begin
         result:=recycler^.newListLiteral;
@@ -563,9 +590,11 @@ FUNCTION printf_imp intFuncSignature;
     if (params<>nil) and (params^.size>=1) and (arg0^.literalType=lt_string) then begin
       preparedStatement:=getFormat(P_stringLiteral(arg0)^.value,tokenLocation,context,recycler);
       if not(context^.messages^.continueEvaluation) then begin
+        preparedStatement^.markAsUnused;
         exit(nil);
       end;
       textToPost:=formatTabs(reSplit(preparedStatement^.format(params,tokenLocation,context,recycler)));
+      preparedStatement^.markAsUnused;
       context^.messages^.postTextMessage(mt_printline,tokenLocation,textToPost);
       result:=newVoidLiteral;
     end;

@@ -1573,7 +1573,7 @@ PROCEDURE T_inlineExpression.resolveIds(CONST messages:P_messages; CONST resolve
           case token.tokType of
             tt_identifier: if (parIdx=NO_PARAMETERS_IDX) then begin
               try
-                if (resolveIdContext=ON_FORMAT) and (context^.valueScope^.hasVariable(token.txt))
+                if (resolveIdContext=ON_FORMAT) and (context^.valueScope<>nil) and context^.valueScope^.hasVariable(token.txt)
                 then token.tokType:=tt_blockLocalVariable;
               except
                 //Catch this thing and ignore it...
