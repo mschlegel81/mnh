@@ -690,7 +690,7 @@ FUNCTION T_abstractLexer.getNextStatement(CONST context:P_context; CONST recycle
           end;
         end;
         if ft^.tokType=tt_identifier
-        then context^.raiseError('Unresolvable identifier in format string: "'+ft^.txt+'"',tok^.location)
+        then context^.raiseError('Unresolvable identifier in format string: "'+ft^.txt+'"',ft^.location)
         else if localIdStack.localIdInfos<>nil then localIdStack.localIdInfos^.add(ft);
         ft:=recycler^.disposeToken(ft);
       end;

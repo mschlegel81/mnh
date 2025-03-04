@@ -35,7 +35,7 @@ TYPE
   P_preparedFormatStatement=^T_preparedFormatStatement;
   T_preparedFormatStatement=object
     private
-      _formatString:AnsiString;
+      _formatString:ansistring;
       _formatLocation:T_tokenLocation;
       _refCount:longint;
     public
@@ -220,7 +220,7 @@ FUNCTION getFormat(CONST formatString:ansistring; CONST tokenLocation:T_tokenLoc
       setLength(formatCache,i+1);
       formatCache[i]:=result;
     end;
-    InterlockedIncrement(result^._refCount);
+    interLockedIncrement(result^._refCount);
     leaveCriticalSection(formatCacheCs);
   end;
 
@@ -466,7 +466,7 @@ DESTRUCTOR T_preparedFormatStatement.destroy;
 
 PROCEDURE T_preparedFormatStatement.markAsUnused;
   begin
-    InterlockedDecrement(_refCount);
+    interlockedDecrement(_refCount);
   end;
 
 FUNCTION T_preparedFormatStatement.equals(CONST fmtString:ansistring; CONST loc:T_tokenLocation):boolean;

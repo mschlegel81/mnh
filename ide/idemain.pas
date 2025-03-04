@@ -600,7 +600,7 @@ PROCEDURE TIdeMainForm.miRunScriptClick(Sender: TObject);
       currentlyDebugging: boolean;
   begin
     ensureTimerSuspend;
-    currentlyDebugging:=miDebug.Enabled and runnerModel.anyRunning(false);
+    currentlyDebugging:=miDebug.enabled and runnerModel.anyRunning(false);
     if runnerModel.canRunMain(not currentlyDebugging) and showCustomRunForm(false) then runnerModel.customRun(true)
     else if currentlyDebugging then begin
       debuggerForm:=getDebuggerFormOrNil;
