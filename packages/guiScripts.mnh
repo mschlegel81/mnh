@@ -115,14 +115,13 @@ editDiff2(editorFile:String)->
 @utility=Check for updates
 @SuppressUnusedParameterWarning
 checkForUpdates(editorFile:String)->begin
-  mnhReleasesUrl:='https://github.com/mschlegel81/mnh/releases/';
+  mnhReleasesUrl:='https://codeberg.org/martin-schlegel/mnh/releases/';
   latestPage:=mnhReleasesUrl&'latest';
   httpResult:=httpGet(latestPage);
-  httpResult.isVoid ? return warn('Could not contact github') : void;
+  httpResult.isVoid ? return warn('Could not contact Codeberg') : void;
   resolvedTag:=httpResult['body'].matchComposite(f'{mnhReleasesUrl}tag/\d+\.\d+\.\d+').head.head;
   online_version :=resolvedTag.split('/').trailing.split('.').softCast;
   current_version:=mnhInfo['version']             .split('.').softCast;
-
   online_version==current_version
   ? print('MNH is up to date')
   : current_version.composeDigits(1000)>online_version .composeDigits(1000)

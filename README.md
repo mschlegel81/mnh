@@ -47,4 +47,4 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-If you redistribute a modified version of this software please include a link to this GitHub page!
+If you redistribute a modified version of this software please include a link to this Codeberg page!
